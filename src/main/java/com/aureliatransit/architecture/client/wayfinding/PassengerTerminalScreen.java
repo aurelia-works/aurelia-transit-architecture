@@ -255,7 +255,7 @@ public class PassengerTerminalScreen extends Screen {
 		}
 		if (pageCount > 1) {
 			final String counter = (subPage + 1) + "/" + pageCount;
-			context.drawCenteredTextWithShadow(textRenderer, counter, contentX + contentW / 2, top + panelH - 19, STYLE.dim());
+			context.drawText(textRenderer, counter, contentX + contentW / 2 - textRenderer.getWidth(counter) / 2, top + panelH - 19, STYLE.dim(), false);
 		}
 		super.render(context, mouseX, mouseY, delta);
 	}
@@ -299,7 +299,7 @@ public class PassengerTerminalScreen extends Screen {
 			final int chipW = 30;
 			final int rgb = 0xFF000000 | row.routeRgb();
 			context.fill(contentX, y + 2, contentX + chipW, y + DEPARTURE_ROW - 3, rgb);
-			context.drawCenteredTextWithShadow(textRenderer, row.route(), contentX + chipW / 2, y + 4, TerminalFace.contrast(row.routeRgb()));
+			context.drawText(textRenderer, row.route(), contentX + chipW / 2 - textRenderer.getWidth(row.route()) / 2, y + 4, TerminalFace.contrast(row.routeRgb()), false);
 			final int statusW = textRenderer.getWidth(row.status());
 			final int right = contentX + contentW;
 			context.drawText(textRenderer, row.status(), right - statusW, y + 4, row.delayed() ? STYLE.delay() : STYLE.accent(), false);
@@ -307,7 +307,7 @@ public class PassengerTerminalScreen extends Screen {
 			if (platW > 0) {
 				final int px = right - statusW - 6 - platW;
 				context.fill(px, y + 2, px + platW, y + DEPARTURE_ROW - 3, STYLE.chip());
-				context.drawCenteredTextWithShadow(textRenderer, row.platform(), px + platW / 2, y + 4, STYLE.text());
+				context.drawText(textRenderer, row.platform(), px + platW / 2 - textRenderer.getWidth(row.platform()) / 2, y + 4, STYLE.text(), false);
 			}
 			final int destX = contentX + chipW + 5;
 			final int destEnd = right - statusW - 10 - (platW > 0 ? platW + 4 : 0);
@@ -329,7 +329,7 @@ public class PassengerTerminalScreen extends Screen {
 			final int rgb = badge.argb();
 			final int badgeW = Math.max(14, textRenderer.getWidth(badge.label()) + 6);
 			context.fill(x0, bandY, x0 + badgeW, bandY + 10, rgb);
-			context.drawCenteredTextWithShadow(textRenderer, badge.label(), x0 + badgeW / 2, bandY + 1, TerminalFace.contrast(badge.rgb()));
+			context.drawText(textRenderer, badge.label(), x0 + badgeW / 2 - textRenderer.getWidth(badge.label()) / 2, bandY + 1, TerminalFace.contrast(badge.rgb()), false);
 			context.drawText(textRenderer, textRenderer.trimToWidth(line.name(), contentW - badgeW - 8), x0 + badgeW + 5, bandY + 1, STYLE.dim(), false);
 			final int sy = contentY + Math.round(strip.stripY());
 			context.fill(x0 + Math.round(strip.left()), sy - 1, x0 + Math.round(strip.right()), sy + 2, rgb);
@@ -386,7 +386,7 @@ public class PassengerTerminalScreen extends Screen {
 			final int fill = selected ? STYLE.accent() : isHovered() ? STYLE.chip() : STYLE.rowBand();
 			context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), fill);
 			final int color = selected ? 0xFF0F1215 : STYLE.text();
-			context.drawCenteredTextWithShadow(textRenderer, getMessage(), getX() + getWidth() / 2, getY() + (getHeight() - 8) / 2, color);
+			context.drawText(textRenderer, getMessage(), getX() + getWidth() / 2 - textRenderer.getWidth(getMessage()) / 2, getY() + (getHeight() - 8) / 2, color, false);
 		}
 	}
 }
