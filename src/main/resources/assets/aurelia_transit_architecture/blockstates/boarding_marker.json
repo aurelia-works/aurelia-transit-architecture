@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,marker=door": {
+      "model": "aurelia_transit_architecture:block/boarding_marker"
+    },
+    "facing=north,marker=accessible": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_accessible"
+    },
+    "facing=north,marker=wait": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_wait"
+    },
+    "facing=east,marker=door": {
+      "model": "aurelia_transit_architecture:block/boarding_marker",
+      "y": 90
+    },
+    "facing=east,marker=accessible": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_accessible",
+      "y": 90
+    },
+    "facing=east,marker=wait": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_wait",
+      "y": 90
+    },
+    "facing=south,marker=door": {
+      "model": "aurelia_transit_architecture:block/boarding_marker",
+      "y": 180
+    },
+    "facing=south,marker=accessible": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_accessible",
+      "y": 180
+    },
+    "facing=south,marker=wait": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_wait",
+      "y": 180
+    },
+    "facing=west,marker=door": {
+      "model": "aurelia_transit_architecture:block/boarding_marker",
+      "y": 270
+    },
+    "facing=west,marker=accessible": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_accessible",
+      "y": 270
+    },
+    "facing=west,marker=wait": {
+      "model": "aurelia_transit_architecture:block/boarding_marker_wait",
+      "y": 270
+    }
+  }
+}

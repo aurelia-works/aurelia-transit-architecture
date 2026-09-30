@@ -35,6 +35,11 @@ EXPECTED_PROPERTIES = {
     "ClockBlock": {"facing"},
     "PidsBlock": {"facing", "left", "right", "up", "down"},
     "SpeakerBlock": {"facing"},
+    "WayfindingPlateBlock": {"facing"},
+    "WayfindingSignBlock": {"facing", "left", "right"},
+    "EntrancePylonBlock": {"facing", "half"},
+    "HelpPointBlock": {"facing"},
+    "BoardingMarkerBlock": {"facing", "marker"},
 }
 
 problems = []
@@ -118,7 +123,8 @@ def main():
                     problem(f"{block_id}: variant '{key}' does not cover properties {expected}")
                 for v in variant if isinstance(variant, list) else [variant]:
                     check_model(v["model"], seen_models)
-            if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock"):
+            if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
+                       "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

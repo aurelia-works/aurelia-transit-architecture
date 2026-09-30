@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "aurelia_transit_architecture:wall_wayfinding_sign"
+    },
+    {
+      "item": "minecraft:chain"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:hanging_wayfinding_sign",
+    "count": 1
+  }
+}
