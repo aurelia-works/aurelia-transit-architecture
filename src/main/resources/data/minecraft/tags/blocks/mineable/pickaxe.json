@@ -45,6 +45,13 @@
     "aurelia_transit_architecture:bus_shelter_roof",
     "aurelia_transit_architecture:bus_shelter_seat",
     "aurelia_transit_architecture:bus_curb",
-    "aurelia_transit_architecture:bus_curb_low"
+    "aurelia_transit_architecture:bus_curb_low",
+    "aurelia_transit_architecture:platform_cis",
+    "aurelia_transit_architecture:hanging_platform_cis",
+    "aurelia_transit_architecture:platform_pids",
+    "aurelia_transit_architecture:hanging_platform_pids",
+    "aurelia_transit_architecture:concourse_board",
+    "aurelia_transit_architecture:wall_speaker",
+    "aurelia_transit_architecture:ceiling_speaker"
   ]
 }

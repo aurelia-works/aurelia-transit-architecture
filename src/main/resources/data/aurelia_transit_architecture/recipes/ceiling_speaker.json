@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "aurelia_transit_architecture:wall_speaker"
+    },
+    {
+      "item": "minecraft:iron_nugget"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:ceiling_speaker",
+    "count": 1
+  }
+}

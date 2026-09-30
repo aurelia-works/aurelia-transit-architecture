@@ -30,6 +30,8 @@ EXPECTED_PROPERTIES = {
     "GlassFacingBlock": {"facing"},
     "AxisShapedBlock": {"axis"},
     "TextSignBlock": {"facing", "left", "right"},
+    "PidsBlock": {"facing", "left", "right", "up", "down"},
+    "SpeakerBlock": {"facing"},
 }
 
 problems = []

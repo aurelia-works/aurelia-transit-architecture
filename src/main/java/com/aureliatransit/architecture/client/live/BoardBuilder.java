@@ -1,0 +1,261 @@
+package com.aureliatransit.architecture.client.live;
+
+import com.aureliatransit.architecture.live.DisplayConfig;
+import com.aureliatransit.architecture.live.DisplayKind;
+import com.aureliatransit.architecture.live.DisplayStyle;
+import com.aureliatransit.architecture.live.display.CallingPages;
+import com.aureliatransit.architecture.live.display.DepartureText;
+import com.aureliatransit.architecture.live.display.Marquee;
+import com.aureliatransit.architecture.live.display.Pagination;
+import com.aureliatransit.architecture.transit.ServiceSnapshot;
+import com.aureliatransit.architecture.transit.StationSnapshot;
+import net.minecraft.client.font.TextRenderer;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Lays a display out into a {@link BoardModel}. Called at most about once a second per visible display (faster only
+ * while a marquee is scrolling); the renderer replays the result every frame.
+ */
+final class BoardBuilder {
+
+	static final float FRAME = 1F / 16F;
+	private static final float MIN_SQUEEZE = 0.65F;
+	private static final float MARGIN = 3F;
+	private static final long MARQUEE_STEP_MILLIS = 350;
+	private static final long MARQUEE_HOLD_MILLIS = 1500;
+	/** Approximate average glyph advance in font units, used to budget characters of calling-at pages. */
+	private static final float AVG_CHAR = 5.2F;
+
+	private BoardBuilder() {
+	}
+
+	/**
+	 * @param nearestPlatformId when non-zero, only this platform's services are shown (AUTO platform displays)
+	 * @param topInsetPixels    pixels of the top block edge not usable by the screen (hanging rods)
+	 */
+	static void build(BoardModel m, TextRenderer tr, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearestPlatformId,
+					  int widthBlocks, int heightBlocks, float topInsetPixels, long now, String clock) {
+		m.reset();
+		final DisplayStyle style = config.style();
+		final boolean header = config.clock() || kind == DisplayKind.CONCOURSE;
+		final boolean sub = config.callingAt() && kind != DisplayKind.CONCOURSE;
+		final float k = kind.textScale();
+		final float mainH = 10 * k;
+		final float subH = sub ? 7.5F : 0;
+		final float rowH = mainH + subH;
+		final float headerH = header ? 11 : 0;
+		final int rows = config.rows();
+		final float contentH = headerH + rows * rowH + 1.5F;
+
+		final float boardW = widthBlocks - 2 * FRAME;
+		final float boardH = heightBlocks - 2 * FRAME - topInsetPixels / 16F;
+		final float minWidth = kind == DisplayKind.CIS ? 96 : 112;
+		final float scale = Math.min(boardH / contentH, boardW / minWidth);
+		final float vw = boardW / scale;
+		final float vh = boardH / scale;
+		m.scale = scale;
+		m.width = vw;
+		m.height = vh;
+		m.rect(0, 0, vw, vh, style.background());
+
+		final float y0 = Math.max(0, (vh - contentH) / 2);
+		final String stationName = snapshot.station() == null ? "" : snapshot.station().displayName();
+
+		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);
+		if (header) {
+			m.rect(0, y0, vw, headerH, style.header());
+			final String title = kind == DisplayKind.CONCOURSE ? (stationName.isEmpty() ? "Departures" : "Departures - " + stationName) : stationName;
+			float right = vw - MARGIN;
+			if (config.clock()) {
+				final float cw = tr.getWidth(clock) * 0.9F;
+				m.text(clock, right - cw, y0 + (headerH - 7.2F) / 2, 0.9F, 1, style.accent());
+				right -= cw + 4;
+			}
+			final int headerPages = kind == DisplayKind.CONCOURSE ? Pagination.pageCount(services.size(), rows) : 1;
+			if (headerPages > 1) {
+				final String indicator = (Pagination.currentPage(now, config.pageSeconds() * 1000L, headerPages) + 1) + "/" + headerPages;
+				final float iw = tr.getWidth(indicator) * 0.9F;
+				m.text(indicator, right - iw, y0 + (headerH - 7.2F) / 2, 0.9F, 1, style.dim());
+				right -= iw + 4;
+			}
+			fit(m, tr, title, MARGIN, y0 + (headerH - 7.2F) / 2, 0.9F, right - MARGIN - 2, style.text(), now);
+		}
+
+		final float rowsTop = y0 + headerH;
+		if (services.isEmpty()) {
+			idle(m, tr, kind, snapshot, stationName, rowsTop, rows * rowH, vw, style, k, now);
+			return;
+		}
+
+		final int pages = kind == DisplayKind.CONCOURSE ? Pagination.pageCount(services.size(), rows) : 1;
+		final int page = Pagination.currentPage(now, config.pageSeconds() * 1000L, pages);
+		final int from = Pagination.firstIndex(page, rows);
+		final int to = Math.min(Pagination.endIndex(page, rows, services.size()), from + rows);
+
+		// column geometry from the widest status text and platform name on this page
+		float statusWidth = 0;
+		float platformWidth = 0;
+		boolean multiplePlatforms = kind == DisplayKind.CONCOURSE;
+		long firstPlatform = services.get(from).platformId();
+		for (int i = from; i < to; i++) {
+			final ServiceSnapshot s = services.get(i);
+			statusWidth = Math.max(statusWidth, tr.getWidth(DepartureText.status(s, now)) * k);
+			platformWidth = Math.max(platformWidth, tr.getWidth(s.platformName()) * k * 0.9F);
+			multiplePlatforms |= s.platformId() != firstPlatform;
+		}
+		final float left = MARGIN;
+		final float right = vw - MARGIN;
+		final float chipW = vw >= 100 ? 15 * k : 0;
+		final float platW = multiplePlatforms ? Math.max(9 * k, platformWidth + 4) : 0;
+		final float destX = left + (chipW > 0 ? chipW + 3 : 0);
+		final float destEnd = right - statusWidth - 4 - (platW > 0 ? platW + 3 : 0);
+
+		for (int i = from; i < to; i++) {
+			final ServiceSnapshot s = services.get(i);
+			final float top = rowsTop + (i - from) * rowH;
+			if (rows > 1 && ((i - from) & 1) == 0) {
+				m.rect(0, top, vw, rowH, style.rowBand());
+			}
+			final float textY = top + (mainH - 8 * k) / 2 + 0.3F;
+			final int delay = DepartureText.delayMinutes(s);
+
+			if (chipW > 0) {
+				final String label = s.routeNumber().isBlank() ? s.routeName() : s.routeNumber();
+				final int routeRgb = 0xFF000000 | s.routeColor();
+				final float chipH = 9 * k;
+				m.rect(left, top + (mainH - chipH) / 2, chipW, chipH, routeRgb);
+				if (!label.isEmpty()) {
+					final int textColor = luminance(routeRgb) > 0.6F ? 0xFF101010 : 0xFFFFFFFF;
+					final float lk = k * 0.8F;
+					String shown = label;
+					float lw = tr.getWidth(shown) * lk;
+					float sx = 1;
+					if (lw > chipW - 2) {
+						sx = Math.max(0.5F, (chipW - 2) / lw);
+						if (lw * sx > chipW - 2) {
+							shown = tr.trimToWidth(shown, (int) ((chipW - 2) / (lk * sx)));
+							lw = tr.getWidth(shown) * lk;
+						}
+					}
+					m.text(shown, left + (chipW - lw * sx) / 2, top + (mainH - 8 * lk) / 2 + 0.3F, lk, sx, textColor);
+				}
+			}
+
+			fit(m, tr, s.destination(), destX, textY, k, destEnd - destX, style.text(), now);
+
+			if (platW > 0) {
+				final float chipH = 9 * k;
+				final float px = right - statusWidth - 4 - platW;
+				m.rect(px, top + (mainH - chipH) / 2, platW, chipH, style.chip());
+				final float pk = k * 0.9F;
+				final float pw = tr.getWidth(s.platformName()) * pk;
+				m.text(s.platformName(), px + (platW - pw) / 2, top + (mainH - 8 * pk) / 2 + 0.3F, pk, 1, style.text());
+			}
+
+			final String status = DepartureText.status(s, now);
+			final int statusColor = delay > 0 ? style.delay() : style.accent();
+			m.text(status, right - tr.getWidth(status) * k, textY, k, 1, statusColor);
+
+			if (sub) {
+				subLine(m, tr, s, delay, destX, top + mainH - 0.5F, destEnd + statusWidth + 4 - destX, style, config.pageSeconds(), now);
+			}
+		}
+	}
+
+	private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, long nearestPlatformId, long now) {
+		final List<ServiceSnapshot> out = new ArrayList<>(snapshot.services().size());
+		for (final ServiceSnapshot s : snapshot.services()) {
+			if (s.departureMillis() < now) {
+				continue;
+			}
+			if (nearestPlatformId != 0 && !kind.stationWide() && s.platformId() != nearestPlatformId) {
+				continue;
+			}
+			out.add(s);
+		}
+		return out;
+	}
+
+	private static void subLine(BoardModel m, TextRenderer tr, ServiceSnapshot s, int delayMinutes, float x, float y, float avail, DisplayStyle style, int pageSeconds, long now) {
+		final float sk = 0.75F;
+		final List<String> pages = new ArrayList<>(4);
+		if (s.terminating()) {
+			pages.add("Terminates here");
+		} else {
+			if (delayMinutes > 0) {
+				pages.add("Delayed by " + delayMinutes + (delayMinutes == 1 ? " minute" : " minutes"));
+			}
+			pages.addAll(CallingPages.paginate(s.callingAt(), (int) (avail / (AVG_CHAR * sk))));
+		}
+		if (pages.isEmpty()) {
+			return;
+		}
+		final int index = Pagination.currentPage(now, pageSeconds * 1000L, pages.size());
+		final boolean delayPage = !s.terminating() && delayMinutes > 0 && index == 0;
+		fit(m, tr, pages.get(index), x, y, sk, avail, delayPage ? style.delay() : style.dim(), now);
+	}
+
+	private static void idle(BoardModel m, TextRenderer tr, DisplayKind kind, StationSnapshot snapshot, String stationName, float top, float height, float vw, DisplayStyle style, float k, long now) {
+		final String first;
+		final String second;
+		if (snapshot.station() == null) {
+			first = "No station linked";
+			second = "Right-click to configure";
+		} else {
+			first = "Welcome to " + stationName;
+			second = "No departures currently available";
+		}
+		final float fk = Math.max(1F, k);
+		final float sk = Math.max(0.75F, k * 0.75F);
+		final float blockH = 8 * fk + 2 + 8 * sk;
+		final float y = top + Math.max(0, (height - blockH) / 2);
+		centred(m, tr, first, vw, y, fk, style.text(), now);
+		centred(m, tr, second, vw, y + 8 * fk + 2, sk, style.dim(), now);
+	}
+
+	private static void centred(BoardModel m, TextRenderer tr, String text, float vw, float y, float k, int color, long now) {
+		final float avail = vw - 2 * MARGIN;
+		final float w = tr.getWidth(text) * k;
+		if (w <= avail) {
+			m.text(text, (vw - w) / 2, y, k, 1, color);
+		} else {
+			fit(m, tr, text, MARGIN, y, k, avail, color, now);
+		}
+	}
+
+	/**
+	 * Left-aligned text in a column: squeezed horizontally down to {@link #MIN_SQUEEZE}, scrolled beyond that.
+	 */
+	private static void fit(BoardModel m, TextRenderer tr, String text, float x, float y, float k, float avail, int color, long now) {
+		if (text.isEmpty() || avail <= 0) {
+			return;
+		}
+		final int width = tr.getWidth(text);
+		final float full = width * k;
+		if (full <= avail) {
+			m.text(text, x, y, k, 1, color);
+			return;
+		}
+		final float squeeze = avail / full;
+		if (squeeze >= MIN_SQUEEZE) {
+			m.text(text, x, y, k, squeeze, color);
+			return;
+		}
+		final float availUnits = avail / (k * MIN_SQUEEZE);
+		final int length = text.length();
+		final int visibleChars = Math.max(1, (int) (length * availUnits / width));
+		final int start = Marquee.startIndex(now, length, visibleChars, MARQUEE_STEP_MILLIS, MARQUEE_HOLD_MILLIS);
+		final String window = tr.trimToWidth(text.substring(start, Math.min(length, start + visibleChars + 2)), (int) availUnits);
+		m.marquee = true;
+		m.text(window, x, y, k, MIN_SQUEEZE, color);
+	}
+
+	private static float luminance(int argb) {
+		final float r = ((argb >> 16) & 0xFF) / 255F;
+		final float g = ((argb >> 8) & 0xFF) / 255F;
+		final float b = (argb & 0xFF) / 255F;
+		return 0.2126F * r + 0.7152F * g + 0.0722F * b;
+	}
+}
