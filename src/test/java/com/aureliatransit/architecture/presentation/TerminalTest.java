@@ -148,6 +148,29 @@ class TerminalTest {
 			for (final PanelLayout.Rect rect : panel.rects()) {
 				assertTrue(rect.cx() - rect.w() / 2 >= -size[0] / 2 - 0.01F && rect.cx() + rect.w() / 2 <= size[0] / 2 + 0.01F);
 			}
+			// live-test regression: text lines and badges must not overlap vertically, and nothing is truncated
+			assertTrue(all.contains("Touch for information") || all.contains("Touch for") && all.contains("information"), "prompt kept whole: " + all);
+			assertTrue(all.contains("Market East Station") || all.contains("Market East") || all.contains("Market"), "name kept: " + all);
+			assertFalse(all.contains("..") || all.contains("\u2026"), "no ellipsis: " + all);
+			final List<float[]> spans = new java.util.ArrayList<>();
+			for (final PanelLayout.Label label : panel.labels()) {
+				if (label.text().length() > 1) {
+					spans.add(new float[]{label.cy() - 4.5F * label.scale(), label.cy() + 4.5F * label.scale()});
+				}
+			}
+			for (final PanelLayout.Rect rect : panel.rects()) {
+				if (rect.h() > 1) {
+					spans.add(new float[]{rect.cy() - rect.h() / 2, rect.cy() + rect.h() / 2});
+				}
+			}
+			for (int i = 0; i < spans.size(); i++) {
+				for (int j = i + 1; j < spans.size(); j++) {
+					final float[] x = spans.get(i);
+					final float[] y = spans.get(j);
+					final boolean sameRow = Math.abs((x[0] + x[1]) - (y[0] + y[1])) < 0.01F;
+					assertTrue(sameRow || x[1] <= y[0] + 0.01F || y[1] <= x[0] + 0.01F, "overlap at " + size[0] + "x" + size[1] + ": " + panel);
+				}
+			}
 		}
 		assertEquals(TerminalFace.layout(resolved("X", lines), 30, 12, -1, TerminalTest::measure), TerminalFace.layout(resolved("X", lines), 30, 12, -1, TerminalTest::measure));
 		final PanelLayout.Panel unnamed = TerminalFace.layout(resolved("", List.of()), 30, 12, -1, TerminalTest::measure);

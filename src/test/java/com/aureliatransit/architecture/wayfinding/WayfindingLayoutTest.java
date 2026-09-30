@@ -192,6 +192,30 @@ class WayfindingLayoutTest {
 		assertTrue(String.join(" ", alone).contains("Broad St & Market St"), "without MTR destinations (may wrap): " + alone);
 	}
 
+	@Test
+	void captionedPictogramSignKeepsItsSymbol() {
+		for (final Pictogram pictogram : new Pictogram[]{Pictogram.ACCESSIBLE_ROUTE, Pictogram.ELEVATOR, Pictogram.HELP_POINT, Pictogram.EXIT}) {
+			final ResolvedWayfinding r = new ResolvedWayfinding("", "", "", List.of(), SignArrow.NONE, "Lift to street", ServiceType.NONE, "", "", "", List.of(),
+					"", "", LanguageLayout.SINGLE, pictogram, AccentPalette.NONE, false);
+			final PanelLayout.Panel captioned = WayfindingLayout.layout(r, WayfindingPanelKind.PICTOGRAM, 9, 9, 0xFFFFFFFF, FONT);
+			final ResolvedWayfinding bare = new ResolvedWayfinding("", "", "", List.of(), SignArrow.NONE, "", ServiceType.NONE, "", "", "", List.of(),
+					"", "", LanguageLayout.SINGLE, pictogram, AccentPalette.NONE, false);
+			final PanelLayout.Panel symbolOnly = WayfindingLayout.layout(bare, WayfindingPanelKind.PICTOGRAM, 9, 9, 0xFFFFFFFF, FONT);
+			assertFalse(symbolOnly.rects().isEmpty() && symbolOnly.labels().isEmpty(), pictogram + " draws a symbol");
+			final PanelLayout.Label caption = label(captioned, "Lift to street");
+			final int symbolParts = captioned.rects().size() + captioned.labels().size() - 1;
+			assertTrue(symbolParts >= 1, pictogram + ": symbol kept next to the caption: " + captioned);
+			for (final PanelLayout.Label l : captioned.labels()) {
+				if (l != caption) {
+					assertTrue(l.cy() > caption.cy(), pictogram + ": symbol above caption");
+				}
+			}
+			for (final PanelLayout.Rect rect : captioned.rects()) {
+				assertTrue(Math.abs(rect.cx()) + rect.w() / 2 <= 4.51F && Math.abs(rect.cy()) + rect.h() / 2 <= 4.51F, "inside");
+			}
+		}
+	}
+
 	private static List<String> texts(PanelLayout.Panel panel) {
 		return panel.labels().stream().map(PanelLayout.Label::text).toList();
 	}

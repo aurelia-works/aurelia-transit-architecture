@@ -84,10 +84,31 @@ public final class WayfindingLayout {
 		}
 		if (kind == WayfindingPanelKind.ENTRANCE_PYLON) {
 			pylon(c, r, area, textColor);
+		} else if (kind == WayfindingPanelKind.PICTOGRAM && r.pictogram() != Pictogram.NONE) {
+			pictogramPanel(c, r, area, textColor);
 		} else {
 			horizontal(c, r, kind, area, textColor);
 		}
 		return c.panel();
+	}
+
+	/**
+	 * A pictogram sign: the symbol fills the upper part of the panel and the caption (destination, else street label,
+	 * else transfers) sits below it. Without a caption the symbol is centred at full size. The symbol is never dropped
+	 * for the caption (live-test regression: a captioned square sign used to show only its text).
+	 */
+	private static void pictogramPanel(Canvas c, ResolvedWayfinding r, Box area, int textColor) {
+		final String caption = first(r.destination(), r.streetLabel(), r.transfers());
+		if (caption.isEmpty()) {
+			final float side = Math.min(area.w(), area.h());
+			WayfindingPictograms.draw(c, r.pictogram(), new Box(area.cx() - side / 2, area.cx() + side / 2, area.cy() - side / 2, area.cy() + side / 2), textColor);
+			return;
+		}
+		final float captionH = area.h() * 0.3F;
+		final float side = Math.min(area.w(), area.h() - captionH - GAP);
+		final float top = area.t();
+		WayfindingPictograms.draw(c, r.pictogram(), new Box(area.cx() - side / 2, area.cx() + side / 2, top - side, top), textColor);
+		c.text(caption, new Box(area.l(), area.r(), area.b(), area.b() + captionH), MAX_SCALE, textColor, TextAlignment.CENTER);
 	}
 
 	// ---- horizontal panels ---------------------------------------------------------------------------------------
