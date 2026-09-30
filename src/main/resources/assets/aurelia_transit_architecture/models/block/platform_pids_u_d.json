@@ -1,0 +1,227 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/live_body",
+    "body": "aurelia_transit_architecture:block/live_body",
+    "screen": "aurelia_transit_architecture:block/live_screen"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        12.5
+      ],
+      "to": [
+        16,
+        16,
+        16.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            3.5
+          ],
+          "texture": "#body",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            12.5,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#screen"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            12.5,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            3.5,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        15,
+        0,
+        12.0
+      ],
+      "to": [
+        16,
+        16,
+        16.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            15,
+            0.0,
+            16.0,
+            4.0
+          ],
+          "texture": "#body",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            15,
+            12.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            1,
+            16.0
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            15,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            12.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            4.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        0,
+        12.0
+      ],
+      "to": [
+        1,
+        16,
+        16.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            1,
+            4.0
+          ],
+          "texture": "#body",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            12.0,
+            1,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            15,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            1,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            12.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#body",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            4.0,
+            16.0
+          ],
+          "texture": "#body"
+        }
+      }
+    }
+  ]
+}

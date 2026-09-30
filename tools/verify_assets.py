@@ -33,6 +33,8 @@ EXPECTED_PROPERTIES = {
     "SeatBlock": {"facing"},
     "InfoDisplayBlock": {"facing"},
     "ClockBlock": {"facing"},
+    "PidsBlock": {"facing", "left", "right", "up", "down"},
+    "SpeakerBlock": {"facing"},
 }
 
 problems = []

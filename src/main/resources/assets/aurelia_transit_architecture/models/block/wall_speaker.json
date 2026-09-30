@@ -1,0 +1,147 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/speaker_body",
+    "body": "aurelia_transit_architecture:block/speaker_body",
+    "grille": "aurelia_transit_architecture:block/speaker_grille"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        4,
+        14
+      ],
+      "to": [
+        12,
+        12,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            2
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            4,
+            14,
+            12,
+            16.0
+          ],
+          "texture": "#body"
+        },
+        "north": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#body",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            14,
+            4,
+            16.0,
+            12
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            4,
+            2,
+            12
+          ],
+          "texture": "#body"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        4.5,
+        13
+      ],
+      "to": [
+        11.5,
+        11.5,
+        14
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            2,
+            11.5,
+            3
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            13,
+            11.5,
+            14
+          ],
+          "texture": "#body"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            4.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#grille"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            4.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#body"
+        },
+        "west": {
+          "uv": [
+            13,
+            4.5,
+            14,
+            11.5
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            2,
+            4.5,
+            3,
+            11.5
+          ],
+          "texture": "#body"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "live.chime.info": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:live/chime_info",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.aurelia_transit_architecture.live.chime.info"
+  },
+  "live.chime.alert": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:live/chime_alert",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.aurelia_transit_architecture.live.chime.alert"
+  },
+  "live.chime.delay": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:live/chime_delay",
+        "stream": false
+      }
+    ],
+    "subtitle": "subtitles.aurelia_transit_architecture.live.chime.delay"
+  }
+}
