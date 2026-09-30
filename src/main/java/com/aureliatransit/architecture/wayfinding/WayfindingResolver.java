@@ -1,13 +1,28 @@
 package com.aureliatransit.architecture.wayfinding;
 
+import com.aureliatransit.architecture.text.TextSanitizer;
+
 import java.util.List;
+import java.util.Locale;
 
 /**
- * Merges manual configuration with MTR facts. Rule: a non-empty manual value always wins; an {@code auto*} flag lets
- * MTR fill an empty field; nothing else is filled in.
+ * Merges manual configuration with MTR facts. Pure and deterministic: equal input gives an equal
+ * {@link ResolvedWayfinding}, so renderers can cache layouts keyed by it.
  *
- * <p>LEAD STUB - owned by the wayfinding-logic workstream (subagent A), which refines service texts, exit matching and
- * tests. Keep the signature.
+ * <p>Rules (nothing is ever invented):
+ * <ul>
+ *     <li>A non-empty manual value always wins.</li>
+ *     <li>{@code autoStation} lets MTR fill an empty station name; with a second-language layout selected and no manual
+ *     secondary name, the second "|" segment of MTR's own multilingual station name fills the secondary name (it is
+ *     MTR data, not a guess; single-language names leave it empty).</li>
+ *     <li>{@code autoLines} lets MTR fill an empty line list.</li>
+ *     <li>The exit destinations are MTR's destinations of the exit whose label equals the configured exit label
+ *     (case-insensitive, surrounding whitespace ignored). No configured exit, or no matching exit, gives none.</li>
+ *     <li>Service text: "Local" / "Express" / "Limited" for those types, the custom label for CUSTOM (empty label, empty
+ *     text), nothing for NONE. MTR has no stopping-pattern data, so the service type is manual only.</li>
+ *     <li>Station code, platform, street label, transfers, destination, arrow, pictogram, accent and language layout are
+ *     manual only.</li>
+ * </ul>
  */
 public final class WayfindingResolver {
 
@@ -15,27 +30,58 @@ public final class WayfindingResolver {
 	}
 
 	public static ResolvedWayfinding merge(WayfindingData data, StationFacts facts) {
-		final boolean mtrName = data.stationName().isEmpty() && data.autoStation() && facts.station() != null;
-		final String name = mtrName ? facts.station().displayName() : data.stationName();
-		final List<LineBadge> lines = data.lines().isEmpty() && data.autoLines() ? facts.lines() : data.lines();
-		final String service = switch (data.serviceType()) {
+		final boolean mtrName = data.stationName().isEmpty() && data.autoStation() && facts.station() != null && !facts.station().displayName().isEmpty();
+		final String name = mtrName ? TextSanitizer.sanitize(facts.station().displayName(), WayfindingData.MAX_NAME) : data.stationName();
+		String secondary = data.secondaryName();
+		if (secondary.isEmpty() && mtrName && data.languageLayout() != LanguageLayout.SINGLE) {
+			secondary = mtrSecondary(facts.station().rawName(), facts.station().displayName());
+		}
+		final List<LineBadge> lines = data.lines().isEmpty() && data.autoLines() ? bounded(facts.lines()) : data.lines();
+		return new ResolvedWayfinding(name, secondary, data.stationCode(), lines, data.arrow(), data.destination(), data.serviceType(),
+				serviceText(data), data.platform(), data.exitLabel(), exitDestinations(data.exitLabel(), facts.exits()), data.streetLabel(), data.transfers(),
+				data.languageLayout(), data.pictogram(), data.accent(), mtrName);
+	}
+
+	static String serviceText(WayfindingData data) {
+		return switch (data.serviceType()) {
 			case NONE -> "";
 			case LOCAL -> "Local";
 			case EXPRESS -> "Express";
 			case LIMITED -> "Limited";
 			case CUSTOM -> data.serviceLabel();
 		};
-		List<String> exitDestinations = List.of();
-		if (!data.exitLabel().isEmpty()) {
-			for (final ExitInfo exit : facts.exits()) {
-				if (exit.label().equalsIgnoreCase(data.exitLabel())) {
-					exitDestinations = exit.destinations();
-					break;
-				}
+	}
+
+	static List<String> exitDestinations(String exitLabel, List<ExitInfo> exits) {
+		final String wanted = exitLabel.trim().toLowerCase(Locale.ROOT);
+		if (wanted.isEmpty()) {
+			return List.of();
+		}
+		for (final ExitInfo exit : exits) {
+			if (exit.label().trim().toLowerCase(Locale.ROOT).equals(wanted)) {
+				return exit.destinations();
 			}
 		}
-		return new ResolvedWayfinding(name, data.secondaryName(), data.stationCode(), lines, data.arrow(), data.destination(), data.serviceType(), service,
-				data.platform(), data.exitLabel(), exitDestinations, data.streetLabel(), data.transfers(), data.languageLayout(), data.pictogram(),
-				data.accent(), mtrName);
+		return List.of();
+	}
+
+	/**
+	 * The first non-blank segment of a "a|b|c" multilingual MTR name that differs from the displayed one.
+	 */
+	static String mtrSecondary(String rawName, String display) {
+		if (rawName == null || rawName.indexOf('|') < 0) {
+			return "";
+		}
+		for (final String segment : rawName.split("\\|")) {
+			final String text = TextSanitizer.sanitize(segment, WayfindingData.MAX_NAME);
+			if (!text.isEmpty() && !text.equals(display)) {
+				return text;
+			}
+		}
+		return "";
+	}
+
+	private static List<LineBadge> bounded(List<LineBadge> lines) {
+		return lines.size() > WayfindingData.MAX_LINES ? lines.subList(0, WayfindingData.MAX_LINES) : lines;
 	}
 }
