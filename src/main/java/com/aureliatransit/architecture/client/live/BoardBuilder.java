@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.client.live;
 
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
 import com.aureliatransit.architecture.live.DisplayConfig;
 import com.aureliatransit.architecture.live.DisplayKind;
 import com.aureliatransit.architecture.live.DisplayStyle;
@@ -9,6 +10,7 @@ import com.aureliatransit.architecture.live.display.Marquee;
 import com.aureliatransit.architecture.live.display.Pagination;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
+import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import net.minecraft.client.font.TextRenderer;
 
 import java.util.ArrayList;
@@ -27,6 +29,8 @@ final class BoardBuilder {
 	private static final long MARQUEE_HOLD_MILLIS = 1500;
 	/** Approximate average glyph advance in font units, used to budget characters of calling-at pages. */
 	private static final float AVG_CHAR = 5.2F;
+	/** Height (virtual units) of the service-message strip at the bottom of a board, reserved only while a message exists. */
+	private static final float MESSAGE_STRIP_H = 10F;
 
 	private BoardBuilder() {
 	}
@@ -47,7 +51,10 @@ final class BoardBuilder {
 		final float rowH = mainH + subH;
 		final float headerH = header ? 11 : 0;
 		final int rows = config.rows();
-		final float contentH = headerH + rows * rowH + 1.5F;
+		// service message (local > station > network): its strip height is part of the content so rows never overlap it
+		final ServiceMessage message = ClientServiceMessages.select(config.message(), snapshot.station() == null ? "" : snapshot.station().displayName());
+		final float stripH = message.isEmpty() ? 0 : MESSAGE_STRIP_H;
+		final float contentH = headerH + rows * rowH + 1.5F + stripH;
 
 		final float boardW = widthBlocks - 2 * FRAME;
 		final float boardH = heightBlocks - 2 * FRAME - topInsetPixels / 16F;
@@ -84,6 +91,7 @@ final class BoardBuilder {
 		}
 
 		final float rowsTop = y0 + headerH;
+		messageStrip(m, tr, message, vw, vh, style, now);
 		if (services.isEmpty()) {
 			idle(m, tr, kind, snapshot, stationName, rowsTop, rows * rowH, vw, style, k, now);
 			return;
@@ -162,6 +170,39 @@ final class BoardBuilder {
 				subLine(m, tr, s, delay, destX, top + mainH - 0.5F, destEnd + statusWidth + 4 - destX, style, config.pageSeconds(), now);
 			}
 		}
+	}
+
+	/**
+	 * The service-message strip along the bottom edge of the board ({@code vw} x {@link #MESSAGE_STRIP_H}); nothing when
+	 * there is no message. The caller has already included {@link #MESSAGE_STRIP_H} in the content height, so rows end
+	 * above the strip. Long text is squeezed, then scrolled through {@link #fit}, so the model only rebuilds at the
+	 * existing marquee cadence.
+	 */
+	private static void messageStrip(BoardModel m, TextRenderer tr, ServiceMessage message, float vw, float vh, DisplayStyle style, long now) {
+		if (message.isEmpty()) {
+			return;
+		}
+		final int band;
+		final int color;
+		switch (message.severity()) {
+			case WARNING -> {
+				band = 0xFF3A2A00;
+				color = 0xFFFFC640;
+			}
+			case DISRUPTION -> {
+				band = 0xFF8E1B16;
+				color = 0xFFFFFFFF;
+			}
+			default -> {
+				band = style.header();
+				color = style.accent();
+			}
+		}
+		final float top = vh - MESSAGE_STRIP_H;
+		m.rect(0, top, vw, MESSAGE_STRIP_H, band, BoardModel.LAYER_BAND);
+		final String text = message.severity() == com.aureliatransit.architecture.wayfinding.MessageSeverity.INFO ? message.text() : "! " + message.text();
+		final float k = 0.85F;
+		fit(m, tr, text, MARGIN, top + (MESSAGE_STRIP_H - 8 * k) / 2 + 0.3F, k, vw - 2 * MARGIN, color, now);
 	}
 
 	private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, long nearestPlatformId, long now) {

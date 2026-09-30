@@ -7,6 +7,7 @@ import com.aureliatransit.architecture.live.LiveSystems;
 import com.aureliatransit.architecture.live.PidsBlockEntity;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
@@ -80,6 +81,12 @@ final class PidsScreen extends LiveConfigScreen {
 			button.setMessage(pageText());
 		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
 		buildAssociationWidgets();
+		// local service message (1.2): shown in a strip on this display, overriding station and network messages
+		final TextFieldWidget messageField = add(new TextFieldWidget(textRenderer, x, y + 24, COLUMN_WIDTH, 18, Text.literal("Message")));
+		messageField.setMaxLength(DisplayConfig.MAX_MESSAGE);
+		messageField.setPlaceholder(Text.literal("Service message (optional)"));
+		messageField.setText(message);
+		messageField.setChangedListener(text -> message = text);
 		addDone();
 	}
 
