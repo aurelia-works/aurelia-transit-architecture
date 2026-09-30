@@ -1,7 +1,7 @@
 package com.aureliatransit.architecture.client.wayfinding;
 
-import com.aureliatransit.architecture.live.cache.ServiceOrder;
 import com.aureliatransit.architecture.live.display.DepartureText;
+import com.aureliatransit.architecture.terminal.TerminalDepartures;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 
@@ -9,8 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The departures the terminal shows. Same rule as a station-wide PIDS: services that have not left yet, in the one
- * {@link ServiceOrder}. PENDING INTEGRATION: replace {@link #select} by {@code TerminalDepartures.select} once it lands.
+ * The departures the terminal shows (the shared {@link TerminalDepartures} rule, identical to a station-wide PIDS) and
+ * their display rows.
  */
 public final class TerminalFeed {
 
@@ -21,15 +21,11 @@ public final class TerminalFeed {
 	private TerminalFeed() {
 	}
 
+	/**
+	 * The terminal's departures: exactly {@link TerminalDepartures#select}, the station-wide PIDS rule.
+	 */
 	public static List<ServiceSnapshot> select(StationSnapshot snapshot, long nowMillis, int max) {
-		final List<ServiceSnapshot> out = new ArrayList<>();
-		for (final ServiceSnapshot s : snapshot.services()) {
-			if (s.departureMillis() >= nowMillis) {
-				out.add(s);
-			}
-		}
-		out.sort(ServiceOrder.COMPARATOR);
-		return out.size() > max ? new ArrayList<>(out.subList(0, Math.max(0, max))) : out;
+		return TerminalDepartures.select(snapshot, nowMillis, max);
 	}
 
 	public static List<Row> rows(List<ServiceSnapshot> services, long nowMillis) {
