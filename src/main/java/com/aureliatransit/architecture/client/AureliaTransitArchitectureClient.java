@@ -4,13 +4,11 @@ import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.client.interactive.InteractiveClient;
 import com.aureliatransit.architecture.client.live.LiveClient;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
-import com.aureliatransit.architecture.registry.ModBlockEntities;
 import com.aureliatransit.architecture.registry.ModBlocks;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
 
 public final class AureliaTransitArchitectureClient implements ClientModInitializer {
 
@@ -26,8 +24,6 @@ public final class AureliaTransitArchitectureClient implements ClientModInitiali
 				}
 			}
 		}
-
-		BlockEntityRendererFactories.register(ModBlockEntities.TEXT_SIGN, TextSignBlockEntityRenderer::new);
 
 		TextSignBlock.openEditor = pos -> {
 			final MinecraftClient client = MinecraftClient.getInstance();
