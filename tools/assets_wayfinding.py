@@ -118,6 +118,15 @@ def textures():
         "...##..",
     ], 5, 3, WHITE)
     t["wf_help_face"] = help_face
+
+    # Terminal screen: dark glass with faint scanlines and a teal top edge.
+    screen = g.noisy((16, 19, 24), 2, "wf_terminal_screen")
+    for y in range(1, 16, 2):
+        g.rect(screen, 0, y, 16, y + 1, (20, 24, 30))
+    g.rect(screen, 0, 0, 16, 1, (79, 184, 176))
+    border(screen, (40, 46, 54))
+    g.rect(screen, 0, 0, 16, 1, (79, 184, 176))
+    t["wf_terminal_screen"] = screen
     return t
 
 
@@ -226,8 +235,28 @@ def epaper(left, right):
     return g.model({"particle": "steel_dark", "frame": "steel_dark", "paper": "wf_epaper"}, els)
 
 
+def terminal(left, right):
+    x1 = 0 if left else 0.75
+    x2 = 16 if right else 15.25
+    return g.model({"particle": "steel_dark", "body": "steel_dark", "screen": "wf_terminal_screen"}, [
+        g.el([0, 1, 12], [16, 15, 16], "#body"),
+        g.el([x1, 2, 11.9], [x2, 14, 12], None, faces={"north": "#screen"}),
+    ])
+
+
+def kiosk():
+    return g.model({"particle": "steel_dark", "body": "steel_dark", "trim": "steel", "screen": "wf_terminal_screen"}, [
+        g.el([2, 0, 5], [14, 2, 12], "#trim"),
+        g.el([3, 2, 6], [13, 16, 11], "#body"),
+        g.el([3.5, 6, 5.9], [12.5, 14, 6], None, faces={"north": "#screen"}),
+        g.el([5, 3, 5.8], [11, 4.5, 6], "#trim", faces={"north": "#trim"}),
+    ])
+
+
 def blocks():
     b = {}
+    b["passenger_info_terminal"] = ("sign", joined(terminal))
+    b["passenger_info_kiosk"] = ("facing", {"": kiosk()})
     b["entrance_pylon"] = ("facing", {"": pylon(False), "_upper": pylon(True)})
     b["wall_wayfinding_sign"] = ("sign", joined(wall_sign))
     b["hanging_wayfinding_sign"] = ("sign", joined(hanging_sign("sign_charcoal", 4, 12)))
@@ -253,6 +282,8 @@ def names():
         "help_point": "Help Point",
         "boarding_marker": "Boarding Marker",
         "bus_epaper_board": "Bus E-Paper Board",
+        "passenger_info_terminal": "Passenger Information Terminal",
+        "passenger_info_kiosk": "Passenger Information Kiosk",
     }
 
 
@@ -299,7 +330,15 @@ def lang():
         KEY + "wf_service.limited": "Limited",
         KEY + "wf_service.custom": "Custom",
         KEY + "wf_symbol": "Symbol: %s",
+        TIP + "wf_terminal": "Right-click to use: departures, system map, station, service and accessibility information",
+        TIP + "wf_terminal_edit": "Sneak + right-click with an empty hand to edit name, code, lines and notes",
+        KEY + "term_title": "Passenger Information",
+        KEY + "term_next": "Next departures",
+        KEY + "term_no_map": "No system map available",
     }
+    for tab, title in (("home", "Home"), ("departures", "Departures"), ("map", "System map"), ("station", "Station"),
+                       ("service", "Service info"), ("accessibility", "Accessibility")):
+        lg[KEY + "term_tab." + tab] = title
     for name in PICTOGRAMS:
         lg[KEY + "wf_pictogram." + name] = "none" if name == "none" else name.replace("_", " ").capitalize()
     return lg
@@ -322,6 +361,8 @@ def recipes():
     shapeless("tactile_guidance_paving", [f"{MOD}:tactile_warning_paving", "minecraft:iron_nugget"])
     shapeless("help_point", ["minecraft:iron_ingot", "minecraft:blue_dye", "minecraft:redstone", "minecraft:glowstone_dust", "minecraft:glass_pane"])
     shapeless("boarding_marker", ["minecraft:iron_nugget", "minecraft:yellow_dye", "minecraft:black_dye"], 4)
+    shapeless("passenger_info_terminal", ["minecraft:iron_ingot", "minecraft:iron_ingot", "minecraft:glass_pane", "minecraft:redstone", "minecraft:glowstone_dust"])
+    shapeless("passenger_info_kiosk", [f"{MOD}:passenger_info_terminal", "minecraft:iron_ingot"])
     shapeless("bus_epaper_board", ["minecraft:iron_ingot", "minecraft:glass_pane", "minecraft:paper", "minecraft:redstone"])
     return r
 

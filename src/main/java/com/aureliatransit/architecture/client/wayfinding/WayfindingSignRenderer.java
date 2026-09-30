@@ -139,6 +139,8 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 			if (dirty || !cached.built || EPaperLayout.due(now, cached.nextRefreshMillis)) {
 				rebuildEPaper(cached, entity.getPos(), spec, now);
 			}
+		} else if (dirty && spec.kind() == WayfindingPanelKind.TERMINAL) {
+			cached.panel = TerminalFace.layout(cached.resolved, spec.panelWidth(cached.rowLength), spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
 		} else if (dirty) {
 			final float w = spec.panelWidth(cached.rowLength);
 			cached.panel = WayfindingLayout.layout(cached.resolved, spec.kind(), w, spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));

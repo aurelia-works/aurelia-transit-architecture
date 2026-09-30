@@ -39,6 +39,8 @@
   "block.aurelia_transit_architecture.help_point": "Help Point",
   "block.aurelia_transit_architecture.information_case": "Information Case",
   "block.aurelia_transit_architecture.information_pillar": "Information Pillar",
+  "block.aurelia_transit_architecture.passenger_info_kiosk": "Passenger Information Kiosk",
+  "block.aurelia_transit_architecture.passenger_info_terminal": "Passenger Information Terminal",
   "block.aurelia_transit_architecture.pictogram_sign": "Pictogram Sign",
   "block.aurelia_transit_architecture.platform_cis": "Platform CIS Board",
   "block.aurelia_transit_architecture.platform_edge": "Platform Edge",
@@ -128,6 +130,15 @@
   "screen.aurelia_transit_architecture.platform": "No.",
   "screen.aurelia_transit_architecture.route": "Route",
   "screen.aurelia_transit_architecture.secondary": "Second line",
+  "screen.aurelia_transit_architecture.term_next": "Next departures",
+  "screen.aurelia_transit_architecture.term_no_map": "No system map available",
+  "screen.aurelia_transit_architecture.term_tab.accessibility": "Accessibility",
+  "screen.aurelia_transit_architecture.term_tab.departures": "Departures",
+  "screen.aurelia_transit_architecture.term_tab.home": "Home",
+  "screen.aurelia_transit_architecture.term_tab.map": "System map",
+  "screen.aurelia_transit_architecture.term_tab.service": "Service info",
+  "screen.aurelia_transit_architecture.term_tab.station": "Station",
+  "screen.aurelia_transit_architecture.term_title": "Passenger Information",
   "screen.aurelia_transit_architecture.wf_badge": "Line",
   "screen.aurelia_transit_architecture.wf_caption": "Caption",
   "screen.aurelia_transit_architecture.wf_code": "Station code",
@@ -190,5 +201,7 @@
   "tooltip.aurelia_transit_architecture.wf_guidance": "Guidance lines run the way you are looking; counts as platform surface for MTR doors",
   "tooltip.aurelia_transit_architecture.wf_help": "Right-click for a reminder of where to get help",
   "tooltip.aurelia_transit_architecture.wf_marker": "Right-click to switch between door, accessible and wait marker",
-  "tooltip.aurelia_transit_architecture.wf_tall": "Two blocks tall; needs a free block above"
+  "tooltip.aurelia_transit_architecture.wf_tall": "Two blocks tall; needs a free block above",
+  "tooltip.aurelia_transit_architecture.wf_terminal": "Right-click to use: departures, system map, station, service and accessibility information",
+  "tooltip.aurelia_transit_architecture.wf_terminal_edit": "Sneak + right-click with an empty hand to edit name, code, lines and notes"
 }
