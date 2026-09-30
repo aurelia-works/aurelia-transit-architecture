@@ -7,6 +7,8 @@ import com.aureliatransit.architecture.block.entity.InfoDisplayBlockEntity;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.text.ConfigurableTextData;
 import com.aureliatransit.architecture.text.SignData;
+import com.aureliatransit.architecture.wayfinding.WayfindingData;
+import com.aureliatransit.architecture.wayfinding.WayfindingEditable;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.block.BlockState;
@@ -25,6 +27,7 @@ public final class ModPackets {
 
 	public static final Identifier UPDATE_SIGN = AureliaTransitArchitecture.id("update_sign");
 	public static final Identifier UPDATE_INFO_TEXT = AureliaTransitArchitecture.id("update_info_text");
+	public static final Identifier UPDATE_WAYFINDING = AureliaTransitArchitecture.id("update_wayfinding");
 
 	private ModPackets() {
 	}
@@ -43,7 +46,30 @@ public final class ModPackets {
 		return buf;
 	}
 
+	public static PacketByteBuf writeWayfinding(BlockPos pos, WayfindingData data) {
+		final PacketByteBuf buf = PacketByteBufs.create();
+		buf.writeBlockPos(pos);
+		data.write(buf);
+		return buf;
+	}
+
 	public static void registerServerReceivers() {
+		ServerPlayNetworking.registerGlobalReceiver(UPDATE_WAYFINDING, (server, player, handler, buf, responseSender) -> {
+			final BlockPos pos;
+			final WayfindingData data;
+			try {
+				pos = buf.readBlockPos();
+				data = WayfindingData.read(buf);
+			} catch (RuntimeException e) {
+				return;
+			}
+			server.execute(() -> {
+				final ServerWorld world = player.getServerWorld();
+				if (world.isChunkLoaded(pos) && EditValidation.canEdit(player, pos) && world.getBlockEntity(pos) instanceof WayfindingEditable editable) {
+					editable.setWayfinding(data);
+				}
+			});
+		});
 		ServerPlayNetworking.registerGlobalReceiver(UPDATE_SIGN, (server, player, handler, buf, responseSender) -> {
 			final BlockPos pos = buf.readBlockPos();
 			final SignData data;

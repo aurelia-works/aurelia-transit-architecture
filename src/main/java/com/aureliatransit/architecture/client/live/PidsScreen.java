@@ -24,6 +24,8 @@ final class PidsScreen extends LiveConfigScreen {
 	private boolean clock;
 	private boolean callingAt;
 	private int pageSeconds;
+	private com.aureliatransit.architecture.live.BoardAlignment alignment;
+	private String message;
 
 	PidsScreen(BlockPos pos, PidsBlockEntity display) {
 		super(tr("live_display_title"), pos, display.config().association());
@@ -35,6 +37,8 @@ final class PidsScreen extends LiveConfigScreen {
 		this.clock = config.clock();
 		this.callingAt = config.callingAt();
 		this.pageSeconds = config.pageSeconds();
+		this.alignment = config.alignment();
+		this.message = config.message();
 	}
 
 	@Override
@@ -102,7 +106,7 @@ final class PidsScreen extends LiveConfigScreen {
 
 	@Override
 	protected void save() {
-		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds);
+		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds, alignment, message);
 		if (!config.equals(display.config())) {
 			ClientPlayNetworking.send(LiveSystems.UPDATE_DISPLAY, LiveSystems.writeDisplayUpdate(pos, config));
 		}

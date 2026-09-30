@@ -737,7 +737,10 @@ NAMES = {
 }
 
 EXTRA_LANG = {
-    f"itemGroup.{MOD}.main": "Aurelia Transit Architecture",
+    f"itemGroup.{MOD}.main": "ATA Architecture",
+    f"itemGroup.{MOD}.wayfinding": "ATA Wayfinding",
+    f"itemGroup.{MOD}.passenger_equipment": "ATA Passenger Equipment",
+    f"itemGroup.{MOD}.bus_street": "ATA Bus / Street Transit",
     f"screen.{MOD}.edit_sign": "Edit Sign Text",
     f"screen.{MOD}.line": "Line %s",
     f"tooltip.{MOD}.editable": "Right-click with an empty hand to edit the text",
@@ -858,7 +861,7 @@ def icon():
     return img
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding")
 
 
 def load_extensions():

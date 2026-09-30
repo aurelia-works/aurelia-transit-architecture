@@ -20,7 +20,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java")
 
 EXPECTED_PROPERTIES = {
     "Block": set(),
@@ -131,7 +131,7 @@ def main():
         if f"{MOD}:{block_id}" not in tag["values"]:
             problem(f"{block_id}: not in mineable/pickaxe tag")
 
-    for key in (f"itemGroup.{MOD}.main",):
+    for key in (f"itemGroup.{MOD}.main", f"itemGroup.{MOD}.wayfinding", f"itemGroup.{MOD}.passenger_equipment", f"itemGroup.{MOD}.bus_street"):
         if key not in lang:
             problem(f"missing lang key {key}")
     java_tooltips = set(re.findall(r'TIP \+ "([a-z_]+)"', "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())))

@@ -9,6 +9,8 @@ import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
 import com.aureliatransit.architecture.registry.ModBlocks;
 import com.aureliatransit.architecture.registry.ModItemGroups;
+import com.aureliatransit.architecture.registry.WayfindingBlocks;
+import com.aureliatransit.architecture.wayfinding.WayfindingSystems;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
@@ -28,11 +30,13 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		ModBlocks.init();
 		LiveBlocks.init();
 		InteractiveBlocks.init();
+		WayfindingBlocks.init();
 		ModBlockEntities.init();
 		ModItemGroups.init();
 		ModPackets.registerServerReceivers();
 		LiveSystems.init();
 		InteractiveSystems.init();
+		WayfindingSystems.init();
 		LOGGER.info("Registered {} Aurelia Transit Architecture blocks (MTR platform door contract: {})", ModBlocks.entries().size(),
 				MtrPlatformContract.available() ? "enabled" : "unavailable");
 	}

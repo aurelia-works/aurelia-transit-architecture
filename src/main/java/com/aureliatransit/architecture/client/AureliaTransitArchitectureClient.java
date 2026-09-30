@@ -3,6 +3,8 @@ package com.aureliatransit.architecture.client;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.client.interactive.InteractiveClient;
 import com.aureliatransit.architecture.client.live.LiveClient;
+import com.aureliatransit.architecture.client.wayfinding.WayfindingClient;
+import com.aureliatransit.architecture.client.wayfinding.WayfindingLogicClient;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.registry.ModBlocks;
 import net.fabricmc.api.ClientModInitializer;
@@ -16,6 +18,8 @@ public final class AureliaTransitArchitectureClient implements ClientModInitiali
 	public void onInitializeClient() {
 		LiveClient.init();
 		InteractiveClient.init();
+		WayfindingLogicClient.init();
+		WayfindingClient.init();
 		for (final ModBlocks.Entry entry : ModBlocks.entries()) {
 			switch (entry.renderKind()) {
 				case CUTOUT -> BlockRenderLayerMap.INSTANCE.putBlock(entry.block(), RenderLayer.getCutout());
