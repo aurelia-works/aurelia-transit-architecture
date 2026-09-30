@@ -57,8 +57,10 @@ def load(path):
 def registered_blocks():
     source = "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())
     # Workstreams add their block classes to EXPECTED_PROPERTIES below.
-    pattern = re.compile(r'register\("([a-z0-9_]+)",\s*BlockFamily\.(\w+),\s*RenderKind\.(\w+),\s*new (\w+)\(')
-    return [(m.group(1), m.group(2), m.group(3), m.group(4)) for m in pattern.finditer(source)]
+    # MtrPlatformContract factories build the same block classes, optionally carrying MTR's platform marker.
+    pattern = re.compile(r'register\("([a-z0-9_]+)",\s*BlockFamily\.(\w+),\s*RenderKind\.(\w+),\s*(?:new (\w+)|MtrPlatformContract\.(\w+))\(')
+    contract = {"surface": "Block", "edge": "FacingShapedBlock"}
+    return [(m.group(1), m.group(2), m.group(3), m.group(4) or contract[m.group(5)]) for m in pattern.finditer(source)]
 
 
 def check_model(ref, seen):

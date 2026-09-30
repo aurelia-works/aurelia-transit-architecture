@@ -12,6 +12,7 @@ import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.ShapedBlock;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.TextSignBlock;
+import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
 import com.aureliatransit.architecture.text.SignStyle;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -69,17 +70,18 @@ public final class ModBlocks {
 	private static final VoxelShape SHELTER_SEAT_COLLISION = box(0, 6.5, 0, 16, 8, 7.5);
 
 	// ---- Platforms -------------------------------------------------------------------------------------------------
+	// Flat walkable surfaces and edges carry MTR's platform marker so train doors open beside them (ramps do not).
 
 	public static final Block PLATFORM_PAVING_LIGHT = register("platform_paving_light", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new Block(paving(MapColor.STONE_GRAY)));
+			MtrPlatformContract.surface(paving(MapColor.STONE_GRAY)));
 	public static final Block PLATFORM_PAVING_DARK = register("platform_paving_dark", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new Block(paving(MapColor.DEEPSLATE_GRAY)));
+			MtrPlatformContract.surface(paving(MapColor.DEEPSLATE_GRAY)));
 	public static final Block TACTILE_WARNING_PAVING = register("tactile_warning_paving", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new Block(paving(MapColor.YELLOW)));
+			MtrPlatformContract.surface(paving(MapColor.YELLOW)));
 	public static final Block PLATFORM_EDGE = register("platform_edge", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new FacingShapedBlock(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
+			MtrPlatformContract.edge(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
 	public static final Block PLATFORM_EDGE_WARNING = register("platform_edge_warning", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new FacingShapedBlock(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
+			MtrPlatformContract.edge(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
 	public static final Block PLATFORM_RAMP_LOWER = register("platform_ramp_lower", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			new FacingShapedBlock(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER,
 					profile(SLOPE_LOWER, 0, true, 4)), TIP_SLOPE);

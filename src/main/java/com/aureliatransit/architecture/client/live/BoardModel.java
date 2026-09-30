@@ -9,6 +9,15 @@ import java.util.Arrays;
  */
 final class BoardModel {
 
+	/**
+	 * Depth layers of rectangles. Overlapping rectangles must not share a plane: coplanar quads z-fight, which showed as
+	 * route chips and row bands flickering against the background as the camera moved.
+	 */
+	static final int LAYER_BACKGROUND = 0;
+	static final int LAYER_BAND = 1;
+	static final int LAYER_CHIP = 2;
+	static final int LAYERS = 3;
+
 	/** Blocks per virtual unit. */
 	float scale;
 	/** Virtual width and height of the screen area. */
@@ -23,6 +32,7 @@ final class BoardModel {
 	float[] rw = new float[32];
 	float[] rh = new float[32];
 	int[] rc = new int[32];
+	int[] rl = new int[32];
 
 	int textCount;
 	String[] ts = new String[32];
@@ -39,7 +49,7 @@ final class BoardModel {
 		Arrays.fill(ts, null);
 	}
 
-	void rect(float x, float y, float w, float h, int argb) {
+	void rect(float x, float y, float w, float h, int argb, int layer) {
 		if (rectCount == rx.length) {
 			final int n = rectCount * 2;
 			rx = Arrays.copyOf(rx, n);
@@ -47,12 +57,14 @@ final class BoardModel {
 			rw = Arrays.copyOf(rw, n);
 			rh = Arrays.copyOf(rh, n);
 			rc = Arrays.copyOf(rc, n);
+			rl = Arrays.copyOf(rl, n);
 		}
 		rx[rectCount] = x;
 		ry[rectCount] = y;
 		rw[rectCount] = w;
 		rh[rectCount] = h;
 		rc[rectCount] = argb;
+		rl[rectCount] = layer;
 		rectCount++;
 	}
 

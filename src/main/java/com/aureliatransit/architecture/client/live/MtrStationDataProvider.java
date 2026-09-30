@@ -2,6 +2,9 @@ package com.aureliatransit.architecture.client.live;
 
 import com.aureliatransit.architecture.live.LiveDebug;
 import com.aureliatransit.architecture.live.NearestPlatformProvider;
+import com.aureliatransit.architecture.live.cache.HeldServices;
+import com.aureliatransit.architecture.live.cache.ServerClockOffset;
+import com.aureliatransit.architecture.live.cache.ServiceOrder;
 import com.aureliatransit.architecture.live.cache.SnapshotVersions;
 import com.aureliatransit.architecture.live.cache.TimedLruCache;
 import com.aureliatransit.architecture.transit.PlatformReference;
@@ -40,7 +43,8 @@ import java.util.function.LongSupplier;
  *     MTR's linear station/platform scans, so it is refreshed only every {@value #RESOLVE_MILLIS} ms;</li>
  *     <li><b>services</b> per platform-id set: built from {@code ArrivalsCacheClient.requestArrivals}, shared by every
  *     display and speaker of the same platforms, refreshed every {@value #REFRESH_MILLIS} ms (which also keeps the
- *     platforms in MTR's poll set). Never consulted for {@code withServices == false}.</li>
+ *     platforms in MTR's poll set). A refresh that briefly returns nothing keeps the not-yet-departed previous
+ *     services for a short grace period ({@link HeldServices}). Never consulted for {@code withServices == false}.</li>
  * </ol>
  */
 public final class MtrStationDataProvider implements StationDataProvider, NearestPlatformProvider {
@@ -75,7 +79,8 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	private final SnapshotVersions versions = new SnapshotVersions();
 	private final TimedLruCache<SnapshotKey, StationSnapshot> snapshots;
 	private final TimedLruCache<ResolutionKey, Resolution> resolutions;
-	private final TimedLruCache<ServiceKey, List<ServiceSnapshot>> services;
+	private final TimedLruCache<ServiceKey, HeldServices> services;
+	private final ServerClockOffset serverOffset = new ServerClockOffset();
 
 	private List<StationReference> stationList = List.of();
 	private long stationListAt = Long.MIN_VALUE;
@@ -98,7 +103,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 			LiveDebug.count(LiveDebug.Counter.PROVIDER_REFRESH);
 			final Resolution resolution = resolution(pos, association);
 			final List<ServiceSnapshot> list = withServices && !resolution.platformIds().isEmpty()
-					? services.get(new ServiceKey(resolution.platformIds()), (serviceKey, old) -> buildServices(serviceKey.platformIds()))
+					? services.get(new ServiceKey(resolution.platformIds()), (serviceKey, old) -> HeldServices.next(old, buildServices(serviceKey.platformIds()), clock.getAsLong())).services()
 					: List.of();
 			return versions.stabilize(previous, resolution.station(), resolution.platforms(), list);
 		});
@@ -225,14 +230,14 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 		}
 		LiveDebug.count(LiveDebug.Counter.ARRIVAL_REQUESTS);
 		final ObjectArrayList<ArrivalResponse> arrivals = ArrivalsCacheClient.INSTANCE.requestArrivals(ids);
-		final long offset = ArrivalsCacheClient.INSTANCE.getMillisOffset();
+		final long offset = serverOffset.stabilize(ArrivalsCacheClient.INSTANCE.getMillisOffset());
 		final long now = clock.getAsLong();
 		final MinecraftClientData data = MinecraftClientData.getInstance();
 		final List<ServiceSnapshot> out = new ArrayList<>(arrivals.size());
 		for (final ArrivalResponse arrival : arrivals) {
-			// to local client time, quantised to whole seconds so sub-second jitter does not change snapshot versions
-			final long arrivalMillis = (arrival.getArrival() - offset) / 1000 * 1000;
-			final long departureMillis = (arrival.getDeparture() - offset) / 1000 * 1000;
+			// to local client time with a held offset, quantised to whole seconds, so jitter does not change snapshot content
+			final long arrivalMillis = ServerClockOffset.toLocalSecond(arrival.getArrival(), offset);
+			final long departureMillis = ServerClockOffset.toLocalSecond(arrival.getDeparture(), offset);
 			if (departureMillis < now - 1_000) {
 				continue;
 			}
@@ -251,7 +256,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 					arrival.getIsTerminating(),
 					callingAt(data, arrival)));
 		}
-		out.sort(Comparator.comparingLong(ServiceSnapshot::arrivalMillis));
+		out.sort(ServiceOrder.COMPARATOR);
 		return out.size() > StationSnapshot.MAX_SERVICES ? List.copyOf(out.subList(0, StationSnapshot.MAX_SERVICES)) : List.copyOf(out);
 	}
 
@@ -292,6 +297,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 		snapshots.clear();
 		resolutions.clear();
 		services.clear();
+		serverOffset.reset();
 		stationList = List.of();
 		stationListAt = Long.MIN_VALUE;
 	}

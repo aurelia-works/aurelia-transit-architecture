@@ -5,6 +5,8 @@ import com.aureliatransit.architecture.live.LiveDebug;
 import com.aureliatransit.architecture.live.NearestPlatformProvider;
 import com.aureliatransit.architecture.live.PidsBlock;
 import com.aureliatransit.architecture.live.PidsBlockEntity;
+import com.aureliatransit.architecture.transit.StationAssociation;
+import com.aureliatransit.architecture.transit.StationAssociationMode;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationDataProvider;
 import com.aureliatransit.architecture.transit.StationSnapshot;
@@ -28,6 +30,8 @@ import net.minecraft.world.World;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 
+import java.util.List;
+
 /**
  * Draws a live display. Only the owner (top-left) block of a joined screen renders, and only if it is within range
  * and not viewed from behind. The expensive part (layout) lives in {@link BoardBuilder} and runs at most about once a
@@ -37,9 +41,14 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 
 	private static final Identifier PIXEL = AureliaTransitArchitecture.id("textures/block/live_pixel.png");
 	private static final int LIGHT = LightmapTextureManager.MAX_LIGHT_COORDINATE;
-	/** Offsets (blocks) in front of the screen surface for rectangles and text. */
-	private static final float Z_BACKGROUND = 0.0030F;
-	private static final float Z_TEXT = 0.0045F;
+	/**
+	 * Offsets (blocks) in front of the screen surface: each rectangle layer ({@link BoardModel#LAYER_BACKGROUND} ...)
+	 * sits {@link #Z_LAYER} further out, text in front of all of them. The step stays depth-resolvable at the full
+	 * {@link #RENDER_DISTANCE} with a 24-bit depth buffer (about 0.0023 blocks at 44 blocks) yet is invisible (1/16 px).
+	 */
+	private static final float Z_BACKGROUND = 0.004F;
+	private static final float Z_LAYER = 0.004F;
+	private static final float Z_TEXT = Z_BACKGROUND + BoardModel.LAYERS * Z_LAYER;
 	private static final long REBUILD_MILLIS = 1000;
 	private static final long REBUILD_MARQUEE_MILLIS = 350;
 	private static final double RENDER_DISTANCE = 44;
@@ -129,10 +138,25 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		cache.height = block.height(world, entity.getPos(), state);
 		final var config = entity.config();
 		final StationDataProvider provider = StationData.provider();
-		final StationSnapshot snapshot = provider.resolve(entity.getPos(), config.association(), true);
 		long nearest = 0;
 		if (provider instanceof NearestPlatformProvider nearestProvider && !block.kind().stationWide()) {
 			nearest = nearestProvider.nearestPlatformId(entity.getPos(), config.association());
+		}
+		StationSnapshot snapshot = null;
+		if (nearest != 0) {
+			// An AUTO platform display shows one platform. Resolving the whole station would cap the list at the
+			// station's first MAX_SERVICES departures, so this platform's trains could drop out behind other platforms'.
+			final StationSnapshot station = provider.resolve(entity.getPos(), config.association(), false);
+			if (station.station() != null && station.station().id() > 0) {
+				final StationSnapshot platform = provider.resolve(entity.getPos(),
+						new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), List.of(nearest)), true);
+				if (platform.hasStation()) {
+					snapshot = platform;
+				}
+			}
+		}
+		if (snapshot == null) {
+			snapshot = provider.resolve(entity.getPos(), config.association(), true);
 		}
 		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now, clock(world));
 		cache.nextRebuild = now + (cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
@@ -158,10 +182,9 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		final Matrix3f normal = entry.getNormalMatrix();
 
 		final VertexConsumer quads = vertexConsumers.getBuffer(RenderLayer.getEntityCutoutNoCull(PIXEL));
-		final float zBackground = Z_BACKGROUND / model.scale;
 		for (int i = 0; i < model.rectCount; i++) {
-			// all rectangles share one plane: LEQUAL depth testing lets later quads (bands, chips) draw over earlier ones
-			quad(quads, position, normal, model.rx[i], model.ry[i], model.rx[i] + model.rw[i], model.ry[i] + model.rh[i], zBackground, model.rc[i]);
+			final float z = (Z_BACKGROUND + model.rl[i] * Z_LAYER) / model.scale;
+			quad(quads, position, normal, model.rx[i], model.ry[i], model.rx[i] + model.rw[i], model.ry[i] + model.rh[i], z, model.rc[i]);
 		}
 
 		final float zText = Z_TEXT / model.scale;

@@ -58,14 +58,14 @@ final class BoardBuilder {
 		m.scale = scale;
 		m.width = vw;
 		m.height = vh;
-		m.rect(0, 0, vw, vh, style.background());
+		m.rect(0, 0, vw, vh, style.background(), BoardModel.LAYER_BACKGROUND);
 
 		final float y0 = Math.max(0, (vh - contentH) / 2);
 		final String stationName = snapshot.station() == null ? "" : snapshot.station().displayName();
 
 		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);
 		if (header) {
-			m.rect(0, y0, vw, headerH, style.header());
+			m.rect(0, y0, vw, headerH, style.header(), BoardModel.LAYER_BAND);
 			final String title = kind == DisplayKind.CONCOURSE ? (stationName.isEmpty() ? "Departures" : "Departures - " + stationName) : stationName;
 			float right = vw - MARGIN;
 			if (config.clock()) {
@@ -116,7 +116,7 @@ final class BoardBuilder {
 			final ServiceSnapshot s = services.get(i);
 			final float top = rowsTop + (i - from) * rowH;
 			if (rows > 1 && ((i - from) & 1) == 0) {
-				m.rect(0, top, vw, rowH, style.rowBand());
+				m.rect(0, top, vw, rowH, style.rowBand(), BoardModel.LAYER_BAND);
 			}
 			final float textY = top + (mainH - 8 * k) / 2 + 0.3F;
 			final int delay = DepartureText.delayMinutes(s);
@@ -125,7 +125,7 @@ final class BoardBuilder {
 				final String label = s.routeNumber().isBlank() ? s.routeName() : s.routeNumber();
 				final int routeRgb = 0xFF000000 | s.routeColor();
 				final float chipH = 9 * k;
-				m.rect(left, top + (mainH - chipH) / 2, chipW, chipH, routeRgb);
+				m.rect(left, top + (mainH - chipH) / 2, chipW, chipH, routeRgb, BoardModel.LAYER_CHIP);
 				if (!label.isEmpty()) {
 					final int textColor = luminance(routeRgb) > 0.6F ? 0xFF101010 : 0xFFFFFFFF;
 					final float lk = k * 0.8F;
@@ -148,7 +148,7 @@ final class BoardBuilder {
 			if (platW > 0) {
 				final float chipH = 9 * k;
 				final float px = right - statusWidth - 4 - platW;
-				m.rect(px, top + (mainH - chipH) / 2, platW, chipH, style.chip());
+				m.rect(px, top + (mainH - chipH) / 2, platW, chipH, style.chip(), BoardModel.LAYER_CHIP);
 				final float pk = k * 0.9F;
 				final float pw = tr.getWidth(s.platformName()) * pk;
 				m.text(s.platformName(), px + (platW - pw) / 2, top + (mainH - 8 * pk) / 2 + 0.3F, pk, 1, style.text());

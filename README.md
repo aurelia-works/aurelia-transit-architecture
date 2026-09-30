@@ -4,7 +4,7 @@ A modular architecture kit for [Minecraft Transit Railway](https://github.com/Mi
 
 The visual language is understated and contemporary, drawing loosely on Dutch, German, Swiss and neighbouring station design: galvanised and dark steel, light concrete, glass, muted blue/green accents and tactile yellow. It doesn't reproduce any real station and has no operator branding or logos. The pieces are meant to be combined.
 
-## Supported environment (V1)
+## Supported environment (1.1)
 
 | Component | Version |
 |---|---|
@@ -14,7 +14,7 @@ The visual language is understated and contemporary, drawing loosely on Dutch, G
 | Minecraft Transit Railway | **4.x** for Fabric 1.20.1 (built and tested against `4.0.5+1.20.1`) — **required** |
 | Java | 17+ |
 
-Forge, NeoForge and other Minecraft versions are **not supported in V1**. Additional versions and loaders are planned as future work.
+Forge, NeoForge and other Minecraft versions are **not supported**. Additional versions and loaders are planned as future work.
 
 ## Installation
 
@@ -22,21 +22,32 @@ Forge, NeoForge and other Minecraft versions are **not supported in V1**. Additi
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.0.0+mc1.20.1-fabric.jar`
+   - `aurelia-transit-architecture-1.1.0+mc1.20.1-fabric.jar`
 3. Start the game. Every piece is in the **Aurelia Transit Architecture** creative tab.
 
 Install the mod on both the server and the clients.
 
-## V1 feature families (45 blocks)
+## Feature families (57 blocks)
 
 | Family | Pieces |
 |---|---|
 | **Platforms** (7) | Light and dark platform paving, tactile warning paving, platform edge, platform edge with warning line, platform ramp (lower and upper halves) |
+| **Passenger information** (10) | Platform CIS board and hanging CIS board, platform PIDS and hanging PIDS, concourse departure board (all live from MTR), wall and ceiling speakers, hanging and wall digital clocks, station analogue clock |
 | **Signage** (6) | Freestanding and hanging station name signs, platform number sign, directional sign, information case, sign pole |
 | **Furniture** (6) | Perforated steel bench, timber slat bench, waste bin, bollard, platform lamp, information pillar |
-| **Architecture** (15) | Square and round steel columns, structural beam, branching roof support, framed glass wall, glass panel, glass barrier, flat canopy, canopy edge, sloped canopy (lower and upper), wave canopy rise and crest, canopy skylight, canopy light panel |
+| **Architecture** (17) | Square and round steel columns, structural beam, branching roof support, framed glass wall, glass panel, glass barrier, flat canopy, canopy edge, sloped canopy (lower and upper), wave canopy rise, crest and flattening, canopy corner cap, canopy skylight, canopy light panel |
 | **Catenary** (4) | Catenary mast, cantilever, gantry beam, insulator (decorative) |
 | **Bus** (7) | Bus stop sign, timetable case, shelter glass wall, shelter roof, shelter seat, boarding curb (full height and low) |
+
+### What 1.1 adds
+
+- **Seating:** right-click a bench or shelter seat to sit. Each block seats two.
+- **Editable information:** the information case, information pillar and bus timetable case have an editor with a heading, body lines, alignment and accent colour.
+- **Station sign v2:** styles, accent stripe, platform badge, arrow, route badges and an **automatic station name** mode that shows the MTR station the sign stands in.
+- **Live displays:** platform CIS/PIDS and concourse departure boards read MTR's own client-side arrival data. They come in three styles (European Amber, European Modern, Dutch Modern), join into bigger screens, and show "No station linked" or "No departures currently available" instead of inventing data. See [docs/MTR_INTEGRATION.md](docs/MTR_INTEGRATION.md).
+- **Announcements:** speakers play chimes, with the sentence shown in the action bar. Resource-pack voice packs can add spoken fragments ([docs/VOICE_PACKS.md](docs/VOICE_PACKS.md)). There is no text-to-speech and nothing is fetched from the network.
+- **Clocks:** show the in-game time of day.
+- **Performance:** no block entity ticks. Displays only lay out about once a second while visible, and MTR data is shared through bounded caches. In-game test steps and the stress scenario are in [docs/LIVE_TESTING.md](docs/LIVE_TESTING.md).
 
 ### Editable signs
 
@@ -61,7 +72,8 @@ Canopy plates sit at the bottom of their block, so they rest directly on columns
 ### MTR compatibility
 
 - Platform pieces are full-height blocks, the same height as MTR's platform blocks, so trains line up with them normally.
-- MTR still defines platforms and stations with its own tools. Aurelia blocks are decorative and don't change MTR's rail, platform or station logic.
+- **Train doors:** the platform edges, platform paving and tactile paving count as platforms for MTR's door check, so train doors open beside them just as beside MTR's own platform blocks. Ramps and bus curbs don't count; keep an MTR platform block (or PSD/APG) within one block of the doors there. Details are in [docs/MTR_INTEGRATION.md](docs/MTR_INTEGRATION.md#platform-blocks-and-train-doors).
+- MTR still defines platforms, stations and where trains stop with its own tools. Aurelia doesn't change MTR's rail, platform or station logic.
 - Catenary pieces are decorative and can be combined with MTR's own catenary/wire system.
 - The addon uses no mixins and does not modify MTR.
 
@@ -76,12 +88,11 @@ python3 tools/verify_assets.py     # check every registered block has its assets
 
 All textures and models are generated from code in `tools/generate_assets.py`, so the art is reproducible and original.
 
-## Future work (not in V1)
+## Future work
 
 - Other Minecraft versions and loaders (Forge/NeoForge) and backports
-- Station-name signs driven by MTR station data, PIDS integration
 - Further architectural families such as stairs, lifts, underpasses and platform screen elements
-- Seating interaction, connected textures, more colourways
+- Connected textures, more colourways
 
 ## Credits
 
