@@ -19,7 +19,9 @@ public enum WayfindingPanelKind {
 	/** Exit sign: exit label and exit destinations. */
 	EXIT,
 	/** Bus stop / e-paper header: stop name, routes. */
-	BUS_STOP;
+	BUS_STOP,
+	/** Passenger information terminal (1.2): its metadata feeds the terminal UI; the idle face shows the station name. */
+	TERMINAL;
 
 	public static WayfindingPanelKind byOrdinal(int ordinal) {
 		final WayfindingPanelKind[] values = values();

@@ -72,6 +72,7 @@ public class WayfindingEditScreen extends Screen {
 				case PLATFORM -> new Fields(true, false, false, true, true, true, true, true, false, false, false, false, true);
 				case EXIT -> new Fields(true, false, false, false, true, true, false, false, true, false, false, true, true);
 				case BUS_STOP -> new Fields(true, false, true, true, false, false, false, false, false, false, false, false, false);
+				case TERMINAL -> new Fields(true, true, true, true, false, false, false, false, false, true, true, false, true);
 			};
 		}
 	}

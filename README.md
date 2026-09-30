@@ -4,7 +4,7 @@ A modular architecture kit for [Minecraft Transit Railway](https://github.com/Mi
 
 The visual language is understated and contemporary, drawing loosely on Dutch, German, Swiss and neighbouring station design: galvanised and dark steel, light concrete, glass, muted blue/green accents and tactile yellow. It doesn't reproduce any real station and has no operator branding or logos. The pieces are meant to be combined.
 
-## Supported environment (1.1)
+## Supported environment (1.2)
 
 | Component | Version |
 |---|---|
@@ -22,12 +22,12 @@ Forge, NeoForge and other Minecraft versions are **not supported**. Additional v
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.1.0+mc1.20.1-fabric.jar`
-3. Start the game. Every piece is in the **Aurelia Transit Architecture** creative tab.
+   - `aurelia-transit-architecture-1.2.0+mc1.20.1-fabric.jar`
+3. Start the game. The pieces are in four creative tabs: **ATA Architecture**, **ATA Wayfinding**, **ATA Passenger Equipment** and **ATA Bus / Street Transit**.
 
 Install the mod on both the server and the clients.
 
-## Feature families (57 blocks)
+## Feature families (67 blocks)
 
 | Family | Pieces |
 |---|---|
@@ -37,7 +37,17 @@ Install the mod on both the server and the clients.
 | **Furniture** (6) | Perforated steel bench, timber slat bench, waste bin, bollard, platform lamp, information pillar |
 | **Architecture** (17) | Square and round steel columns, structural beam, branching roof support, framed glass wall, glass panel, glass barrier, flat canopy, canopy edge, sloped canopy (lower and upper), wave canopy rise, crest and flattening, canopy corner cap, canopy skylight, canopy light panel |
 | **Catenary** (4) | Catenary mast, cantilever, gantry beam, insulator (decorative) |
-| **Bus** (7) | Bus stop sign, timetable case, shelter glass wall, shelter roof, shelter seat, boarding curb (full height and low) |
+| **Wayfinding** (5) | Entrance pylon (two blocks tall), wall and hanging wayfinding signs (join side by side), exit sign, street / landmark / connection blade |
+| **Accessibility** (4) | Pictogram sign (accessible route, lift, help point, exit and more from one block), tactile guidance paving, help point, boarding marker (door / accessible / waiting position) |
+| **Bus** (8) | Bus stop sign, timetable case, shelter glass wall, shelter roof, shelter seat, boarding curb (full height and low), low-refresh e-paper bus arrival board |
+
+### What 1.2 adds (City Wayfinding)
+
+- **One shared wayfinding model:** station name, line badges and colours, direction and destination, service type (local / express / limited / custom), station code, platform/track, exits, street and landmark labels, transfers, second-language name and pictogram. Every wayfinding sign reads the same model. MTR fills station name, lines and exits automatically; the rest is set in the sign's editor, and a manual value always wins. See [docs/WAYFINDING.md](docs/WAYFINDING.md).
+- **Multilingual layout:** single, side by side, or stacked.
+- **Service messages:** operators can post a network-wide or per-station message (`/ata_message`), and each display can have its own. PIDS, CIS and concourse boards show it in a strip along the bottom.
+- **Top-aligned departure boards:** tall boards now start under the top bezel instead of floating in the middle. Each display can switch back to centred.
+- **Creative tabs:** four dedicated tabs. No block or item ids changed.
 
 ### What 1.1 adds
 
