@@ -39,3 +39,36 @@ Op only (permission level 2), in creative/cheats:
 `place <displays> <speakers>` fills a grid (10 columns, every second block so nothing joins) 3+ blocks in front of you for displays and behind you for speakers, cycling the five display kinds and both speaker kinds; all use Automatic association. Run it inside an MTR station (or with the defaults changed through a screen) so there is data to draw. `clear` removes every live display and speaker within 24 blocks.
 
 What to watch: `board_rebuilds` should grow by roughly one per visible display per second (faster only while a long destination scrolls), `provider_refresh` by one per distinct block per 2 s, and `arrival_requests` by one per distinct platform set per 2 s, not per display. `board_frames` counts draws and is expected to be large. Frame rate should stay close to baseline; with no speaker loaded `engine_updates` stays at zero.
+
+# 1.2 in-game checklist: wayfinding, accessibility, street and bus blocks
+
+## Board alignment fix (live displays)
+
+1. Place a 6 wide x 3 high concourse board in a station (or any tall PIDS). The header and first departure row must start at the **top** under a small bezel margin; unused height stays empty at the **bottom**. Boards saved by 1.1 load as Top.
+2. Right-click the board: the left column ends with "Align content: Top". Click it to switch to Centre (the 1.1 look, content centred vertically), press Done, and the board updates. Switch back to Top.
+3. A content-filling board (for example a 6 x 1 CIS) looks the same in both modes. The idle text ("Welcome to ...", "No station linked") follows the same anchoring.
+
+## New blocks (creative tabs: Wayfinding, Passenger equipment, Bus / Street)
+
+Signs with content are edited with an empty-hand right-click: one editor for all of them that shows only the fields the sign uses (station or stop name and Auto/Manual, second language and layout, station code, exit, street or landmark, transfer note, direction/destination, arrow, service type, symbol, accent colour, and up to six line badges with label and colour). Leave the station on Auto to use the MTR station next to the block. The preview uses the same layout as the world. Changes are sent when you press Done.
+
+| Block (tab) | Try this |
+|---|---|
+| Station Entrance Pylon (Wayfinding) | Place it on the ground: it is two blocks tall and needs a free block above. Break either half in survival: exactly one item drops. In creative no extra item drops. Station name, line badges and the exit label show on both faces. |
+| Wall Wayfinding Sign, Hanging Wayfinding Sign (Wayfinding) | Place several side by side: they join into one wide panel owned by the leftmost block; right-click any of them to edit the row. The hanging sign is readable from both sides. |
+| Exit Sign (Wayfinding) | Set exit "A"; with Auto station the destinations of MTR exit A appear if the station defines them. Hanging, double sided, joins. |
+| Street Sign (Bus / Street) | A pole with a side blade: street, landmark or connection text. |
+| Pictogram Sign (Passenger equipment) | Defaults to the accessible-route symbol; change Symbol in the editor for lift, stairs, exit, help point and others. |
+| Tactile Guidance Paving (Passenger equipment) | The bars run the way you were looking. Next to an MTR track it must open train doors like the other tactile paving. |
+| Help Point (Passenger equipment) | Lit wall unit; right-click shows a line on the action bar. |
+| Boarding Marker (Passenger equipment) | Flat plate, no collision: walk over it. Right-click cycles door / accessible / wait. It breaks when the block under it is removed. |
+| Bus E-Paper Board (Bus / Street) | Wall-mounted, joins side by side (2-3 wide reads best). Grey paper look, no glow. Shows the stop name, then up to three next arrivals of the nearest MTR station; with no departures "No departures currently available", with no station nearby "No stop linked". |
+
+## E-paper board refresh
+
+The board updates only every 15 to 30 seconds (each board has its own offset), so times may lag by up to that long; it never scrolls or pages. Check that nearby boards do not all change in the same frame and that frame rate is unaffected with a dozen of them in view. Saving it in the editor updates it immediately.
+
+## Performance checks
+
+- Stand 40+ blocks away: no text is drawn for any of the new signs. Walk behind a wall sign or e-paper board: nothing is drawn from behind.
+- Place about 50 mixed wayfinding blocks in view: frame rate stays close to baseline. The signs do not tick; they re-check their station data once a second and rebuild only when it changes.

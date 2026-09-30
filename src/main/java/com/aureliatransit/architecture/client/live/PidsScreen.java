@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.client.live;
 
+import com.aureliatransit.architecture.live.BoardAlignment;
 import com.aureliatransit.architecture.live.DisplayConfig;
 import com.aureliatransit.architecture.live.DisplayKind;
 import com.aureliatransit.architecture.live.DisplayStyle;
@@ -25,7 +26,7 @@ final class PidsScreen extends LiveConfigScreen {
 	private boolean clock;
 	private boolean callingAt;
 	private int pageSeconds;
-	private com.aureliatransit.architecture.live.BoardAlignment alignment;
+	private BoardAlignment alignment;
 	private String message;
 
 	PidsScreen(BlockPos pos, PidsBlockEntity display) {
@@ -80,6 +81,7 @@ final class PidsScreen extends LiveConfigScreen {
 			pageSeconds = PAGE_SECONDS[(index + 1) % PAGE_SECONDS.length];
 			button.setMessage(pageText());
 		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
+		y += 24;
 		buildAssociationWidgets();
 		// local service message (1.2): shown in a strip on this display, overriding station and network messages
 		final TextFieldWidget messageField = add(new TextFieldWidget(textRenderer, x, y + 24, COLUMN_WIDTH, 18, Text.literal("Message")));
@@ -88,6 +90,14 @@ final class PidsScreen extends LiveConfigScreen {
 		messageField.setText(message);
 		messageField.setChangedListener(text -> message = text);
 		addDone();
+		add(ButtonWidget.builder(alignmentText(), button -> {
+			alignment = alignment == BoardAlignment.TOP ? BoardAlignment.CENTER : BoardAlignment.TOP;
+			button.setMessage(alignmentText());
+		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
+	}
+
+	private Text alignmentText() {
+		return tr("live_alignment", tr("live_alignment." + alignment.name().toLowerCase(java.util.Locale.ROOT)));
 	}
 
 	private Text styleText() {

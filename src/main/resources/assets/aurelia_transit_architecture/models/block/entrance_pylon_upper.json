@@ -1,0 +1,149 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel",
+    "trim": "aurelia_transit_architecture:block/steel",
+    "body": "aurelia_transit_architecture:block/steel_dark",
+    "face": "aurelia_transit_architecture:block/sign_charcoal"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        6
+      ],
+      "to": [
+        13,
+        14.5,
+        10
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#body",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            3,
+            6,
+            13,
+            10
+          ],
+          "texture": "#body"
+        },
+        "north": {
+          "uv": [
+            3,
+            1.5,
+            13,
+            16.0
+          ],
+          "texture": "#face"
+        },
+        "south": {
+          "uv": [
+            3,
+            1.5,
+            13,
+            16.0
+          ],
+          "texture": "#face"
+        },
+        "west": {
+          "uv": [
+            6,
+            1.5,
+            10,
+            16.0
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            6,
+            1.5,
+            10,
+            16.0
+          ],
+          "texture": "#body"
+        }
+      }
+    },
+    {
+      "from": [
+        2,
+        14.5,
+        5.5
+      ],
+      "to": [
+        14,
+        16,
+        10.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2,
+            5.5,
+            14,
+            10.5
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            2,
+            5.5,
+            14,
+            10.5
+          ],
+          "texture": "#trim",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            1.5
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            1.5
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            0.0,
+            10.5,
+            1.5
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            0.0,
+            10.5,
+            1.5
+          ],
+          "texture": "#trim"
+        }
+      }
+    }
+  ]
+}

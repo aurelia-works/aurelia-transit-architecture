@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMess
 import com.aureliatransit.architecture.live.DisplayConfig;
 import com.aureliatransit.architecture.live.DisplayKind;
 import com.aureliatransit.architecture.live.DisplayStyle;
+import com.aureliatransit.architecture.live.display.BoardAnchor;
 import com.aureliatransit.architecture.live.display.CallingPages;
 import com.aureliatransit.architecture.live.display.DepartureText;
 import com.aureliatransit.architecture.live.display.Marquee;
@@ -25,6 +26,8 @@ final class BoardBuilder {
 	static final float FRAME = 1F / 16F;
 	private static final float MIN_SQUEEZE = 0.65F;
 	private static final float MARGIN = 3F;
+	/** Gap above the first row of a top-anchored board: half the side margin, so the bezel looks even. */
+	private static final float TOP_MARGIN = MARGIN / 2;
 	private static final long MARQUEE_STEP_MILLIS = 350;
 	private static final long MARQUEE_HOLD_MILLIS = 1500;
 	/** Approximate average glyph advance in font units, used to budget characters of calling-at pages. */
@@ -67,7 +70,7 @@ final class BoardBuilder {
 		m.height = vh;
 		m.rect(0, 0, vw, vh, style.background(), BoardModel.LAYER_BACKGROUND);
 
-		final float y0 = Math.max(0, (vh - contentH) / 2);
+		final float y0 = BoardAnchor.contentTop(config.alignment(), vh, contentH, TOP_MARGIN);
 		final String stationName = snapshot.station() == null ? "" : snapshot.station().displayName();
 
 		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);

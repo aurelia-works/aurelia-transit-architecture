@@ -57,6 +57,16 @@
     "aurelia_transit_architecture:wall_digital_clock",
     "aurelia_transit_architecture:station_analog_clock",
     "aurelia_transit_architecture:canopy_wave_flat",
-    "aurelia_transit_architecture:canopy_end_cap"
+    "aurelia_transit_architecture:canopy_end_cap",
+    "aurelia_transit_architecture:entrance_pylon",
+    "aurelia_transit_architecture:wall_wayfinding_sign",
+    "aurelia_transit_architecture:hanging_wayfinding_sign",
+    "aurelia_transit_architecture:exit_sign",
+    "aurelia_transit_architecture:street_sign",
+    "aurelia_transit_architecture:pictogram_sign",
+    "aurelia_transit_architecture:tactile_guidance_paving",
+    "aurelia_transit_architecture:help_point",
+    "aurelia_transit_architecture:boarding_marker",
+    "aurelia_transit_architecture:bus_epaper_board"
   ]
 }
