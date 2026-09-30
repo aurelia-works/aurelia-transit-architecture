@@ -236,14 +236,18 @@ public final class WayfindingLayout {
 				sub = first(r.transfers(), r.streetLabel());
 			}
 			case EXIT -> {
+				// manual "leads to" text (destination) wins over MTR's exit destinations, like every manual field
 				final List<String> destinations = r.exitDestinations();
-				if (!destinations.isEmpty()) {
+				if (!r.destination().isEmpty()) {
+					main = r.destination();
+					sub = destinations.isEmpty() ? first(r.transfers(), r.streetLabel()) : String.join(SEPARATOR, destinations);
+				} else if (!destinations.isEmpty()) {
 					main = destinations.get(0);
 					sub = destinations.size() > 1 ? String.join(SEPARATOR, destinations.subList(1, destinations.size())) : first(r.transfers());
 				} else {
 					main = first(r.streetLabel(), r.stationName());
 					mainIsStation = main.equals(r.stationName());
-					sub = first(r.transfers(), r.destination());
+					sub = first(r.transfers());
 				}
 			}
 			case BUS_STOP -> {

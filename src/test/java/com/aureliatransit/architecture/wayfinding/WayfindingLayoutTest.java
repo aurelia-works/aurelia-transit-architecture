@@ -177,6 +177,19 @@ class WayfindingLayoutTest {
 		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.STREET, 61.5F, 16, 0xFFFFFFFF, FONT)).contains("Market Street"), "street");
 	}
 
+	@Test
+	void manualExitTextWinsOverMtrExitDestinations() {
+		final ResolvedWayfinding manual = new ResolvedWayfinding("City Hall", "", "", List.of(), SignArrow.NONE, "Broad St & Market St", ServiceType.NONE, "", "",
+				"A", List.of("Library"), "", "", LanguageLayout.SINGLE, Pictogram.EXIT, AccentPalette.NONE, true);
+		final List<String> shown = texts(WayfindingLayout.layout(manual, WayfindingPanelKind.EXIT, 61.5F, 16, 0xFFFFFFFF, FONT));
+		assertTrue(shown.contains("Broad St & Market St"), "manual text is the main line: " + shown);
+		assertFalse(shown.contains("City Hall"), "station name is not shown instead: " + shown);
+		final ResolvedWayfinding noMtr = new ResolvedWayfinding("City Hall", "", "", List.of(), SignArrow.NONE, "Broad St & Market St", ServiceType.NONE, "", "",
+				"A", List.of(), "", "", LanguageLayout.SINGLE, Pictogram.EXIT, AccentPalette.NONE, true);
+		final List<String> alone = texts(WayfindingLayout.layout(noMtr, WayfindingPanelKind.EXIT, 61.5F, 16, 0xFFFFFFFF, FONT));
+		assertTrue(String.join(" ", alone).contains("Broad St & Market St"), "without MTR destinations (may wrap): " + alone);
+	}
+
 	private static List<String> texts(PanelLayout.Panel panel) {
 		return panel.labels().stream().map(PanelLayout.Label::text).toList();
 	}
