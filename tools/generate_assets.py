@@ -219,33 +219,44 @@ def draw_textures():
     d.rectangle((4, 5, 11, 12), outline=WHITE + (255,))
     t["platform_number"] = number
 
+    # Information faces are blank: the editable text is drawn over them in the world.
     poster = noisy(STEEL, 3, "poster")
-    rect(poster, 2, 2, 14, 14, (242, 242, 238))
-    rect(poster, 2, 2, 14, 4, SIGN_BLUE)
-    for y in (5, 7, 9):
-        rect(poster, 3, y, 8, y + 1, (120, 124, 128))
-    rect(poster, 9, 5, 13, 11, (214, 222, 214))
-    rect(poster, 9, 7, 13, 8, ACCENT_GREEN)
-    rect(poster, 10, 5, 11, 11, (70, 110, 150))
-    rect(poster, 3, 11, 13, 12, (170, 172, 174))
+    rect(poster, 2, 2, 14, 13, (242, 242, 238))
+    for y in (2, 12):
+        rect(poster, 2, y, 14, y + 1, (226, 226, 221))
     t["information_poster"] = poster
 
     timetable = noisy(STEEL_DARK, 2, "timetable")
-    rect(timetable, 3, 3, 13, 12, (240, 240, 234))
-    rect(timetable, 3, 3, 13, 5, ACCENT_GREEN)
-    for y in range(6, 12, 2):
-        rect(timetable, 4, y, 7, y + 1, (96, 100, 104))
-        rect(timetable, 8, y, 12, y + 1, (150, 154, 158))
+    rect(timetable, 2, 2, 14, 12, (240, 240, 234))
+    rect(timetable, 2, 11, 14, 12, (224, 224, 217))
     t["timetable"] = timetable
 
     screen = noisy(STEEL_DARK, 2, "screen")
-    rect(screen, 4, 1, 12, 11, (16, 20, 26))
-    rect(screen, 4, 1, 12, 2, SIGN_BLUE)
-    for i, y in enumerate(range(3, 11, 2)):
-        rect(screen, 5, y, 7, y + 1, (242, 196, 90))
-        rect(screen, 8, y, 11 - (i % 2), y + 1, (226, 228, 232))
-    rect(screen, 3, 12, 13, 13, shade(STEEL_DARK, 16))
+    rect(screen, 4, 1, 12, 15, (14, 17, 22))
+    rect(screen, 4, 1, 12, 2, (24, 29, 36))
+    rect(screen, 3, 1, 4, 15, shade(STEEL_DARK, 14))
+    rect(screen, 12, 1, 13, 15, shade(STEEL_DARK, 14))
     t["information_screen"] = screen
+
+    t["panel_fill"] = new((255, 255, 255, 255))
+
+    display = noisy(STEEL_DARK, 2, "clock_display")
+    rect(display, 1, 5, 15, 11, (12, 14, 18))
+    rect(display, 1, 5, 15, 6, (22, 25, 30))
+    t["clock_display"] = display
+    wall_display = noisy(STEEL_DARK, 2, "clock_display_wall")
+    rect(wall_display, 2, 5, 14, 11, (12, 14, 18))
+    rect(wall_display, 2, 5, 14, 6, (22, 25, 30))
+    t["clock_display_wall"] = wall_display
+
+    dial = noisy(STEEL_DARK, 2, "clock_dial")
+    dd = ImageDraw.Draw(dial)
+    dd.ellipse((1.6, 1.6, 14.4, 14.4), fill=(244, 244, 240, 255), outline=(200, 202, 204, 255))
+    for i in range(12):
+        ang = math.radians(i * 30)
+        x, y = 8 + 5.5 * math.sin(ang), 8 - 5.5 * math.cos(ang)
+        dd.point((int(round(x - 0.5)), int(round(y - 0.5))), fill=(27, 31, 35, 255) if i % 3 == 0 else (120, 124, 128, 255))
+    t["clock_dial"] = dial
 
     lamp = new(LAMP + (255,))
     rect(lamp, 0, 0, 16, 1, shade(LAMP, -30))
@@ -397,6 +408,7 @@ SLOPE_LOWER = lambda z: z / 2
 SLOPE_UPPER = lambda z: 8 + z / 2
 WAVE_RISE = lambda z: 8 * (z / 16) ** 2
 WAVE_CREST = lambda z: 8 + z - z * z / 16
+WAVE_FLAT = lambda z: 8 + z - z * z / 32
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -498,18 +510,24 @@ def blocks():
     b["sign_pole"] = ("simple", {"": model({"particle": "steel", "pole": "steel"}, [el([7, 0, 7], [9, 16, 9], "#pole")])})
 
     # -- Furniture
-    def bench(seat_tex):
-        return model({"particle": "steel_dark", "frame": "steel_dark", "seat": seat_tex}, [
-            el([1, 0, 4], [2.5, 6, 11], "#frame"),
-            el([13.5, 0, 4], [15, 6, 11], "#frame"),
-            el([0, 6, 3], [16, 7.5, 11], "#seat"),
-            el([1, 6, 11.5], [2.5, 14, 12.5], "#frame"),
-            el([13.5, 6, 11.5], [15, 14, 12.5], "#frame"),
-            el([0, 8.5, 10.5], [16, 14, 11.5], "#seat"),
-        ])
+    def bench(seat_tex, slatted):
+        """Thin-section European bench: 1px seat board, flat side frames, one low backrest panel (two slats when timber)."""
+        els = []
+        for x1, x2 in ((1, 2.5), (13.5, 15)):
+            els += [
+                el([x1, 0, 11], [x2, 13.5, 12.5], "#frame"),
+                el([x1, 0, 4.5], [x2, 6.5, 6], "#frame"),
+                el([x1, 5.25, 6], [x2, 6.5, 11], "#frame"),
+            ]
+        els.append(el([0, 6.5, 4.5], [16, 7.5, 11], "#seat"))
+        if slatted:
+            els += [el([0, 9, 10], [16, 10.75, 11], "#seat"), el([0, 11.25, 10], [16, 13, 11], "#seat")]
+        else:
+            els.append(el([0, 9, 10], [16, 13, 11], "#seat"))
+        return model({"particle": "steel_dark", "frame": "steel_dark", "seat": seat_tex}, els)
 
-    b["steel_bench"] = ("facing", {"": bench("steel_perforated")})
-    b["wooden_bench"] = ("facing", {"": bench("wood_slats")})
+    b["steel_bench"] = ("facing", {"": bench("steel_perforated", False)})
+    b["wooden_bench"] = ("facing", {"": bench("wood_slats", True)})
     b["waste_bin"] = ("facing", {"": model({"particle": "bin_side", "body": "bin_side", "front": "bin_front", "lid": "steel_dark"}, [
         el([4, 0, 4], [12, 13, 12], "#body", faces={"north": "#front", "up": None}),
         el([3.5, 13, 3.5], [12.5, 14.5, 12.5], "#lid"),
@@ -523,8 +541,10 @@ def blocks():
         el([5, 13, 3], [11, 15, 11], "#head", faces={"down": None}),
         el([5.5, 12.75, 3.5], [10.5, 13, 10.5], "#light", faces={"up": None}, shade_=False),
     ])})
-    b["information_pillar"] = ("facing", {"": model({"particle": "steel_dark", "body": "steel_dark", "screen": "information_screen"}, [
-        el([3, 0, 6], [13, 16, 10], "#body", faces={"north": "#screen", "south": "#screen"}),
+    b["information_pillar"] = ("facing", {"": model({"particle": "steel_dark", "body": "steel_dark", "screen": "information_screen", "trim": "steel"}, [
+        el([2.5, 0, 5.5], [13.5, 1.5, 10.5], "#trim"),
+        el([3, 1.5, 6], [13, 14.5, 10], "#body", faces={"north": "#screen", "south": "#screen"}),
+        el([2.5, 14.5, 5.5], [13.5, 16, 10.5], "#trim"),
     ])})
 
     # -- Architecture
@@ -552,7 +572,11 @@ def blocks():
     b["glass_barrier"] = ("facing", {"": model({"particle": "steel", "glass": "glass_clear", "rail": "steel", "shoe": "steel_dark"}, [
         el([0, 0, 6.75], [16, 1.5, 9.25], "#shoe"),
         el([0, 1.5, 7.25], [16, 13, 8.75], "#glass", faces={"up": None, "down": None}),
-        el([0, 13, 6.5], [16, 15, 9.5], "#rail"),
+        el([0, 13, 6.75], [16, 15, 9.25], "#rail"),
+        el([1.5, 3.5, 6.75], [3, 5.5, 9.25], "#shoe"),
+        el([13, 3.5, 6.75], [14.5, 5.5, 9.25], "#shoe"),
+        el([1.5, 9, 6.75], [3, 11, 9.25], "#shoe"),
+        el([13, 9, 6.75], [14.5, 11, 9.25], "#shoe"),
     ])})
     b["canopy_flat"] = ("simple", {"": model({"particle": "canopy_top", "top": "canopy_top", "under": "canopy_underside", "side": "steel_dark"}, [
         el([0, 0, 0], [16, 2, 16], "#side", faces={"up": "#top", "down": "#under"}),
@@ -574,7 +598,8 @@ def blocks():
     ])})
     b["canopy_light"] = ("facing", {"": model({"particle": "canopy_underside", "top": "canopy_top", "under": "canopy_underside", "side": "steel_dark", "light": "lamp_diffuser"}, [
         el([0, 0, 0], [16, 2, 16], "#side", faces={"up": "#top", "down": "#under"}),
-        el([6.5, -0.5, 0.5], [9.5, 0, 15.5], "#side", faces={"down": "#light", "up": None}, shade_=False),
+        el([3.5, -0.6, 0.5], [12.5, 0, 15.5], "#side", faces={"up": None}),
+        el([4.25, -0.7, 1], [11.75, -0.6, 15], "#side", faces={"down": "#light", "up": None, "north": None, "south": None, "east": None, "west": None}, shade_=False),
     ])})
 
     # -- Catenary (all galvanised steel)
@@ -620,12 +645,12 @@ def blocks():
     # -- Bus
     b["bus_stop_sign"] = ("sign_single", {"": model({"particle": "steel", "pole": "steel", "frame": "steel", "flag": "bus_stop_flag", "plate": "panel_white"}, [
         el([7, 0, 7], [9, 16, 9], "#pole"),
-        el([2, 10, 6.75], [14, 16, 9.25], "#frame", faces={"north": ("#flag", [2, 0, 14, 6]), "south": ("#flag", [2, 0, 14, 6])}),
-        el([2, 7, 6.75], [14, 9.75, 9.25], "#frame", faces={"north": ("#plate", [2, 6, 14, 8.75]), "south": ("#plate", [2, 6, 14, 8.75])}),
+        el([1, 3, 6.75], [15, 12, 9.25], "#frame", faces={"north": ("#plate", [1, 4, 15, 13]), "south": ("#plate", [1, 4, 15, 13])}),
+        el([3, 12, 7], [13, 16, 9], "#frame", faces={"north": ("#flag", [3, 0, 13, 4]), "south": ("#flag", [3, 0, 13, 4])}),
     ])})
     b["bus_timetable_case"] = ("facing", {"": model({"particle": "steel", "pole": "steel", "frame": "steel_dark", "face": "timetable"}, [
         el([7, 0, 7], [9, 16, 9], "#pole"),
-        el([2, 4, 4], [14, 14, 7], "#frame", faces={"north": "#face"}),
+        el([1, 3, 4], [15, 15, 7], "#frame", faces={"north": "#face"}),
     ])})
     b["bus_shelter_glass"] = ("facing", {"": model({"particle": "steel_dark", "frame": "steel_dark", "glass": "shelter_glass"}, [
         el([0, 0, 0], [16, 1.5, 1.5], "#frame"),
@@ -641,10 +666,11 @@ def blocks():
         el([0, 0, 0], [16, 4, 1.5], "#frame", faces={"north": ("#fascia", [0, 4, 16, 8]), "south": ("#fascia", [0, 4, 16, 8])}),
     ])})
     b["bus_shelter_seat"] = ("facing", {"": model({"particle": "steel_dark", "frame": "steel_dark", "seat": "steel_perforated"}, [
-        el([0, 4, 0], [16, 5, 1], "#frame"),
-        el([1, 4, 1], [2.5, 7, 6.5], "#frame"),
-        el([13.5, 4, 1], [15, 7, 6.5], "#frame"),
-        el([0, 7, 0.5], [16, 8.5, 7], "#seat"),
+        el([0, 7, 0.5], [16, 8, 7.5], "#seat"),
+        el([1, 0, 6], [2.5, 7, 7.5], "#frame"),
+        el([13.5, 0, 6], [15, 7, 7.5], "#frame"),
+        el([1, 5.5, 0], [2.5, 7, 6], "#frame"),
+        el([13.5, 5.5, 0], [15, 7, 6], "#frame"),
     ])})
 
     def curb(h_mid, h_top):
