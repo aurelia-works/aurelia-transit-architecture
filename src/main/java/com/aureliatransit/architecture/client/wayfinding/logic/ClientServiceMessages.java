@@ -35,4 +35,22 @@ public final class ClientServiceMessages {
 	public static ServiceMessage select(String local, String stationName) {
 		return current.select(local, stationName);
 	}
+
+	/**
+	 * Every message applicable to a station, in priority order: the station's own, then the network's (empty ones left
+	 * out). For the terminal's service-info page; {@link #select} is unchanged.
+	 */
+	public static java.util.List<ServiceMessage> allFor(String stationName) {
+		final ServiceMessages messages = current;
+		final ServiceMessage station = messages.forStation(stationName);
+		final ServiceMessage network = messages.network();
+		final java.util.List<ServiceMessage> out = new java.util.ArrayList<>(2);
+		if (!station.isEmpty()) {
+			out.add(station);
+		}
+		if (!network.isEmpty()) {
+			out.add(network);
+		}
+		return java.util.List.copyOf(out);
+	}
 }

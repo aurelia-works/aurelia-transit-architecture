@@ -101,7 +101,7 @@ public final class WayfindingLayout {
 		float right = area.r();
 
 		// 1. arrow
-		if (kind != WayfindingPanelKind.BUS_STOP && r.arrow() != SignArrow.NONE) {
+		if (kind != WayfindingPanelKind.BUS_STOP && kind != WayfindingPanelKind.TERMINAL && r.arrow() != SignArrow.NONE) {
 			final float cell = ah * 0.7F;
 			if (used + cell + GAP <= budget) {
 				final boolean onLeft = r.arrow().onLeft();
@@ -249,6 +249,12 @@ public final class WayfindingLayout {
 					mainIsStation = main.equals(r.stationName());
 					sub = first(r.transfers());
 				}
+			}
+			case TERMINAL -> {
+				// station-name header: name (+ secondary per layout), code and line chips; street/transfer note below
+				main = first(r.stationName(), r.streetLabel());
+				mainIsStation = main.equals(r.stationName());
+				sub = first(r.transfers(), mainIsStation ? r.streetLabel() : "");
 			}
 			case BUS_STOP -> {
 				main = first(r.stationName(), r.streetLabel(), r.destination());
