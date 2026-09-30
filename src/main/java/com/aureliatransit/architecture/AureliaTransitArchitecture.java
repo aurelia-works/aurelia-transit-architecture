@@ -1,6 +1,10 @@
 package com.aureliatransit.architecture;
 
+import com.aureliatransit.architecture.interactive.InteractiveSystems;
+import com.aureliatransit.architecture.live.LiveSystems;
 import com.aureliatransit.architecture.network.ModPackets;
+import com.aureliatransit.architecture.registry.InteractiveBlocks;
+import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
 import com.aureliatransit.architecture.registry.ModBlocks;
 import com.aureliatransit.architecture.registry.ModItemGroups;
@@ -21,9 +25,13 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		ModBlocks.init();
+		LiveBlocks.init();
+		InteractiveBlocks.init();
 		ModBlockEntities.init();
 		ModItemGroups.init();
 		ModPackets.registerServerReceivers();
+		LiveSystems.init();
+		InteractiveSystems.init();
 		LOGGER.info("Registered {} Aurelia Transit Architecture blocks", ModBlocks.entries().size());
 	}
 }

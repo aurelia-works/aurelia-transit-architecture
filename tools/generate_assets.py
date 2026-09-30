@@ -832,21 +832,45 @@ def icon():
     return img
 
 
+EXTENSION_MODULES = ("assets_live", "assets_interactive")
+
+
+def load_extensions():
+    """Workstream modules may define: textures(), blocks(), names(), lang(), recipes(), write_extra(assets, data, write_json).
+    They can import this module (``import generate_assets as g``) for the model/texture helpers."""
+    import importlib
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    sys.modules.setdefault("generate_assets", sys.modules[__name__])
+    return [importlib.import_module(name) for name in EXTENSION_MODULES]
+
+
 def main():
+    extensions = load_extensions()
     for sub in ("blockstates", "models", "textures", "lang"):
         shutil.rmtree(ASSETS / sub, ignore_errors=True)
     for sub in ("loot_tables", "recipes"):
         shutil.rmtree(DATA / MOD / sub, ignore_errors=True)
 
     textures = draw_textures()
+    all_blocks = blocks()
+    names = dict(NAMES)
+    lang = dict(EXTRA_LANG)
+    all_recipes = recipes()
+    for ext in extensions:
+        textures.update(getattr(ext, "textures", dict)())
+        all_blocks.update(getattr(ext, "blocks", dict)())
+        names.update(getattr(ext, "names", dict)())
+        lang.update(getattr(ext, "lang", dict)())
+        all_recipes.update(getattr(ext, "recipes", dict)())
+
     for name, img in textures.items():
         path = ASSETS / "textures" / "block" / f"{name}.png"
         path.parent.mkdir(parents=True, exist_ok=True)
         img.save(path)
     icon().save(ASSETS / "icon.png")
 
-    all_blocks = blocks()
-    assert set(all_blocks) == set(NAMES), set(all_blocks) ^ set(NAMES)
+    assert set(all_blocks) == set(names), set(all_blocks) ^ set(names)
     for block_id, (kind, variants) in all_blocks.items():
         for suffix, m in variants.items():
             write_json(ASSETS / "models" / "block" / f"{block_id}{suffix}.json", m)
@@ -858,16 +882,18 @@ def main():
                        "conditions": [{"condition": "minecraft:survives_explosion"}]}],
         })
 
-    for name, recipe in recipes().items():
+    for name, recipe in all_recipes.items():
         write_json(DATA / MOD / "recipes" / f"{name}.json", recipe)
 
     write_json(DATA / "minecraft" / "tags" / "blocks" / "mineable" / "pickaxe.json",
                {"replace": False, "values": [f"{MOD}:{b}" for b in all_blocks]})
 
-    lang = {f"block.{MOD}.{b}": n for b, n in NAMES.items()}
-    lang.update(EXTRA_LANG)
-    write_json(ASSETS / "lang" / "en_us.json", lang)
-    print(f"Generated {len(all_blocks)} blocks, {len(textures)} textures, {len(recipes())} recipes")
+    lang.update({f"block.{MOD}.{b}": n for b, n in names.items()})
+    write_json(ASSETS / "lang" / "en_us.json", dict(sorted(lang.items())))
+    for ext in extensions:
+        if hasattr(ext, "write_extra"):
+            ext.write_extra(ASSETS, DATA, write_json)
+    print(f"Generated {len(all_blocks)} blocks, {len(textures)} textures, {len(all_recipes)} recipes")
 
 
 if __name__ == "__main__":

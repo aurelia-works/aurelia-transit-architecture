@@ -18,7 +18,9 @@ ROOT = Path(__file__).resolve().parent.parent
 RES = ROOT / "src" / "main" / "resources"
 ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
-JAVA = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry" / "ModBlocks.java"
+REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
+JAVA = REGISTRY / "ModBlocks.java"
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java")
 
 EXPECTED_PROPERTIES = {
     "Block": set(),
@@ -48,7 +50,8 @@ def load(path):
 
 
 def registered_blocks():
-    source = JAVA.read_text(encoding="utf-8")
+    source = "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())
+    # Workstreams add their block classes to EXPECTED_PROPERTIES below.
     pattern = re.compile(r'register\("([a-z0-9_]+)",\s*BlockFamily\.(\w+),\s*RenderKind\.(\w+),\s*new (\w+)\(')
     return [(m.group(1), m.group(2), m.group(3), m.group(4)) for m in pattern.finditer(source)]
 
@@ -124,7 +127,7 @@ def main():
     for key in (f"itemGroup.{MOD}.main",):
         if key not in lang:
             problem(f"missing lang key {key}")
-    java_tooltips = set(re.findall(r'TIP \+ "([a-z_]+)"', JAVA.read_text(encoding="utf-8")))
+    java_tooltips = set(re.findall(r'TIP \+ "([a-z_]+)"', "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())))
     for tip in java_tooltips:
         if f"tooltip.{MOD}.{tip}" not in lang:
             problem(f"missing tooltip lang key {tip}")

@@ -190,15 +190,15 @@ public final class ModBlocks {
 	private ModBlocks() {
 	}
 
-	private static AbstractBlock.Settings paving(MapColor color) {
+	static AbstractBlock.Settings paving(MapColor color) {
 		return AbstractBlock.Settings.create().mapColor(color).instrument(Instrument.BASEDRUM).strength(1.5F, 6.0F).sounds(BlockSoundGroup.STONE);
 	}
 
-	private static AbstractBlock.Settings metal() {
+	static AbstractBlock.Settings metal() {
 		return AbstractBlock.Settings.create().mapColor(MapColor.IRON_GRAY).strength(2.0F, 6.0F).sounds(BlockSoundGroup.METAL).nonOpaque();
 	}
 
-	private static AbstractBlock.Settings glass() {
+	static AbstractBlock.Settings glass() {
 		return AbstractBlock.Settings.create().mapColor(MapColor.CLEAR).strength(0.8F, 3.0F).sounds(BlockSoundGroup.GLASS).nonOpaque()
 				.allowsSpawning((state, world, pos, type) -> false)
 				.solidBlock((state, world, pos) -> false)
@@ -206,7 +206,10 @@ public final class ModBlocks {
 				.blockVision((state, world, pos) -> false);
 	}
 
-	private static Block register(String id, BlockFamily family, RenderKind renderKind, Block block, String... tooltipKeys) {
+	/**
+	 * Registers a block and its item. Also used by {@link LiveBlocks} and {@link InteractiveBlocks}.
+	 */
+	static Block register(String id, BlockFamily family, RenderKind renderKind, Block block, String... tooltipKeys) {
 		Registry.register(Registries.BLOCK, AureliaTransitArchitecture.id(id), block);
 		Registry.register(Registries.ITEM, AureliaTransitArchitecture.id(id), new DescribedBlockItem(block, new Item.Settings(), List.of(tooltipKeys)));
 		ENTRIES.add(new Entry(id, block, family, renderKind));

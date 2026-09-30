@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.block.entity;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
+import com.aureliatransit.architecture.text.TextSanitizer;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -12,7 +13,6 @@ import net.minecraft.nbt.NbtString;
 import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 
 import java.util.Arrays;
@@ -56,9 +56,7 @@ public class TextSignBlockEntity extends BlockEntity {
 	}
 
 	public static String sanitize(String text, int maxLength) {
-		final String stripped = Formatting.strip(text == null ? "" : text);
-		final String clean = stripped == null ? "" : stripped.replaceAll("\\p{Cntrl}", "").trim();
-		return clean.length() > maxLength ? clean.substring(0, maxLength) : clean;
+		return TextSanitizer.sanitize(text, maxLength);
 	}
 
 	@Override

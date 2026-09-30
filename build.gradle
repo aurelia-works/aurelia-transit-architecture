@@ -36,6 +36,14 @@ dependencies {
 	// so it is compile-only (not re-exported) and loaded in the dev runs to prove coexistence.
 	modCompileOnly "maven.modrinth:minecraft-transit-railway:${project.mtr_version}"
 	modLocalRuntime "maven.modrinth:minecraft-transit-railway:${project.mtr_version}"
+
+	// Pure-logic unit tests (text sanitising, caches, announcement queue, seat bookkeeping, pagination ...)
+	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {

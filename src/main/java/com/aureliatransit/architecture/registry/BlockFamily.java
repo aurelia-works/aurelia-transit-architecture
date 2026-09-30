@@ -6,6 +6,7 @@ package com.aureliatransit.architecture.registry;
 public enum BlockFamily {
 	PLATFORMS,
 	SIGNAGE,
+	PASSENGER_INFO,
 	FURNITURE,
 	ARCHITECTURE,
 	CATENARY,
