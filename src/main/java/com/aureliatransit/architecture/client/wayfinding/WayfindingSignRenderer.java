@@ -37,8 +37,9 @@ import java.util.WeakHashMap;
  * Draws the panel of every {@link WayfindingData} block: pylon, directional and exit signs, street blade, pictogram
  * sign, and the bus e-paper board. Static-first: the panel is laid out once and replayed. The resolved content (MTR
  * station facts merged with the manual data) and the row length of a joined sign are re-checked once per second and the
- * layout is rebuilt only when one of them, or the stored data, changes. The e-paper board additionally re-reads the
- * departure snapshot only every 15 to 30 seconds. Only the owner block of a joined row draws, and single-sided signs
+ * layout is rebuilt only when one of them, or the stored data, changes. The e-paper board redraws its departures only
+ * every 15 to 30 seconds (and once as soon as data first arrives), but still asks the cached provider every second so
+ * MTR keeps its platforms in the arrivals poll. Only the owner block of a joined row draws, and single-sided signs
  * draw nothing when seen from behind. No block-entity ticking, no dynamic textures.
  */
 public final class WayfindingSignRenderer implements BlockEntityRenderer<WayfindingSignBlockEntity> {
@@ -55,6 +56,8 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		// e-paper only
 		long nextRefreshMillis;
 		boolean built;
+		StationSnapshot snapshot = StationSnapshot.EMPTY;
+		boolean showingIdle;
 	}
 
 	private final TextRenderer textRenderer;
@@ -124,6 +127,12 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 			cached.data = data;
 			cached.rowLength = rowLength;
 			cached.resolved = resolved;
+			if (epaper) {
+				// Ask the (cached) provider every second even though the panel redraws rarely: it keeps the platforms in
+				// MTR's arrivals poll and the snapshot cache warm, so a slow refresh never lands on an empty list.
+				cached.snapshot = StationData.provider().resolve(entity.getPos(), StationAssociation.AUTO, true);
+				dirty |= cached.showingIdle && !cached.snapshot.services().isEmpty();
+			}
 		}
 		if (epaper) {
 			final long now = System.currentTimeMillis();
@@ -139,11 +148,12 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 	private void rebuildEPaper(Cached cached, BlockPos pos, WayfindingPanelSpec spec, long now) {
 		cached.built = true;
 		cached.nextRefreshMillis = now + EPaperLayout.refreshIntervalMillis(pos.asLong());
-		final StationSnapshot snapshot = StationData.provider().resolve(pos, StationAssociation.AUTO, true);
+		final StationSnapshot snapshot = cached.snapshot;
 		final String manual = cached.resolved.stationName();
 		final String header = !manual.isEmpty() ? manual : snapshot.station() != null ? snapshot.station().displayName() : "";
 		final float w = spec.panelWidth(cached.rowLength);
 		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height()));
+		cached.showingIdle = rows.isEmpty();
 		final String idle = snapshot.station() == null ? "No stop linked" : "No departures currently available";
 		cached.panel = EPaperLayout.layout(header, rows, idle, w, spec.height(), s -> textRenderer.getWidth(s));
 	}
