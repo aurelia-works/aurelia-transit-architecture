@@ -72,3 +72,11 @@ The board updates only every 15 to 30 seconds (each board has its own offset), s
 
 - Stand 40+ blocks away: no text is drawn for any of the new signs. Walk behind a wall sign or e-paper board: nothing is drawn from behind.
 - Place about 50 mixed wayfinding blocks in view: frame rate stays close to baseline. The signs do not tick; they re-check their station data once a second and rebuild only when it changes.
+
+## Passenger Information Terminal and Kiosk (Passenger equipment tab)
+
+1. Place a Passenger Information Terminal (wall, joins side by side; 2 wide reads best) and a Kiosk (freestanding) inside an MTR station. The idle face is static: station name, line badges, "Touch for information". No animation; it changes only when the station or the terminal's data changes.
+2. Right-click with an empty hand: the terminal UI opens (the game keeps running). Sneak + right-click with an empty hand opens the wayfinding editor instead (station name override, code, lines, street, transfers); saving updates the idle face.
+3. Tabs: **Home** (name, clock, next departures, active service message), **Departures** (same rows and order as a station-wide PIDS; arrows or scroll wheel page through more than fit), **System map** (line strips with stops; the current station is highlighted, transfers have a ring; page through lines), **Station** (platforms, exits with destinations, transfers, street/landmark), **Service info** (station and network messages set with the service message command; "No service notices" when none), **Accessibility** (only what is configured near the terminal; otherwise "No accessibility information has been provided for this station").
+4. No station nearby: "No station linked" / empty map text, no errors. Remove the terminal block while the UI is open: the screen closes.
+5. Performance: departures refresh about once a second while the UI is open, map and station info about every 10 seconds; nothing runs when it is closed.

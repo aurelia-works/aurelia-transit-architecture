@@ -1,0 +1,240 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel_dark",
+    "body": "aurelia_transit_architecture:block/steel_dark",
+    "trim": "aurelia_transit_architecture:block/steel",
+    "screen": "aurelia_transit_architecture:block/wf_terminal_screen"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        0,
+        5
+      ],
+      "to": [
+        14,
+        2,
+        12
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2,
+            4,
+            14,
+            11
+          ],
+          "texture": "#trim",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            2,
+            5,
+            14,
+            12
+          ],
+          "texture": "#trim"
+        },
+        "north": {
+          "uv": [
+            2,
+            14,
+            14,
+            16.0
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            2,
+            14,
+            14,
+            16.0
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            5,
+            14,
+            12,
+            16.0
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            4,
+            14,
+            11,
+            16.0
+          ],
+          "texture": "#trim"
+        }
+      }
+    },
+    {
+      "from": [
+        3,
+        2,
+        6
+      ],
+      "to": [
+        13,
+        16,
+        11
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            3,
+            5,
+            13,
+            10
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            3,
+            6,
+            13,
+            11
+          ],
+          "texture": "#body",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            14
+          ],
+          "texture": "#body"
+        },
+        "south": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            14
+          ],
+          "texture": "#body"
+        },
+        "west": {
+          "uv": [
+            6,
+            0.0,
+            11,
+            14
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            5,
+            0.0,
+            10,
+            14
+          ],
+          "texture": "#body"
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        6,
+        5.9
+      ],
+      "to": [
+        12.5,
+        14,
+        6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            3.5,
+            2,
+            12.5,
+            10
+          ],
+          "texture": "#screen"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        3,
+        5.8
+      ],
+      "to": [
+        11,
+        4.5,
+        6
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5,
+            10,
+            11,
+            10.2
+          ],
+          "texture": "#trim"
+        },
+        "up": {
+          "uv": [
+            5,
+            5.8,
+            11,
+            6
+          ],
+          "texture": "#trim"
+        },
+        "north": {
+          "uv": [
+            5,
+            11.5,
+            11,
+            13
+          ],
+          "texture": "#trim"
+        },
+        "south": {
+          "uv": [
+            5,
+            11.5,
+            11,
+            13
+          ],
+          "texture": "#trim"
+        },
+        "west": {
+          "uv": [
+            5.8,
+            11.5,
+            6,
+            13
+          ],
+          "texture": "#trim"
+        },
+        "east": {
+          "uv": [
+            10,
+            11.5,
+            10.2,
+            13
+          ],
+          "texture": "#trim"
+        }
+      }
+    }
+  ]
+}

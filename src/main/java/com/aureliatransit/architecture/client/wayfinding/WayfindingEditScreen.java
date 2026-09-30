@@ -339,7 +339,9 @@ public class WayfindingEditScreen extends Screen {
 		if (previewDirty) {
 			previewDirty = false;
 			final WayfindingData data = current();
-			preview = WayfindingLayout.layout(Wayfinding.resolve(pos, data), kind, panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(),
+			preview = kind == WayfindingPanelKind.TERMINAL
+					? TerminalFace.layout(Wayfinding.resolve(pos, data), panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
+					: WayfindingLayout.layout(Wayfinding.resolve(pos, data), kind, panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(),
 					s -> textRenderer.getWidth(s));
 		}
 		final float scale = previewScale();

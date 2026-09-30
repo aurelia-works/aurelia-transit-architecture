@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.block.wayfinding;
 import com.aureliatransit.architecture.block.FacingShapedBlock;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity;
+import com.aureliatransit.architecture.wayfinding.WayfindingPanelKind;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
@@ -27,6 +28,12 @@ public class WayfindingPlateBlock extends FacingShapedBlock implements BlockEnti
 	 * Set by the client initializer; opens the wayfinding editor for a block position. A no-op on dedicated servers.
 	 */
 	public static Consumer<BlockPos> openEditor = pos -> {
+	};
+
+	/**
+	 * Set by the client initializer; opens the passenger terminal UI for a terminal/kiosk position.
+	 */
+	public static Consumer<BlockPos> openTerminal = pos -> {
 	};
 
 	private final WayfindingPanelSpec spec;
@@ -60,7 +67,12 @@ public class WayfindingPlateBlock extends FacingShapedBlock implements BlockEnti
 			return ActionResult.PASS;
 		}
 		if (world.isClient) {
-			openEditor.accept(editorPos(world, pos, state));
+			final BlockPos target = editorPos(world, pos, state);
+			if (spec.kind() == WayfindingPanelKind.TERMINAL && !player.isSneaking()) {
+				openTerminal.accept(target);
+			} else {
+				openEditor.accept(target);
+			}
 		}
 		return ActionResult.success(world.isClient);
 	}

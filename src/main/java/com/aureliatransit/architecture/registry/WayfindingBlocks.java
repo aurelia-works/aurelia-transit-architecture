@@ -37,6 +37,8 @@ public final class WayfindingBlocks {
 	private static final String TIP_MARKER = TIP + "wf_marker";
 	private static final String TIP_HELP = TIP + "wf_help";
 	private static final String TIP_EPAPER = TIP + "wf_epaper";
+	private static final String TIP_TERMINAL = TIP + "wf_terminal";
+	private static final String TIP_TERMINAL_EDIT = TIP + "wf_terminal_edit";
 	private static final String TIP_FACES_YOU = TIP + "faces_you";
 
 	private static final int WHITE = 0xFFFFFFFF;
@@ -54,6 +56,10 @@ public final class WayfindingBlocks {
 	private static final WayfindingPanelSpec STREET_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.STREET, 9.5F, 10, 12.5F, 4.5F, 7.25F, 8.75F, false, WHITE, NAVY, Pictogram.NONE);
 	private static final WayfindingPanelSpec PICTOGRAM_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.PICTOGRAM, 8, 7, 9, 9, 7, 9, false, WHITE, NAVY, Pictogram.ACCESSIBLE_ROUTE);
 	private static final WayfindingPanelSpec BUS_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.BUS_STOP, 8, 8, 16, 14.7F, 13, -1, true, INK, PAPER, Pictogram.NONE);
+
+	private static final int DARK = 0xFF16191D;
+	private static final WayfindingPanelSpec TERMINAL_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 8, 16, 12, 11.9F, -1, true, WHITE, DARK, Pictogram.NONE);
+	private static final WayfindingPanelSpec KIOSK_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 10, 9, 8, 5.9F, -1, false, WHITE, DARK, Pictogram.NONE);
 
 	// ---- Wayfinding (creative tab: Wayfinding) ---------------------------------------------------------------------
 
@@ -99,11 +105,20 @@ public final class WayfindingBlocks {
 			new WayfindingSignBlock(ModBlocks.metal(), box(0, 0, 13, 16, 16, 16), BUS_SPEC),
 			TIP_CONFIGURE, TIP_EPAPER, TIP_JOINS);
 
+	// ---- Passenger information terminals (creative tab: Passenger equipment) ---------------------------------------
+
+	public static final Block PASSENGER_INFO_TERMINAL = ModBlocks.register("passenger_info_terminal", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
+			new WayfindingSignBlock(ModBlocks.metal().luminance(state -> 8), box(0, 1, 12, 16, 15, 16), TERMINAL_SPEC),
+			TIP_TERMINAL, TIP_TERMINAL_EDIT, TIP_JOINS);
+	public static final Block PASSENGER_INFO_KIOSK = ModBlocks.register("passenger_info_kiosk", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
+			new WayfindingPlateBlock(ModBlocks.metal().luminance(state -> 8), union(box(2, 0, 5, 14, 2, 12), box(3, 2, 6, 13, 16, 11)), KIOSK_SPEC),
+			TIP_TERMINAL, TIP_TERMINAL_EDIT);
+
 	public static final BlockEntityType<WayfindingSignBlockEntity> SIGN_ENTITY = Registry.register(
 			Registries.BLOCK_ENTITY_TYPE,
 			AureliaTransitArchitecture.id("wayfinding_sign"),
 			BlockEntityType.Builder.create(WayfindingSignBlockEntity::new, ENTRANCE_PYLON, WALL_WAYFINDING_SIGN, HANGING_WAYFINDING_SIGN, EXIT_SIGN, STREET_SIGN,
-					PICTOGRAM_SIGN, BUS_EPAPER_BOARD).build(null)
+					PICTOGRAM_SIGN, BUS_EPAPER_BOARD, PASSENGER_INFO_TERMINAL, PASSENGER_INFO_KIOSK).build(null)
 	);
 
 	private WayfindingBlocks() {

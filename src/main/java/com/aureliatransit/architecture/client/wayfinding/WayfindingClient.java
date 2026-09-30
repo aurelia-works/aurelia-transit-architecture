@@ -16,5 +16,11 @@ public final class WayfindingClient {
 	public static void init() {
 		BlockEntityRendererFactories.register(WayfindingBlocks.SIGN_ENTITY, WayfindingSignRenderer::new);
 		WayfindingPlateBlock.openEditor = WayfindingEditScreen::open;
+		WayfindingPlateBlock.openTerminal = pos -> {
+			final net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+			if (client.world != null && client.world.getBlockEntity(pos) instanceof com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity terminal) {
+				client.setScreen(new PassengerTerminalScreen(pos, terminal));
+			}
+		};
 	}
 }

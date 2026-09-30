@@ -58,6 +58,8 @@
     "aurelia_transit_architecture:station_analog_clock",
     "aurelia_transit_architecture:canopy_wave_flat",
     "aurelia_transit_architecture:canopy_end_cap",
+    "aurelia_transit_architecture:passenger_info_terminal",
+    "aurelia_transit_architecture:passenger_info_kiosk",
     "aurelia_transit_architecture:entrance_pylon",
     "aurelia_transit_architecture:wall_wayfinding_sign",
     "aurelia_transit_architecture:hanging_wayfinding_sign",
