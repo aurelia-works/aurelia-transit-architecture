@@ -61,6 +61,20 @@ Short notices shown in a strip at the bottom of PIDS, platform CIS and concourse
 
 Wiring note if the vertical anchoring in `BoardBuilder` changes: the strip is drawn by `messageStrip(m, tr, message, vw, vh, style, now)` at `y = vh - MESSAGE_STRIP_H`, and `contentH` must keep including `stripH` so that rows, anchored from the top or centred, never reach the strip.
 
+## Passenger information terminal
+
+Logic behind the terminal screens (`terminal/*`, `client/terminal/logic/MtrTerminalSource`, installed with `Terminals.install` when MTR is loaded).
+
+| Data | Source |
+|---|---|
+| System map | MTR `simplifiedRoutes` (automatic). `SystemMapBuilder`: routes of one line (same label and colour) collapse into the variant with the most distinct stations (ties: lower route id); consecutive duplicate stops removed; `transfer` = station on two or more map lines; lines serving the current station first, then label, colour, id; at most 24 lines of 48 stops. Deterministic for shuffled input. Cached 10 s per current station. |
+| Station info | Wayfinding facts (name, lines, exits) and the station snapshot's platforms (automatic); station code, transfers, street label and a manual name come from the terminal's own wayfinding data (manual wins). |
+| Accessibility notes | ATA metadata only: loaded block entities implementing `WayfindingEditable` within 24 blocks whose pictogram is accessible route, lift, escalator, stairs or help point (text = destination, else street label, else pictogram name), scanned only when station info is requested, cached 10 s. Help point blocks have no block entity, so they are not found (only help-point signs are). Empty when nothing is configured. |
+| Departures | `TerminalDepartures.select` = the station-wide PIDS rule (not yet departed, `ServiceOrder` order kept). |
+| Service messages | `ClientServiceMessages.allFor(station)`: station message, then network message. |
+
+Trip planning is deferred: MTR's directions finder is server-side only.
+
 ## Limitations
 
 - Station codes, stopping patterns and street names do not exist in MTR; they are manual.

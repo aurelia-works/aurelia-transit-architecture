@@ -174,6 +174,8 @@ class WayfindingLayoutTest {
 		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.WALL_DIRECTION, 61.5F, 16, 0xFFFFFFFF, FONT)).stream().anyMatch("express"::equalsIgnoreCase), "service tag");
 		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.WALL_DIRECTION, 93.5F, 16, 0xFFFFFFFF, FONT)).contains("EXPRESS"), "service tag on a wide sign");
 		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.ENTRANCE_PYLON, 16, 48, 0xFFFFFFFF, FONT)).contains("L"), "line badge");
+		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.TERMINAL, 61.5F, 16, 0xFFFFFFFF, FONT)).contains("City Hall"), "terminal header name");
+		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.TERMINAL, 61.5F, 16, 0xFFFFFFFF, FONT)).contains("MFL 15"), "terminal code chip");
 		assertTrue(texts(WayfindingLayout.layout(r, WayfindingPanelKind.STREET, 61.5F, 16, 0xFFFFFFFF, FONT)).contains("Market Street"), "street");
 	}
 

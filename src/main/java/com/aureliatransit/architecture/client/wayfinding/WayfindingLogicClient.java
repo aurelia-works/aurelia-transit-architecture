@@ -1,7 +1,9 @@
 package com.aureliatransit.architecture.client.wayfinding;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
+import com.aureliatransit.architecture.client.terminal.logic.MtrTerminalSource;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
+import com.aureliatransit.architecture.terminal.Terminals;
 import com.aureliatransit.architecture.client.wayfinding.logic.MtrWayfindingSource;
 import com.aureliatransit.architecture.wayfinding.ServiceMessageSync;
 import com.aureliatransit.architecture.wayfinding.ServiceMessages;
@@ -23,6 +25,7 @@ public final class WayfindingLogicClient {
 	public static void init() {
 		if (FabricLoader.getInstance().isModLoaded("mtr")) {
 			Wayfinding.install(new MtrWayfindingSource());
+			Terminals.install(new MtrTerminalSource());
 		}
 		ClientPlayNetworking.registerGlobalReceiver(ServiceMessageSync.SYNC, (client, handler, buf, responseSender) -> {
 			final ServiceMessages messages;
