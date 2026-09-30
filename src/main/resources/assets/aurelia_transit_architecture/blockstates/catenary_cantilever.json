@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/catenary_cantilever"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/catenary_cantilever",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/catenary_cantilever",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/catenary_cantilever",
+      "y": 270
+    }
+  }
+}

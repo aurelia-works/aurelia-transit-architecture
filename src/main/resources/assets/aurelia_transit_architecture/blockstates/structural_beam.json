@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/structural_beam"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/structural_beam",
+      "y": 90
+    }
+  }
+}

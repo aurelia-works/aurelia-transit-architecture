@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/information_case"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/information_case",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/information_case",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/information_case",
+      "y": 270
+    }
+  }
+}

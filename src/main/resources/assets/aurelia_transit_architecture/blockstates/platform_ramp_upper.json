@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/platform_ramp_upper"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/platform_ramp_upper",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/platform_ramp_upper",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/platform_ramp_upper",
+      "y": 270
+    }
+  }
+}

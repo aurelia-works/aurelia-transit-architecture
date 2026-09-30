@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/canopy_slope_upper"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/canopy_slope_upper",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/canopy_slope_upper",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/canopy_slope_upper",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/catenary_gantry"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/catenary_gantry",
+      "y": 90
+    }
+  }
+}

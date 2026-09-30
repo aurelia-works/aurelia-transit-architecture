@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:polished_deepslate"
+  },
+  "result": "aurelia_transit_architecture:platform_paving_dark",
+  "count": 1
+}

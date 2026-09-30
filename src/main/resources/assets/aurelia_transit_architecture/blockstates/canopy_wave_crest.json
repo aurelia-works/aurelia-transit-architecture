@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/canopy_wave_crest"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/canopy_wave_crest",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/canopy_wave_crest",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/canopy_wave_crest",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/waste_bin"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/waste_bin",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/waste_bin",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/waste_bin",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:platform_paving_light"
+  },
+  "result": "aurelia_transit_architecture:platform_ramp_lower",
+  "count": 2
+}

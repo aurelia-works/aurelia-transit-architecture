@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "aurelia_transit_architecture:platform_edge"
+    },
+    {
+      "item": "aurelia_transit_architecture:platform_edge"
+    },
+    {
+      "item": "aurelia_transit_architecture:platform_edge"
+    },
+    {
+      "item": "aurelia_transit_architecture:platform_edge"
+    },
+    {
+      "item": "minecraft:yellow_dye"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:platform_edge_warning",
+    "count": 4
+  }
+}

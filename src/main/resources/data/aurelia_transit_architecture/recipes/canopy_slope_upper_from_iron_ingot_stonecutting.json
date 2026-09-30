@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:iron_ingot"
+  },
+  "result": "aurelia_transit_architecture:canopy_slope_upper",
+  "count": 4
+}

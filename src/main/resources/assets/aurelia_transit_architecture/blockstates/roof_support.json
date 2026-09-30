@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/roof_support"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/roof_support",
+      "y": 90
+    }
+  }
+}
