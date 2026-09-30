@@ -45,6 +45,11 @@
     "aurelia_transit_architecture:bus_shelter_roof",
     "aurelia_transit_architecture:bus_shelter_seat",
     "aurelia_transit_architecture:bus_curb",
-    "aurelia_transit_architecture:bus_curb_low"
+    "aurelia_transit_architecture:bus_curb_low",
+    "aurelia_transit_architecture:hanging_digital_clock",
+    "aurelia_transit_architecture:wall_digital_clock",
+    "aurelia_transit_architecture:station_analog_clock",
+    "aurelia_transit_architecture:canopy_wave_flat",
+    "aurelia_transit_architecture:canopy_end_cap"
   ]
 }

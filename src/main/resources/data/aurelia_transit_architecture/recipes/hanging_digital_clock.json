@@ -1,0 +1,22 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "redstone",
+  "ingredients": [
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:clock"
+    },
+    {
+      "item": "minecraft:redstone"
+    },
+    {
+      "item": "minecraft:chain"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:hanging_digital_clock",
+    "count": 1
+  }
+}
