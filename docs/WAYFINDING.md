@@ -72,7 +72,7 @@ Short notices shown one at a time in a strip at the bottom of PIDS, platform CIS
 
 ## Station association (Auto / Manual)
 
-Wayfinding signs, passenger information terminals, kiosks, station information boards and bus e-paper boards have a **Station** button in their editor:
+Entrance pylons, exit signs, passenger information terminals, kiosks, station information boards and bus e-paper boards have a **Station** button in their editor (directional, street and pictogram signs have no station field, so no button):
 
 - **Auto** (default, the 1.2 behaviour): the MTR station at the block, falling back to the nearest platform.
 - **Manual**: pick the station, and optionally platforms, from MTR's list. This is for overlapping or vertically stacked stations, big complexes, and decorative terminals just outside a station's area.

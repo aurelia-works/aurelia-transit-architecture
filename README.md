@@ -47,8 +47,8 @@ Install the mod on both the server and the clients.
 - **Elevated railway kit:** columns, beams, braces, stairs, stair enclosures, wind screens, fascias, fencing, utility runs and under-deck lighting for el-style lines above streets. Generic and original, usable for any elevated metro. Each piece is **one inventory item**: right-click it with an empty hand to change its style (sneak + right-click switches a beam between steel and concrete). See [docs/URBAN_INFRASTRUCTURE.md](docs/URBAN_INFRASTRUCTURE.md).
 - **Station information board:** one wall board with five views of the shared wayfinding model: trains this side, platform/track, service changes, mezzanine transfers and a street/exit summary.
 - **Several service messages at once:** network and station notices each have an id and a severity (info, notice, disruption, severe). Boards rotate through them one at a time in their bottom strip and scroll long ones; the terminal lists them all. `/ata_message add | remove | clear | list`.
-- **Manual station association** for wayfinding signs, terminals and e-paper boards ("Station: Auto / Manual" in the editor), for overlapping, stacked or large stations.
-- **Terminal polish:** joined terminals form one continuous screen, standalone help points nearby appear on the Accessibility page, terminal and board text is translatable, and the entrance pylon shows in full in the inventory.
+- **Manual station association** for entrance pylons, exit signs, terminals, kiosks, station information boards and e-paper boards ("Station: Auto / Manual" in the editor), for overlapping, stacked or large stations.
+- **Terminal polish:** joined terminals form one continuous screen, standalone help points nearby appear on the Accessibility page, terminal text and board idle/strip text are translatable (PIDS departure wording such as "Due" or "Calling at" is still English), and the entrance pylon shows in full in the inventory.
 - **Accessibility:** tactile junctions, handrails / glass balustrades / ramp edge rails, ramp and assistance boarding markers.
 - **Angled and curved platform edges** that still open MTR train doors.
 
