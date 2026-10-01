@@ -22,7 +22,12 @@ loom {
 	runs {
 		configureEach { ideConfigGenerated = true }
 		server { runDir = "run/server" }
-		client { runDir = "run/client" }
+		client {
+			runDir = "run/client"
+			// Dev only: Loom runs Apple Silicon on LWJGL 3.3.2-snapshot natives; Sodium 0.5's startup check wants 3.3.1
+			// and refuses to start. This switch (Sodium issue #2561) skips only that check. Not part of the mod.
+			vmArg "-Dsodium.checks.issue2561=false"
+		}
 	}
 }
 
@@ -37,6 +42,12 @@ dependencies {
 	modCompileOnly "maven.modrinth:minecraft-transit-railway:${project.mtr_version}"
 	modLocalRuntime "maven.modrinth:minecraft-transit-railway:${project.mtr_version}"
 
+	// Dev runs only (./gradlew runClient), for shader testing. modLocalRuntime never reaches the published jar,
+	// its POM or fabric.mod.json. Iris 1.7.6 is the last 1.20.1 build and requires Sodium >= 0.5.12-beta.2;
+	// Sodium 0.5.13 is the last 1.20.1 release. Both target Fabric API 0.92.x / loader >= 0.15.
+	modLocalRuntime "maven.modrinth:sodium:${project.sodium_version}"
+	modLocalRuntime "maven.modrinth:iris:${project.iris_version}"
+
 	// Pure-logic unit tests (text sanitising, caches, announcement queue, seat bookkeeping, pagination ...)
 	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
 	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
@@ -46,6 +57,12 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+}
+
+// The dev-run shader stack must not start inside the unit tests (fabric-loader-junit loads every mod on the test classpath).
+configurations.testRuntimeClasspath {
+	exclude module: "sodium"
+	exclude module: "iris"
 }
 
 processResources {
