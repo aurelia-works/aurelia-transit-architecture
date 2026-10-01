@@ -7,3 +7,15 @@ out/
 .DS_Store
 __pycache__/
 .claude/
+logs/
+mods/
+*.class
+*.log
+__MACOSX/
+tools/__pycache__/
+.vscode/
+.classpath
+.project
+.settings/
+*.ipr
+*.iws
