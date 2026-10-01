@@ -111,6 +111,7 @@ Canopy plates sit at the bottom of their block, so they rest directly on columns
 ./gradlew clean build      # JAR in build/libs/
 python3 tools/generate_assets.py   # regenerate textures/models/blockstates/loot/recipes/lang (needs Pillow)
 python3 tools/verify_assets.py     # check every registered block has its assets and data
+python3 tools/check_zfighting.py   # flag model faces that would flicker (z-fighting)
 ./gradlew runServer / runClient    # dev runs with MTR loaded
 ```
 

@@ -617,7 +617,7 @@ def blocks():
         el([6.5, 11.25, 15], [9.5, 14.25, 18], "#insulator", cull=False),
         el([7.25, 4.25, 21 - stay], [8.75, 5.75, 20], "#tube", rot=stay_rot),
         el([6.75, 3.5, 15], [9.25, 6.5, 18], "#insulator", rot=stay_rot),
-        el([7.5, 8, 3], [8.5, 12, 4], "#clamp", cull=False),
+        el([7.5, 8.5, 3], [8.5, 12, 4], "#clamp", cull=False),
         el([7.5, 7.5, 0], [8.5, 8.5, 4], "#tube", cull=False),
     ])})
     lattice_faces_z = {"north": ("#lattice", [0, 1, 16, 5]), "south": ("#lattice", [0, 1, 16, 5])}
@@ -635,7 +635,7 @@ def blocks():
     insulator_elements = [
         el([7.5, 12, 7.5], [8.5, 16, 8.5], "#rod"),
         el([7, 5.5, 7], [9, 12, 9], "#insulator"),
-        el([7, 3, 7], [9, 5.5, 9], "#clamp"),
+        el([7, 2.75, 7], [9, 5.5, 9], "#clamp"),
         el([4, 3, 7.5], [12, 4, 8.5], "#rod"),
     ]
     for y in (6.5, 8, 9.5, 11):
@@ -646,7 +646,7 @@ def blocks():
     b["bus_stop_sign"] = ("sign_single", {"": model({"particle": "steel", "pole": "steel", "frame": "steel", "flag": "bus_stop_flag", "plate": "panel_white"}, [
         el([7, 0, 7], [9, 16, 9], "#pole"),
         el([1, 3, 6.75], [15, 12, 9.25], "#frame", faces={"north": ("#plate", [1, 4, 15, 13]), "south": ("#plate", [1, 4, 15, 13])}),
-        el([3, 12, 7], [13, 16, 9], "#frame", faces={"north": ("#flag", [3, 0, 13, 4]), "south": ("#flag", [3, 0, 13, 4])}),
+        el([3, 12, 6.75], [13, 16, 9.25], "#frame", faces={"north": ("#flag", [3, 0, 13, 4]), "south": ("#flag", [3, 0, 13, 4])}),
     ])})
     b["bus_timetable_case"] = ("facing", {"": model({"particle": "steel", "pole": "steel", "frame": "steel_dark", "face": "timetable"}, [
         el([7, 0, 7], [9, 16, 9], "#pole"),

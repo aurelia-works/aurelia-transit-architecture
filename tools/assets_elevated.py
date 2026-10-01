@@ -159,19 +159,19 @@ def beam(kind, concrete):
         ])
     if kind == "girder":
         return g.model(t, [
-            g.el([0, 6, 2], [16, 16, 14], "#body"),
+            g.el([0, 7.5, 2], [16, 14.5, 14], "#body"),
             g.el([0, 6, 2], [16, 7.5, 14], "#trim"),
             g.el([0, 14.5, 2], [16, 16, 14], "#trim"),
         ])
     if kind == "stringer":
         return g.model(t, [
             g.el([0, 14, 4], [16, 16, 12], "#trim"),
-            g.el([0, 10, 7], [16, 14, 9], "#body"),
+            g.el([0, 11.5, 7], [16, 14, 9], "#body"),
             g.el([0, 10, 5], [16, 11.5, 11], "#trim"),
         ])
     return g.model(t, [
         g.el([0, 12, 0], [16, 16, 16], "#trim"),
-        g.el([0, 5, 6], [16, 12, 10], "#body"),
+        g.el([0, 7, 6], [16, 12, 10], "#body"),
         g.el([0, 5, 3], [16, 7, 13], "#trim"),
     ])
 
@@ -216,7 +216,7 @@ def windscreen(kind):
     flat = {"up": None, "down": None, "west": None, "east": None}
     if kind == "lower":
         return g.model(t, [
-            g.el([0, 0, 0], [16, 4, 1.5], "#plate"),
+            g.el([0, 0, 0], [16, 3.5, 1.5], "#plate"),
             g.el([0, 4, 0.5], [16, 16, 1.0], "#glass", faces=flat),
             g.el([0, 4, 0], [1.2, 16, 1.5], "#frame"),
             g.el([14.8, 4, 0], [16, 16, 1.5], "#frame"),
@@ -249,7 +249,7 @@ def fence_post(kind):
         return g.model({"particle": "steel", "post": "steel", "cap": "steel_dark"}, [
             g.el([6.5, 0, 6.5], [9.5, 15, 9.5], "#post"), g.el([6, 15, 6], [10, 16, 10], "#cap")])
     return g.model({"particle": "steel", "post": "steel", "cap": "steel_dark"}, [
-        g.el([7, 0, 7], [9, 16, 9], "#post"), g.el([6.5, 15, 6.5], [9.5, 16, 9.5], "#cap")])
+        g.el([7, 0, 7], [9, 15, 9], "#post"), g.el([6.5, 15, 6.5], [9.5, 16, 9.5], "#cap")])
 
 
 def fence_side(kind):
@@ -259,7 +259,7 @@ def fence_side(kind):
             g.el([7.5, 0, 1], [8.5, 12, 2], "#picket"), g.el([7.5, 0, 4], [8.5, 12, 5], "#picket")])
     flat = {"up": None, "down": None, "north": None, "south": None}
     return g.model({"particle": "steel", "rail": "steel", "mesh": "fence_mesh"}, [
-        g.el([7.75, 1, 0], [8.25, 15, 7], "#mesh", faces=flat), g.el([7, 15, 0], [9, 16, 7], "#rail"), g.el([7, 0, 0], [9, 1, 7], "#rail")])
+        g.el([7.75, 1, 0], [8.25, 15, 7], "#mesh", faces=flat), g.el([7, 15, 0], [9, 16, 6.5], "#rail"), g.el([7, 0, 0], [9, 1, 7], "#rail")])
 
 
 def rail_post():

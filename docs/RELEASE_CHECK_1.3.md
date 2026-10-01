@@ -80,7 +80,7 @@ Look for: flicker, wrong brightness (displays should glow, e-paper should not), 
 | Bus e-paper board (must stay matte) | ✅ | ✅ | ✅ | Matte under both packs. |
 | Station information board | ✅ | ✅ | ✅ |  |
 | Station stair in every shape + enclosure glass | ✅ | ✅ | ✅ |  |
-| Fences / handrails / glass balustrade | ✅ | ✅ | ✅ | Tester reported an unspecified fence oddity; not reproduced in close-ups (see STATUS). |
+| Fences / handrails / glass balustrade | ✅ | ✅ | ✅ | Trackside fence z-fighting found and fixed after this pass (see STATUS). |
 | Viaduct: columns, beams, braces, wind-screen glass from below | ✅ | ✅ | ✅ |  |
 | Entrance pylon (both faces) | ✅ | ✅ | ✅ |  |
 | Boarding markers (no z-fighting with floor) | ➖ not shot | ✅ | ✅ |  |
@@ -134,9 +134,10 @@ How to read the counters (expectations from LIVE_TESTING.md / the performance co
 
 All of B, C, E pass, no ❌ in D other than packs that cannot load on this GPU, F within expectations → tag `v1.3.0` on the tested commit.
 
-**Result 2026-10-01: PASS with documented exceptions** (Noriega instance, macOS, Apple M1; final build 3142a22b).
+**Result 2026-10-01: PASS with documented exceptions** (Noriega instance, macOS, Apple M1; final build 3112a40d).
 
 - B1–B9, B11, C, D (three settings), E, F: pass. Gaps noted in the tables (boarding markers not shot in vanilla; some E cells and FPS rows not measured; FPS derived, not read from F3).
 - B10: known issue (manual name hides station messages), shipped by release-owner decision; documented in README → Known issues; fix in 1.3.1.
 - Three bugs found and fixed during the check (station list never loaded; picker search box over "Found:"; info board street box over platform box), each re-checked in game. See STATUS → Bugs found during the 1.3 check.
-- Open, not blocking: e-paper text size on small boards (1.3.1), unspecified fence oddity (not reproduced).
+- Trackside fence flicker (z-fighting) found late, fixed and confirmed by the tester; the same defect fixed in 12 other models via `tools/check_zfighting.py` (not each re-checked by eye).
+- Open, not blocking: e-paper text size on small boards (1.3.1).
