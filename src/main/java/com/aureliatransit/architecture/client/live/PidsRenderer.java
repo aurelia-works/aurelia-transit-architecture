@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.live.LiveDebug;
 import com.aureliatransit.architecture.live.NearestPlatformProvider;
 import com.aureliatransit.architecture.live.PidsBlock;
 import com.aureliatransit.architecture.live.PidsBlockEntity;
+import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationAssociationMode;
 import com.aureliatransit.architecture.transit.StationData;
@@ -159,7 +160,7 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 			snapshot = provider.resolve(entity.getPos(), config.association(), true);
 		}
 		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now, clock(world));
-		cache.nextRebuild = now + (cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
+		cache.nextRebuild = now + (cache.model.stripScroll ? MessageRotation.STEP_MILLIS : cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
 	}
 
 	/**

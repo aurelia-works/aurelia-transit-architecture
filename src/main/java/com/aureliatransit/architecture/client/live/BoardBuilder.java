@@ -11,6 +11,7 @@ import com.aureliatransit.architecture.live.display.Marquee;
 import com.aureliatransit.architecture.live.display.Pagination;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
+import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import net.minecraft.client.font.TextRenderer;
 
@@ -34,6 +35,9 @@ final class BoardBuilder {
 	private static final float AVG_CHAR = 5.2F;
 	/** Height (virtual units) of the service-message strip at the bottom of a board, reserved only while a message exists. */
 	private static final float MESSAGE_STRIP_H = 10F;
+	private static final float STRIP_TEXT_SCALE = 0.85F;
+	/** The message strip is squeezed at most this much before it scrolls instead, so text never gets unreadably narrow. */
+	private static final float STRIP_MIN_SQUEEZE = 0.85F;
 
 	private BoardBuilder() {
 	}
@@ -55,8 +59,8 @@ final class BoardBuilder {
 		final float headerH = header ? 11 : 0;
 		final int rows = config.rows();
 		// service message (local > station > network): its strip height is part of the content so rows never overlap it
-		final ServiceMessage message = ClientServiceMessages.select(config.message(), snapshot.station() == null ? "" : snapshot.station().displayName());
-		final float stripH = message.isEmpty() ? 0 : MESSAGE_STRIP_H;
+		final List<ServiceMessage> messages = ClientServiceMessages.applicable(config.message(), snapshot.station() == null ? "" : snapshot.station().displayName());
+		final float stripH = messages.isEmpty() ? 0 : MESSAGE_STRIP_H;
 		final float contentH = headerH + rows * rowH + 1.5F + stripH;
 
 		final float boardW = widthBlocks - 2 * FRAME;
@@ -94,7 +98,7 @@ final class BoardBuilder {
 		}
 
 		final float rowsTop = y0 + headerH;
-		messageStrip(m, tr, message, vw, vh, style, now);
+		messageStrip(m, tr, messages, vw, vh, style, now);
 		if (services.isEmpty()) {
 			idle(m, tr, kind, snapshot, stationName, rowsTop, rows * rowH, vw, style, k, now);
 			return;
@@ -177,14 +181,28 @@ final class BoardBuilder {
 
 	/**
 	 * The service-message strip along the bottom edge of the board ({@code vw} x {@link #MESSAGE_STRIP_H}); nothing when
-	 * there is no message. The caller has already included {@link #MESSAGE_STRIP_H} in the content height, so rows end
-	 * above the strip. Long text is squeezed, then scrolled through {@link #fit}, so the model only rebuilds at the
-	 * existing marquee cadence.
+	 * there are no messages. The caller has already included {@link #MESSAGE_STRIP_H} in the content height, so rows end
+	 * above the strip. One message is shown at a time; several rotate by wall-clock time ({@link MessageRotation}), a
+	 * single message never rotates. Text is kept readable: at most a mild squeeze, otherwise it scrolls one character at
+	 * a time inside its slot, restarting from the beginning for every message.
 	 */
-	private static void messageStrip(BoardModel m, TextRenderer tr, ServiceMessage message, float vw, float vh, DisplayStyle style, long now) {
-		if (message.isEmpty()) {
+	private static void messageStrip(BoardModel m, TextRenderer tr, List<ServiceMessage> messages, float vw, float vh, DisplayStyle style, long now) {
+		if (messages.isEmpty()) {
 			return;
 		}
+		final float k = STRIP_TEXT_SCALE;
+		final float avail = vw - 2 * MARGIN;
+		final int count = messages.size();
+		final String[] texts = new String[count];
+		final int[] overflow = new int[count];
+		final long[] slots = new long[count];
+		for (int i = 0; i < count; i++) {
+			texts[i] = stripText(messages.get(i));
+			overflow[i] = stripOverflow(tr, texts[i], k, avail);
+			slots[i] = MessageRotation.slotMillis(overflow[i]);
+		}
+		final int current = MessageRotation.index(now, slots);
+		final ServiceMessage message = messages.get(current);
 		final int band;
 		final int color;
 		switch (message.severity()) {
@@ -196,6 +214,10 @@ final class BoardBuilder {
 				band = 0xFF8E1B16;
 				color = 0xFFFFFFFF;
 			}
+			case SEVERE -> {
+				band = 0xFFC2160E;
+				color = 0xFFFFFFFF;
+			}
 			default -> {
 				band = style.header();
 				color = style.accent();
@@ -203,9 +225,40 @@ final class BoardBuilder {
 		}
 		final float top = vh - MESSAGE_STRIP_H;
 		m.rect(0, top, vw, MESSAGE_STRIP_H, band, BoardModel.LAYER_BAND);
-		final String text = message.severity() == com.aureliatransit.architecture.wayfinding.MessageSeverity.INFO ? message.text() : "! " + message.text();
-		final float k = 0.85F;
-		fit(m, tr, text, MARGIN, top + (MESSAGE_STRIP_H - 8 * k) / 2 + 0.3F, k, vw - 2 * MARGIN, color, now);
+		final float y = top + (MESSAGE_STRIP_H - 8 * k) / 2 + 0.3F;
+		final String text = texts[current];
+		final float full = tr.getWidth(text) * k;
+		if (full <= avail) {
+			m.text(text, MARGIN, y, k, 1, color);
+		} else if (overflow[current] == 0) {
+			m.text(text, MARGIN, y, k, avail / full, color);
+		} else {
+			final float availUnits = avail / (k * STRIP_MIN_SQUEEZE);
+			final int start = MessageRotation.scrollStart(MessageRotation.elapsedInSlot(now, slots), overflow[current]);
+			final String window = tr.trimToWidth(text.substring(start), (int) availUnits);
+			m.stripScroll = true;
+			m.text(window, MARGIN, y, k, STRIP_MIN_SQUEEZE, color);
+		}
+	}
+
+	private static String stripText(ServiceMessage message) {
+		return switch (message.severity()) {
+			case INFO, WARNING -> message.severity() == com.aureliatransit.architecture.wayfinding.MessageSeverity.INFO ? message.text() : "! " + message.text();
+			case DISRUPTION -> "! " + message.text();
+			case SEVERE -> "!! " + message.text();
+		};
+	}
+
+	/** Characters by which the text overflows the strip even after the mild squeeze; 0 when it fits (squeezed or not). */
+	private static int stripOverflow(TextRenderer tr, String text, float k, float avail) {
+		final int width = tr.getWidth(text);
+		if (width * k * STRIP_MIN_SQUEEZE <= avail) {
+			return 0;
+		}
+		final float availUnits = avail / (k * STRIP_MIN_SQUEEZE);
+		final int length = text.length();
+		final int visibleChars = Math.max(1, (int) (length * availUnits / width));
+		return Math.max(1, length - visibleChars);
 	}
 
 	private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, long nearestPlatformId, long now) {

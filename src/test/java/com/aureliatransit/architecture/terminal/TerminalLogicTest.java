@@ -11,6 +11,7 @@ import com.aureliatransit.architecture.wayfinding.BadgeShape;
 import com.aureliatransit.architecture.wayfinding.ExitInfo;
 import com.aureliatransit.architecture.wayfinding.LanguageLayout;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
+import com.aureliatransit.architecture.wayfinding.MessageScope;
 import com.aureliatransit.architecture.wayfinding.MessageSeverity;
 import com.aureliatransit.architecture.wayfinding.Pictogram;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
@@ -157,12 +158,12 @@ class TerminalLogicTest {
 
 	@Test
 	void serviceMessageListPriorityIsStationThenNetwork() {
-		ClientServiceMessages.set(ServiceMessages.EMPTY.withNetwork(new ServiceMessage("net", MessageSeverity.INFO))
-				.withStation("Market Street", new ServiceMessage("stn", MessageSeverity.WARNING)));
+		ClientServiceMessages.set(ServiceMessages.EMPTY.add(MessageScope.NETWORK, "", MessageSeverity.INFO, "net")
+				.add(MessageScope.STATION, "Market Street", MessageSeverity.WARNING, "stn"));
 		try {
 			assertEquals(List.of("stn", "net"), ClientServiceMessages.allFor("market street").stream().map(ServiceMessage::text).toList());
 			assertEquals(List.of("net"), ClientServiceMessages.allFor("Elsewhere").stream().map(ServiceMessage::text).toList());
-			assertEquals("stn", ClientServiceMessages.select("", "Market Street").text(), "select unchanged");
+			assertEquals(List.of("mine", "stn", "net"), ClientServiceMessages.applicable("mine", "Market Street").stream().map(ServiceMessage::text).toList());
 			ClientServiceMessages.clear();
 			assertTrue(ClientServiceMessages.allFor("Market Street").isEmpty());
 		} finally {

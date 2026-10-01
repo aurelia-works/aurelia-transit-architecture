@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.terminal.StationInfo;
 import com.aureliatransit.architecture.transit.PlatformReference;
 import com.aureliatransit.architecture.wayfinding.ExitInfo;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
+import com.aureliatransit.architecture.wayfinding.MessageScope;
 import com.aureliatransit.architecture.wayfinding.MessageSeverity;
 import com.aureliatransit.architecture.wayfinding.Pictogram;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
@@ -89,15 +90,23 @@ public final class TerminalText {
 		return lines;
 	}
 
-	public static List<Line> serviceLines(ServiceMessage station, ServiceMessage network) {
+	/**
+	 * Every applicable notice, grouped by scope in the order given (the caller passes {@link
+	 * com.aureliatransit.architecture.wayfinding.ServiceMessages#applicable}): a heading when the scope changes, then
+	 * one line per message prefixed with its severity.
+	 */
+	public static List<Line> serviceLines(List<ServiceMessage> messages) {
 		final List<Line> lines = new ArrayList<>();
-		if (!station.isEmpty()) {
-			lines.add(new Line("Station", Kind.HEADING));
-			lines.add(new Line(station.text(), kind(station.severity())));
-		}
-		if (!network.isEmpty()) {
-			lines.add(new Line("Network", Kind.HEADING));
-			lines.add(new Line(network.text(), kind(network.severity())));
+		MessageScope scope = null;
+		for (final ServiceMessage message : messages) {
+			if (message.isEmpty()) {
+				continue;
+			}
+			if (message.scope() != scope) {
+				scope = message.scope();
+				lines.add(new Line(scope == MessageScope.STATION ? "Station" : scope == MessageScope.DISPLAY ? "This display" : "Network", Kind.HEADING));
+			}
+			lines.add(new Line(severityPrefix(message.severity()) + message.text(), kind(message.severity())));
 		}
 		if (lines.isEmpty()) {
 			lines.add(new Line(NO_NOTICES, Kind.DIM));
@@ -105,11 +114,20 @@ public final class TerminalText {
 		return lines;
 	}
 
+	static String severityPrefix(MessageSeverity severity) {
+		return switch (severity) {
+			case INFO -> "";
+			case WARNING -> "! ";
+			case DISRUPTION -> "! ";
+			case SEVERE -> "!! ";
+		};
+	}
+
 	public static Kind kind(MessageSeverity severity) {
 		return switch (severity) {
 			case INFO -> Kind.INFO;
 			case WARNING -> Kind.WARNING;
-			case DISRUPTION -> Kind.DISRUPTION;
+			case DISRUPTION, SEVERE -> Kind.DISRUPTION;
 		};
 	}
 

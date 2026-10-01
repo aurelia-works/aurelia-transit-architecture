@@ -12,8 +12,8 @@ import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
+import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
-import com.aureliatransit.architecture.wayfinding.ServiceMessages;
 import com.aureliatransit.architecture.wayfinding.Wayfinding;
 import com.aureliatransit.architecture.wayfinding.WayfindingData;
 import net.minecraft.client.gui.DrawContext;
@@ -71,7 +71,8 @@ public class PassengerTerminalScreen extends Screen {
 	private List<MapLayout.Strip> strips = List.of();
 	private int pageCount = 1;
 	private String clock = "";
-	private ServiceMessage homeMessage = ServiceMessage.NONE;
+	private List<ServiceMessage> homeMessages = List.of();
+	private long[] homeSlots = new long[0];
 	private ButtonWidget prevButton;
 	private ButtonWidget nextButton;
 
@@ -166,12 +167,13 @@ public class PassengerTerminalScreen extends Screen {
 		dirty = false;
 		final long now = System.currentTimeMillis();
 		final String name = stationName();
-		final ServiceMessages messages = ClientServiceMessages.get();
-		final ServiceMessage stationMessage = messages.forStation(name);
+		final List<ServiceMessage> notices = ClientServiceMessages.allFor(name);
 		textRows.clear();
 		strips = List.of();
 		departureRows = List.of();
-		homeMessage = ClientServiceMessages.select("", name);
+		homeMessages = notices;
+		homeSlots = new long[notices.size()];
+		java.util.Arrays.fill(homeSlots, MessageRotation.DWELL_MILLIS);
 
 		switch (page) {
 			case HOME -> departureRows = TerminalFeed.rows(TerminalFeed.select(snapshot, now, Math.max(1, (contentH - 34) / DEPARTURE_ROW)), now);
@@ -189,7 +191,7 @@ public class PassengerTerminalScreen extends Screen {
 				strips = MapLayout.layout(map, subPage, contentW, contentH, s -> Math.round(textRenderer.getWidth(s) * 0.75F));
 			}
 			case STATION -> paginateText(TerminalText.stationLines(info));
-			case SERVICE -> paginateText(TerminalText.serviceLines(stationMessage, messages.network()));
+			case SERVICE -> paginateText(TerminalText.serviceLines(notices));
 			case ACCESSIBILITY -> paginateText(TerminalText.accessibilityLines(info));
 		}
 		if (page == TerminalPage.HOME) {
@@ -265,21 +267,29 @@ public class PassengerTerminalScreen extends Screen {
 		context.drawText(textRenderer, Text.translatable(KEY + "term_next"), contentX, y, STYLE.dim(), false);
 		y += 12;
 		drawDepartures(context, y, name);
-		if (!homeMessage.isEmpty()) {
+		if (!homeMessages.isEmpty()) {
+			// the current notice follows the wall clock; the list itself only changes when the server syncs it
+			final int index = MessageRotation.index(System.currentTimeMillis(), homeSlots);
+			final ServiceMessage homeMessage = homeMessages.get(index);
 			final int color = switch (homeMessage.severity()) {
 				case INFO -> STYLE.text();
 				case WARNING -> 0xFFFFD25A;
-				case DISRUPTION -> STYLE.delay();
+				case DISRUPTION, SEVERE -> STYLE.delay();
 			};
 			final int stripY = contentY + contentH - 22;
 			context.fill(contentX - 2, stripY, contentX + contentW + 2, stripY + 22, STYLE.rowBand());
+			final String counter = homeMessages.size() > 1 ? (index + 1) + "/" + homeMessages.size() : "";
+			final int textW = contentW - 4 - (counter.isEmpty() ? 0 : textRenderer.getWidth(counter) + 4);
 			int line = 0;
-			for (final OrderedText wrapped : textRenderer.wrapLines(Text.literal(homeMessage.text()), contentW - 4)) {
+			for (final OrderedText wrapped : textRenderer.wrapLines(Text.literal(TerminalText.severityPrefix(homeMessage.severity()) + homeMessage.text()), textW)) {
 				if (line >= 2) {
 					break;
 				}
 				context.drawText(textRenderer, wrapped, contentX + 2, stripY + 3 + line * TEXT_ROW, color, false);
 				line++;
+			}
+			if (!counter.isEmpty()) {
+				context.drawText(textRenderer, counter, contentX + contentW - textRenderer.getWidth(counter), stripY + 3, STYLE.dim(), false);
 			}
 		}
 	}

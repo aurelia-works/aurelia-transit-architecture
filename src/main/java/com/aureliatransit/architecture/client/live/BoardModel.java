@@ -1,5 +1,7 @@
 package com.aureliatransit.architecture.client.live;
 
+import com.aureliatransit.architecture.wayfinding.MessageRotation;
+
 import java.util.Arrays;
 
 /**
@@ -25,6 +27,8 @@ final class BoardModel {
 	float height;
 	/** True when a marquee is active and the model must be rebuilt at the faster marquee cadence. */
 	boolean marquee;
+	/** True while the message strip scrolls: rebuilt at {@link MessageRotation#STEP_MILLIS} instead of the marquee cadence. */
+	boolean stripScroll;
 
 	int rectCount;
 	float[] rx = new float[32];
@@ -46,6 +50,7 @@ final class BoardModel {
 		rectCount = 0;
 		textCount = 0;
 		marquee = false;
+		stripScroll = false;
 		Arrays.fill(ts, null);
 	}
 
