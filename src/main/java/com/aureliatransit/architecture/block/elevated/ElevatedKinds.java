@@ -126,6 +126,33 @@ public final class ElevatedKinds {
 		}
 	}
 
+	/** Plan shape of a platform edge piece for curved or angled track (platform on the south-west side). */
+	public enum CurveKind implements StringIdentifiable {
+		/** Straight 45 degree edge across the block. */
+		DIAGONAL,
+		/** Convex quarter round (outside of a curve). */
+		OUTER,
+		/** Concave quarter round (inside of a curve). */
+		INNER;
+
+		@Override
+		public String asString() {
+			return id(this);
+		}
+
+		/**
+		 * How far (pixels, from x = 0) the platform reaches in the one-pixel strip at depth {@code z} (0 = north, the
+		 * track side). Shared by the collision shape and the generated model, so both follow the same edge line.
+		 */
+		public double reach(double z) {
+			return switch (this) {
+				case DIAGONAL -> Math.min(16, z);
+				case OUTER -> Math.sqrt(Math.max(0, 256 - (16 - z) * (16 - z)));
+				case INNER -> 16 - Math.sqrt(Math.max(0, 256 - z * z));
+			};
+		}
+	}
+
 	public enum JunctionKind implements StringIdentifiable {
 		/** Guidance line turning 90 degrees. */
 		TURN,

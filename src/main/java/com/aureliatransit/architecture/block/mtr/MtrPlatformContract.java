@@ -49,6 +49,13 @@ public final class MtrPlatformContract {
 		return AVAILABLE ? MtrPlatformBlocks.edge(settings, placement, northShape) : new FacingShapedBlock(settings, placement, northShape);
 	}
 
+	/**
+	 * A platform edge for angled/curved track (45 degree, convex or concave), with the same door marker as the straight edge.
+	 */
+	public static Block curve(AbstractBlock.Settings settings) {
+		return AVAILABLE ? MtrPlatformBlocks.curve(settings) : new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings);
+	}
+
 	private static boolean detect() {
 		try {
 			final Class<?> marker = Class.forName(PLATFORM_HELPER, false, MtrPlatformContract.class.getClassLoader());

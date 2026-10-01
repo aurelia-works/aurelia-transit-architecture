@@ -82,6 +82,7 @@
     "aurelia_transit_architecture:utility_run",
     "aurelia_transit_architecture:deck_light",
     "aurelia_transit_architecture:handrail",
-    "aurelia_transit_architecture:tactile_junction"
+    "aurelia_transit_architecture:tactile_junction",
+    "aurelia_transit_architecture:platform_edge_curve"
   ]
 }

@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_diagonal"
+    },
+    "facing=east,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_diagonal",
+      "y": 90
+    },
+    "facing=south,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_diagonal",
+      "y": 180
+    },
+    "facing=west,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_diagonal",
+      "y": 270
+    },
+    "facing=north,kind=outer": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_outer"
+    },
+    "facing=east,kind=outer": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_outer",
+      "y": 90
+    },
+    "facing=south,kind=outer": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_outer",
+      "y": 180
+    },
+    "facing=west,kind=outer": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_outer",
+      "y": 270
+    },
+    "facing=north,kind=inner": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_inner"
+    },
+    "facing=east,kind=inner": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_inner",
+      "y": 90
+    },
+    "facing=south,kind=inner": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_inner",
+      "y": 180
+    },
+    "facing=west,kind=inner": {
+      "model": "aurelia_transit_architecture:block/platform_edge_curve_inner",
+      "y": 270
+    }
+  }
+}

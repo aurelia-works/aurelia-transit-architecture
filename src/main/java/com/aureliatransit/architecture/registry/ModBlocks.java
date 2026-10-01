@@ -82,6 +82,8 @@ public final class ModBlocks {
 			MtrPlatformContract.edge(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
 	public static final Block PLATFORM_EDGE_WARNING = register("platform_edge_warning", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			MtrPlatformContract.edge(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
+	public static final Block PLATFORM_EDGE_CURVE = register("platform_edge_curve", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			MtrPlatformContract.curve(paving(MapColor.STONE_GRAY).nonOpaque()), TIP + "style_cycle", TIP_POINTS_AWAY);
 	public static final Block PLATFORM_RAMP_LOWER = register("platform_ramp_lower", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			new FacingShapedBlock(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER,
 					profile(SLOPE_LOWER, 0, true, 4)), TIP_SLOPE);

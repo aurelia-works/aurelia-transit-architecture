@@ -24,6 +24,16 @@ final class MtrPlatformBlocks {
 		return new Edge(settings, placement, northShape);
 	}
 
+	static Block curve(AbstractBlock.Settings settings) {
+		return new Curve(settings);
+	}
+
+	private static final class Curve extends com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock implements PlatformHelper {
+		Curve(Settings settings) {
+			super(settings);
+		}
+	}
+
 	private static final class Surface extends Block implements PlatformHelper {
 		Surface(Settings settings) {
 			super(settings);

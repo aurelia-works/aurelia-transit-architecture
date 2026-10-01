@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "aurelia_transit_architecture:platform_edge"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:platform_edge_curve",
+    "count": 1
+  }
+}

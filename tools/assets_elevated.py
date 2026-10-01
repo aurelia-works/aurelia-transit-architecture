@@ -7,6 +7,8 @@ viaduct_column (4 styles), viaduct_beam (4 roles x steel/concrete x 2 axes), via
 station_stair, stair_enclosure (3), platform_windscreen (2), platform_fascia (3), station_fence (2), utility_run (2),
 deck_light, handrail (3), tactile_junction (3).  All art is original and generic.
 """
+import math
+
 import generate_assets as g
 
 MOD = g.MOD
@@ -24,6 +26,7 @@ FENCE = ("platform", "trackside")
 UTILITY = ("tray", "conduit")
 RAIL = ("handrail", "balustrade", "ramp_rail")
 JUNCTION = ("turn", "tee", "cross")
+CURVE = ("diagonal", "outer", "inner")
 
 TACTILE = g.TACTILE
 CLADDING = (150, 158, 164)
@@ -308,6 +311,34 @@ def deck_light():
         g.el([0.5, 13.5, 6], [1.5, 16, 10], "#body"), g.el([14.5, 13.5, 6], [15.5, 16, 10], "#body")])
 
 
+def curve_reach(kind, z):
+    """Mirror of ElevatedKinds.CurveKind.reach: platform extent (px from x = 0) at depth z (0 = track side)."""
+    if kind == "diagonal":
+        return min(16.0, z)
+    if kind == "outer":
+        return math.sqrt(max(0.0, 256 - (16 - z) ** 2))
+    return 16 - math.sqrt(max(0.0, 256 - z * z))
+
+
+def platform_curve(kind):
+    """Same section as the straight edge (paving 12-16 px, face 2 px back), drawn in 1 px strips along the edge line,
+    with a granite coping strip on the edge."""
+    t = {"particle": "platform_paving_light", "top": "platform_paving_light", "side": "concrete_light", "coping": "coping_side", "face": "concrete_dark"}
+    els = []
+    for z in range(16):
+        reach = round(curve_reach(kind, z + 0.5) * 2) / 2
+        if reach <= 0:
+            continue
+        coping = min(1.5, reach)
+        if reach - coping > 0:
+            els.append(g.el([0, 12, z], [reach - coping, 16, z + 1], "#side", faces={"up": "#top", "down": "#face", "north": None, "south": None}))
+        els.append(g.el([reach - coping, 12, z], [reach, 16, z + 1], "#coping", faces={"north": None, "south": None}))
+        if reach > 2:
+            els.append(g.el([0, 0, z], [reach - 2, 12, z + 1], "#side", faces={"east": "#face", "north": None, "south": None, "up": None}))
+    # close the open ends of the strip stack on the block faces
+    return g.model(t, els)
+
+
 def stair(kind):
     parent = {"": "stairs", "_inner": "inner_stairs", "_outer": "outer_stairs"}[kind]
     return {"parent": f"minecraft:block/{parent}", "textures": {
@@ -338,6 +369,7 @@ def blocks():
     b["handrail"] = ("simple", {"": rail_post()} | rail)
     b["tactile_junction"] = ("simple", {"": g.cube_bottom_top("wf_guidance_turn", "concrete_light", "concrete_light")}
                              | {f"_{k}": g.cube_bottom_top(f"wf_guidance_{k}", "concrete_light", "concrete_light") for k in JUNCTION})
+    b["platform_edge_curve"] = ("simple", with_default(None, {f"_{k}": platform_curve(k) for k in CURVE}))
     return b
 
 
@@ -355,6 +387,7 @@ def names():
         "deck_light": "Under-Deck Light",
         "handrail": "Handrail and Balustrade",
         "tactile_junction": "Tactile Guidance Junction",
+        "platform_edge_curve": "Angled / Curved Platform Edge",
     }
 
 
@@ -373,7 +406,7 @@ def lang():
     }
     for block, values in (("viaduct_column", COLUMN), ("viaduct_beam", BEAM), ("viaduct_brace", BRACE), ("stair_enclosure", ENCLOSURE),
                           ("platform_windscreen", WINDSCREEN), ("platform_fascia", FASCIA), ("station_fence", FENCE), ("utility_run", UTILITY),
-                          ("handrail", RAIL), ("tactile_junction", JUNCTION)):
+                          ("handrail", RAIL), ("tactile_junction", JUNCTION), ("platform_edge_curve", CURVE)):
         for value in values:
             lg[f"{MSG}{block}.{value}"] = pretty(value)
     return lg
@@ -399,6 +432,7 @@ def recipes():
     shapeless("deck_light", [iron, "minecraft:glowstone_dust", pane], 2)
     shapeless("handrail", [iron, nugget, pane], 4)
     shapeless("tactile_junction", [f"{MOD}:tactile_guidance_paving", "minecraft:yellow_dye"], 1)
+    shapeless("platform_edge_curve", [f"{MOD}:platform_edge"], 1)
     return r
 
 
@@ -428,7 +462,7 @@ def write_extra(assets, data, write_json):
             variants[f"axis=z,kind={k},concrete={str(c).lower()}"] = {"model": model, "y": 90}
     put("viaduct_beam", variants)
     for block, kinds in (("viaduct_brace", BRACE), ("stair_enclosure", ENCLOSURE), ("platform_windscreen", WINDSCREEN), ("platform_fascia", FASCIA),
-                         ("tactile_junction", JUNCTION)):
+                         ("tactile_junction", JUNCTION), ("platform_edge_curve", CURVE)):
         put(block, {f"facing={f},kind={k}": {"model": ref(f"{block}_{k}")} | ({"y": y} if y else {}) for k in kinds for f, y in g.FACING_Y.items()})
 
     # utility run: x/z share the x model (z turned), y has its own

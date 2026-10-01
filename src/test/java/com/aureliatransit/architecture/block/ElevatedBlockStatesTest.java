@@ -156,6 +156,7 @@ class ElevatedBlockStatesTest {
 		checkVariants("platform_fascia", new PlatformFasciaBlock(settings()), List.of("facing", "kind"));
 		checkVariants("utility_run", new UtilityRunBlock(settings()), List.of("axis", "kind"));
 		checkVariants("tactile_junction", new TactileJunctionBlock(settings()), List.of("facing", "kind"));
+		checkVariants("platform_edge_curve", new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings()), List.of("facing", "kind"));
 		checkVariants("station_stair", new StationStairBlock(settings()), List.of("facing", "half", "shape"));
 		// changed or added in 1.3 outside the elevated family
 		checkVariants("boarding_marker", new com.aureliatransit.architecture.block.wayfinding.BoardingMarkerBlock(settings(), net.minecraft.util.shape.VoxelShapes.fullCube()),
@@ -199,8 +200,28 @@ class ElevatedBlockStatesTest {
 		checkShapes("platform_fascia", new PlatformFasciaBlock(settings()), false);
 		checkShapes("utility_run", new UtilityRunBlock(settings()), false);
 		checkShapes("tactile_junction", new TactileJunctionBlock(settings()), false);
+		checkShapes("platform_edge_curve", new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings()), false);
 		checkShapes("station_fence", new StationFenceBlock(settings()), true);
 		checkShapes("handrail", new HandrailBlock(settings()), true);
+	}
+
+	@Test
+	void curvedEdgesKeepTheStraightEdgeSection() {
+		final var block = new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings());
+		for (final BlockState state : block.getStateManager().getStates()) {
+			final VoxelShape shape = block.getOutlineShape(state, EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
+			assertEquals(1.0, shape.getMax(Direction.Axis.Y), 0.0001, "walking surface at the straight edge's height");
+			assertEquals(0.0, shape.getMin(Direction.Axis.Y), 0.0001);
+		}
+		for (final var kind : com.aureliatransit.architecture.block.elevated.ElevatedKinds.CurveKind.values()) {
+			double previous = -1;
+			for (double z = 0; z <= 16; z += 0.5) {
+				final double reach = kind.reach(z);
+				assertTrue(reach >= 0 && reach <= 16, kind + " reach " + reach);
+				assertTrue(reach >= previous - 1e-9, kind + ": the platform widens away from the track");
+				previous = reach;
+			}
+		}
 	}
 
 	@Test
