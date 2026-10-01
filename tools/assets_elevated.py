@@ -153,9 +153,9 @@ def beam(kind, concrete):
     if kind == "crossbeam":
         return g.model(t, [
             g.el([0, 14, 3], [16, 16, 13], "#trim"),
-            g.el([0, 2, 3], [16, 4, 13], "#trim"),
-            g.el([0, 4, 6], [16, 14, 10], "#body"),
-            g.el([7, 4, 4.5], [9, 14, 11.5], "#trim"),
+            g.el([0, 0, 3], [16, 2, 13], "#trim"),
+            g.el([0, 2, 6], [16, 14, 10], "#body"),
+            g.el([7, 2, 4.5], [9, 14, 11.5], "#trim"),
         ])
     if kind == "girder":
         return g.model(t, [
@@ -181,10 +181,12 @@ def brace(kind):
     if kind == "diagonal":
         bar = g.el([6, -3.3, 6.5], [10, 19.3, 9.5], "#bar", cull=False)
         bar["rotation"] = {"origin": [8, 8, 8], "axis": "x", "angle": -45}
-        return g.model(t, [bar, g.el([5, 0, 14], [11, 2, 16], "#plate"), g.el([5, 14, 0], [11, 16, 2], "#plate")])
+        # lower wall plate reaches 5 px into the column's block (column faces sit 2-5 px in)
+        return g.model(t, [bar, g.el([5, 0, 14], [11, 2, 21], "#plate"), g.el([5, 14, 0], [11, 16, 2], "#plate")])
     strut = g.el([6, -2.5, 8.5], [10, 14.5, 11.5], "#bar", cull=False)
     strut["rotation"] = {"origin": [8, 6, 10], "axis": "x", "angle": -45}
-    return g.model(t, [g.el([6, 12, 0], [10, 16, 16], "#bar"), strut, g.el([5, 0, 14], [11, 4, 16], "#plate")])
+    # arm and wall plate reach 5 px into the column's block, so they meet every column style (faces 2-5 px in)
+    return g.model(t, [g.el([6, 12, 0], [10, 16, 21], "#bar"), strut, g.el([5, 0, 14], [11, 4, 21], "#plate")])
 
 
 def enclosure(kind):

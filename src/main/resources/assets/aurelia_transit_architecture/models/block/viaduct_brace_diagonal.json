@@ -92,7 +92,7 @@
       "to": [
         11,
         2,
-        16
+        21
       ],
       "faces": {
         "down": {
@@ -130,8 +130,7 @@
             11,
             16.0
           ],
-          "texture": "#plate",
-          "cullface": "south"
+          "texture": "#plate"
         },
         "west": {
           "uv": [

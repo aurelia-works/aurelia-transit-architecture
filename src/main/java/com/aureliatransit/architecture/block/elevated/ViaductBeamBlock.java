@@ -39,7 +39,7 @@ public class ViaductBeamBlock extends StateShapedBlock {
 	private static final Map<BeamKind, VoxelShape> ALONG_Z = new EnumMap<>(BeamKind.class);
 
 	static {
-		ALONG_X.put(BeamKind.CROSSBEAM, box(0, 2, 3, 16, 16, 13));
+		ALONG_X.put(BeamKind.CROSSBEAM, box(0, 0, 3, 16, 16, 13));
 		ALONG_X.put(BeamKind.GIRDER, box(0, 6, 2, 16, 16, 14));
 		ALONG_X.put(BeamKind.STRINGER, union(box(0, 14, 4, 16, 16, 12), box(0, 10, 7, 16, 14, 9)));
 		ALONG_X.put(BeamKind.PLATFORM_SUPPORT, union(box(0, 12, 0, 16, 16, 16), box(0, 5, 6, 16, 12, 10)));
