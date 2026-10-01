@@ -6,6 +6,7 @@ import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
 import com.aureliatransit.architecture.text.PanelLayout;
+import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationSnapshot;
@@ -156,7 +157,7 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		final float w = spec.panelWidth(cached.rowLength);
 		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height()));
 		cached.showingIdle = rows.isEmpty();
-		final String idle = snapshot.station() == null ? "No stop linked" : "No departures currently available";
+		final String idle = snapshot.station() == null ? Tr.t("epaper_no_stop") : Tr.t("term_no_departures");
 		cached.panel = EPaperLayout.layout(header, rows, idle, w, spec.height(), s -> textRenderer.getWidth(s));
 	}
 

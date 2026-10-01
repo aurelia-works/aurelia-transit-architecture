@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.client.wayfinding;
 
 import com.aureliatransit.architecture.terminal.AccessibilityNote;
+import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.terminal.StationInfo;
 import com.aureliatransit.architecture.transit.PlatformReference;
 import com.aureliatransit.architecture.wayfinding.ExitInfo;
@@ -20,9 +21,10 @@ import java.util.Locale;
  */
 public final class TerminalText {
 
-	public static final String NO_STATION = "No station linked";
-	public static final String NO_NOTICES = "No service notices";
-	public static final String NO_ACCESSIBILITY = "No accessibility information has been provided for this station";
+	/** Translation keys (under {@link Tr#PREFIX}) of the explicit "not available" lines. */
+	public static final String NO_STATION_KEY = "term_no_station";
+	public static final String NO_NOTICES_KEY = "term_no_notices";
+	public static final String NO_ACCESSIBILITY_KEY = "term_no_accessibility";
 
 	public enum Kind {
 		HEADING, BODY, DIM, INFO, WARNING, DISRUPTION
@@ -37,7 +39,7 @@ public final class TerminalText {
 	public static List<Line> stationLines(StationInfo info) {
 		final List<Line> lines = new ArrayList<>();
 		if (info.stationName().isEmpty() && info.platforms().isEmpty() && info.exits().isEmpty() && info.lines().isEmpty()) {
-			lines.add(new Line(NO_STATION, Kind.DIM));
+			lines.add(new Line(Tr.t(NO_STATION_KEY), Kind.DIM));
 			return lines;
 		}
 		lines.add(new Line(info.stationCode().isEmpty() ? info.stationName() : info.stationName() + "  (" + info.stationCode() + ")", Kind.HEADING));
@@ -46,31 +48,31 @@ public final class TerminalText {
 			for (final LineBadge badge : info.lines()) {
 				labels.add(badge.label());
 			}
-			lines.add(new Line("Lines: " + String.join(", ", labels), Kind.BODY));
+			lines.add(new Line(Tr.t("term_lines", String.join(", ", labels)), Kind.BODY));
 		}
 		if (info.platforms().isEmpty()) {
-			lines.add(new Line("No platform information", Kind.DIM));
+			lines.add(new Line(Tr.t("term_no_platforms"), Kind.DIM));
 		} else {
 			final List<String> names = new ArrayList<>();
 			for (final PlatformReference platform : info.platforms()) {
 				names.add(platform.name());
 			}
-			lines.add(new Line("Platforms: " + String.join(", ", names), Kind.BODY));
+			lines.add(new Line(Tr.t("term_platforms", String.join(", ", names)), Kind.BODY));
 		}
 		if (info.exits().isEmpty()) {
-			lines.add(new Line("No exit information", Kind.DIM));
+			lines.add(new Line(Tr.t("term_no_exits"), Kind.DIM));
 		}
 		for (final ExitInfo exit : info.exits()) {
-			lines.add(new Line("Exit " + exit.label(), Kind.HEADING));
+			lines.add(new Line(Tr.t("term_exit", exit.label()), Kind.HEADING));
 			for (final String destination : exit.destinations()) {
 				lines.add(new Line("  " + destination, Kind.BODY));
 			}
 		}
 		if (!info.transfers().isEmpty()) {
-			lines.add(new Line("Transfers: " + info.transfers(), Kind.BODY));
+			lines.add(new Line(Tr.t("term_transfers", info.transfers()), Kind.BODY));
 		}
 		if (!info.streetLabel().isEmpty()) {
-			lines.add(new Line("Street / landmark: " + info.streetLabel(), Kind.BODY));
+			lines.add(new Line(Tr.t("term_street", info.streetLabel()), Kind.BODY));
 		}
 		return lines;
 	}
@@ -85,7 +87,7 @@ public final class TerminalText {
 			}
 		}
 		if (lines.isEmpty()) {
-			lines.add(new Line(NO_ACCESSIBILITY, Kind.DIM));
+			lines.add(new Line(Tr.t(NO_ACCESSIBILITY_KEY), Kind.DIM));
 		}
 		return lines;
 	}
@@ -104,12 +106,12 @@ public final class TerminalText {
 			}
 			if (message.scope() != scope) {
 				scope = message.scope();
-				lines.add(new Line(scope == MessageScope.STATION ? "Station" : scope == MessageScope.DISPLAY ? "This display" : "Network", Kind.HEADING));
+				lines.add(new Line(Tr.t("term_scope." + scope.name().toLowerCase(Locale.ROOT)), Kind.HEADING));
 			}
 			lines.add(new Line(severityPrefix(message.severity()) + message.text(), kind(message.severity())));
 		}
 		if (lines.isEmpty()) {
-			lines.add(new Line(NO_NOTICES, Kind.DIM));
+			lines.add(new Line(Tr.t(NO_NOTICES_KEY), Kind.DIM));
 		}
 		return lines;
 	}
@@ -132,7 +134,6 @@ public final class TerminalText {
 	}
 
 	static String pretty(Pictogram pictogram) {
-		final String lower = pictogram.name().toLowerCase(Locale.ROOT).replace('_', ' ');
-		return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+		return Tr.t("wf_pictogram." + pictogram.name().toLowerCase(Locale.ROOT));
 	}
 }

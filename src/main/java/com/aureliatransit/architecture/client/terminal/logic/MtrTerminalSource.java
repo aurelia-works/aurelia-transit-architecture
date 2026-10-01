@@ -1,6 +1,9 @@
 package com.aureliatransit.architecture.client.terminal.logic;
 
+import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.live.cache.TimedLruCache;
+import com.aureliatransit.architecture.registry.WayfindingBlocks;
+import com.aureliatransit.architecture.terminal.NearbyBlocks;
 import com.aureliatransit.architecture.terminal.AccessibilityNote;
 import com.aureliatransit.architecture.terminal.StationInfo;
 import com.aureliatransit.architecture.terminal.StationInfoBuilder;
@@ -22,7 +25,9 @@ import com.aureliatransit.architecture.wayfinding.WayfindingEditable;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.chunk.ChunkSection;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import org.mtr.core.data.Route;
@@ -48,8 +53,9 @@ import java.util.function.LongSupplier;
  *     <li><b>Accessibility notes</b>: from ATA metadata only. A scan of the <em>loaded</em> chunks within
  *     {@value #SCAN_RADIUS} blocks for block entities implementing {@link WayfindingEditable} whose pictogram is
  *     accessible route, lift, escalator, stairs or help point; text = the sign's destination, else street label, else the
- *     pictogram name. Cached per position for 10 s. Help point blocks have no block entity, finding them would need a
- *     block-by-block scan, so they are not scanned for (a help-point <em>sign</em> with that pictogram is).</li>
+ *     pictogram name. Standalone help point blocks have no block entity: they are found through the chunk sections of the
+ *     same loaded chunks ({@link #helpPoints}; sections without one are skipped via the palette) and the nearest
+ *     {@value #MAX_HELP_POINTS} are listed with their distance. Cached per position for 10 s; never run per tick.</li>
  * </ul>
  */
 public final class MtrTerminalSource implements TerminalSource {
@@ -60,6 +66,7 @@ public final class MtrTerminalSource implements TerminalSource {
 	static final long EVICT_MILLIS = 60_000;
 	static final int SCAN_RADIUS = 24;
 	static final int MAX_NOTES = 12;
+	static final int MAX_HELP_POINTS = 4;
 
 	private record InfoKey(long pos, WayfindingData data) {
 	}
@@ -149,8 +156,51 @@ public final class MtrTerminalSource implements TerminalSource {
 			}
 		}
 		final List<AccessibilityNote> notes = new ArrayList<>(found);
-		notes.sort((a, b) -> a.pictogram() != b.pictogram() ? Integer.compare(a.pictogram().ordinal(), b.pictogram().ordinal()) : a.text().compareTo(b.text()));
+		notes.addAll(helpPoints(world, centre, minX, maxX, minZ, maxZ));
+		notes.sort((a, b) -> a.pictogram() != b.pictogram() ? Integer.compare(a.pictogram().ordinal(), b.pictogram().ordinal())
+				: a.pictogram() == Pictogram.HELP_POINT ? 0 : a.text().compareTo(b.text())); // help points keep their nearest-first order
 		return List.copyOf(notes.size() > MAX_NOTES ? notes.subList(0, MAX_NOTES) : notes);
+	}
+
+	/**
+	 * Standalone help points have no block entity, so they are found through the chunk sections of the loaded chunks
+	 * around the terminal. A section whose palette holds no help point is rejected without visiting a block, so the
+	 * work is bounded by the radius and runs only when the terminal's station info is requested (then cached).
+	 */
+	private static List<AccessibilityNote> helpPoints(ClientWorld world, BlockPos centre, int minX, int maxX, int minZ, int maxZ) {
+		final List<BlockPos> candidates = new ArrayList<>();
+		final int minSection = world.getSectionIndex(Math.max(world.getBottomY(), centre.getY() - SCAN_RADIUS));
+		final int maxSection = world.getSectionIndex(Math.min(world.getTopY() - 1, centre.getY() + SCAN_RADIUS));
+		final BlockPos.Mutable cursor = new BlockPos.Mutable();
+		for (int cx = minX; cx <= maxX; cx++) {
+			for (int cz = minZ; cz <= maxZ; cz++) {
+				if (!(world.getChunk(cx, cz, ChunkStatus.FULL, false) instanceof WorldChunk chunk)) {
+					continue;
+				}
+				final ChunkSection[] sections = chunk.getSectionArray();
+				for (int index = Math.max(0, minSection); index <= Math.min(sections.length - 1, maxSection); index++) {
+					final ChunkSection section = sections[index];
+					if (section == null || section.isEmpty() || !section.hasAny(state -> state.isOf(WayfindingBlocks.HELP_POINT))) {
+						continue;
+					}
+					final int baseY = world.sectionIndexToCoord(index) << 4;
+					for (int x = 0; x < 16; x++) {
+						for (int y = 0; y < 16; y++) {
+							for (int z = 0; z < 16; z++) {
+								if (section.getBlockState(x, y, z).isOf(WayfindingBlocks.HELP_POINT)) {
+									candidates.add(cursor.set((cx << 4) + x, baseY + y, (cz << 4) + z).toImmutable());
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		final List<AccessibilityNote> notes = new ArrayList<>();
+		for (final BlockPos pos : NearbyBlocks.nearest(candidates, centre, SCAN_RADIUS, MAX_HELP_POINTS)) {
+			notes.add(new AccessibilityNote(Pictogram.HELP_POINT, Text.translatable("note." + AureliaTransitArchitecture.MOD_ID + ".help_point_distance", NearbyBlocks.distance(centre, pos)).getString()));
+		}
+		return notes;
 	}
 
 	private static AccessibilityNote note(WayfindingData data) {

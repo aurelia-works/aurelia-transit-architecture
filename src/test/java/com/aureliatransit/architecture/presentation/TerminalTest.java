@@ -118,9 +118,9 @@ class TerminalTest {
 
 	@Test
 	void textPagesNeverInventContent() {
-		assertEquals(TerminalText.NO_STATION, TerminalText.stationLines(StationInfo.EMPTY).get(0).text());
-		assertEquals(TerminalText.NO_ACCESSIBILITY, TerminalText.accessibilityLines(StationInfo.EMPTY).get(0).text());
-		assertEquals(TerminalText.NO_NOTICES, TerminalText.serviceLines(List.of()).get(0).text());
+		assertEquals(com.aureliatransit.architecture.text.Tr.t(TerminalText.NO_STATION_KEY), TerminalText.stationLines(StationInfo.EMPTY).get(0).text());
+		assertEquals(com.aureliatransit.architecture.text.Tr.t(TerminalText.NO_ACCESSIBILITY_KEY), TerminalText.accessibilityLines(StationInfo.EMPTY).get(0).text());
+		assertEquals(com.aureliatransit.architecture.text.Tr.t(TerminalText.NO_NOTICES_KEY), TerminalText.serviceLines(List.of()).get(0).text());
 		final StationInfo info = new StationInfo("Central", "C1", List.of(), List.of(), List.of(), "", "", List.of(new AccessibilityNote(Pictogram.ELEVATOR, "Lift to concourse")));
 		assertEquals("Elevator: Lift to concourse", TerminalText.accessibilityLines(info).get(0).text());
 		final List<TerminalText.Line> service = TerminalText.serviceLines(List.of(new ServiceMessage(1, com.aureliatransit.architecture.wayfinding.MessageScope.STATION, "Central", MessageSeverity.WARNING, "Works")));

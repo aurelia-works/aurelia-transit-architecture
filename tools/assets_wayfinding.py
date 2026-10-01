@@ -340,6 +340,31 @@ def lang():
         KEY + "wf_station_source.manual": "Manual: %s",
         TIP + "wf_terminal": "Right-click to use: departures, system map, station, service and accessibility information",
         TIP + "wf_terminal_edit": "Sneak + right-click with an empty hand to edit name, code, lines and notes",
+        KEY + "term_no_station": "No station linked",
+        KEY + "term_no_notices": "No service notices",
+        KEY + "term_no_accessibility": "No accessibility information has been provided for this station",
+        KEY + "term_no_platforms": "No platform information",
+        KEY + "term_no_exits": "No exit information",
+        KEY + "term_no_departures": "No departures currently available",
+        KEY + "term_exit": "Exit %s",
+        KEY + "term_lines": "Lines: %s",
+        KEY + "term_platforms": "Platforms: %s",
+        KEY + "term_transfers": "Transfers: %s",
+        KEY + "term_street": "Street / landmark: %s",
+        KEY + "term_scope.station": "Station",
+        KEY + "term_scope.network": "Network",
+        KEY + "term_scope.display": "This display",
+        KEY + "term_touch": "Touch for information",
+        KEY + "term_passenger_info": "Passenger information",
+        KEY + "board_departures": "Departures",
+        KEY + "board_departures_at": "Departures - %s",
+        KEY + "board_terminates": "Terminates here",
+        KEY + "board_delayed_one": "Delayed by %s minute",
+        KEY + "board_delayed_many": "Delayed by %s minutes",
+        KEY + "board_configure": "Right-click to configure",
+        KEY + "board_welcome": "Welcome to %s",
+        KEY + "epaper_no_stop": "No stop linked",
+        f"note.{MOD}.help_point_distance": "about %s blocks away",
         KEY + "term_title": "Passenger Information",
         KEY + "term_next": "Next departures",
         KEY + "term_no_map": "No system map available",
@@ -392,6 +417,31 @@ def write_extra(assets, data, write_json):
                                 "conditions": [{"condition": "minecraft:block_state_property", "block": f"{MOD}:entrance_pylon", "properties": {"half": "lower"}}]}],
                    "conditions": [{"condition": "minecraft:survives_explosion"}]}],
     })
+
+    # Entrance pylon inventory/hand model: both halves stacked and scaled so the whole two-block item is visible
+    # (the block model alone is only the lower half, which showed as the bottom half of the pylon in the inventory).
+    lower, upper = pylon(False), pylon(True)
+    elements = list(lower["elements"])
+    for element in upper["elements"]:
+        shifted = dict(element)
+        shifted["from"] = [element["from"][0], element["from"][1] + 16, element["from"][2]]
+        shifted["to"] = [element["to"][0], element["to"][1] + 16, element["to"][2]]
+        elements.append(shifted)
+    scale = 0.34
+
+    def display(rotation, translation, base_scale):
+        k = base_scale * 0.55
+        return {"rotation": rotation, "translation": [translation[0], translation[1] - 8 * k, translation[2]], "scale": [k, k, k]}
+
+    item = {"parent": "block/block", "textures": {**lower["textures"], **upper["textures"]}, "elements": elements, "display": {
+        "gui": display([30, 225, 0], [0, 0, 0], 0.625),
+        "ground": display([0, 0, 0], [0, 3, 0], 0.25),
+        "fixed": display([0, 0, 0], [0, 0, 0], 0.5),
+        "thirdperson_righthand": display([75, 45, 0], [0, 2.5, 0], 0.375),
+        "firstperson_righthand": display([0, 45, 0], [0, 0, 0], 0.4),
+        "firstperson_lefthand": display([0, 225, 0], [0, 0, 0], 0.4),
+    }}
+    write_json(assets / "models" / "item" / "entrance_pylon.json", item)
 
     # Boarding marker: type is a block state.
     variants = {}

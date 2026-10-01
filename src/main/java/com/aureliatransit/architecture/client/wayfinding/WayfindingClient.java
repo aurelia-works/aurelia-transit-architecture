@@ -14,6 +14,7 @@ public final class WayfindingClient {
 	}
 
 	public static void init() {
+		com.aureliatransit.architecture.text.Tr.install((key, args) -> net.minecraft.client.resource.language.I18n.translate(key, args));
 		BlockEntityRendererFactories.register(WayfindingBlocks.SIGN_ENTITY, WayfindingSignRenderer::new);
 		WayfindingPlateBlock.openEditor = WayfindingEditScreen::open;
 		WayfindingPlateBlock.openTerminal = pos -> {

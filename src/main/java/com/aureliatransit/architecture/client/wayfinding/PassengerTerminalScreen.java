@@ -12,6 +12,7 @@ import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
+import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import com.aureliatransit.architecture.wayfinding.Wayfinding;
@@ -296,7 +297,7 @@ public class PassengerTerminalScreen extends Screen {
 
 	private void drawDepartures(DrawContext context, int startY, String name) {
 		if (departureRows.isEmpty()) {
-			final String empty = snapshot.station() == null ? TerminalText.NO_STATION : "No departures currently available";
+			final String empty = snapshot.station() == null ? Tr.t(TerminalText.NO_STATION_KEY) : Tr.t("term_no_departures");
 			context.drawText(textRenderer, empty, contentX, startY + 2, STYLE.dim(), false);
 			return;
 		}

@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.client.wayfinding;
 
 import com.aureliatransit.architecture.text.PanelLayout;
+import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
 import com.aureliatransit.architecture.wayfinding.ResolvedWayfinding;
 
@@ -15,8 +16,8 @@ import java.util.function.ToIntFunction;
  */
 public final class TerminalFace {
 
-	public static final String PROMPT = "Touch for information";
-	public static final String FALLBACK_NAME = "Passenger information";
+	public static final String PROMPT_KEY = "term_touch";
+	public static final String FALLBACK_NAME_KEY = "term_passenger_info";
 	private static final float PAD = 0.8F;
 	private static final float MAX_NAME_SCALE = 0.7F;
 	private static final float MAX_PROMPT_SCALE = 0.5F;
@@ -34,7 +35,7 @@ public final class TerminalFace {
 		final float top = h / 2;
 
 		// Three bands that never overlap: name (4-40 % from the top), badges (centred at 52 %), prompt (64-95 %).
-		final String name = r.stationName().isEmpty() ? FALLBACK_NAME : r.stationName();
+		final String name = r.stationName().isEmpty() ? Tr.t(FALLBACK_NAME_KEY) : r.stationName();
 		block(labels, name, avail, top - h * 0.22F, h * 0.36F, MAX_NAME_SCALE, textColor, measure);
 
 		final float badgeH = Math.min(3.4F, h * 0.16F);
@@ -62,7 +63,7 @@ public final class TerminalFace {
 		}
 
 		rects.add(new PanelLayout.Rect(0, -h / 2 + h * 0.03F, avail, 0.5F, 0xFF4FB8B0));
-		block(labels, PROMPT, avail, top - h * 0.795F, h * 0.31F, MAX_PROMPT_SCALE, 0xFF4FB8B0, measure);
+		block(labels, Tr.t(PROMPT_KEY), avail, top - h * 0.795F, h * 0.31F, MAX_PROMPT_SCALE, 0xFF4FB8B0, measure);
 		return new PanelLayout.Panel(rects, labels);
 	}
 

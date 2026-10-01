@@ -11,6 +11,7 @@ import com.aureliatransit.architecture.live.display.Marquee;
 import com.aureliatransit.architecture.live.display.Pagination;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
+import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import net.minecraft.client.font.TextRenderer;
@@ -80,7 +81,7 @@ final class BoardBuilder {
 		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);
 		if (header) {
 			m.rect(0, y0, vw, headerH, style.header(), BoardModel.LAYER_BAND);
-			final String title = kind == DisplayKind.CONCOURSE ? (stationName.isEmpty() ? "Departures" : "Departures - " + stationName) : stationName;
+			final String title = kind == DisplayKind.CONCOURSE ? (stationName.isEmpty() ? Tr.t("board_departures") : Tr.t("board_departures_at", stationName)) : stationName;
 			float right = vw - MARGIN;
 			if (config.clock()) {
 				final float cw = tr.getWidth(clock) * 0.9F;
@@ -279,10 +280,10 @@ final class BoardBuilder {
 		final float sk = 0.75F;
 		final List<String> pages = new ArrayList<>(4);
 		if (s.terminating()) {
-			pages.add("Terminates here");
+			pages.add(Tr.t("board_terminates"));
 		} else {
 			if (delayMinutes > 0) {
-				pages.add("Delayed by " + delayMinutes + (delayMinutes == 1 ? " minute" : " minutes"));
+				pages.add(Tr.t(delayMinutes == 1 ? "board_delayed_one" : "board_delayed_many", delayMinutes));
 			}
 			pages.addAll(CallingPages.paginate(s.callingAt(), (int) (avail / (AVG_CHAR * sk))));
 		}
@@ -298,11 +299,11 @@ final class BoardBuilder {
 		final String first;
 		final String second;
 		if (snapshot.station() == null) {
-			first = "No station linked";
-			second = "Right-click to configure";
+			first = Tr.t("term_no_station");
+			second = Tr.t("board_configure");
 		} else {
-			first = "Welcome to " + stationName;
-			second = "No departures currently available";
+			first = Tr.t("board_welcome", stationName);
+			second = Tr.t("term_no_departures");
 		}
 		final float fk = Math.max(1F, k);
 		final float sk = Math.max(0.75F, k * 0.75F);
