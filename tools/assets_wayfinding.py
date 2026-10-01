@@ -238,9 +238,14 @@ def epaper(left, right):
 def terminal(left, right):
     x1 = 0 if left else 0.75
     x2 = 16 if right else 15.25
+    # The screen texture has a lighter 1 px rim on every edge. A north face is mirrored (u = 16 - x), so a screen that
+    # runs to a block edge would put that rim exactly on the join and draw a visible seam between joined terminals.
+    # Sampling only the interior columns (1..15) keeps the surface continuous across any number of blocks.
+    u1 = max(1.0, 16 - x2)
+    u2 = min(15.0, 16 - x1)
     return g.model({"particle": "steel_dark", "body": "steel_dark", "screen": "wf_terminal_screen"}, [
         g.el([0, 1, 12], [16, 15, 16], "#body"),
-        g.el([x1, 2, 11.9], [x2, 14, 12], None, faces={"north": "#screen"}),
+        g.el([x1, 2, 11.9], [x2, 14, 12], None, faces={"north": ("#screen", [u1, 2, u2, 14])}),
     ])
 
 
