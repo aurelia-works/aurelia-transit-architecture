@@ -224,7 +224,7 @@ public class WayfindingEditScreen extends Screen {
 				column++;
 			}
 			if (fields.street()) {
-				streetField = field(left, y, WIDTH, WayfindingData.MAX_STREET, seed.streetLabel(), "wf_street");
+				streetField = field(left + column * 60, y, WIDTH - column * 60, WayfindingData.MAX_STREET, seed.streetLabel(), "wf_street");
 			} else if (fields.destination()) {
 				destinationField = field(left + column * 60, y, WIDTH - column * 60, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
 			}

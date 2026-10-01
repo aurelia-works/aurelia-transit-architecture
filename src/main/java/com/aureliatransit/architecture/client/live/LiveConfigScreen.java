@@ -39,6 +39,7 @@ abstract class LiveConfigScreen extends Screen {
 	private boolean platformsHint;
 	private final List<ClickableWidget> listWidgets = new ArrayList<>();
 	private ButtonWidget modeButton;
+	private TextFieldWidget filterField;
 	private int rightX;
 	private int listY;
 	private boolean sent;
@@ -82,7 +83,7 @@ abstract class LiveConfigScreen extends Screen {
 			button.setMessage(modeText());
 			refreshLists();
 		}).dimensions(rightX, y, COLUMN_WIDTH, 20).build());
-		final TextFieldWidget filterField = add(new TextFieldWidget(textRenderer, rightX, y + 24, COLUMN_WIDTH, 18, tr("live_filter")));
+		filterField = add(new TextFieldWidget(textRenderer, rightX, y + 24, COLUMN_WIDTH, 18, tr("live_filter")));
 		filterField.setMaxLength(32);
 		filterField.setText(filter);
 		filterField.setChangedListener(text -> {
@@ -105,6 +106,8 @@ abstract class LiveConfigScreen extends Screen {
 		listWidgets.clear();
 		pageCount = 1;
 		platformsHint = false;
+		// the filter only applies to the manual list; in Automatic mode "Found: ..." is drawn in its place
+		filterField.visible = mode == StationAssociationMode.MANUAL;
 		if (mode != StationAssociationMode.MANUAL) {
 			return;
 		}

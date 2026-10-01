@@ -117,7 +117,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	@Override
 	public List<StationReference> listStations(int limit) {
 		final long now = clock.getAsLong();
-		if (now - stationListAt > RESOLVE_MILLIS) {
+		if (stationListAt == Long.MIN_VALUE || now - stationListAt > RESOLVE_MILLIS) {
 			final List<StationReference> list = new ArrayList<>();
 			for (final Station station : MinecraftClientData.getInstance().stations) {
 				list.add(new StationReference(station.getId(), station.getName(), station.getColor()));

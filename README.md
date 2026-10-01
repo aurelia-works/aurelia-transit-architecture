@@ -98,6 +98,12 @@ Canopy plates sit at the bottom of their block, so they rest directly on columns
 - MTR still defines platforms, stations and where trains stop with its own tools. Aurelia doesn't change MTR's rail, platform or station logic.
 - Catenary pieces are decorative and can be combined with MTR's own catenary/wire system.
 - The addon uses no mixins and does not modify MTR.
+- **Manual station picker:** lists only the stations MTR has sent to your client, which are the ones near you (in testing, a station ~100 blocks away was listed and one ~210 blocks away was not). Once picked, the link is kept when you move away.
+
+### Known issues (1.3.0)
+
+- **Station messages and manual names:** a terminal or station information board with a manual station name doesn't show that station's `/ata_message` station messages, while the PIDS beside it does. Network messages are unaffected. Workaround: leave the name blank so the MTR station name is used. Fix planned for 1.3.1.
+- **Small e-paper bus boards:** on 1- and 2-wide boards the route and destination are cut short ("R…", "Al…"). Use a wider board for now. Fix planned for 1.3.1.
 
 ## Building from source
 
