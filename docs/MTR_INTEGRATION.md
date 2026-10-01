@@ -56,12 +56,13 @@ From this build, ATA's walkable platform surfaces implement MTR's `PlatformHelpe
 
 - platform edge
 - platform edge with warning line
+- angled / curved platform edge (1.3: 45°, convex and concave; same marker, see [URBAN_INFRASTRUCTURE.md](URBAN_INFRASTRUCTURE.md#curved-platforms-what-ata-provides))
 - light and dark platform paving
-- tactile warning paving
+- tactile warning paving and tactile guidance paving
 
 - `PlatformHelper` has no abstract methods. In MTR 4.0.3 and 4.0.5, MTR tests it only with `instanceof`: in the door check, and to show rails while you hold a platform item. MTR reads no block-state properties through it. There is no mixin, and nothing in MTR changes.
 - `MtrPlatformContract` checks at startup that the interface exists and is still a pure marker. Only then does it load the block classes that implement it. If a future MTR changes it, ATA registers plain blocks (doors then need an MTR platform block nearby) and logs a warning instead of failing to load. The startup log line reports `MTR platform door contract: enabled|unavailable`.
-- Ramps are not platforms and do not carry the marker. Neither do bus curbs.
+- Ramps are not platforms and do not carry the marker. Neither do bus curbs, nor the 1.3 tactile junctions (decorative paving for mezzanines and streets).
 - MTR still decides where trains stop from its own platform rails and schedules. The marker only satisfies the "is there a platform beside this door" check.
 
 ## Known limitations (deliberately not faked)

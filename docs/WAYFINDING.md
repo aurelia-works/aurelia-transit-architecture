@@ -48,18 +48,50 @@ Routes are matched to the station by station id or by the ids of the station's p
 
 ## Service messages
 
-Short notices shown in a strip at the bottom of PIDS, platform CIS and concourse boards.
+Short notices shown one at a time in a strip at the bottom of PIDS, platform CIS and concourse boards, listed in full on the terminal's Service info page and summarised by the station information board's "Service changes" view.
 
-- **Server state**: one network message and up to 16 station messages (keyed by station display name, case-insensitive), in the overworld's persistent state (`ata_service_messages`). Text is sanitised and capped at 96 characters; severity is `info`, `warning` or `disruption`. The server never references MTR.
+- **Server state** (`ServiceMessages`): any number of NETWORK and STATION messages, at most 32 in total, in the overworld's persistent state (`ata_service_messages`). Each message has a **stable id** that is never reused (ids carry on after removals and restarts), a **scope** (network, or a station matched by display name, case-insensitive), a **severity** (`info`, `notice`, `disruption`, `severe`) and sanitised text of up to 96 characters. Adding a message never overwrites another one. 1.2 data (one network message plus one per station) is migrated on load. The server never references MTR.
+- **DISPLAY scope**: the message typed into a display's own config screen. It stays in the display's config, not in the server list.
 - **Commands** (permission level 2):
-  - `/ata_message network set <info|warning|disruption> <text...>` and `/ata_message network clear`
-  - `/ata_message station "<name>" set <info|warning|disruption> <text...>` and `/ata_message station "<name>" clear`
-  - `/ata_message list`
-- **Sync**: the complete set is sent to a player on join and to everyone when it changes (packet `service_messages`, bounded reads). Clients drop it on disconnect.
-- **Priority on a board**: the display's own message (the field in its config screen) over the station message for the board's resolved station name, over the network message.
-- **Drawing**: `BoardBuilder` adds a strip along the bottom (INFO uses the style's header and accent colours, WARNING amber, DISRUPTION red with white text and a "! " prefix). Long text is squeezed, then scrolled by the existing marquee, so the board rebuilds at the existing cadence (about once a second, faster only while scrolling). The strip height (10 virtual units) is added to the board's content height only while a message exists, so departure rows end above it; idle boards show it too.
+  - `/ata_message add network <info|notice|disruption|severe> <text...>`
+  - `/ata_message add station "<name>" <severity> <text...>`
+  - `/ata_message remove <id>`
+  - `/ata_message clear` (everything), `/ata_message clear network`, `/ata_message clear station "<name>"`
+  - `/ata_message list` (shows ids)
+  - 1.2 forms still work: `network set ...` / `station "<name>" set ...` replace that scope's messages with one; `... clear` clears that scope. `warning` is accepted for `notice`.
+- **Sync**: the complete list goes to a player on join and to everyone when it changes (packet `service_messages`, bounded reads: count checked before allocation, strings length-capped, invalid entries dropped). Clients drop it on disconnect.
+- **Order** (`ServiceMessages.applicable`, deterministic): display message, then station messages, then network messages. Within a group the most severe comes first, then by id. Lower groups are never hidden; they come later in the same cycle.
 
-Wiring note if the vertical anchoring in `BoardBuilder` changes: the strip is drawn by `messageStrip(m, tr, message, vw, vh, style, now)` at `y = vh - MESSAGE_STRIP_H`, and `contentH` must keep including `stripH` so that rows, anchored from the top or centred, never reach the strip.
+### Rotation and scrolling (`MessageRotation`)
+
+- Each message gets a time slot of **5 s** (dwell). A message that has to scroll gets a longer slot: 1.2 s hold, then the scroll, then 1.2 s hold at the end.
+- The message shown and the scroll position are pure functions of the **wall clock**, never of frames. The board model is rebuilt at its normal cadence (about once a second), and every 140 ms only while the current message is scrolling. Nothing is laid out per frame.
+- **Zero** messages: no strip, and the departure rows get the space back. **One**: it never rotates. **Many**: they rotate in order.
+- **Long text** is squeezed at most to 85 % width (never unreadable), then scrolled one way, one character at a time from its start. Every new message starts from its beginning.
+- Colours: info uses the board style, notice is amber, disruption red, and severe bright red with a "!!" prefix.
+
+## Station association (Auto / Manual)
+
+Wayfinding signs, passenger information terminals, kiosks, station information boards and bus e-paper boards have a **Station** button in their editor:
+
+- **Auto** (default, the 1.2 behaviour): the MTR station at the block, falling back to the nearest platform.
+- **Manual**: pick the station, and optionally platforms, from MTR's list. This is for overlapping or vertically stacked stations, big complexes, and decorative terminals just outside a station's area.
+
+The choice is stored in the block's wayfinding data (`association`) and used everywhere that block resolves MTR data: names, lines and exits, terminal departures and station info, and e-paper arrivals. Caches key on position *and* association, so an Auto block and a Manual block never share an entry. This is a block-level override only; ATA has no network-wide overlapping-station system.
+
+## Station information board
+
+One wall board (joins side by side; 2–3 wide reads best) with a **view** chosen in its editor. Every view lays out facts the shared model already resolved (`StationBoardLayout`); nothing is stored twice.
+
+| View | Shows |
+|---|---|
+| Trains this side | heading, then arrow, direction/destination and line badges (the directional-sign layout) |
+| Platform / track | heading, then platform number, direction and lines (the platform-sign layout) |
+| Service changes | the applicable service messages with severity markers; "+N more" when they do not fit; "No service changes" when there are none |
+| Transfer board | line badges serving the station, transfer note, street/landmark |
+| Street / exit summary | every MTR exit of the station with its destinations; "+N more" when they do not fit |
+
+The layout is static. It rebuilds only when the resolved data, the board width or the service-message list changes.
 
 ## Passenger information terminal
 
@@ -69,9 +101,9 @@ Logic behind the terminal screens (`terminal/*`, `client/terminal/logic/MtrTermi
 |---|---|
 | System map | MTR `simplifiedRoutes` (automatic). `SystemMapBuilder`: routes of one line (same label and colour) collapse into the variant with the most distinct stations (ties: lower route id); consecutive duplicate stops removed; `transfer` = station on two or more map lines; lines serving the current station first, then label, colour, id; at most 24 lines of 48 stops. Deterministic for shuffled input. Cached 10 s per current station. |
 | Station info | Wayfinding facts (name, lines, exits) and the station snapshot's platforms (automatic); station code, transfers, street label and a manual name come from the terminal's own wayfinding data (manual wins). |
-| Accessibility notes | ATA metadata only: loaded block entities implementing `WayfindingEditable` within 24 blocks whose pictogram is accessible route, lift, escalator, stairs or help point (text = destination, else street label, else pictogram name), scanned only when station info is requested, cached 10 s. Help point blocks have no block entity, so they are not found (only help-point signs are). Empty when nothing is configured. |
+| Accessibility notes | ATA metadata only: loaded block entities implementing `WayfindingEditable` within 24 blocks whose pictogram is accessible route, lift, escalator, stairs or help point (text = destination, else street label, else pictogram name), **plus standalone help point blocks** within 24 blocks (nearest 4, listed with their distance). Help points have no block entity, so they are found through the chunk sections of the same loaded chunks; a section whose palette holds no help point is skipped without visiting its blocks. Runs only when station info is requested, cached 10 s, never per tick and never beyond the radius. Empty when nothing is configured. |
 | Departures | `TerminalDepartures.select` = the station-wide PIDS rule (not yet departed, `ServiceOrder` order kept). |
-| Service messages | `ClientServiceMessages.allFor(station)`: station message, then network message. |
+| Service messages | `ClientServiceMessages.allFor(station)`: every applicable station and network message, in rotation order. The Service info page lists them all, grouped by scope with severity; Home shows them one at a time (5 s each, with an "n/N" counter), only while the screen is open. |
 
 Trip planning is deferred: MTR's directions finder is server-side only.
 
