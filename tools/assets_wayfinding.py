@@ -19,6 +19,7 @@ PAPER = (205, 208, 195)
 MARKER_BASE = (66, 70, 74)
 MARKER_YELLOW = (236, 190, 40)
 MARKER_BLUE = (29, 90, 160)
+MARKER_ASSIST = (36, 118, 84)
 HELP_BLUE = (29, 78, 140)
 WHITE = g.WHITE
 
@@ -95,6 +96,27 @@ def textures():
     d.line((11, 9, 12, 12), fill=white)
     d.arc((3, 7, 10, 14), 0, 360, fill=white)
     t["wf_marker_accessible"] = accessible
+
+    ramp = g.noisy(MARKER_BLUE, 3, "wf_marker_ramp")
+    border(ramp, WHITE)
+    g.rect(ramp, 2, 12, 14, 13, WHITE)
+    for step in range(10):
+        g.rect(ramp, 3 + step, 11 - step // 2, 4 + step, 12, WHITE)
+    t["wf_marker_ramp"] = ramp
+
+    assist = g.noisy(MARKER_ASSIST, 3, "wf_marker_assist")
+    border(assist, WHITE)
+    glyph(assist, [
+        "...##...",
+        "...##...",
+        "........",
+        "..####..",
+        "...##...",
+        "...##...",
+        "...##...",
+        "..####..",
+    ], 4, 4, WHITE)
+    t["wf_marker_assist"] = assist
 
     wait = g.noisy(MARKER_BASE, 3, "wf_marker_wait")
     border(wait, MARKER_YELLOW)
@@ -284,7 +306,8 @@ def blocks():
     b["pictogram_sign"] = ("sign_single", {"": pictogram_sign()})
     b["tactile_guidance_paving"] = ("facing", {"": g.cube_bottom_top("wf_guidance_paving", "concrete_light", "concrete_light")})
     b["help_point"] = ("facing", {"": help_point()})
-    b["boarding_marker"] = ("facing", {"": marker("wf_marker_door"), "_accessible": marker("wf_marker_accessible"), "_wait": marker("wf_marker_wait")})
+    b["boarding_marker"] = ("facing", {"": marker("wf_marker_door"), "_accessible": marker("wf_marker_accessible"), "_wait": marker("wf_marker_wait"),
+                                       "_ramp": marker("wf_marker_ramp"), "_assist": marker("wf_marker_assist")})
     b["bus_epaper_board"] = ("sign", joined(epaper))
     return b
 
@@ -312,13 +335,15 @@ def lang():
         TIP + "wf_configure": "Right-click with an empty hand to set station, lines and text",
         TIP + "wf_tall": "Two blocks tall; needs a free block above",
         TIP + "wf_guidance": "Guidance lines run the way you are looking; counts as platform surface for MTR doors",
-        TIP + "wf_marker": "Right-click to switch between door, accessible and wait marker",
+        TIP + "wf_marker": "Right-click to switch between door, accessible, wait, ramp and assistance markers",
         TIP + "wf_help": "Right-click for a reminder of where to get help",
         TIP + "wf_epaper": "Low-refresh arrivals from the nearest station; updates every 15-30 seconds",
         f"message.{MOD}.help_point": "Help point: ask station staff or use the nearest information desk",
         f"message.{MOD}.boarding_marker.door": "Marker: train door position",
         f"message.{MOD}.boarding_marker.accessible": "Marker: accessible boarding position",
         f"message.{MOD}.boarding_marker.wait": "Marker: wait behind the line",
+        f"message.{MOD}.boarding_marker.ramp": "Marker: boarding ramp position",
+        f"message.{MOD}.boarding_marker.assist": "Marker: wait here for staff assistance",
         KEY + "live_alignment": "Align content: %s",
         KEY + "live_alignment.top": "Top",
         KEY + "live_alignment.center": "Centre",
@@ -478,6 +503,6 @@ def write_extra(assets, data, write_json):
     # Boarding marker: type is a block state.
     variants = {}
     for facing, y in g.FACING_Y.items():
-        for marker_type, suffix in (("door", ""), ("accessible", "_accessible"), ("wait", "_wait")):
+        for marker_type, suffix in (("door", ""), ("accessible", "_accessible"), ("wait", "_wait"), ("ramp", "_ramp"), ("assist", "_assist")):
             variants[f"facing={facing},marker={marker_type}"] = {"model": ref(suffix, "boarding_marker")} | ({"y": y} if y else {})
     write_json(assets / "blockstates" / "boarding_marker.json", {"variants": variants})

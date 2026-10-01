@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_diagonal"
+    },
+    "facing=east,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_diagonal",
+      "y": 90
+    },
+    "facing=south,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_diagonal",
+      "y": 180
+    },
+    "facing=west,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_diagonal",
+      "y": 270
+    },
+    "facing=north,kind=knee": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_knee"
+    },
+    "facing=east,kind=knee": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_knee",
+      "y": 90
+    },
+    "facing=south,kind=knee": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_knee",
+      "y": 180
+    },
+    "facing=west,kind=knee": {
+      "model": "aurelia_transit_architecture:block/viaduct_brace_knee",
+      "y": 270
+    }
+  }
+}

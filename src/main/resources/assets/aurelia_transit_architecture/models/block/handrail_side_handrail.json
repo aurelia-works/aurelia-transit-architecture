@@ -1,0 +1,149 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel",
+    "rail": "aurelia_transit_architecture:block/steel",
+    "glass": "aurelia_transit_architecture:block/glass_clear",
+    "kerb": "aurelia_transit_architecture:block/concrete_light"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        13,
+        0
+      ],
+      "to": [
+        9,
+        15,
+        7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            9,
+            9,
+            16.0
+          ],
+          "texture": "#rail"
+        },
+        "up": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            7
+          ],
+          "texture": "#rail"
+        },
+        "north": {
+          "uv": [
+            7,
+            1,
+            9,
+            3
+          ],
+          "texture": "#rail",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            7,
+            1,
+            9,
+            3
+          ],
+          "texture": "#rail"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            1,
+            7,
+            3
+          ],
+          "texture": "#rail"
+        },
+        "east": {
+          "uv": [
+            9,
+            1,
+            16.0,
+            3
+          ],
+          "texture": "#rail"
+        }
+      }
+    },
+    {
+      "from": [
+        7.5,
+        7,
+        0
+      ],
+      "to": [
+        8.5,
+        8.5,
+        7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.5,
+            9,
+            8.5,
+            16.0
+          ],
+          "texture": "#rail"
+        },
+        "up": {
+          "uv": [
+            7.5,
+            0.0,
+            8.5,
+            7
+          ],
+          "texture": "#rail"
+        },
+        "north": {
+          "uv": [
+            7.5,
+            7.5,
+            8.5,
+            9
+          ],
+          "texture": "#rail",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            7.5,
+            7.5,
+            8.5,
+            9
+          ],
+          "texture": "#rail"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            7.5,
+            7,
+            9
+          ],
+          "texture": "#rail"
+        },
+        "east": {
+          "uv": [
+            9,
+            7.5,
+            16.0,
+            9
+          ],
+          "texture": "#rail"
+        }
+      }
+    }
+  ]
+}

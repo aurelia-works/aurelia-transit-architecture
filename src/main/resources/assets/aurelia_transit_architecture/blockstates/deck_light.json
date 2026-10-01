@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/deck_light"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/deck_light",
+      "y": 90
+    }
+  }
+}

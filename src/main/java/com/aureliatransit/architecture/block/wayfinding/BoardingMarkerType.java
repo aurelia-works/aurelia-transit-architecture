@@ -13,7 +13,11 @@ public enum BoardingMarkerType implements StringIdentifiable {
 	/** Step-free / accessible boarding position. */
 	ACCESSIBLE,
 	/** Stand-back / wait here line. */
-	WAIT;
+	WAIT,
+	/** Where a boarding ramp is laid for step-free access. */
+	RAMP,
+	/** Where to wait for staff assistance. */
+	ASSIST;
 
 	@Override
 	public String asString() {

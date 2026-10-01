@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "style=steel_heavy": {
+      "model": "aurelia_transit_architecture:block/viaduct_column_steel_heavy"
+    },
+    "style=steel_narrow": {
+      "model": "aurelia_transit_architecture:block/viaduct_column_steel_narrow"
+    },
+    "style=concrete": {
+      "model": "aurelia_transit_architecture:block/viaduct_column_concrete"
+    },
+    "style=concrete_narrow": {
+      "model": "aurelia_transit_architecture:block/viaduct_column_concrete_narrow"
+    }
+  }
+}

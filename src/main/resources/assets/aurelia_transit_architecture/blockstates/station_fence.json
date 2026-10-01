@@ -1,0 +1,146 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "kind": "platform"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_post_platform"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_platform"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_platform",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_platform",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_platform",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "kind": "trackside"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_post_trackside"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_trackside"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_trackside",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_trackside",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_side_trackside",
+        "y": 270
+      }
+    }
+  ]
+}

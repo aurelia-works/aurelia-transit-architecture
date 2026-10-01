@@ -1,0 +1,149 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/concrete_light",
+    "pier": "aurelia_transit_architecture:block/concrete_light",
+    "foot": "aurelia_transit_architecture:block/concrete_dark"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        0,
+        4
+      ],
+      "to": [
+        12,
+        16,
+        12
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#pier",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#pier",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#pier"
+        },
+        "south": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#pier"
+        },
+        "west": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#pier"
+        },
+        "east": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#pier"
+        }
+      }
+    },
+    {
+      "from": [
+        3.5,
+        0,
+        3.5
+      ],
+      "to": [
+        12.5,
+        1.5,
+        12.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ],
+          "texture": "#foot",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            3.5,
+            3.5,
+            12.5,
+            12.5
+          ],
+          "texture": "#foot"
+        },
+        "north": {
+          "uv": [
+            3.5,
+            14.5,
+            12.5,
+            16.0
+          ],
+          "texture": "#foot"
+        },
+        "south": {
+          "uv": [
+            3.5,
+            14.5,
+            12.5,
+            16.0
+          ],
+          "texture": "#foot"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            14.5,
+            12.5,
+            16.0
+          ],
+          "texture": "#foot"
+        },
+        "east": {
+          "uv": [
+            3.5,
+            14.5,
+            12.5,
+            16.0
+          ],
+          "texture": "#foot"
+        }
+      }
+    }
+  ]
+}

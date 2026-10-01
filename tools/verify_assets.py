@@ -20,7 +20,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java")
 
 EXPECTED_PROPERTIES = {
     "Block": set(),
@@ -40,6 +40,18 @@ EXPECTED_PROPERTIES = {
     "EntrancePylonBlock": {"facing", "half"},
     "HelpPointBlock": {"facing"},
     "BoardingMarkerBlock": {"facing", "marker"},
+    # 1.3
+    "ViaductColumnBlock": {"style"},
+    "ViaductBeamBlock": {"axis", "kind", "concrete"},
+    "ViaductBraceBlock": {"facing", "kind"},
+    "StationStairBlock": {"facing", "half", "shape"},
+    "StairEnclosureBlock": {"facing", "kind"},
+    "PlatformWindscreenBlock": {"facing", "kind"},
+    "PlatformFasciaBlock": {"facing", "kind"},
+    "StationFenceBlock": {"kind", "north", "east", "south", "west"},
+    "UtilityRunBlock": {"axis", "kind"},
+    "HandrailBlock": {"kind", "north", "east", "south", "west"},
+    "TactileJunctionBlock": {"facing", "kind"},
 }
 
 problems = []
@@ -111,6 +123,21 @@ def main():
 
     for block_id, family, render, cls in blocks:
         state = load(ASSETS / "blockstates" / f"{block_id}.json")
+        if state and "multipart" in state:
+            # multipart blockstates (connecting railings): check every model and the properties used in conditions
+            expected = EXPECTED_PROPERTIES.get(cls)
+            if expected is None:
+                problem(f"{block_id}: unknown block class {cls}")
+            used = set()
+            for part in state["multipart"]:
+                for apply in part["apply"] if isinstance(part["apply"], list) else [part["apply"]]:
+                    check_model(apply["model"], seen_models)
+                conditions = part.get("when", {})
+                for clause in conditions.get("AND", [conditions]):
+                    used |= set(clause)
+            if expected is not None and not used <= expected:
+                problem(f"{block_id}: multipart conditions use {used - expected} not on {cls}")
+            state = None
         if state:
             expected = EXPECTED_PROPERTIES.get(cls)
             if expected is None:
@@ -124,7 +151,8 @@ def main():
                 for v in variant if isinstance(variant, list) else [variant]:
                     check_model(v["model"], seen_models)
             if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
-                       "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock"):
+                       "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
+                       "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

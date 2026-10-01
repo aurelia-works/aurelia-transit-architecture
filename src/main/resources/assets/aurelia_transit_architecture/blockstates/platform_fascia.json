@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,kind=plain": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_plain"
+    },
+    "facing=east,kind=plain": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_plain",
+      "y": 90
+    },
+    "facing=south,kind=plain": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_plain",
+      "y": 180
+    },
+    "facing=west,kind=plain": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_plain",
+      "y": 270
+    },
+    "facing=north,kind=panelled": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_panelled"
+    },
+    "facing=east,kind=panelled": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_panelled",
+      "y": 90
+    },
+    "facing=south,kind=panelled": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_panelled",
+      "y": 180
+    },
+    "facing=west,kind=panelled": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_panelled",
+      "y": 270
+    },
+    "facing=north,kind=ribbed": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_ribbed"
+    },
+    "facing=east,kind=ribbed": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_ribbed",
+      "y": 90
+    },
+    "facing=south,kind=ribbed": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_ribbed",
+      "y": 180
+    },
+    "facing=west,kind=ribbed": {
+      "model": "aurelia_transit_architecture:block/platform_fascia_ribbed",
+      "y": 270
+    }
+  }
+}

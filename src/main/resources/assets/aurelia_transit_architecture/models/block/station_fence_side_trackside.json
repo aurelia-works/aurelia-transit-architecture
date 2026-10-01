@@ -1,0 +1,182 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel",
+    "rail": "aurelia_transit_architecture:block/steel",
+    "mesh": "aurelia_transit_architecture:block/fence_mesh"
+  },
+  "elements": [
+    {
+      "from": [
+        7.75,
+        1,
+        0
+      ],
+      "to": [
+        8.25,
+        15,
+        7
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            0.0,
+            1,
+            7,
+            15
+          ],
+          "texture": "#mesh"
+        },
+        "east": {
+          "uv": [
+            9,
+            1,
+            16.0,
+            15
+          ],
+          "texture": "#mesh"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        15,
+        0
+      ],
+      "to": [
+        9,
+        16,
+        7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            9,
+            9,
+            16.0
+          ],
+          "texture": "#rail"
+        },
+        "up": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            7
+          ],
+          "texture": "#rail",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            1
+          ],
+          "texture": "#rail",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            1
+          ],
+          "texture": "#rail"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            7,
+            1
+          ],
+          "texture": "#rail"
+        },
+        "east": {
+          "uv": [
+            9,
+            0.0,
+            16.0,
+            1
+          ],
+          "texture": "#rail"
+        }
+      }
+    },
+    {
+      "from": [
+        7,
+        0,
+        0
+      ],
+      "to": [
+        9,
+        1,
+        7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            9,
+            9,
+            16.0
+          ],
+          "texture": "#rail",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            7
+          ],
+          "texture": "#rail"
+        },
+        "north": {
+          "uv": [
+            7,
+            15,
+            9,
+            16.0
+          ],
+          "texture": "#rail",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            7,
+            15,
+            9,
+            16.0
+          ],
+          "texture": "#rail"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            15,
+            7,
+            16.0
+          ],
+          "texture": "#rail"
+        },
+        "east": {
+          "uv": [
+            9,
+            15,
+            16.0,
+            16.0
+          ],
+          "texture": "#rail"
+        }
+      }
+    }
+  ]
+}

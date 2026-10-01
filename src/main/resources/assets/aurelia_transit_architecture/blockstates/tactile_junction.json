@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,kind=turn": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_turn"
+    },
+    "facing=east,kind=turn": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_turn",
+      "y": 90
+    },
+    "facing=south,kind=turn": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_turn",
+      "y": 180
+    },
+    "facing=west,kind=turn": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_turn",
+      "y": 270
+    },
+    "facing=north,kind=tee": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_tee"
+    },
+    "facing=east,kind=tee": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_tee",
+      "y": 90
+    },
+    "facing=south,kind=tee": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_tee",
+      "y": 180
+    },
+    "facing=west,kind=tee": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_tee",
+      "y": 270
+    },
+    "facing=north,kind=cross": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_cross"
+    },
+    "facing=east,kind=cross": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_cross",
+      "y": 90
+    },
+    "facing=south,kind=cross": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_cross",
+      "y": 180
+    },
+    "facing=west,kind=cross": {
+      "model": "aurelia_transit_architecture:block/tactile_junction_cross",
+      "y": 270
+    }
+  }
+}

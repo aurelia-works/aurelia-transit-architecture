@@ -1,0 +1,60 @@
+{
+  "variants": {
+    "axis=x,kind=crossbeam,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_crossbeam"
+    },
+    "axis=z,kind=crossbeam,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_crossbeam",
+      "y": 90
+    },
+    "axis=x,kind=crossbeam,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_crossbeam_concrete"
+    },
+    "axis=z,kind=crossbeam,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_crossbeam_concrete",
+      "y": 90
+    },
+    "axis=x,kind=girder,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_girder"
+    },
+    "axis=z,kind=girder,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_girder",
+      "y": 90
+    },
+    "axis=x,kind=girder,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_girder_concrete"
+    },
+    "axis=z,kind=girder,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_girder_concrete",
+      "y": 90
+    },
+    "axis=x,kind=stringer,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_stringer"
+    },
+    "axis=z,kind=stringer,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_stringer",
+      "y": 90
+    },
+    "axis=x,kind=stringer,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_stringer_concrete"
+    },
+    "axis=z,kind=stringer,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_stringer_concrete",
+      "y": 90
+    },
+    "axis=x,kind=platform_support,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_platform_support"
+    },
+    "axis=z,kind=platform_support,concrete=false": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_platform_support",
+      "y": 90
+    },
+    "axis=x,kind=platform_support,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_platform_support_concrete"
+    },
+    "axis=z,kind=platform_support,concrete=true": {
+      "model": "aurelia_transit_architecture:block/viaduct_beam_platform_support_concrete",
+      "y": 90
+    }
+  }
+}

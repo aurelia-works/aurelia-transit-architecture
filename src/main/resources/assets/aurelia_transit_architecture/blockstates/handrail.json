@@ -1,0 +1,217 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "kind": "handrail"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_post"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "handrail"
+          },
+          {
+            "north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_handrail"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "handrail"
+          },
+          {
+            "east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_handrail",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "handrail"
+          },
+          {
+            "south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_handrail",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "handrail"
+          },
+          {
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_handrail",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "kind": "balustrade"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_post"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "balustrade"
+          },
+          {
+            "north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_balustrade"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "balustrade"
+          },
+          {
+            "east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_balustrade",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "balustrade"
+          },
+          {
+            "south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_balustrade",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "balustrade"
+          },
+          {
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_balustrade",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "kind": "ramp_rail"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_post"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "ramp_rail"
+          },
+          {
+            "north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_ramp_rail"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "ramp_rail"
+          },
+          {
+            "east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_ramp_rail",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "ramp_rail"
+          },
+          {
+            "south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_ramp_rail",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "ramp_rail"
+          },
+          {
+            "west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/handrail_side_ramp_rail",
+        "y": 270
+      }
+    }
+  ]
+}

@@ -1,0 +1,148 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel",
+    "tube": "aurelia_transit_architecture:block/steel",
+    "band": "aurelia_transit_architecture:block/steel_dark"
+  },
+  "elements": [
+    {
+      "from": [
+        5,
+        0,
+        5
+      ],
+      "to": [
+        11,
+        16,
+        11
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#tube",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#tube",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            5,
+            0.0,
+            11,
+            16.0
+          ],
+          "texture": "#tube"
+        },
+        "south": {
+          "uv": [
+            5,
+            0.0,
+            11,
+            16.0
+          ],
+          "texture": "#tube"
+        },
+        "west": {
+          "uv": [
+            5,
+            0.0,
+            11,
+            16.0
+          ],
+          "texture": "#tube"
+        },
+        "east": {
+          "uv": [
+            5,
+            0.0,
+            11,
+            16.0
+          ],
+          "texture": "#tube"
+        }
+      }
+    },
+    {
+      "from": [
+        4.5,
+        7,
+        4.5
+      ],
+      "to": [
+        11.5,
+        9,
+        11.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4.5,
+            4.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#band"
+        },
+        "up": {
+          "uv": [
+            4.5,
+            4.5,
+            11.5,
+            11.5
+          ],
+          "texture": "#band"
+        },
+        "north": {
+          "uv": [
+            4.5,
+            7,
+            11.5,
+            9
+          ],
+          "texture": "#band"
+        },
+        "south": {
+          "uv": [
+            4.5,
+            7,
+            11.5,
+            9
+          ],
+          "texture": "#band"
+        },
+        "west": {
+          "uv": [
+            4.5,
+            7,
+            11.5,
+            9
+          ],
+          "texture": "#band"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            7,
+            11.5,
+            9
+          ],
+          "texture": "#band"
+        }
+      }
+    }
+  ]
+}

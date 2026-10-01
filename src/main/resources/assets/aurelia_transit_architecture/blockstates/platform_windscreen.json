@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,kind=lower": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_lower"
+    },
+    "facing=east,kind=lower": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_lower",
+      "y": 90
+    },
+    "facing=south,kind=lower": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_lower",
+      "y": 180
+    },
+    "facing=west,kind=lower": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_lower",
+      "y": 270
+    },
+    "facing=north,kind=upper": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_upper"
+    },
+    "facing=east,kind=upper": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_upper",
+      "y": 90
+    },
+    "facing=south,kind=upper": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_upper",
+      "y": 180
+    },
+    "facing=west,kind=upper": {
+      "model": "aurelia_transit_architecture:block/platform_windscreen_upper",
+      "y": 270
+    }
+  }
+}

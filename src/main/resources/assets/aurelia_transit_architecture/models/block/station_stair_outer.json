@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/outer_stairs",
+  "textures": {
+    "bottom": "aurelia_transit_architecture:block/steel_dark",
+    "top": "aurelia_transit_architecture:block/stair_tread",
+    "side": "aurelia_transit_architecture:block/steel_dark"
+  }
+}

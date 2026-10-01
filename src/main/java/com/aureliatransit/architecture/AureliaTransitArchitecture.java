@@ -9,6 +9,7 @@ import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
 import com.aureliatransit.architecture.registry.ModBlocks;
 import com.aureliatransit.architecture.registry.ModItemGroups;
+import com.aureliatransit.architecture.registry.ElevatedBlocks;
 import com.aureliatransit.architecture.registry.WayfindingBlocks;
 import com.aureliatransit.architecture.wayfinding.WayfindingSystems;
 import net.fabricmc.api.ModInitializer;
@@ -31,6 +32,7 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		LiveBlocks.init();
 		InteractiveBlocks.init();
 		WayfindingBlocks.init();
+		ElevatedBlocks.init();
 		ModBlockEntities.init();
 		ModItemGroups.init();
 		ModPackets.registerServerReceivers();

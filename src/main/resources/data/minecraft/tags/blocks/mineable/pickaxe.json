@@ -70,6 +70,18 @@
     "aurelia_transit_architecture:tactile_guidance_paving",
     "aurelia_transit_architecture:help_point",
     "aurelia_transit_architecture:boarding_marker",
-    "aurelia_transit_architecture:bus_epaper_board"
+    "aurelia_transit_architecture:bus_epaper_board",
+    "aurelia_transit_architecture:viaduct_column",
+    "aurelia_transit_architecture:viaduct_beam",
+    "aurelia_transit_architecture:viaduct_brace",
+    "aurelia_transit_architecture:station_stair",
+    "aurelia_transit_architecture:stair_enclosure",
+    "aurelia_transit_architecture:platform_windscreen",
+    "aurelia_transit_architecture:platform_fascia",
+    "aurelia_transit_architecture:station_fence",
+    "aurelia_transit_architecture:utility_run",
+    "aurelia_transit_architecture:deck_light",
+    "aurelia_transit_architecture:handrail",
+    "aurelia_transit_architecture:tactile_junction"
   ]
 }

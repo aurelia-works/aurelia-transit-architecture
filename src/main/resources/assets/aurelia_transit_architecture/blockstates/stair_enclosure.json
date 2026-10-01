@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,kind=clad": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_clad"
+    },
+    "facing=east,kind=clad": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_clad",
+      "y": 90
+    },
+    "facing=south,kind=clad": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_clad",
+      "y": 180
+    },
+    "facing=west,kind=clad": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_clad",
+      "y": 270
+    },
+    "facing=north,kind=windowed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_windowed"
+    },
+    "facing=east,kind=windowed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_windowed",
+      "y": 90
+    },
+    "facing=south,kind=windowed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_windowed",
+      "y": 180
+    },
+    "facing=west,kind=windowed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_windowed",
+      "y": 270
+    },
+    "facing=north,kind=glazed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_glazed"
+    },
+    "facing=east,kind=glazed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_glazed",
+      "y": 90
+    },
+    "facing=south,kind=glazed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_glazed",
+      "y": 180
+    },
+    "facing=west,kind=glazed": {
+      "model": "aurelia_transit_architecture:block/stair_enclosure_glazed",
+      "y": 270
+    }
+  }
+}

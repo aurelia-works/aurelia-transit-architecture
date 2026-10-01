@@ -1,0 +1,24 @@
+{
+  "variants": {
+    "axis=x,kind=tray": {
+      "model": "aurelia_transit_architecture:block/utility_run_x_tray"
+    },
+    "axis=z,kind=tray": {
+      "model": "aurelia_transit_architecture:block/utility_run_x_tray",
+      "y": 90
+    },
+    "axis=y,kind=tray": {
+      "model": "aurelia_transit_architecture:block/utility_run_y_tray"
+    },
+    "axis=x,kind=conduit": {
+      "model": "aurelia_transit_architecture:block/utility_run_x_conduit"
+    },
+    "axis=z,kind=conduit": {
+      "model": "aurelia_transit_architecture:block/utility_run_x_conduit",
+      "y": 90
+    },
+    "axis=y,kind=conduit": {
+      "model": "aurelia_transit_architecture:block/utility_run_y_conduit"
+    }
+  }
+}
