@@ -41,6 +41,13 @@ final class ServiceMessageCommand {
 		final var legacyNetwork = CommandManager.literal("set");
 		final var legacyStation = CommandManager.literal("set");
 		for (final MessageSeverity severity : MessageSeverity.values()) {
+			if (severity == MessageSeverity.WARNING) {
+				// 1.2 called this level "warning"; keep that spelling working in every form
+				addNetwork.then(severityNode("warning", severity, (c, s) -> addMessage(c, MessageScope.NETWORK, "", s)));
+				addStation.then(severityNode("warning", severity, (c, s) -> addMessage(c, MessageScope.STATION, StringArgumentType.getString(c, "name"), s)));
+				legacyNetwork.then(severityNode("warning", severity, (c, s) -> replace(c, MessageScope.NETWORK, "", s)));
+				legacyStation.then(severityNode("warning", severity, (c, s) -> replace(c, MessageScope.STATION, StringArgumentType.getString(c, "name"), s)));
+			}
 			addNetwork.then(severityNode(severity, (c, s) -> addMessage(c, MessageScope.NETWORK, "", s)));
 			addStation.then(severityNode(severity, (c, s) -> addMessage(c, MessageScope.STATION, StringArgumentType.getString(c, "name"), s)));
 			legacyNetwork.then(severityNode(severity, (c, s) -> replace(c, MessageScope.NETWORK, "", s)));
@@ -67,7 +74,11 @@ final class ServiceMessageCommand {
 	}
 
 	private static com.mojang.brigadier.builder.LiteralArgumentBuilder<ServerCommandSource> severityNode(MessageSeverity severity, Action action) {
-		return CommandManager.literal(severity.id()).then(CommandManager.argument("text", StringArgumentType.greedyString())
+		return severityNode(severity.id(), severity, action);
+	}
+
+	private static com.mojang.brigadier.builder.LiteralArgumentBuilder<ServerCommandSource> severityNode(String literal, MessageSeverity severity, Action action) {
+		return CommandManager.literal(literal).then(CommandManager.argument("text", StringArgumentType.greedyString())
 				.executes(context -> action.run(context, severity)));
 	}
 
