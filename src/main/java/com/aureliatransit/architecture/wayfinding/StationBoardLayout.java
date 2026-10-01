@@ -18,9 +18,9 @@ import java.util.function.ToIntFunction;
 public final class StationBoardLayout {
 
 	private static final float PAD = 0.9F;
-	private static final float HEADER_FRACTION = 0.26F;
+	private static final float HEADER_FRACTION = 0.22F;
 	private static final float MAX_ROW_SCALE = 0.62F;
-	private static final float MIN_ROW_SCALE = 0.36F;
+	private static final float MIN_ROW_SCALE = 0.31F;
 	private static final int HEADER_FILL = 0xFF2B6CB0;
 	private static final int HEADER_TEXT = 0xFFFFFFFF;
 	private static final int DIM = 0xFF9AA5AE;
@@ -255,7 +255,7 @@ public final class StationBoardLayout {
 		Rows(Canvas c, float headerH) {
 			this.top = c.top() - headerH;
 			final float avail = c.h - headerH - 0.6F;
-			final int fit = Math.max(1, (int) Math.floor(avail / (9F * MIN_ROW_SCALE + 0.5F)));
+			final int fit = Math.max(1, (int) Math.floor(avail / (9F * MIN_ROW_SCALE + 0.2F)));
 			this.capacity = Math.min(4, fit);
 			this.rowH = avail / capacity;
 			this.scale = Math.min(MAX_ROW_SCALE, rowH / 9F * 0.92F);

@@ -140,19 +140,11 @@ def column(style):
             g.el([6.5, 0, 5], [9.5, 16, 11], "#web"),
         ])
     if style == "steel_narrow":
-        return g.model({"particle": "steel", "tube": "steel", "band": "steel_dark"}, [
-            g.el([5, 0, 5], [11, 16, 11], "#tube"),
-            g.el([4.5, 7, 4.5], [11.5, 9, 11.5], "#band"),
-        ])
+        # no bands or feet: columns stack, and any per-block detail would stripe a tall column
+        return g.model({"particle": "steel", "tube": "steel"}, [g.el([5, 0, 5], [11, 16, 11], "#tube")])
     if style == "concrete":
-        return g.model({"particle": "concrete_light", "pier": "concrete_light", "foot": "concrete_dark"}, [
-            g.el([2, 0, 2], [14, 16, 14], "#pier"),
-            g.el([1.5, 0, 1.5], [14.5, 1.5, 14.5], "#foot"),
-        ])
-    return g.model({"particle": "concrete_light", "pier": "concrete_light", "foot": "concrete_dark"}, [
-        g.el([4, 0, 4], [12, 16, 12], "#pier"),
-        g.el([3.5, 0, 3.5], [12.5, 1.5, 12.5], "#foot"),
-    ])
+        return g.model({"particle": "concrete_light", "pier": "concrete_light"}, [g.el([2, 0, 2], [14, 16, 14], "#pier")])
+    return g.model({"particle": "concrete_light", "pier": "concrete_light"}, [g.el([4, 0, 4], [12, 16, 12], "#pier")])
 
 
 def beam(kind, concrete):
@@ -330,12 +322,13 @@ def platform_curve(kind):
         if reach <= 0:
             continue
         coping = min(1.5, reach)
+        # every strip keeps its north/south faces: where a neighbouring strip is shorter they are the visible steps of
+        # the edge; where it is as long they sit back to back inside the solid and are never seen
         if reach - coping > 0:
-            els.append(g.el([0, 12, z], [reach - coping, 16, z + 1], "#side", faces={"up": "#top", "down": "#face", "north": None, "south": None}))
-        els.append(g.el([reach - coping, 12, z], [reach, 16, z + 1], "#coping", faces={"north": None, "south": None}))
+            els.append(g.el([0, 12, z], [reach - coping, 16, z + 1], "#side", faces={"up": "#top", "down": "#face"}))
+        els.append(g.el([reach - coping, 12, z], [reach, 16, z + 1], "#coping"))
         if reach > 2:
-            els.append(g.el([0, 0, z], [reach - 2, 12, z + 1], "#side", faces={"east": "#face", "north": None, "south": None, "up": None}))
-    # close the open ends of the strip stack on the block faces
+            els.append(g.el([0, 0, z], [reach - 2, 12, z + 1], "#side", faces={"east": "#face", "up": None}))
     return g.model(t, els)
 
 
@@ -483,6 +476,21 @@ def write_extra(assets, data, write_json):
         write_json(states / f"{block_id}.json", {"multipart": parts})
 
     multipart("station_fence", FENCE, lambda k: f"station_fence_post_{k}", lambda k: f"station_fence_side_{k}")
+
+    # Inventory models: a post with rails both ways, so the icon reads as a fence/railing rather than a bare post.
+    def run_item(post, side):
+        elements = list(post["elements"]) + list(side["elements"])
+        for element in side["elements"]:
+            mirrored = dict(element)
+            mirrored["from"] = [element["from"][0], element["from"][1], 16 - element["to"][2]]
+            mirrored["to"] = [element["to"][0], element["to"][1], 16 - element["from"][2]]
+            mirrored["faces"] = {({"north": "south", "south": "north"}).get(face, face): spec for face, spec in element["faces"].items()}
+            elements.append(mirrored)
+        return {"parent": "block/block", "textures": {**post["textures"], **side["textures"]}, "elements": elements,
+                "display": {"gui": {"rotation": [30, 135, 0], "translation": [0, 0, 0], "scale": [0.625, 0.625, 0.625]}}}
+
+    write_json(assets / "models" / "item" / "station_fence.json", run_item(fence_post("platform"), fence_side("platform")))
+    write_json(assets / "models" / "item" / "handrail.json", run_item(rail_post(), rail_side("handrail")))
     multipart("handrail", RAIL, lambda k: "handrail_post", lambda k: f"handrail_side_{k}")
 
     # station stair: vanilla stair state mapping
