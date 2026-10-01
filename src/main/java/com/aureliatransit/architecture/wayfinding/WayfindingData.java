@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.wayfinding;
 import com.aureliatransit.architecture.text.AccentPalette;
 import com.aureliatransit.architecture.text.SignArrow;
 import com.aureliatransit.architecture.text.TextSanitizer;
+import com.aureliatransit.architecture.transit.StationAssociation;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
@@ -33,6 +34,9 @@ import java.util.List;
  * @param exitLabel     exit identifier ("A", "B", "2"); with {@code autoStation} MTR exit destinations with this name are used
  * @param streetLabel   street, landmark or connection text ("Market St", "City Hall", "To Regional Rail")
  * @param transfers     free-text transfer note, shown by consumers that have room for it
+ * @param association   which MTR station the block belongs to when {@code autoStation} is on: AUTO resolves the nearest
+ *                      station (the default), MANUAL pins the station (and platforms) the builder picked
+ * @param view          what a station information board shows; ignored by every other block
  */
 public record WayfindingData(
 		boolean autoStation,
@@ -51,7 +55,9 @@ public record WayfindingData(
 		String transfers,
 		LanguageLayout languageLayout,
 		Pictogram pictogram,
-		AccentPalette accent
+		AccentPalette accent,
+		StationAssociation association,
+		BoardView view
 ) {
 
 	public static final int MAX_NAME = 32;
@@ -66,7 +72,7 @@ public record WayfindingData(
 	public static final String NBT_KEY = "Wayfinding";
 
 	public static final WayfindingData EMPTY = new WayfindingData(true, "", "", "", List.of(), true, SignArrow.NONE, "", ServiceType.NONE, "", "", "", "", "",
-			LanguageLayout.SINGLE, Pictogram.NONE, AccentPalette.NONE);
+			LanguageLayout.SINGLE, Pictogram.NONE, AccentPalette.NONE, StationAssociation.AUTO, BoardView.TRAINS_THIS_SIDE);
 
 	public WayfindingData {
 		stationName = TextSanitizer.sanitize(stationName, MAX_NAME);
@@ -92,6 +98,8 @@ public record WayfindingData(
 		languageLayout = languageLayout == null ? LanguageLayout.SINGLE : languageLayout;
 		pictogram = pictogram == null ? Pictogram.NONE : pictogram;
 		accent = accent == null ? AccentPalette.NONE : accent;
+		association = association == null ? StationAssociation.AUTO : association;
+		view = view == null ? BoardView.TRAINS_THIS_SIDE : view;
 	}
 
 	/**
@@ -99,7 +107,17 @@ public record WayfindingData(
 	 */
 	public WayfindingData withPictogram(Pictogram value) {
 		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
-				platform, exitLabel, streetLabel, transfers, languageLayout, value, accent);
+				platform, exitLabel, streetLabel, transfers, languageLayout, value, accent, association, view);
+	}
+
+	public WayfindingData withAssociation(StationAssociation value) {
+		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, value, view);
+	}
+
+	public WayfindingData withView(BoardView value) {
+		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, association, value);
 	}
 
 	// ---- NBT -----------------------------------------------------------------------------------------------------------
@@ -125,6 +143,8 @@ public record WayfindingData(
 		tag.putInt("Layout", languageLayout.ordinal());
 		tag.putInt("Pictogram", pictogram.ordinal());
 		tag.putInt("Accent", accent.ordinal());
+		association.writeNbt(tag, "Association");
+		tag.putInt("View", view.ordinal());
 		nbt.put(NBT_KEY, tag);
 	}
 
@@ -145,7 +165,8 @@ public record WayfindingData(
 				tag.getBoolean("AutoLines"), SignArrow.byOrdinal(tag.getInt("Arrow")), tag.getString("Destination"),
 				ServiceType.byOrdinal(tag.getInt("Service")), tag.getString("ServiceLabel"), tag.getString("Platform"), tag.getString("Exit"),
 				tag.getString("Street"), tag.getString("Transfers"), LanguageLayout.byOrdinal(tag.getInt("Layout")),
-				Pictogram.byOrdinal(tag.getInt("Pictogram")), AccentPalette.byOrdinal(tag.getInt("Accent")));
+				Pictogram.byOrdinal(tag.getInt("Pictogram")), AccentPalette.byOrdinal(tag.getInt("Accent")),
+				StationAssociation.readNbt(tag, "Association"), BoardView.byOrdinal(tag.getInt("View")));
 	}
 
 	// ---- packets -------------------------------------------------------------------------------------------------------
@@ -169,6 +190,8 @@ public record WayfindingData(
 		buf.writeVarInt(languageLayout.ordinal());
 		buf.writeVarInt(pictogram.ordinal());
 		buf.writeVarInt(accent.ordinal());
+		association.write(buf);
+		buf.writeVarInt(view.ordinal());
 	}
 
 	/**
@@ -190,6 +213,7 @@ public record WayfindingData(
 		return new WayfindingData(autoStation, station, secondary, code, lines, buf.readBoolean(), SignArrow.byOrdinal(buf.readVarInt()),
 				buf.readString(MAX_DESTINATION * 4), ServiceType.byOrdinal(buf.readVarInt()), buf.readString(MAX_SERVICE_LABEL * 4),
 				buf.readString(MAX_PLATFORM * 4), buf.readString(MAX_EXIT_LABEL * 4), buf.readString(MAX_STREET * 4), buf.readString(MAX_TRANSFERS * 4),
-				LanguageLayout.byOrdinal(buf.readVarInt()), Pictogram.byOrdinal(buf.readVarInt()), AccentPalette.byOrdinal(buf.readVarInt()));
+				LanguageLayout.byOrdinal(buf.readVarInt()), Pictogram.byOrdinal(buf.readVarInt()), AccentPalette.byOrdinal(buf.readVarInt()),
+				StationAssociation.read(buf), BoardView.byOrdinal(buf.readVarInt()));
 	}
 }

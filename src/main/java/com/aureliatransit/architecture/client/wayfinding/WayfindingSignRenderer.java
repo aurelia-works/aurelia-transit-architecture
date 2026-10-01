@@ -130,7 +130,7 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 			if (epaper) {
 				// Ask the (cached) provider every second even though the panel redraws rarely: it keeps the platforms in
 				// MTR's arrivals poll and the snapshot cache warm, so a slow refresh never lands on an empty list.
-				cached.snapshot = StationData.provider().resolve(entity.getPos(), StationAssociation.AUTO, true);
+				cached.snapshot = StationData.provider().resolve(entity.getPos(), data.autoStation() ? data.association() : StationAssociation.AUTO, true);
 				dirty |= cached.showingIdle && !cached.snapshot.services().isEmpty();
 			}
 		}

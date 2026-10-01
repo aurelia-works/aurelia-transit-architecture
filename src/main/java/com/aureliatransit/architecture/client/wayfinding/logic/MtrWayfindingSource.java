@@ -52,7 +52,11 @@ public final class MtrWayfindingSource implements WayfindingSource {
 	private record Resolved(StationReference station, List<Long> platformIds) {
 	}
 
-	private final TimedLruCache<Long, Resolved> byPosition;
+	/** A block position together with its association, so an AUTO block and a MANUAL one never share an entry. */
+	private record Key(long pos, StationAssociation association) {
+	}
+
+	private final TimedLruCache<Key, Resolved> byPosition;
 	private final TimedLruCache<Long, StationFacts> byStation;
 
 	public MtrWayfindingSource() {
@@ -65,11 +69,11 @@ public final class MtrWayfindingSource implements WayfindingSource {
 	}
 
 	@Override
-	public StationFacts facts(BlockPos pos, boolean auto) {
+	public StationFacts facts(BlockPos pos, boolean auto, StationAssociation association) {
 		if (!auto) {
 			return StationFacts.EMPTY;
 		}
-		final Resolved resolved = byPosition.get(pos.asLong(), (key, previous) -> resolve(pos, previous));
+		final Resolved resolved = byPosition.get(new Key(pos.asLong(), association), (key, previous) -> resolve(pos, association, previous));
 		if (resolved.station() == null) {
 			return StationFacts.EMPTY;
 		}
@@ -78,8 +82,8 @@ public final class MtrWayfindingSource implements WayfindingSource {
 
 	private static final Resolved NONE = new Resolved(null, List.of());
 
-	private static Resolved resolve(BlockPos pos, Resolved previous) {
-		final StationSnapshot snapshot = StationData.provider().resolve(pos, StationAssociation.AUTO, false);
+	private static Resolved resolve(BlockPos pos, StationAssociation association, Resolved previous) {
+		final StationSnapshot snapshot = StationData.provider().resolve(pos, association, false);
 		final StationReference station = snapshot.station();
 		if (station == null) {
 			return NONE;

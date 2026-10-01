@@ -115,7 +115,7 @@ class TerminalLogicTest {
 
 	private static WayfindingData data(boolean auto, String name, String code, String transfers, String street) {
 		return new WayfindingData(auto, name, "", code, List.of(), auto, SignArrow.NONE, "", ServiceType.NONE, "", "", "", street, transfers, LanguageLayout.SINGLE, Pictogram.NONE,
-				AccentPalette.NONE);
+				AccentPalette.NONE, com.aureliatransit.architecture.transit.StationAssociation.AUTO, com.aureliatransit.architecture.wayfinding.BoardView.TRAINS_THIS_SIDE);
 	}
 
 	@Test

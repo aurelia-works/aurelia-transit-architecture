@@ -23,6 +23,6 @@ public final class Wayfinding {
 	}
 
 	public static ResolvedWayfinding resolve(BlockPos pos, WayfindingData data) {
-		return WayfindingResolver.merge(data, source.facts(pos, data.autoStation()));
+		return WayfindingResolver.merge(data, source.facts(pos, data.autoStation(), data.association()));
 	}
 }

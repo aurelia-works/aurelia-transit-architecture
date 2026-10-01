@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.wayfinding;
 
+import com.aureliatransit.architecture.transit.StationAssociation;
 import net.minecraft.util.math.BlockPos;
 
 /**
@@ -12,7 +13,14 @@ public interface WayfindingSource {
 	/**
 	 * @param auto  resolve the station at {@code pos} (AUTO association); when false nothing is looked up
 	 */
-	StationFacts facts(BlockPos pos, boolean auto);
+	default StationFacts facts(BlockPos pos, boolean auto) {
+		return facts(pos, auto, StationAssociation.AUTO);
+	}
 
-	WayfindingSource NONE = (pos, auto) -> StationFacts.EMPTY;
+	/**
+	 * @param association AUTO resolves the station at {@code pos}; MANUAL resolves the station the builder pinned
+	 */
+	StationFacts facts(BlockPos pos, boolean auto, StationAssociation association);
+
+	WayfindingSource NONE = (pos, auto, association) -> StationFacts.EMPTY;
 }

@@ -129,7 +129,7 @@ public class PassengerTerminalScreen extends Screen {
 		final long now = System.currentTimeMillis();
 		if (now >= nextDepartures) {
 			nextDepartures = now + DEPARTURES_MILLIS;
-			snapshot = StationData.provider().resolve(pos, StationAssociation.AUTO, true);
+			snapshot = StationData.provider().resolve(pos, terminal.getWayfinding().autoStation() ? terminal.getWayfinding().association() : StationAssociation.AUTO, true);
 			clock = clock();
 			dirty = true;
 		}

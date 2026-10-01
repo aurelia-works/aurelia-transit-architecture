@@ -111,8 +111,8 @@ public final class MtrTerminalSource implements TerminalSource {
 	@Override
 	public StationInfo stationInfo(BlockPos pos, WayfindingData data) {
 		return infos.get(new InfoKey(pos.asLong(), data), (key, previous) -> {
-			final StationFacts facts = Wayfinding.source().facts(pos, data.autoStation());
-			final StationSnapshot snapshot = data.autoStation() ? StationData.provider().resolve(pos, StationAssociation.AUTO, false) : StationSnapshot.EMPTY;
+			final StationFacts facts = Wayfinding.source().facts(pos, data.autoStation(), data.association());
+			final StationSnapshot snapshot = data.autoStation() ? StationData.provider().resolve(pos, data.association(), false) : StationSnapshot.EMPTY;
 			final StationInfo info = StationInfoBuilder.build(facts, snapshot.platforms(), data, accessibility(pos));
 			return info.equals(previous) ? previous : info;
 		});

@@ -24,7 +24,7 @@ class WayfindingResolverTest {
 	private static WayfindingData data(boolean autoStation, String name, List<LineBadge> lines, boolean autoLines, String exit, ServiceType type, String serviceLabel,
 									   LanguageLayout layout, String secondary) {
 		return new WayfindingData(autoStation, name, secondary, "", lines, autoLines, SignArrow.LEFT, "To East", type, serviceLabel, "2", exit, "Market St", "Bus 12",
-				layout, Pictogram.NONE, AccentPalette.NONE);
+				layout, Pictogram.NONE, AccentPalette.NONE, com.aureliatransit.architecture.transit.StationAssociation.AUTO, com.aureliatransit.architecture.wayfinding.BoardView.TRAINS_THIS_SIDE);
 	}
 
 	@Test

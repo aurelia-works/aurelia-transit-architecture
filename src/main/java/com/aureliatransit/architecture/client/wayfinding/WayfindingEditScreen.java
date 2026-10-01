@@ -5,6 +5,8 @@ import com.aureliatransit.architecture.block.wayfinding.WayfindingPanelSpec;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
 import com.aureliatransit.architecture.client.interactive.EditorWidgets;
+import com.aureliatransit.architecture.client.live.StationPickerScreen;
+import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.network.ModPackets;
 import com.aureliatransit.architecture.text.AccentPalette;
 import com.aureliatransit.architecture.text.PanelLayout;
@@ -82,7 +84,12 @@ public class WayfindingEditScreen extends Screen {
 	private final WayfindingPanelSpec spec;
 	private final WayfindingPanelKind kind;
 	private final Fields fields;
+	/** The data as stored when the editor opened; the screen only sends when the result differs from it. */
 	private final WayfindingData initial;
+	/** Values the widgets start from: {@link #initial}, or the edited state restored after the station picker. */
+	private WayfindingData seed;
+	private StationAssociation association;
+	private boolean switching;
 	private final int rowLength;
 
 	private boolean autoStation;
@@ -118,6 +125,8 @@ public class WayfindingEditScreen extends Screen {
 		this.kind = sign.panelKind();
 		this.fields = Fields.of(kind);
 		this.initial = sign.getWayfinding();
+		this.seed = initial;
+		this.association = initial.association();
 		this.autoStation = initial.autoStation();
 		this.autoLines = initial.autoLines();
 		this.arrow = initial.arrow();
@@ -154,7 +163,7 @@ public class WayfindingEditScreen extends Screen {
 		int y = tallPanel() ? 16 : 10 + Math.round(panelHeight() * previewScale()) + 10;
 
 		if (fields.station()) {
-			stationField = field(left, y, WIDTH, WayfindingData.MAX_NAME, initial.stationName(), kind == WayfindingPanelKind.BUS_STOP ? "wf_stop" : "wf_station");
+			stationField = field(left, y, WIDTH, WayfindingData.MAX_NAME, seed.stationName(), kind == WayfindingPanelKind.BUS_STOP ? "wf_stop" : "wf_station");
 			y += ROW;
 			addDrawableChild(EditorWidgets.cycler(left, y, COLUMN, List.of(Boolean.TRUE, Boolean.FALSE), autoStation,
 					value -> Text.translatable(EditorWidgets.KEY + (value ? "auto_on" : "auto_off")), value -> {
@@ -169,13 +178,15 @@ public class WayfindingEditScreen extends Screen {
 						}));
 			}
 			y += ROW;
+			addDrawableChild(ButtonWidget.builder(associationText(), button -> openStationPicker()).dimensions(left, y, WIDTH, 20).build());
+			y += ROW;
 		}
 		if (fields.secondary() || fields.code()) {
 			if (fields.secondary()) {
-				secondaryField = field(left, y, fields.code() ? COLUMN : WIDTH, WayfindingData.MAX_NAME, initial.secondaryName(), "wf_secondary");
+				secondaryField = field(left, y, fields.code() ? COLUMN : WIDTH, WayfindingData.MAX_NAME, seed.secondaryName(), "wf_secondary");
 			}
 			if (fields.code()) {
-				codeField = field(fields.secondary() ? right : left, y, fields.secondary() ? COLUMN : WIDTH, WayfindingData.MAX_CODE, initial.stationCode(),
+				codeField = field(fields.secondary() ? right : left, y, fields.secondary() ? COLUMN : WIDTH, WayfindingData.MAX_CODE, seed.stationCode(),
 						kind == WayfindingPanelKind.BUS_STOP ? "wf_stop_code" : "wf_code");
 			}
 			y += ROW;
@@ -191,25 +202,25 @@ public class WayfindingEditScreen extends Screen {
 		if (fields.exit() || fields.platform() || fields.street()) {
 			int column = 0;
 			if (fields.exit()) {
-				exitField = field(left, y, 56, WayfindingData.MAX_EXIT_LABEL, initial.exitLabel(), "wf_exit");
+				exitField = field(left, y, 56, WayfindingData.MAX_EXIT_LABEL, seed.exitLabel(), "wf_exit");
 				column = 1;
 			}
 			if (fields.platform()) {
-				platformField = field(left + column * 60, y, 56, WayfindingData.MAX_PLATFORM, initial.platform(), "wf_platform");
+				platformField = field(left + column * 60, y, 56, WayfindingData.MAX_PLATFORM, seed.platform(), "wf_platform");
 				column++;
 			}
 			if (fields.street()) {
-				streetField = field(left, y, WIDTH, WayfindingData.MAX_STREET, initial.streetLabel(), "wf_street");
+				streetField = field(left, y, WIDTH, WayfindingData.MAX_STREET, seed.streetLabel(), "wf_street");
 			} else if (fields.destination()) {
-				destinationField = field(left + column * 60, y, WIDTH - column * 60, WayfindingData.MAX_DESTINATION, initial.destination(), destinationKey());
+				destinationField = field(left + column * 60, y, WIDTH - column * 60, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
 			}
 			y += ROW;
 		} else if (fields.destination()) {
-			destinationField = field(left, y, WIDTH, WayfindingData.MAX_DESTINATION, initial.destination(), destinationKey());
+			destinationField = field(left, y, WIDTH, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
 			y += ROW;
 		}
 		if (fields.transfers()) {
-			transfersField = field(left, y, WIDTH, WayfindingData.MAX_TRANSFERS, initial.transfers(), "wf_transfers");
+			transfersField = field(left, y, WIDTH, WayfindingData.MAX_TRANSFERS, seed.transfers(), "wf_transfers");
 			y += ROW;
 		}
 		if (fields.arrow() || fields.service()) {
@@ -229,7 +240,7 @@ public class WayfindingEditScreen extends Screen {
 			}
 			y += ROW;
 			if (fields.service()) {
-				serviceLabelField = field(left, y, WIDTH, WayfindingData.MAX_SERVICE_LABEL, initial.serviceLabel(), "wf_service_label");
+				serviceLabelField = field(left, y, WIDTH, WayfindingData.MAX_SERVICE_LABEL, seed.serviceLabel(), "wf_service_label");
 				y += ROW;
 			}
 		}
@@ -275,6 +286,25 @@ public class WayfindingEditScreen extends Screen {
 		addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, button -> close()).dimensions(left, y + 4, WIDTH, 20).build());
 	}
 
+	private Text associationText() {
+		if (association.isAuto()) {
+			return Text.translatable(EditorWidgets.KEY + "wf_station_source", Text.translatable(EditorWidgets.KEY + "wf_station_source.auto"));
+		}
+		final String name = com.aureliatransit.architecture.transit.StationData.provider().listStations(512).stream()
+				.filter(station -> station.id() == association.stationId()).map(station -> station.displayName()).findFirst().orElse("#" + association.stationId());
+		return Text.translatable(EditorWidgets.KEY + "wf_station_source", Text.translatable(EditorWidgets.KEY + "wf_station_source.manual", name));
+	}
+
+	private void openStationPicker() {
+		final WayfindingData edited = current();
+		switching = true;
+		client.setScreen(new StationPickerScreen(this, pos, association, () -> !sign.isRemoved(), picked -> {
+			association = picked;
+			seed = edited.withAssociation(picked);
+			previewDirty = true;
+		}));
+	}
+
 	private String destinationKey() {
 		return kind == WayfindingPanelKind.PICTOGRAM ? "wf_caption" : kind == WayfindingPanelKind.EXIT ? "wf_exit_text" : "wf_destination";
 	}
@@ -306,14 +336,15 @@ public class WayfindingEditScreen extends Screen {
 				}
 			}
 		} else {
-			lines.addAll(initial.lines());
+			lines.addAll(seed.lines());
 		}
-		return new WayfindingData(fields.station() ? autoStation : initial.autoStation(), text(stationField, initial.stationName()),
-				text(secondaryField, initial.secondaryName()), text(codeField, initial.stationCode()), lines, fields.lines() ? autoLines : initial.autoLines(),
-				fields.arrow() ? arrow : initial.arrow(), text(destinationField, initial.destination()), fields.service() ? service : initial.serviceType(),
-				text(serviceLabelField, initial.serviceLabel()), text(platformField, initial.platform()), text(exitField, initial.exitLabel()),
-				text(streetField, initial.streetLabel()), text(transfersField, initial.transfers()), fields.secondary() ? languageLayout : initial.languageLayout(),
-				fields.pictogram() ? pictogram : initial.pictogram(), fields.accent() ? accent : initial.accent());
+		return new WayfindingData(fields.station() ? autoStation : seed.autoStation(), text(stationField, seed.stationName()),
+				text(secondaryField, seed.secondaryName()), text(codeField, seed.stationCode()), lines, fields.lines() ? autoLines : seed.autoLines(),
+				fields.arrow() ? arrow : seed.arrow(), text(destinationField, seed.destination()), fields.service() ? service : seed.serviceType(),
+				text(serviceLabelField, seed.serviceLabel()), text(platformField, seed.platform()), text(exitField, seed.exitLabel()),
+				text(streetField, seed.streetLabel()), text(transfersField, seed.transfers()), fields.secondary() ? languageLayout : seed.languageLayout(),
+				fields.pictogram() ? pictogram : seed.pictogram(), fields.accent() ? accent : seed.accent(),
+				fields.station() ? association : seed.association(), seed.view());
 	}
 
 	private float previewScale() {
@@ -357,7 +388,8 @@ public class WayfindingEditScreen extends Screen {
 
 	@Override
 	public void removed() {
-		if (sent) {
+		if (sent || switching) {
+			switching = false;
 			return;
 		}
 		sent = true;
