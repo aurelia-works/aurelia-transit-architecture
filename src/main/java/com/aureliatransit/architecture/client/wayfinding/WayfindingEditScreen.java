@@ -6,12 +6,15 @@ import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
 import com.aureliatransit.architecture.client.interactive.EditorWidgets;
 import com.aureliatransit.architecture.client.live.StationPickerScreen;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
 import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.network.ModPackets;
 import com.aureliatransit.architecture.text.AccentPalette;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.SignArrow;
 import com.aureliatransit.architecture.wayfinding.BadgeShape;
+import com.aureliatransit.architecture.wayfinding.BoardView;
+import com.aureliatransit.architecture.wayfinding.StationBoardLayout;
 import com.aureliatransit.architecture.wayfinding.LanguageLayout;
 import com.aureliatransit.architecture.wayfinding.LineBadge;
 import com.aureliatransit.architecture.wayfinding.Pictogram;
@@ -63,18 +66,19 @@ public class WayfindingEditScreen extends Screen {
 	 * Which controls a panel kind shows.
 	 */
 	record Fields(boolean station, boolean secondary, boolean code, boolean lines, boolean arrow, boolean destination, boolean service, boolean platform,
-	              boolean exit, boolean street, boolean transfers, boolean pictogram, boolean accent) {
+	              boolean exit, boolean street, boolean transfers, boolean pictogram, boolean accent, boolean view) {
 
 		static Fields of(WayfindingPanelKind kind) {
 			return switch (kind) {
-				case ENTRANCE_PYLON -> new Fields(true, true, true, true, false, false, false, false, true, false, false, true, true);
-				case WALL_DIRECTION, HANGING_DIRECTION -> new Fields(false, false, false, true, true, true, true, false, false, false, false, true, true);
-				case STREET -> new Fields(false, false, false, false, true, false, false, false, false, true, true, true, true);
-				case PICTOGRAM -> new Fields(false, false, false, false, false, true, false, false, false, false, false, true, true);
-				case PLATFORM -> new Fields(true, false, false, true, true, true, true, true, false, false, false, false, true);
-				case EXIT -> new Fields(true, false, false, false, true, true, false, false, true, false, false, true, true);
-				case BUS_STOP -> new Fields(true, false, true, true, false, false, false, false, false, false, false, false, false);
-				case TERMINAL -> new Fields(true, true, true, true, false, false, false, false, false, true, true, false, true);
+				case ENTRANCE_PYLON -> new Fields(true, true, true, true, false, false, false, false, true, false, false, true, true, false);
+				case WALL_DIRECTION, HANGING_DIRECTION -> new Fields(false, false, false, true, true, true, true, false, false, false, false, true, true, false);
+				case STREET -> new Fields(false, false, false, false, true, false, false, false, false, true, true, true, true, false);
+				case PICTOGRAM -> new Fields(false, false, false, false, false, true, false, false, false, false, false, true, true, false);
+				case PLATFORM -> new Fields(true, false, false, true, true, true, true, true, false, false, false, false, true, false);
+				case EXIT -> new Fields(true, false, false, false, true, true, false, false, true, false, false, true, true, false);
+				case BUS_STOP -> new Fields(true, false, true, true, false, false, false, false, false, false, false, false, false, false);
+				case TERMINAL -> new Fields(true, true, true, true, false, false, false, false, false, true, true, false, true, false);
+				case BOARD -> new Fields(true, false, false, true, true, true, false, true, false, true, true, false, false, true);
 			};
 		}
 	}
@@ -99,6 +103,7 @@ public class WayfindingEditScreen extends Screen {
 	private LanguageLayout languageLayout;
 	private Pictogram pictogram;
 	private AccentPalette accent;
+	private BoardView view;
 	private final String[] badgeLabel = new String[WayfindingData.MAX_LINES];
 	private final int[] badgeColor = new int[WayfindingData.MAX_LINES];
 	private final BadgeShape[] badgeShape = new BadgeShape[WayfindingData.MAX_LINES];
@@ -134,6 +139,7 @@ public class WayfindingEditScreen extends Screen {
 		this.languageLayout = initial.languageLayout();
 		this.pictogram = initial.pictogram();
 		this.accent = initial.accent();
+		this.view = initial.view();
 		for (int i = 0; i < badgeLabel.length; i++) {
 			final LineBadge badge = i < initial.lines().size() ? initial.lines().get(i) : null;
 			badgeLabel[i] = badge == null ? "" : badge.label();
@@ -179,6 +185,14 @@ public class WayfindingEditScreen extends Screen {
 			}
 			y += ROW;
 			addDrawableChild(ButtonWidget.builder(associationText(), button -> openStationPicker()).dimensions(left, y, WIDTH, 20).build());
+			y += ROW;
+		}
+		if (fields.view()) {
+			addDrawableChild(EditorWidgets.cycler(left, y, WIDTH, List.of(BoardView.values()), view, value -> Text.translatable(EditorWidgets.KEY + "wf_view",
+					Text.translatable(EditorWidgets.KEY + "wf_view." + value.id())), value -> {
+				view = value;
+				previewDirty = true;
+			}));
 			y += ROW;
 		}
 		if (fields.secondary() || fields.code()) {
@@ -344,7 +358,7 @@ public class WayfindingEditScreen extends Screen {
 				text(serviceLabelField, seed.serviceLabel()), text(platformField, seed.platform()), text(exitField, seed.exitLabel()),
 				text(streetField, seed.streetLabel()), text(transfersField, seed.transfers()), fields.secondary() ? languageLayout : seed.languageLayout(),
 				fields.pictogram() ? pictogram : seed.pictogram(), fields.accent() ? accent : seed.accent(),
-				fields.station() ? association : seed.association(), seed.view());
+				fields.station() ? association : seed.association(), fields.view() ? view : seed.view());
 	}
 
 	private float previewScale() {
@@ -370,7 +384,10 @@ public class WayfindingEditScreen extends Screen {
 		if (previewDirty) {
 			previewDirty = false;
 			final WayfindingData data = current();
-			preview = kind == WayfindingPanelKind.TERMINAL
+			preview = kind == WayfindingPanelKind.BOARD
+					? StationBoardLayout.layout(Wayfinding.resolve(pos, data), data.view(), ClientServiceMessages.allFor(Wayfinding.resolve(pos, data).stationName()), panelWidth(),
+					panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
+					: kind == WayfindingPanelKind.TERMINAL
 					? TerminalFace.layout(Wayfinding.resolve(pos, data), panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
 					: WayfindingLayout.layout(Wayfinding.resolve(pos, data), kind, panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(),
 					s -> textRenderer.getWidth(s));

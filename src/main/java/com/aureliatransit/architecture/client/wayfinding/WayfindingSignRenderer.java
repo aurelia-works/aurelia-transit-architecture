@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.block.wayfinding.WayfindingPanelSpec;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.StationAssociation;
@@ -12,6 +13,8 @@ import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 import com.aureliatransit.architecture.util.Shapes;
 import com.aureliatransit.architecture.wayfinding.ResolvedWayfinding;
+import com.aureliatransit.architecture.wayfinding.ServiceMessages;
+import com.aureliatransit.architecture.wayfinding.StationBoardLayout;
 import com.aureliatransit.architecture.wayfinding.Wayfinding;
 import com.aureliatransit.architecture.wayfinding.WayfindingData;
 import com.aureliatransit.architecture.wayfinding.WayfindingLayout;
@@ -54,6 +57,8 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		ResolvedWayfinding resolved;
 		PanelLayout.Panel panel = PanelLayout.Panel.EMPTY;
 		long nextCheck;
+		/** Service messages the board layout was built from (identity-compared; the set is immutable). */
+		ServiceMessages messages;
 		// e-paper only
 		long nextRefreshMillis;
 		boolean built;
@@ -125,6 +130,11 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 			final int rowLength = block instanceof WayfindingSignBlock sign ? sign.rowLength(world, entity.getPos(), state) : DEFAULT_ROW;
 			final ResolvedWayfinding resolved = Wayfinding.resolve(entity.getPos(), data);
 			dirty |= cached.rowLength != rowLength || !resolved.equals(cached.resolved);
+			if (spec.kind() == WayfindingPanelKind.BOARD) {
+				final ServiceMessages messages = ClientServiceMessages.get();
+				dirty |= cached.messages != messages;
+				cached.messages = messages;
+			}
 			cached.data = data;
 			cached.rowLength = rowLength;
 			cached.resolved = resolved;
@@ -140,6 +150,9 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 			if (dirty || !cached.built || EPaperLayout.due(now, cached.nextRefreshMillis)) {
 				rebuildEPaper(cached, entity.getPos(), spec, now);
 			}
+		} else if (dirty && spec.kind() == WayfindingPanelKind.BOARD) {
+			cached.panel = StationBoardLayout.layout(cached.resolved, data.view(), ClientServiceMessages.allFor(cached.resolved.stationName()), spec.panelWidth(cached.rowLength),
+					spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
 		} else if (dirty && spec.kind() == WayfindingPanelKind.TERMINAL) {
 			cached.panel = TerminalFace.layout(cached.resolved, spec.panelWidth(cached.rowLength), spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
 		} else if (dirty) {

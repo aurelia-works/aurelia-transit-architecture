@@ -21,7 +21,9 @@ public enum WayfindingPanelKind {
 	/** Bus stop / e-paper header: stop name, routes. */
 	BUS_STOP,
 	/** Passenger information terminal (1.2): its metadata feeds the terminal UI; the idle face shows the station name. */
-	TERMINAL;
+	TERMINAL,
+	/** Station information board (1.3): one of the {@link BoardView}s, laid out by {@link StationBoardLayout}. */
+	BOARD;
 
 	public static WayfindingPanelKind byOrdinal(int ordinal) {
 		final WayfindingPanelKind[] values = values();

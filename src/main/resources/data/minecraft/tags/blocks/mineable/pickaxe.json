@@ -61,6 +61,7 @@
     "aurelia_transit_architecture:passenger_info_terminal",
     "aurelia_transit_architecture:passenger_info_kiosk",
     "aurelia_transit_architecture:entrance_pylon",
+    "aurelia_transit_architecture:station_info_board",
     "aurelia_transit_architecture:wall_wayfinding_sign",
     "aurelia_transit_architecture:hanging_wayfinding_sign",
     "aurelia_transit_architecture:exit_sign",

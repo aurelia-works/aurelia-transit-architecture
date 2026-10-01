@@ -36,6 +36,7 @@ public final class WayfindingBlocks {
 	private static final String TIP_GUIDANCE = TIP + "wf_guidance";
 	private static final String TIP_MARKER = TIP + "wf_marker";
 	private static final String TIP_HELP = TIP + "wf_help";
+	private static final String TIP_BOARD = TIP + "wf_board";
 	private static final String TIP_EPAPER = TIP + "wf_epaper";
 	private static final String TIP_TERMINAL = TIP + "wf_terminal";
 	private static final String TIP_TERMINAL_EDIT = TIP + "wf_terminal_edit";
@@ -58,6 +59,7 @@ public final class WayfindingBlocks {
 	private static final WayfindingPanelSpec BUS_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.BUS_STOP, 8, 8, 16, 14.7F, 13, -1, true, INK, PAPER, Pictogram.NONE);
 
 	private static final int DARK = 0xFF16191D;
+	private static final WayfindingPanelSpec BOARD_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.BOARD, 8, 8, 16, 12.5F, 13, -1, true, WHITE, CHARCOAL, Pictogram.NONE);
 	private static final WayfindingPanelSpec TERMINAL_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 8, 16, 12, 11.9F, -1, true, WHITE, DARK, Pictogram.NONE);
 	private static final WayfindingPanelSpec KIOSK_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 10, 9, 8, 5.9F, -1, false, WHITE, DARK, Pictogram.NONE);
 
@@ -69,6 +71,9 @@ public final class WayfindingBlocks {
 	public static final Block WALL_WAYFINDING_SIGN = ModBlocks.register("wall_wayfinding_sign", BlockFamily.WAYFINDING, RenderKind.CUTOUT,
 			new WayfindingSignBlock(ModBlocks.metal().luminance(state -> 4), box(0, 3, 13, 16, 13, 16), WALL_SPEC),
 			TIP_CONFIGURE, TIP_JOINS);
+	public static final Block STATION_INFO_BOARD = ModBlocks.register("station_info_board", BlockFamily.WAYFINDING, RenderKind.CUTOUT,
+			new WayfindingSignBlock(ModBlocks.metal().luminance(state -> 7), box(0, 1, 12.75, 16, 15, 16), BOARD_SPEC),
+			TIP_CONFIGURE, TIP_BOARD, TIP_JOINS);
 	public static final Block HANGING_WAYFINDING_SIGN = ModBlocks.register("hanging_wayfinding_sign", BlockFamily.WAYFINDING, RenderKind.CUTOUT,
 			new WayfindingSignBlock(ModBlocks.metal().luminance(state -> 4),
 					union(box(0, 4, 7, 16, 12, 9), box(3, 12, 7.5, 5, 16, 8.5), box(11, 12, 7.5, 13, 16, 8.5)), HANGING_SPEC),
@@ -117,7 +122,7 @@ public final class WayfindingBlocks {
 	public static final BlockEntityType<WayfindingSignBlockEntity> SIGN_ENTITY = Registry.register(
 			Registries.BLOCK_ENTITY_TYPE,
 			AureliaTransitArchitecture.id("wayfinding_sign"),
-			BlockEntityType.Builder.create(WayfindingSignBlockEntity::new, ENTRANCE_PYLON, WALL_WAYFINDING_SIGN, HANGING_WAYFINDING_SIGN, EXIT_SIGN, STREET_SIGN,
+			BlockEntityType.Builder.create(WayfindingSignBlockEntity::new, ENTRANCE_PYLON, WALL_WAYFINDING_SIGN, STATION_INFO_BOARD, HANGING_WAYFINDING_SIGN, EXIT_SIGN, STREET_SIGN,
 					PICTOGRAM_SIGN, BUS_EPAPER_BOARD, PASSENGER_INFO_TERMINAL, PASSENGER_INFO_KIOSK).build(null)
 	);
 

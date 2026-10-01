@@ -26,6 +26,8 @@ import java.util.Locale;
  */
 public final class WayfindingResolver {
 
+	public static final int MAX_EXITS = 8;
+
 	private WayfindingResolver() {
 	}
 
@@ -39,7 +41,7 @@ public final class WayfindingResolver {
 		final List<LineBadge> lines = data.lines().isEmpty() && data.autoLines() ? bounded(facts.lines()) : data.lines();
 		return new ResolvedWayfinding(name, secondary, data.stationCode(), lines, data.arrow(), data.destination(), data.serviceType(),
 				serviceText(data), data.platform(), data.exitLabel(), exitDestinations(data.exitLabel(), facts.exits()), data.streetLabel(), data.transfers(),
-				data.languageLayout(), data.pictogram(), data.accent(), mtrName);
+				data.languageLayout(), data.pictogram(), data.accent(), mtrName, data.autoStation() ? bounded(facts.exits(), MAX_EXITS) : List.of());
 	}
 
 	static String serviceText(WayfindingData data) {
@@ -79,6 +81,10 @@ public final class WayfindingResolver {
 			}
 		}
 		return "";
+	}
+
+	private static <T> List<T> bounded(List<T> list, int max) {
+		return list.size() > max ? list.subList(0, max) : list;
 	}
 
 	private static List<LineBadge> bounded(List<LineBadge> lines) {

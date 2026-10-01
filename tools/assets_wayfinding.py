@@ -155,6 +155,19 @@ def wall_sign(left, right):
     return g.model({"particle": "steel", "frame": "steel", "face": "sign_charcoal"}, els)
 
 
+def station_board(left, right):
+    els = [
+        g.el([0, 1, 13], [16, 15, 16], "#frame", faces={"north": "#face"}),
+        g.el([0, 14.5, 12.75], [16, 15, 16], "#frame"),
+        g.el([0, 1, 12.75], [16, 1.5, 16], "#frame"),
+    ]
+    if not left:
+        els.append(g.el([0, 1, 12.75], [0.75, 15, 16], "#frame"))
+    if not right:
+        els.append(g.el([15.25, 1, 12.75], [16, 15, 16], "#frame"))
+    return g.model({"particle": "steel", "frame": "steel", "face": "sign_charcoal"}, els)
+
+
 def hanging_sign(face, y1, y2):
     def build(left, right):
         both = {"north": "#face", "south": "#face"}
@@ -263,6 +276,7 @@ def blocks():
     b["passenger_info_terminal"] = ("sign", joined(terminal))
     b["passenger_info_kiosk"] = ("facing", {"": kiosk()})
     b["entrance_pylon"] = ("facing", {"": pylon(False), "_upper": pylon(True)})
+    b["station_info_board"] = ("sign", joined(station_board))
     b["wall_wayfinding_sign"] = ("sign", joined(wall_sign))
     b["hanging_wayfinding_sign"] = ("sign", joined(hanging_sign("sign_charcoal", 4, 12)))
     b["exit_sign"] = ("sign", joined(hanging_sign("wf_exit_green", 6, 12)))
@@ -287,6 +301,7 @@ def names():
         "help_point": "Help Point",
         "boarding_marker": "Boarding Marker",
         "bus_epaper_board": "Bus E-Paper Board",
+        "station_info_board": "Station Information Board",
         "passenger_info_terminal": "Passenger Information Terminal",
         "passenger_info_kiosk": "Passenger Information Kiosk",
     }
@@ -335,6 +350,22 @@ def lang():
         KEY + "wf_service.limited": "Limited",
         KEY + "wf_service.custom": "Custom",
         KEY + "wf_symbol": "Symbol: %s",
+        KEY + "wf_view": "Board: %s",
+        KEY + "wf_view.trains_this_side": "Trains this side",
+        KEY + "wf_view.platform_track": "Platform / track",
+        KEY + "wf_view.service_change": "Service changes",
+        KEY + "wf_view.transfer": "Transfer board",
+        KEY + "wf_view.exits": "Street / exit summary",
+        KEY + "board_view.trains": "Trains this side",
+        KEY + "board_view.platform": "Platform",
+        KEY + "board_view.service": "Service changes",
+        KEY + "board_view.transfer": "Change here for",
+        KEY + "board_view.exits": "Exits",
+        KEY + "board_no_changes": "No service changes",
+        KEY + "board_no_transfer": "No transfer information",
+        KEY + "board_no_exits": "No exit information",
+        KEY + "board_more": "+%s more",
+        TIP + "wf_board": "Right-click to choose the view: trains this side, platform, service changes, transfers or exits",
         KEY + "wf_station_source": "Station: %s",
         KEY + "wf_station_source.auto": "Auto (nearest MTR station)",
         KEY + "wf_station_source.manual": "Manual: %s",
@@ -394,6 +425,7 @@ def recipes():
     shapeless("tactile_guidance_paving", [f"{MOD}:tactile_warning_paving", "minecraft:iron_nugget"])
     shapeless("help_point", ["minecraft:iron_ingot", "minecraft:blue_dye", "minecraft:redstone", "minecraft:glowstone_dust", "minecraft:glass_pane"])
     shapeless("boarding_marker", ["minecraft:iron_nugget", "minecraft:yellow_dye", "minecraft:black_dye"], 4)
+    shapeless("station_info_board", ["minecraft:iron_ingot", "minecraft:blue_dye", "minecraft:paper", "minecraft:glowstone_dust"], 2)
     shapeless("passenger_info_terminal", ["minecraft:iron_ingot", "minecraft:iron_ingot", "minecraft:glass_pane", "minecraft:redstone", "minecraft:glowstone_dust"])
     shapeless("passenger_info_kiosk", [f"{MOD}:passenger_info_terminal", "minecraft:iron_ingot"])
     shapeless("bus_epaper_board", ["minecraft:iron_ingot", "minecraft:glass_pane", "minecraft:paper", "minecraft:redstone"])
