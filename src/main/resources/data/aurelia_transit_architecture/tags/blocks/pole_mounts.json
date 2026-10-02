@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    "aurelia_transit_architecture:station_name_sign",
+    "aurelia_transit_architecture:hanging_station_sign",
+    "aurelia_transit_architecture:platform_number_sign",
+    "aurelia_transit_architecture:direction_sign",
+    "aurelia_transit_architecture:composition_board",
+    "aurelia_transit_architecture:hanging_wayfinding_sign",
+    "aurelia_transit_architecture:exit_sign",
+    "aurelia_transit_architecture:pictogram_sign"
+  ]
+}

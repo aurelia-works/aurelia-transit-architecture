@@ -6,12 +6,15 @@ model per status (the lamp texture differs). All art is original and generic: no
 """
 import math
 
+from PIL import Image, ImageDraw
+
 import generate_assets as g
 
 MOD = g.MOD
 TIP = f"tooltip.{MOD}."
 MSG = f"message.{MOD}.style."
 SCREEN = f"screen.{MOD}."
+CARD = f"message.{MOD}.card."
 
 BARRIER = ("solid", "solid_half", "glass", "glass_half", "solid_glass")
 GATE = ("gate", "wide", "end")
@@ -151,15 +154,16 @@ def noise_barrier(kind):
     return g.model(t, els)
 
 
-def fare_gate(kind):
+def fare_gate(kind, open_=False):
+    """Closed paddles reach into the passage; open ones are folded into the cabinet (not drawn)."""
     t = {"particle": "steel", "body": "steel", "top": "gate_top", "go": "gate_indicator_go", "stop": "gate_indicator_stop", "glass": "glass_clear"}
     faces = {"up": "#top"}
     if kind != "end":
         faces |= {"north": ("#go", [0, 0, 4, 14]), "south": ("#stop", [0, 0, 4, 14])}
     els = [g.el([0, 0, 1], [4, 14, 15], "#body", faces=faces)]
-    if kind == "gate":
+    if kind == "gate" and not open_:
         els.append(g.el([4, 5, 7], [9, 12, 9], "#glass", faces={"west": None}))
-    elif kind == "wide":
+    elif kind == "wide" and not open_:
         els.append(g.el([4, 5, 7], [13, 12, 9], "#glass", faces={"west": None}))
     return g.model(t, els)
 
@@ -221,7 +225,7 @@ def blocks():
     wd = lambda models: {"": next(iter(models.values()))} | models
     b = {}
     b["noise_barrier"] = ("simple", wd({f"_{k}": noise_barrier(k) for k in BARRIER}))
-    b["fare_gate"] = ("simple", wd({f"_{k}": fare_gate(k) for k in GATE}))
+    b["fare_gate"] = ("simple", wd({f"_{k}": fare_gate(k) for k in GATE} | {f"_{k}_open": fare_gate(k, True) for k in GATE if k != "end"}))
     b["card_reader"] = ("simple", wd({f"_{k}": card_reader(k) for k in READER}))
     b["booth_window"] = ("facing", {"": booth_window()})
     b["cctv_camera"] = ("simple", wd({f"_{k}": cctv_camera(k) for k in CAMERA}))
@@ -243,7 +247,19 @@ def names():
 def lang():
     lg = {
         TIP + "noise_barrier": "Trackside noise barrier; full or half height, solid or glass. Stack panels for a taller wall.",
-        TIP + "prop_only": "Decorative: no fare logic; the passage beside the cabinet is always walkable",
+        TIP + "prop_only": "Decorative only",
+        TIP + "fare_gate": "Charges MTR fares: walk in from the green arrow carrying a transit card (/card). Works inside an MTR station area",
+        TIP + "transit_card": "Right-click: show balance. Fare gates charge it while it is anywhere in your inventory",
+        TIP + "transit_card.load": "Top up: /card load <emeralds> (MTR ticket machine rates)",
+        f"item.{MOD}.transit_card": "Transit Card",
+        CARD + "balance": "Transit card balance: $%s",
+        CARD + "given": "You received a transit card.",
+        CARD + "how_to_load": "Top up with /card load <emeralds> (1 emerald = $10, more per emerald in bulk, as at MTR's ticket machine).",
+        CARD + "loaded": "Loaded $%s for %s emeralds. Balance: $%s",
+        CARD + "not_enough": "You need %s emeralds but carry %s.",
+        CARD + "unavailable": "Fares are unavailable: this MTR version's fare system was not found.",
+        CARD + "need_card": "Tap a transit card: carry one in your inventory (/card)",
+        CARD + "welcome": "Welcome! You have a transit card for fare gates. /card shows your balance; /card load <emeralds> tops it up.",
         TIP + "lift_status": "Lift name and levels; set the status (in service, out of service, maintenance) in its editor. "
                              "Set by hand: MTR lift state is not read.",
         SCREEN + "lift_in_service": "In service",
@@ -278,9 +294,25 @@ def recipes():
 def write_extra(assets, data, write_json):
     ref = lambda name: f"{MOD}:block/{name}"
     states = assets / "blockstates"
-    for block, kinds in (("noise_barrier", BARRIER), ("fare_gate", GATE), ("card_reader", READER), ("cctv_camera", CAMERA)):
+    for block, kinds in (("noise_barrier", BARRIER), ("card_reader", READER), ("cctv_camera", CAMERA)):
         write_json(states / f"{block}.json", {"variants": {
             f"facing={f},kind={k}": {"model": ref(f"{block}_{k}")} | ({"y": y} if y else {}) for k in kinds for f, y in g.FACING_Y.items()}})
+    # Fare gate: paddles drawn while closed or waiting for MTR's answer, folded away while open.
+    write_json(states / "fare_gate.json", {"variants": {
+        f"facing={f},kind={k},open={o}": {"model": ref(f"fare_gate_{k}_open" if o == "open" and k != "end" else f"fare_gate_{k}")} | ({"y": y} if y else {})
+        for k in GATE for o in ("closed", "pending", "open") for f, y in g.FACING_Y.items()}})
+
+    # Transit card (an item, not a block): flat generated item model and its texture.
+    card = Image.new("RGBA", (16, 16), (0, 0, 0, 0))
+    d = ImageDraw.Draw(card)
+    d.rounded_rectangle((0, 3, 15, 12), radius=1, fill=(38, 92, 156, 255), outline=(22, 56, 98, 255))
+    d.rectangle((1, 5, 14, 6), fill=(230, 236, 242, 255))
+    d.rectangle((2, 8, 4, 10), fill=(214, 178, 72, 255))
+    d.rectangle((7, 9, 13, 9), fill=(160, 190, 222, 255))
+    path = assets / "textures" / "item" / "transit_card.png"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    card.save(path)
+    write_json(assets / "models" / "item" / "transit_card.json", {"parent": "minecraft:item/generated", "textures": {"layer0": f"{MOD}:item/transit_card"}})
     variants = {}
     for f, y in g.FACING_Y.items():
         for left in ("false", "true"):

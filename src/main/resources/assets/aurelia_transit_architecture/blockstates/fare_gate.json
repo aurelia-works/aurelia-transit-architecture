@@ -1,47 +1,137 @@
 {
   "variants": {
-    "facing=north,kind=gate": {
+    "facing=north,kind=gate,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_gate"
     },
-    "facing=east,kind=gate": {
+    "facing=east,kind=gate,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_gate",
       "y": 90
     },
-    "facing=south,kind=gate": {
+    "facing=south,kind=gate,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_gate",
       "y": 180
     },
-    "facing=west,kind=gate": {
+    "facing=west,kind=gate,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_gate",
       "y": 270
     },
-    "facing=north,kind=wide": {
+    "facing=north,kind=gate,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate"
+    },
+    "facing=east,kind=gate,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate",
+      "y": 90
+    },
+    "facing=south,kind=gate,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate",
+      "y": 180
+    },
+    "facing=west,kind=gate,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate",
+      "y": 270
+    },
+    "facing=north,kind=gate,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate_open"
+    },
+    "facing=east,kind=gate,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate_open",
+      "y": 90
+    },
+    "facing=south,kind=gate,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate_open",
+      "y": 180
+    },
+    "facing=west,kind=gate,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_gate_open",
+      "y": 270
+    },
+    "facing=north,kind=wide,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_wide"
     },
-    "facing=east,kind=wide": {
+    "facing=east,kind=wide,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_wide",
       "y": 90
     },
-    "facing=south,kind=wide": {
+    "facing=south,kind=wide,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_wide",
       "y": 180
     },
-    "facing=west,kind=wide": {
+    "facing=west,kind=wide,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_wide",
       "y": 270
     },
-    "facing=north,kind=end": {
+    "facing=north,kind=wide,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide"
+    },
+    "facing=east,kind=wide,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide",
+      "y": 90
+    },
+    "facing=south,kind=wide,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide",
+      "y": 180
+    },
+    "facing=west,kind=wide,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide",
+      "y": 270
+    },
+    "facing=north,kind=wide,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide_open"
+    },
+    "facing=east,kind=wide,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide_open",
+      "y": 90
+    },
+    "facing=south,kind=wide,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide_open",
+      "y": 180
+    },
+    "facing=west,kind=wide,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_wide_open",
+      "y": 270
+    },
+    "facing=north,kind=end,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_end"
     },
-    "facing=east,kind=end": {
+    "facing=east,kind=end,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_end",
       "y": 90
     },
-    "facing=south,kind=end": {
+    "facing=south,kind=end,open=closed": {
       "model": "aurelia_transit_architecture:block/fare_gate_end",
       "y": 180
     },
-    "facing=west,kind=end": {
+    "facing=west,kind=end,open=closed": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 270
+    },
+    "facing=north,kind=end,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end"
+    },
+    "facing=east,kind=end,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 90
+    },
+    "facing=south,kind=end,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 180
+    },
+    "facing=west,kind=end,open=pending": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 270
+    },
+    "facing=north,kind=end,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end"
+    },
+    "facing=east,kind=end,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 90
+    },
+    "facing=south,kind=end,open=open": {
+      "model": "aurelia_transit_architecture:block/fare_gate_end",
+      "y": 180
+    },
+    "facing=west,kind=end,open=open": {
       "model": "aurelia_transit_architecture:block/fare_gate_end",
       "y": 270
     }

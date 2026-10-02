@@ -22,7 +22,7 @@ Forge, NeoForge and other Minecraft versions are **not supported**. Additional v
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.3.1+mc1.20.1-fabric.jar`
+   - `aurelia-transit-architecture-1.4.0+mc1.20.1-fabric.jar`
 3. Start the game. The pieces are in four creative tabs: **ATA Architecture**, **ATA Wayfinding**, **ATA Passenger Equipment** and **ATA Bus / Street Transit**.
 
 Install the mod on both the server and the clients.
@@ -43,7 +43,7 @@ Install the mod on both the server and the clients.
 | **Station equipment** (4) | Fare gate (gate, wide, end), card reader (post, wall), booth window, CCTV camera (wall, pendant, dome). Decorative: no fare logic |
 | **Bus** (8) | Bus stop sign, timetable case, shelter glass wall, shelter roof, shelter seat, boarding curb (full height and low), low-refresh e-paper bus arrival board |
 
-### What 1.4 adds (in progress)
+### What 1.4 adds
 
 - **Station suffixes** (`/ata_suffix`): "Aurelia Airport" on chosen contexts while MTR keeps "Aurelia".
 - **Per-exit settings** on the station information board's Exits view; **calling-point times** on PIDS/CIS where MTR reports them.

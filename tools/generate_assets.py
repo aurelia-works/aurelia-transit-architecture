@@ -504,7 +504,8 @@ def blocks():
         {"particle": "steel", "frame": "steel", "face": "information_poster"}, [
             el([1, 2, 14], [15, 15, 16], "#frame", faces={"north": "#face"}),
         ])})
-    b["sign_pole"] = ("simple", {"": model({"particle": "steel", "pole": "steel"}, [el([7, 0, 7], [9, 16, 9], "#pole")])})
+    b["sign_pole"] = ("pole", {suffix: sign_pole(up, down) for suffix, up, down in POLE_VARIANTS}
+                      | {"_post": model({"particle": "steel", "pole": "steel"}, [el([1, 0, 7], [3, 16, 9], "#pole")])})
 
     # -- Furniture
     def bench(seat_tex, slatted):
@@ -734,6 +735,7 @@ NAMES = {
 }
 
 EXTRA_LANG = {
+    f"tooltip.{MOD}.sign_pole": "Joins a sign placed on top of it or hanging below it",
     f"itemGroup.{MOD}.main": "ATA Architecture",
     f"itemGroup.{MOD}.wayfinding": "ATA Wayfinding",
     f"itemGroup.{MOD}.passenger_equipment": "ATA Passenger Equipment",
@@ -825,12 +827,39 @@ def write_json(path, data):
 FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 
 
+# Sign pole joins the sign above / below it (Java: SignPoleBlock, tag pole_mounts). Under a street sign the pole moves
+# under the sign's own off-centre post instead (align=<street sign facing>; model sign_pole_post, rotated like the sign).
+# The extension is a little slimmer
+# than the pole so its faces never share a plane with a 2 px sign panel (z 7..9), and it stops where every tagged sign
+# still covers it: sign y 9 going up (all panels span y 7..11), sign y 7 going down.
+POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True), ("_up_down", True, True))
+POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
+               "hanging_wayfinding_sign", "exit_sign", "pictogram_sign")
+
+
+def sign_pole(up, down):
+    els = [el([7, 0, 7], [9, 16, 9], "#pole", skip=(("up",) if up else ()) + (("down",) if down else ()))]
+    side = {f: ("#pole", [7, 0, 9, 16]) for f in ("north", "south", "east", "west")}
+    if up:
+        els.append(el([7.25, 16, 7.25], [8.75, 25, 8.75], "#pole", faces=side | {"down": None}, cull=False))
+    if down:
+        els.append(el([7.25, -9, 7.25], [8.75, 0, 8.75], "#pole", faces=side | {"up": None}, cull=False))
+    return model({"particle": "steel", "pole": "steel"}, els)
+
+
 def blockstate(block_id, kind, variant_names):
     ref = lambda suffix: f"{MOD}:block/{block_id}{suffix}"
     if kind == "simple":
         return {"variants": {"": {"model": ref("")}}}
     if kind in ("facing", "sign_single"):
         return {"variants": {f"facing={f}": ({"model": ref("")} | ({"y": y} if y else {})) for f, y in FACING_Y.items()}}
+    if kind == "pole":
+        variants = {}
+        for suffix, up, down in POLE_VARIANTS:
+            for align in ("centre",) + tuple(FACING_Y):
+                key = f"align={align},down={str(down).lower()},up={str(up).lower()}"
+                variants[key] = {"model": ref(suffix)} if align == "centre" else {"model": ref("_post")} | ({"y": FACING_Y[align]} if FACING_Y[align] else {})
+        return {"variants": variants}
     if kind == "axis":
         return {"variants": {"axis=x": {"model": ref("")}, "axis=z": {"model": ref(""), "y": 90}}}
     if kind == "sign":
@@ -911,6 +940,7 @@ def main():
     for name, recipe in all_recipes.items():
         write_json(DATA / MOD / "recipes" / f"{name}.json", recipe)
 
+    write_json(DATA / MOD / "tags" / "blocks" / "pole_mounts.json", {"replace": False, "values": [f"{MOD}:{b}" for b in POLE_MOUNTS]})
     write_json(DATA / "minecraft" / "tags" / "blocks" / "mineable" / "pickaxe.json",
                {"replace": False, "values": [f"{MOD}:{b}" for b in all_blocks]})
 

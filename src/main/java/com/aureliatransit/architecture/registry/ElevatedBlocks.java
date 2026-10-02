@@ -82,7 +82,7 @@ public final class ElevatedBlocks {
 	public static final Block NOISE_BARRIER = ModBlocks.register("noise_barrier", BlockFamily.ELEVATED, RenderKind.TRANSLUCENT,
 			new NoiseBarrierBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL)), TIP_STYLE, TIP + "noise_barrier");
 	public static final Block FARE_GATE = ModBlocks.register("fare_gate", BlockFamily.STATION_EQUIPMENT, RenderKind.TRANSLUCENT,
-			new FareGateBlock(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "prop_only");
+			new FareGateBlock(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "fare_gate");
 	public static final Block CARD_READER = ModBlocks.register("card_reader", BlockFamily.STATION_EQUIPMENT, RenderKind.CUTOUT,
 			new CardReaderBlock(ModBlocks.metal().nonOpaque().luminance(state -> 4)), TIP_STYLE, TIP + "prop_only");
 	public static final Block BOOTH_WINDOW = ModBlocks.register("booth_window", BlockFamily.STATION_EQUIPMENT, RenderKind.TRANSLUCENT,

@@ -1,7 +1,76 @@
 {
   "variants": {
-    "": {
+    "align=centre,down=false,up=false": {
       "model": "aurelia_transit_architecture:block/sign_pole"
+    },
+    "align=north,down=false,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post"
+    },
+    "align=east,down=false,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 90
+    },
+    "align=south,down=false,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 180
+    },
+    "align=west,down=false,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 270
+    },
+    "align=centre,down=false,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_up"
+    },
+    "align=north,down=false,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post"
+    },
+    "align=east,down=false,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 90
+    },
+    "align=south,down=false,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 180
+    },
+    "align=west,down=false,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 270
+    },
+    "align=centre,down=true,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_down"
+    },
+    "align=north,down=true,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post"
+    },
+    "align=east,down=true,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 90
+    },
+    "align=south,down=true,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 180
+    },
+    "align=west,down=true,up=false": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 270
+    },
+    "align=centre,down=true,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_up_down"
+    },
+    "align=north,down=true,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post"
+    },
+    "align=east,down=true,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 90
+    },
+    "align=south,down=true,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 180
+    },
+    "align=west,down=true,up=true": {
+      "model": "aurelia_transit_architecture:block/sign_pole_post",
+      "y": 270
     }
   }
 }

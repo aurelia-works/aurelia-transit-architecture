@@ -61,7 +61,7 @@ public final class WayfindingBlocks {
 	private static final int DARK = 0xFF16191D;
 	private static final WayfindingPanelSpec BOARD_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.BOARD, 8, 8, 16, 12.5F, 13, -1, true, WHITE, CHARCOAL, Pictogram.NONE);
 	private static final WayfindingPanelSpec TERMINAL_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 8, 16, 12, 11.9F, -1, true, WHITE, DARK, Pictogram.NONE);
-	private static final WayfindingPanelSpec KIOSK_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 10, 9, 8, 5.9F, -1, false, WHITE, DARK, Pictogram.NONE);
+	private static final WayfindingPanelSpec KIOSK_SPEC = new WayfindingPanelSpec(WayfindingPanelKind.TERMINAL, 8, 23, 9, 12, 5.9F, -1, false, WHITE, DARK, Pictogram.NONE);
 
 	// ---- Wayfinding (creative tab: Wayfinding) ---------------------------------------------------------------------
 
@@ -116,7 +116,7 @@ public final class WayfindingBlocks {
 			new WayfindingSignBlock(ModBlocks.metal().luminance(state -> 8), box(0, 1, 12, 16, 15, 16), TERMINAL_SPEC),
 			TIP_TERMINAL, TIP_TERMINAL_EDIT, TIP_JOINS);
 	public static final Block PASSENGER_INFO_KIOSK = ModBlocks.register("passenger_info_kiosk", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
-			new WayfindingPlateBlock(ModBlocks.metal().luminance(state -> 8), union(box(2, 0, 5, 14, 2, 12), box(3, 2, 6, 13, 16, 11)), KIOSK_SPEC),
+			new EntrancePylonBlock(ModBlocks.metal().luminance(state -> 8), union(box(2, 0, 5, 14, 2, 12), box(3, 2, 6, 13, 16, 11)), KIOSK_SPEC),
 			TIP_TERMINAL, TIP_TERMINAL_EDIT);
 
 	public static final BlockEntityType<WayfindingSignBlockEntity> SIGN_ENTITY = Registry.register(

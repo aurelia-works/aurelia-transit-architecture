@@ -10,6 +10,7 @@ import com.aureliatransit.architecture.block.InfoLayout;
 import com.aureliatransit.architecture.block.SeatBlock;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.ShapedBlock;
+import com.aureliatransit.architecture.block.SignPoleBlock;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
@@ -117,7 +118,7 @@ public final class ModBlocks {
 			new InfoDisplayBlock(metal().luminance(state -> 6), Placement.TOWARD_PLAYER, box(1, 2, 14, 15, 15, 16),
 					new InfoLayout(8, 8.5F, 12, 11, 14, -1, 0xFF23272B, 0xFF1B3A5E, 6, 0.8F)), TIP_WALL, TIP_EDITABLE);
 	public static final Block SIGN_POLE = register("sign_pole", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
-			new ShapedBlock(metal(), POLE));
+			new SignPoleBlock(metal()), TIP + "sign_pole");
 	// 1.4 (A17, A16, A18): built as far as MTR allows, all text set by hand
 	public static final Block PSD_TEXT_PANEL = register("psd_text_panel", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
 			new TextSignBlock(metal().luminance(state -> 6),

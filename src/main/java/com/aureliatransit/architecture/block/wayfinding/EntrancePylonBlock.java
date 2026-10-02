@@ -23,8 +23,9 @@ import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Freestanding station-entrance totem, two blocks tall (lower/upper {@code half}, handled like a vanilla door). Only
- * the lower half has a block entity and draws the tall panel; the upper half forwards clicks to it.
+ * Freestanding block two blocks tall (lower/upper {@code half}, handled like a vanilla door): the station-entrance
+ * totem and the passenger information kiosk. Only the lower half has a block entity and draws the tall panel; the upper
+ * half forwards clicks to it.
  */
 public class EntrancePylonBlock extends WayfindingPlateBlock {
 

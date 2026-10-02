@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,half=lower": {
       "model": "aurelia_transit_architecture:block/passenger_info_kiosk"
     },
-    "facing=east": {
+    "facing=north,half=upper": {
+      "model": "aurelia_transit_architecture:block/passenger_info_kiosk_upper"
+    },
+    "facing=east,half=lower": {
       "model": "aurelia_transit_architecture:block/passenger_info_kiosk",
       "y": 90
     },
-    "facing=south": {
+    "facing=east,half=upper": {
+      "model": "aurelia_transit_architecture:block/passenger_info_kiosk_upper",
+      "y": 90
+    },
+    "facing=south,half=lower": {
       "model": "aurelia_transit_architecture:block/passenger_info_kiosk",
       "y": 180
     },
-    "facing=west": {
+    "facing=south,half=upper": {
+      "model": "aurelia_transit_architecture:block/passenger_info_kiosk_upper",
+      "y": 180
+    },
+    "facing=west,half=lower": {
       "model": "aurelia_transit_architecture:block/passenger_info_kiosk",
+      "y": 270
+    },
+    "facing=west,half=upper": {
+      "model": "aurelia_transit_architecture:block/passenger_info_kiosk_upper",
       "y": 270
     }
   }

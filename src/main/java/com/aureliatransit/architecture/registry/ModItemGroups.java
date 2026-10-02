@@ -37,10 +37,15 @@ public final class ModItemGroups {
 				FabricItemGroup.builder()
 						.displayName(Text.translatable("itemGroup." + AureliaTransitArchitecture.MOD_ID + "." + tab.id()))
 						.icon(() -> new ItemStack(icon.get()))
-						.entries((context, entries) -> ModBlocks.entries().stream()
-								.filter(entry -> entry.family().tab() == tab)
-								.sorted(Comparator.comparing(ModBlocks.Entry::family))
-								.forEach(entry -> entries.add(entry.block())))
+						.entries((context, entries) -> {
+							ModBlocks.entries().stream()
+									.filter(entry -> entry.family().tab() == tab)
+									.sorted(Comparator.comparing(ModBlocks.Entry::family))
+									.forEach(entry -> entries.add(entry.block()));
+							if (tab == BlockFamily.Tab.PASSENGER_EQUIPMENT) {
+								entries.add(ModItems.TRANSIT_CARD);
+							}
+						})
 						.build()));
 	}
 

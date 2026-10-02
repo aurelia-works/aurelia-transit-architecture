@@ -285,19 +285,26 @@ def terminal(left, right):
     ])
 
 
-def kiosk():
-    return g.model({"particle": "steel_dark", "body": "steel_dark", "trim": "steel", "screen": "wf_terminal_screen"}, [
+def kiosk(upper):
+    """Two blocks tall (lower/upper half, like the entrance pylon): plinth and card pad below, screen at eye height."""
+    t = {"particle": "steel_dark", "body": "steel_dark", "trim": "steel", "screen": "wf_terminal_screen"}
+    if upper:
+        return g.model(t, [
+            g.el([3, 0, 6], [13, 14, 11], "#body"),
+            g.el([2.5, 14, 5.5], [13.5, 15, 11.5], "#trim"),
+            g.el([3.5, 1, 5.9], [12.5, 13, 6], None, faces={"north": "#screen"}),
+        ])
+    return g.model(t, [
         g.el([2, 0, 5], [14, 2, 12], "#trim"),
         g.el([3, 2, 6], [13, 16, 11], "#body"),
-        g.el([3.5, 6, 5.9], [12.5, 14, 6], None, faces={"north": "#screen"}),
-        g.el([5, 3, 5.8], [11, 4.5, 6], "#trim", faces={"north": "#trim"}),
+        g.el([5, 10, 5.8], [11, 11.5, 6], "#trim", faces={"north": "#trim"}),
     ])
 
 
 def blocks():
     b = {}
     b["passenger_info_terminal"] = ("sign", joined(terminal))
-    b["passenger_info_kiosk"] = ("facing", {"": kiosk()})
+    b["passenger_info_kiosk"] = ("facing", {"": kiosk(False), "_upper": kiosk(True)})
     b["entrance_pylon"] = ("facing", {"": pylon(False), "_upper": pylon(True)})
     b["station_info_board"] = ("sign", joined(station_board))
     b["wall_wayfinding_sign"] = ("sign", joined(wall_sign))
@@ -474,31 +481,42 @@ def recipes():
 def write_extra(assets, data, write_json):
     ref = lambda suffix, block_id: f"{MOD}:block/{block_id}{suffix}"
 
-    # Entrance pylon: lower/upper half models, rotated per facing.
+    # Two-block-tall blocks (entrance pylon, passenger info kiosk): lower/upper half models, rotated per facing.
+    for block_id, model in (("entrance_pylon", pylon), ("passenger_info_kiosk", kiosk)):
+        write_tall(assets, data, write_json, block_id, model(False), model(True))
+
+    # Boarding marker: type is a block state.
+    variants = {}
+    for facing, y in g.FACING_Y.items():
+        for marker_type, suffix in (("door", ""), ("accessible", "_accessible"), ("wait", "_wait"), ("ramp", "_ramp"), ("assist", "_assist")):
+            variants[f"facing={facing},marker={marker_type}"] = {"model": ref(suffix, "boarding_marker")} | ({"y": y} if y else {})
+    write_json(assets / "blockstates" / "boarding_marker.json", {"variants": variants})
+
+
+def write_tall(assets, data, write_json, block_id, lower, upper):
+    ref = lambda suffix: f"{MOD}:block/{block_id}{suffix}"
     variants = {}
     for facing, y in g.FACING_Y.items():
         for half, suffix in (("lower", ""), ("upper", "_upper")):
-            variants[f"facing={facing},half={half}"] = {"model": ref(suffix, "entrance_pylon")} | ({"y": y} if y else {})
-    write_json(assets / "blockstates" / "entrance_pylon.json", {"variants": variants})
+            variants[f"facing={facing},half={half}"] = {"model": ref(suffix)} | ({"y": y} if y else {})
+    write_json(assets / "blockstates" / f"{block_id}.json", {"variants": variants})
     # Only the lower half drops the item (the upper half is removed with it), like a vanilla door.
-    write_json(data / MOD / "loot_tables" / "blocks" / "entrance_pylon.json", {
+    write_json(data / MOD / "loot_tables" / "blocks" / f"{block_id}.json", {
         "type": "minecraft:block",
         "pools": [{"rolls": 1, "bonus_rolls": 0,
-                   "entries": [{"type": "minecraft:item", "name": f"{MOD}:entrance_pylon",
-                                "conditions": [{"condition": "minecraft:block_state_property", "block": f"{MOD}:entrance_pylon", "properties": {"half": "lower"}}]}],
+                   "entries": [{"type": "minecraft:item", "name": f"{MOD}:{block_id}",
+                                "conditions": [{"condition": "minecraft:block_state_property", "block": f"{MOD}:{block_id}", "properties": {"half": "lower"}}]}],
                    "conditions": [{"condition": "minecraft:survives_explosion"}]}],
     })
 
-    # Entrance pylon inventory/hand model: both halves stacked and scaled so the whole two-block item is visible
-    # (the block model alone is only the lower half, which showed as the bottom half of the pylon in the inventory).
-    lower, upper = pylon(False), pylon(True)
+    # Inventory/hand model: both halves stacked and scaled so the whole two-block item is visible
+    # (the block model alone is only the lower half, which showed as the bottom half in the inventory).
     elements = list(lower["elements"])
     for element in upper["elements"]:
         shifted = dict(element)
         shifted["from"] = [element["from"][0], element["from"][1] + 16, element["from"][2]]
         shifted["to"] = [element["to"][0], element["to"][1] + 16, element["to"][2]]
         elements.append(shifted)
-    scale = 0.34
 
     def display(rotation, translation, base_scale):
         k = base_scale * 0.55
@@ -512,11 +530,4 @@ def write_extra(assets, data, write_json):
         "firstperson_righthand": display([0, 45, 0], [0, 0, 0], 0.4),
         "firstperson_lefthand": display([0, 225, 0], [0, 0, 0], 0.4),
     }}
-    write_json(assets / "models" / "item" / "entrance_pylon.json", item)
-
-    # Boarding marker: type is a block state.
-    variants = {}
-    for facing, y in g.FACING_Y.items():
-        for marker_type, suffix in (("door", ""), ("accessible", "_accessible"), ("wait", "_wait"), ("ramp", "_ramp"), ("assist", "_assist")):
-            variants[f"facing={facing},marker={marker_type}"] = {"model": ref(suffix, "boarding_marker")} | ({"y": y} if y else {})
-    write_json(assets / "blockstates" / "boarding_marker.json", {"variants": variants})
+    write_json(assets / "models" / "item" / f"{block_id}.json", item)

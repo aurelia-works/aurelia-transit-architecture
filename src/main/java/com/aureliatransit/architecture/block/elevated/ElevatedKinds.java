@@ -192,7 +192,7 @@ public final class ElevatedKinds {
 		}
 	}
 
-	/** Fare gate unit (A10, prop only): a cabinet with a passage beside it. Side by side they make a gate bank. */
+	/** Fare gate unit (A10): a cabinet with a passage beside it. Side by side they make a gate bank. */
 	public enum FareGateKind implements StringIdentifiable {
 		/** Cabinet with glass paddles into its passage. */
 		GATE,
@@ -200,6 +200,16 @@ public final class ElevatedKinds {
 		WIDE,
 		/** Cabinet alone, closing the end of a bank. */
 		END;
+
+		@Override
+		public String asString() {
+			return id(this);
+		}
+	}
+
+	/** Fare gate paddles: shut, waiting for MTR's fare answer (still shut), or open for one passage. */
+	public enum FareGateOpen implements StringIdentifiable {
+		CLOSED, PENDING, OPEN;
 
 		@Override
 		public String asString() {

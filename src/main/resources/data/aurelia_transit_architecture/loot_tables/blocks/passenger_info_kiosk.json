@@ -7,7 +7,16 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "aurelia_transit_architecture:passenger_info_kiosk"
+          "name": "aurelia_transit_architecture:passenger_info_kiosk",
+          "conditions": [
+            {
+              "condition": "minecraft:block_state_property",
+              "block": "aurelia_transit_architecture:passenger_info_kiosk",
+              "properties": {
+                "half": "lower"
+              }
+            }
+          ]
         }
       ],
       "conditions": [
