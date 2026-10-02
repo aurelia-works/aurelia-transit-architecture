@@ -35,7 +35,7 @@ Builders line a curved platform with screens and put doorways where the train do
 
 **Design:** `drop_barrier_edge`: a platform edge (walkable top, `PlatformHelper` marker, so doors open) with barrier posts and bars on the coping.
 
-- **The visual is client-side and keyed to the train:** a block entity *without* a ticker; its renderer runs only while the block is visible and in range. At most once a second per block, it asks the existing provider whether a train is standing at the nearest platform: `ServiceSnapshot.isStanding`, from the same cached snapshot a PIDS at that platform uses, so one request per platform set, never per block. The bars slide down over 1 s when a train stands and rise after it leaves.
+- **The visual is client-side and keyed to the train:** a block entity *without* a ticker; its renderer runs only while the block is visible and in range. Once a second per platform (shared by every edge along it), it asks the existing provider whether a train is standing at the nearest platform: `ServiceSnapshot.isStanding`, from the same cached snapshot a PIDS at that platform uses, so one request per platform set, never per block. The bars slide down over 1 s when a train stands and rise after it leaves.
 - **Collision:** the server cannot know without polling. The bars have no collision, and the edge surface is the only collision. The barrier is a visual cue, not a safety barrier. Documented.
 - **Fails visibly:** with no MTR platform within 5 blocks, the bars stay up.
 
@@ -45,7 +45,7 @@ Builders line a curved platform with screens and put doorways where the train do
 
 **Want:** a platform-edge piece that pushes a step toward the train while one is stopping.
 
-**Design:** `boarding_step_edge`. The same mechanism as (c): an edge block (`PlatformHelper`) whose renderer slides a thin step plate out over the gap (up to 4 px beyond the block face) while a train stands at the nearest platform. The step is visual only, with no collision change, because MTR moves players on and off trains itself and the walkable surface is the edge block. Keyed to the train in the same way: the cached snapshot of the nearest platform, checked at most once a second. With no platform nearby it stays retracted.
+**Design:** `boarding_step_edge`. The same mechanism as (c): an edge block (`PlatformHelper`) whose renderer slides a thin step plate out over the gap (up to 4 px beyond the block face) while a train stands at the nearest platform. The step is visual only, with no collision change, because MTR moves players on and off trains itself and the walkable surface is the edge block. Keyed to the train in the same way: the cached snapshot of the nearest platform, checked once a second per platform. With no platform nearby it stays retracted.
 
 ## Blocked items, built as far as honest (package 5)
 

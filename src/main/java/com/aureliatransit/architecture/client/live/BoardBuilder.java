@@ -186,7 +186,8 @@ final class BoardBuilder {
 				}
 			}
 
-			final String place = arrivals ? (s.origin().isEmpty() ? s.routeName() : s.origin()) : s.destination();
+			// no origin from MTR: the From cell stays empty rather than showing something else under that heading
+			final String place = arrivals ? s.origin() : s.destination();
 			fit(m, tr, ClientStationSuffixes.apply(place, SuffixContext.DISPLAYS), destX, textY, k, destEnd - destX, style.text(), now);
 
 			if (platW > 0) {
@@ -297,7 +298,8 @@ final class BoardBuilder {
 	private static List<ServiceSnapshot> arrivals(StationSnapshot snapshot, String plainStation, long now) {
 		final List<ServiceSnapshot> out = new ArrayList<>(snapshot.services().size());
 		for (final ServiceSnapshot s : snapshot.services()) {
-			if (s.departureMillis() >= now && !(s.origin().equals(plainStation) && !plainStation.isEmpty())) {
+			// trains starting here do not arrive; a circular route's train ending here does
+			if (s.departureMillis() >= now && !(s.origin().equals(plainStation) && !plainStation.isEmpty() && !s.terminating())) {
 				out.add(s);
 			}
 		}

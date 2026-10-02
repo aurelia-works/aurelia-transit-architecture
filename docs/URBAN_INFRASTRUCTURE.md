@@ -64,6 +64,21 @@ Fences and handrails join each other (any style), and they also join any full si
 - Gaps between a curved coping and a straight train body are cosmetic, as on real curved platforms.
 - Doors still need an ATA platform piece, an MTR platform block or a PSD/APG within MTR's search box of each doorway.
 
+## 1.4 additions
+
+| Item | Styles | Notes |
+|---|---|---|
+| Noise Barrier | solid, solid half, glass, glass half, solid + glass | Panel on the far side of the block; stack for taller walls. |
+| Fare Gate | gate, wide, end | Place side by side for a bank. A prop with no fare logic: the paddles have no collision, so the passage beside each cabinet is always walkable. |
+| Card Reader | post, wall | Prop. |
+| Booth Window | (one look) | Ticket-booth window with counter shelf; prop. |
+| CCTV Camera | wall, pendant, dome | Prop, no collision. |
+| Lift Status Panel | in service, out of service, maintenance | An editable sign: lift name, levels served; status set by hand in its editor. MTR lift state is not read. |
+| Platform Screen Panel / Doorway | straight, 45°, convex, concave | The fixed panel and the always-open doorway follow the edge pieces. The doorway carries MTR's door marker. There is no moving leaf: MTR exposes no door state. |
+| Drop Barrier / Boarding Step Platform Edge | (one look each) | Platform edges with MTR's door marker. The bars drop, or the step slides out, while MTR's arrival data says a train stands at the nearest platform. This is drawn client-side only, with no collision change. `/aurelia_live edge` shows what an edge sees. |
+
+Design notes: [DESIGN_1.4.md](DESIGN_1.4.md).
+
 ## Performance
 
-None of these blocks has a block entity or ticks. Each state's shapes are computed once and cached. Fence and handrail connections are block states, updated only when a neighbour changes. Models are static, with no dynamic textures.
+None of these blocks ticks. Only the 1.4 drop-barrier and boarding-step edges have a block entity, and it has no data and no ticker: its renderer runs only while the block is visible and finds its platform every 5 s, and the cached arrivals are checked once a second per platform. Each state's shapes are computed once and cached. Fence and handrail connections are block states, updated only when a neighbour changes. Models are static, with no dynamic textures.

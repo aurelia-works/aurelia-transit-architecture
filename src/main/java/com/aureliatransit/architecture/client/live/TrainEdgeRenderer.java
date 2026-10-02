@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.block.elevated.ElevatedKinds.EdgePart;
 import com.aureliatransit.architecture.block.elevated.TrainEdgeBlock;
 import com.aureliatransit.architecture.block.entity.TrainEdgeBlockEntity;
 import com.aureliatransit.architecture.live.NearestPlatformProvider;
+import com.aureliatransit.architecture.live.cache.TimedLruCache;
 import com.aureliatransit.architecture.live.display.EdgeMotion;
 import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationAssociationMode;
@@ -25,9 +26,9 @@ import java.util.WeakHashMap;
 
 /**
  * Draws the moving part of a train-keyed edge (1.4): drop-down barrier bars or a boarding step. Runs only while the
- * block is visible and in range (block-entity renderer, no ticker). At most once a second per block it asks the shared,
- * cached provider whether a train stands at the nearest MTR platform: the same snapshot a PIDS at that platform uses,
- * so one arrivals request per platform, never per block. No platform nearby or no data: the part stays at rest.
+ * block is visible and in range (block-entity renderer, no ticker). Each block finds its nearest MTR platform every
+ * 5 s; whether a train stands there is looked up once a second per platform (shared by all edges along it) from the
+ * cached provider: the same snapshot a PIDS at that platform uses, so one arrivals request per platform, never per block. No platform nearby or no data: the part stays at rest.
  */
 public class TrainEdgeRenderer implements BlockEntityRenderer<TrainEdgeBlockEntity> {
 
@@ -35,11 +36,20 @@ public class TrainEdgeRenderer implements BlockEntityRenderer<TrainEdgeBlockEnti
 	private static final float BAR_DROP = 9F / 16F;
 	private static final float STEP_OUT = 4F / 16F;
 
+	/** Which platform a block belongs to is re-resolved this rarely; the standing check itself runs per platform. */
+	private static final long RESOLVE_MILLIS = 5_000;
+
 	private static final class State {
 		final EdgeMotion motion = new EdgeMotion();
 		long nextCheck;
+		long nextResolve;
+		long platformId;
+		long stationId;
 		boolean deployed;
 	}
+
+	/** Standing or not, per platform: shared by every edge along it, so 100 edges on a platform make one lookup a second. */
+	private static final TimedLruCache<Long, Boolean> STANDING = new TimedLruCache<>(128, EdgeMotion.CHECK_MILLIS, 30_000, System::currentTimeMillis);
 
 	private final Map<TrainEdgeBlockEntity, State> states = new WeakHashMap<>();
 
@@ -57,7 +67,14 @@ public class TrainEdgeRenderer implements BlockEntityRenderer<TrainEdgeBlockEnti
 		if (now >= s.nextCheck || s.nextCheck - now > EdgeMotion.CHECK_MILLIS * 2) {
 			// stagger by position so a long row of edges does not look up in the same frame
 			s.nextCheck = now + EdgeMotion.CHECK_MILLIS + Math.floorMod(entity.getPos().asLong(), 200);
-			s.deployed = trainStanding(entity.getPos(), now);
+			if (now >= s.nextResolve) {
+				s.nextResolve = now + RESOLVE_MILLIS;
+				resolvePlatform(entity.getPos(), s);
+			}
+			final BlockPos pos = entity.getPos();
+			final long platformId = s.platformId;
+			final long stationId = s.stationId;
+			s.deployed = platformId != 0 && STANDING.get(platformId, (key, previous) -> trainStanding(pos, stationId, key, now));
 		}
 		final float p = s.motion.update(now, s.deployed);
 		matrices.push();
@@ -71,21 +88,25 @@ public class TrainEdgeRenderer implements BlockEntityRenderer<TrainEdgeBlockEnti
 		matrices.pop();
 	}
 
-	private static boolean trainStanding(BlockPos pos, long now) {
+	/** The nearest MTR platform (and its station) of a block, or 0 when there is none: the edge then stays at rest. */
+	private static void resolvePlatform(BlockPos pos, State s) {
+		s.platformId = 0;
+		s.stationId = 0;
 		final StationDataProvider provider = StationData.provider();
 		if (!(provider instanceof NearestPlatformProvider nearestProvider)) {
-			return false;
+			return;
 		}
 		final long nearest = nearestProvider.nearestPlatformId(pos, StationAssociation.AUTO);
-		if (nearest == 0) {
-			return false;
+		final StationSnapshot station = nearest == 0 ? StationSnapshot.EMPTY : provider.resolve(pos, StationAssociation.AUTO, false);
+		if (station.station() != null && station.station().id() > 0) {
+			s.platformId = nearest;
+			s.stationId = station.station().id();
 		}
-		final StationSnapshot station = provider.resolve(pos, StationAssociation.AUTO, false);
-		if (station.station() == null || station.station().id() <= 0) {
-			return false;
-		}
-		final StationSnapshot platform = provider.resolve(pos, new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), List.of(nearest)), true);
-		return EdgeMotion.trainStanding(platform.services(), nearest, now);
+	}
+
+	private static boolean trainStanding(BlockPos pos, long stationId, long platformId, long now) {
+		final StationSnapshot platform = StationData.provider().resolve(pos, new StationAssociation(StationAssociationMode.MANUAL, stationId, List.of(platformId)), true);
+		return EdgeMotion.trainStanding(platform.services(), platformId, now);
 	}
 
 	/** Diagnostic for {@code /aurelia_live edge}: each step of the lookup the renderer makes for {@code pos}. */

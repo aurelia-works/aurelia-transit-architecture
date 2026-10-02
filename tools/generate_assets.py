@@ -858,7 +858,7 @@ def icon():
     return img
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14")
 
 
 def load_extensions():

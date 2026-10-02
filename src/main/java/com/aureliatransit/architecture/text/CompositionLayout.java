@@ -83,6 +83,9 @@ public final class CompositionLayout {
 			breaks += car.unitBreakBefore() ? 1 : 0;
 		}
 		final float carW = (inner - GAP * (cars.size() - 1) - (UNIT_GAP - GAP) * breaks) / cars.size();
+		if (carW <= 0) {
+			return PanelLayout.Panel.EMPTY;
+		}
 		final float sectorH = sectors.isEmpty() ? 0 : h * 0.3F;
 		final float carH = h - 2 * PAD - sectorH;
 		final float carCy = h / 2 - PAD - carH / 2;

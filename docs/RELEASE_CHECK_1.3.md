@@ -202,3 +202,17 @@ Ran 2026-10-01, dev client, scene `ata_test:v14_platform`. Gates: 233 tests, ass
 | c | Drop-barrier edges ×4 on P1; `/aurelia_live edge` diagnostic. | ✅ Lookup: Alpha, platform 658, 10 s dwell. With a train standing the bars are down; otherwise up (`c-drop-barrier-up-and-down.jpg`). The trigger is MTR's schedule window for the platform (arrival to departure, about 9 s here). |
 | d | Boarding-step edges ×4 on P1. | ➖ Same code path as (c); the step sliding out was **not captured**: **needs human eye**. |
 | F | Counters, 8 train-keyed edges + boards in view, 60 s. | arrival_requests +62 (about 1/s: two shared platform sets), provider_refresh +785 (cached per-block lookups, 2 per edge per 2 s; no server traffic), board_rebuilds +124. Within the contract: requests are per platform, not per block. |
+
+---
+
+## 1.4 package 5 (A17, A16, A18) and package 4 follow-ups
+
+Ran 2026-10-01, dev client, scene `ata_test:v14_signs`. Gates: 237 tests, asset audit OK, z-fighting 0.
+
+| # | Check | Result |
+|---|---|---|
+| A17 | 4-wide PSD text panel, "Beta 3 min / Doors 1-4", platform 1. | ✅ Joined panel, amber text, platform badge (`a16-a17-a18-signs.jpg`). |
+| A16 | Stand-back sign left empty. | ✅ Reads "Stand back / Non-stopping trains". The text is small on a one-block plate: **needs human eye** at platform distance. |
+| A18 | 4-wide composition board `1+ 2 3 \| 4 5 6!`, sectors `A B C D`. | ✅ Six cars left to right, gap between units, first-class and accessible bands, sectors below. Two hanger rods, at the ends. |
+| — | Package 4 review follow-ups. | Edge standing check now runs once per second per platform (shared), with each block's platform re-resolved every 5 s. The arrivals From cell is empty when MTR has no origin. Circular routes keep trains ending at their origin. The composition board draws nothing when too narrow. Not re-measured live. |
+| — | Shader and non-Latin passes for these signs. | ➖ Shader skipped (dev client, see package 3). Non-Latin: same text path as the lift panel (checked in package 3); not repeated. |

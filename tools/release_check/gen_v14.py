@@ -67,3 +67,16 @@ for i, kind in enumerate(("diagonal", "outer", "inner")):
     P.append(f"setblock {34 + i * 3} {Y + 1} {Z + 2} {A}screen_door_doorway[facing=north,kind={kind}]")
 P.append('tellraw @a {"text":"1.4 platform scene placed (Alpha P1 x 10-23, board behind the wall, curved screens x 34-40).","color":"green"}')
 open(os.path.join(os.path.dirname(__file__), "ata_test/data/ata_test/functions/v14_platform.mcfunction"), "w").write("\n".join(P) + "\n")
+
+# (text signs: left = the facing's counter-clockwise side, the row owner is the block furthest that way)
+# ---- package 5: PSD text panel, stand-back sign, composition board (all text set by hand) --------------------------
+Q = [f"fill 0 {Y} {Z - 9} 20 {Y + 4} {Z - 9} minecraft:stone_bricks", f"fill 0 {Y + 5} {Z - 9} 20 {Y + 5} {Z - 5} minecraft:stone_bricks"]
+for x in range(2, 6):
+    Q.append(f"setblock {x} {Y + 2} {Z - 8} {A}psd_text_panel[facing=south,left={str(x < 5).lower()},right={str(x > 2).lower()}]")
+Q.append(f'data merge block 5 {Y + 2} {Z - 8} {{Sign:{{Primary:"Beta 3 min",Secondary:"Doors 1-4",Platform:"1"}}}}')
+Q.append(f"setblock 8 {Y + 1} {Z - 8} {A}stand_back_sign[facing=south,left=false,right=false]")
+for x in range(11, 15):
+    Q.append(f"setblock {x} {Y + 4} {Z - 7} {A}composition_board[facing=south,left={str(x < 14).lower()},right={str(x > 11).lower()}]")
+Q.append(f'data merge block 14 {Y + 4} {Z - 7} {{Sign:{{Primary:"1+ 2 3 | 4 5 6!",Secondary:"A B C D"}}}}')
+Q.append('tellraw @a {"text":"1.4 package 5 scene placed (z -104).","color":"green"}')
+open(os.path.join(os.path.dirname(__file__), "ata_test/data/ata_test/functions/v14_signs.mcfunction"), "w").write("\n".join(Q) + "\n")

@@ -27,13 +27,13 @@ Forge, NeoForge and other Minecraft versions are **not supported**. Additional v
 
 Install the mod on both the server and the clients.
 
-## Feature families (89 blocks)
+## Feature families (96 blocks)
 
 | Family | Pieces |
 |---|---|
-| **Platforms** (8) | Light and dark platform paving, tactile warning paving, platform edge, platform edge with warning line, angled / curved platform edge (45°, convex, concave), platform ramp (lower and upper halves) |
+| **Platforms** (12) | Platform screen panel and doorway (straight, 45°, convex, concave), drop-barrier and boarding-step platform edges (move while a train stands), light and dark platform paving, tactile warning paving, platform edge, platform edge with warning line, angled / curved platform edge (45°, convex, concave), platform ramp (lower and upper halves) |
 | **Passenger information** (12) | Platform CIS board and hanging CIS board, platform PIDS and hanging PIDS, concourse departure board (all live from MTR), wall and ceiling speakers, hanging and wall digital clocks, station analogue clock, passenger information terminal (joins side by side) and kiosk |
-| **Signage** (6) | Freestanding and hanging station name signs, platform number sign, directional sign, information case, sign pole |
+| **Signage** (9) | PSD text panel, stand-back warning sign, train composition board (all typed by hand), freestanding and hanging station name signs, platform number sign, directional sign, information case, sign pole |
 | **Furniture** (6) | Perforated steel bench, timber slat bench, waste bin, bollard, platform lamp, information pillar |
 | **Architecture** (17) | Square and round steel columns, structural beam, branching roof support, framed glass wall, glass panel, glass barrier, flat canopy, canopy edge, sloped canopy (lower and upper), wave canopy rise, crest and flattening, canopy corner cap, canopy skylight, canopy light panel |
 | **Catenary** (4) | Catenary mast, cantilever, gantry beam, insulator (decorative) |
@@ -47,7 +47,9 @@ Install the mod on both the server and the clients.
 
 - **Station suffixes** (`/ata_suffix`): "Aurelia Airport" on chosen contexts while MTR keeps "Aurelia".
 - **Per-exit settings** on the station information board's Exits view; **calling-point times** on PIDS/CIS where MTR reports them.
-- **Lift status panel, noise barriers, station equipment props.** See [CHANGELOG.md](CHANGELOG.md).
+- **Lift status panel, noise barriers, station equipment props.**
+- **Concourse board:** column headings, departures or arrivals, station summary.
+- **Platform screen doors** for straight and curved edges, **drop-barrier and boarding-step edges** keyed to MTR's arrivals, and PSD text / stand-back / composition signs set by hand. See [CHANGELOG.md](CHANGELOG.md) and [docs/DESIGN_1.4.md](docs/DESIGN_1.4.md).
 
 ### What 1.3 adds (Urban Infrastructure)
 

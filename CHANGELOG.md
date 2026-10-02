@@ -10,6 +10,7 @@
 - **Concourse board:** column headings, Departures/Arrivals, station summary.
 - **Platform screen doors for straight and curved edges:** fixed panel and always-open doorway (opens MTR train doors).
 - **Drop-barrier and boarding-step platform edges:** the bars drop / the step extends while a train stands at the platform (client-side, from MTR's arrival data). `/aurelia_live edge` explains what an edge sees.
+- **PSD text panel (A17), stand-back sign (A16), train composition board (A18):** typed by hand. MTR does not expose PSD text, through trains or car layout to addons.
 - **Calling-point times (A14):** PIDS/CIS "Calling at" can show minutes to each stop where MTR reports the same trip there (option **Times**, off by default). `/aurelia_live routes` shows the data.
 
 ## 1.3.1

@@ -93,6 +93,9 @@
     "aurelia_transit_architecture:screen_door_panel",
     "aurelia_transit_architecture:screen_door_doorway",
     "aurelia_transit_architecture:drop_barrier_edge",
-    "aurelia_transit_architecture:boarding_step_edge"
+    "aurelia_transit_architecture:boarding_step_edge",
+    "aurelia_transit_architecture:psd_text_panel",
+    "aurelia_transit_architecture:stand_back_sign",
+    "aurelia_transit_architecture:composition_board"
   ]
 }

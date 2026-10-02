@@ -118,6 +118,22 @@ public final class ModBlocks {
 					new InfoLayout(8, 8.5F, 12, 11, 14, -1, 0xFF23272B, 0xFF1B3A5E, 6, 0.8F)), TIP_WALL, TIP_EDITABLE);
 	public static final Block SIGN_POLE = register("sign_pole", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
 			new ShapedBlock(metal(), POLE));
+	// 1.4 (A17, A16, A18): built as far as MTR allows, all text set by hand
+	public static final Block PSD_TEXT_PANEL = register("psd_text_panel", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(metal().luminance(state -> 6),
+					new TextLayout(8, 7, 16, 12.9F, -1, true, SignStyle.PSD),
+					box(0, 4, 13, 16, 12, 16)),
+			TIP_EDITABLE, TIP_JOINS, TIP + "psd_text_panel");
+	public static final Block STAND_BACK_SIGN = register("stand_back_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(metal(),
+					new TextLayout(8, 10, 12.5F, 13.9F, -1, false, SignStyle.WARNING),
+					box(1, 2, 14, 15, 14, 16)),
+			TIP_EDITABLE, TIP + "stand_back_sign");
+	public static final Block COMPOSITION_BOARD = register("composition_board", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(metal().luminance(state -> 6),
+					new TextLayout(7, 7.5F, 16, 6.4F, 9.6F, true, SignStyle.COMPOSITION),
+					union(box(0, 3, 6.5, 16, 11, 9.5), box(3, 11, 7.5, 5, 16, 8.5), box(11, 11, 7.5, 13, 16, 8.5))),
+			TIP_EDITABLE, TIP_JOINS, TIP + "composition_board");
 
 	// ---- Furniture -------------------------------------------------------------------------------------------------
 
