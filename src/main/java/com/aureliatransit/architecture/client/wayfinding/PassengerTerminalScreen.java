@@ -15,6 +15,7 @@ import com.aureliatransit.architecture.wayfinding.LineBadge;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
+import com.aureliatransit.architecture.wayfinding.ServiceMessages;
 import com.aureliatransit.architecture.wayfinding.Wayfinding;
 import com.aureliatransit.architecture.wayfinding.WayfindingData;
 import net.minecraft.client.gui.DrawContext;
@@ -168,7 +169,8 @@ public class PassengerTerminalScreen extends Screen {
 		dirty = false;
 		final long now = System.currentTimeMillis();
 		final String name = stationName();
-		final List<ServiceMessage> notices = ClientServiceMessages.allFor(name);
+		// messages are keyed by MTR's station name; a manual name override is only the fallback (B10)
+		final List<ServiceMessage> notices = ClientServiceMessages.allFor(ServiceMessages.messageStation(snapshot.station() == null ? "" : snapshot.station().displayName(), name));
 		textRows.clear();
 		strips = List.of();
 		departureRows = List.of();

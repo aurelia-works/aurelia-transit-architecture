@@ -229,6 +229,11 @@ public class WayfindingEditScreen extends Screen {
 				destinationField = field(left + column * 60, y, WIDTH - column * 60, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
 			}
 			y += ROW;
+			if (fields.street() && fields.destination()) {
+				// the station information board has both: its "trains this side" view shows the destination (1.3.1)
+				destinationField = field(left, y, WIDTH, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
+				y += ROW;
+			}
 		} else if (fields.destination()) {
 			destinationField = field(left, y, WIDTH, WayfindingData.MAX_DESTINATION, seed.destination(), destinationKey());
 			y += ROW;
@@ -385,7 +390,7 @@ public class WayfindingEditScreen extends Screen {
 			previewDirty = false;
 			final WayfindingData data = current();
 			preview = kind == WayfindingPanelKind.BOARD
-					? StationBoardLayout.layout(Wayfinding.resolve(pos, data), data.view(), ClientServiceMessages.allFor(Wayfinding.resolve(pos, data).stationName()), panelWidth(),
+					? StationBoardLayout.layout(Wayfinding.resolve(pos, data), data.view(), ClientServiceMessages.allFor(Wayfinding.resolve(pos, data).messageStation()), panelWidth(),
 					panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
 					: kind == WayfindingPanelKind.TERMINAL
 					? TerminalFace.layout(Wayfinding.resolve(pos, data), panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))

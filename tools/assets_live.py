@@ -78,9 +78,12 @@ def display_model(z0, z1, double, top_inset, combo):
         els.append(g.el([15, 0, zf], [16, y1, zb], "#body"))
     if not right:
         els.append(g.el([0, 0, zf], [1, y1, zb], "#body"))
+    # At most two hanger rods per screen: only the top row, one near each free end (viewer's left is model +X).
     if top_inset and not up:
-        for x in (3, 12):
-            els.append(g.el([x, y1, 7.5], [x + 1, 16, 8.5], "#body"))
+        if not left:
+            els.append(g.el([12, y1, 7.5], [13, 16, 8.5], "#body"))
+        if not right:
+            els.append(g.el([3, y1, 7.5], [4, 16, 8.5], "#body"))
     return g.model(textures, els)
 
 

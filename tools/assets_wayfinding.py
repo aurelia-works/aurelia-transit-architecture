@@ -197,13 +197,14 @@ def hanging_sign(face, y1, y2):
             g.el([0, y1, 7], [16, y2, 9], "#frame", faces=both),
             g.el([0, y2 - 0.5, 6.75], [16, y2, 9.25], "#frame"),
             g.el([0, y1, 6.75], [16, y1 + 0.5, 9.25], "#frame"),
-            g.el([3, y2, 7.5], [5, 16, 8.5], "#frame"),
-            g.el([11, y2, 7.5], [13, 16, 8.5], "#frame"),
         ]
+        # At most two hanger rods per joined row: one near each free end, none on inner blocks.
         if not left:
             els.append(g.el([0, y1, 6.75], [0.75, y2, 9.25], "#frame"))
+            els.append(g.el([3, y2, 7.5], [5, 16, 8.5], "#frame"))
         if not right:
             els.append(g.el([15.25, y1, 6.75], [16, y2, 9.25], "#frame"))
+            els.append(g.el([11, y2, 7.5], [13, 16, 8.5], "#frame"))
         return g.model({"particle": "steel", "frame": "steel", "face": face}, els)
     return build
 

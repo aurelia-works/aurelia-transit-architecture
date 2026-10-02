@@ -91,7 +91,34 @@ class EPaperLayoutTest {
 			assertTrue(label.cx() - half >= -w / 2 - 0.01F && label.cx() + half <= w / 2 + 0.01F, "label '" + label.text() + "' overflows horizontally");
 			assertTrue(label.cy() <= h / 2 && label.cy() >= -h / 2, "label '" + label.text() + "' outside vertically");
 		}
-		assertEquals(EPaperLayout.maxRows(h), panel.labels().stream().filter(l -> l.argb() == EPaperLayout.INK && l.cx() > 0 && l.text().matches("Due|Boarding|5 min|99\\+ min")).count());
+		assertEquals(EPaperLayout.maxRows(h, w), panel.labels().stream().filter(l -> l.argb() == EPaperLayout.INK && l.cx() > 0 && l.text().matches("Due|Boarding|5 min|99\\+ min")).count());
+	}
+
+	@Test
+	void textScalesWithPanelWidth() {
+		// 1.3.1: panel widths of 1-, 2- and 3-wide boards (16n - join margin)
+		final float one = 14.5F;
+		final float two = 30.5F;
+		final float three = 46.5F;
+		assertEquals(EPaperLayout.MIN_TEXT_FACTOR, EPaperLayout.textFactor(one));
+		assertTrue(EPaperLayout.textFactor(two) > EPaperLayout.textFactor(one) && EPaperLayout.textFactor(two) < 1F);
+		assertEquals(1F, EPaperLayout.textFactor(three), "three blocks and wider keep the 1.3.0 size");
+		assertEquals(EPaperLayout.maxRows(14.7F), EPaperLayout.maxRows(14.7F, three));
+		assertTrue(EPaperLayout.maxRows(14.7F, one) >= EPaperLayout.maxRows(14.7F, three), "smaller text never shows fewer rows");
+
+		for (final float w : new float[]{one, two, three}) {
+			// a one-block board fits a short destination beside "3 min"; from two blocks also beside the long "Arrived"
+			final List<EPaperLayout.Row> rows = w == one ? List.of(new EPaperLayout.Row("12", "Alpha", "3 min"))
+					: List.of(new EPaperLayout.Row("12", "Alpha", "Arrived"));
+			final PanelLayout.Panel panel = EPaperLayout.layout("Alpha", rows, "", w, 14.7F, EPaperLayoutTest::measure);
+			assertTrue(panel.labels().stream().anyMatch(l -> l.text().equals("12")), w + ": route shown in full");
+			assertTrue(panel.labels().stream().anyMatch(l -> l.text().equals("Alpha") && l.argb() == EPaperLayout.INK), w + ": destination shown in full");
+			assertTrue(panel.labels().stream().anyMatch(l -> l.text().equals(rows.get(0).status())), w + ": time shown");
+			for (final PanelLayout.Label label : panel.labels()) {
+				final float half = label.widthUnits() * label.scale() / 2;
+				assertTrue(label.cx() - half >= -w / 2 - 0.01F && label.cx() + half <= w / 2 + 0.01F, w + ": '" + label.text() + "' overflows");
+			}
+		}
 	}
 
 	@Test

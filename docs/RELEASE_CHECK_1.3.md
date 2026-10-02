@@ -141,3 +141,20 @@ All of B, C, E pass, no ❌ in D other than packs that cannot load on this GPU, 
 - Three bugs found and fixed during the check (station list never loaded; picker search box over "Found:"; info board street box over platform box), each re-checked in game. See STATUS → Bugs found during the 1.3 check.
 - Trackside fence flicker (z-fighting) found late, fixed and confirmed by the tester; the same defect fixed in 12 other models via `tools/check_zfighting.py` (not each re-checked by eye).
 - Open, not blocking: e-paper text size on small boards (1.3.1).
+
+---
+
+## 1.3.1
+
+Ran 2026-10-01 on branch `release/1.3.1`, dev client (`./gradlew runClient`, MTR 4.0.5, Sodium 0.5.13, Iris 1.7.6 with shaders off) on a **copy** of the release-check world (`run/client/saves/ATA Release Check`; the Prism instance was not touched). Scene: `function ata_test:v131` (`tools/release_check/gen_v131.py`). Screenshots: `screenshots/1.3.1/`. Automated gates: 197 tests, asset audit OK, z-fighting check 0 models.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | **B10:** terminal at Alpha and station information board (Service changes view) both given the manual name "Alpha Central"; `/ata_message add station "Alpha" severe Alpha severe test` + a network message. | ✅ Board lists "!! Alpha severe test" and "Network info test"; terminal Home rotates 2/2 and Service info lists Station "!! Alpha severe test", Network "Network info test" (`b10-terminal-service-info.jpg`). |
+| 2 | **E-paper** 1-, 2- and 3-wide boards on Alpha's wall. | ✅ 1-wide: "Ro… Alpha 2 min" (destination and time in full; small text, about vanilla sign size); 2-wide: "Rout Alpha 1 min" in full (the long "Arrived" status fits beside "Alpha" in `EPaperLayoutTest`, not seen live); 3-wide unchanged (`epaper-1-2-3-wide.jpg`). Readability from a normal viewing distance: **needs human eye**. |
+| 3 | **BOARD editor destination field.** | ✅ Field on its own row below Platform/Street; "To Gamma" typed shows in the Trains this side preview (`board-editor-destination.jpg`). |
+| 4 | **Viaduct joints**, every column style: crossbeam on top, knee and diagonal braces. | ✅ Crossbeam sits on the column top; brace plates meet the column face, steel and concrete (`viaduct-*-joint.jpg`). |
+| 5 | **12 z-fighting models** (girder/stringer/platform support ×2 materials, wind screen lower/upper, bus stop sign, catenary cantilever and insulator, trackside fence). | ✅ in stills: no striping (`zfighting-contact-sheet.jpg`). ➖ Flicker shows only in motion: **needs human eye** walking past. |
+| 6 | **Hanging rods ≤ 2 per row** (new in 1.3.1): hanging wayfinding sign 1/2/4 wide, hanging PIDS 1/2/4, hanging CIS 4, exit sign 3, hanging station name sign 3, direction sign 3. | ✅ Each row shows exactly two rods, one near each end (`hanging-rods-*.jpg`). The block outline (F3/aim box) still includes rods on inner blocks. |
+
+Not run for 1.3.1 (no new display family): stress scenario, shader pass, non-Latin pass. The 1.3.0 results stand for those.

@@ -151,7 +151,7 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 				rebuildEPaper(cached, entity.getPos(), spec, now);
 			}
 		} else if (dirty && spec.kind() == WayfindingPanelKind.BOARD) {
-			cached.panel = StationBoardLayout.layout(cached.resolved, data.view(), ClientServiceMessages.allFor(cached.resolved.stationName()), spec.panelWidth(cached.rowLength),
+			cached.panel = StationBoardLayout.layout(cached.resolved, data.view(), ClientServiceMessages.allFor(cached.resolved.messageStation()), spec.panelWidth(cached.rowLength),
 					spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
 		} else if (dirty && spec.kind() == WayfindingPanelKind.TERMINAL) {
 			cached.panel = TerminalFace.layout(cached.resolved, spec.panelWidth(cached.rowLength), spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
@@ -168,7 +168,7 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		final String manual = cached.resolved.stationName();
 		final String header = !manual.isEmpty() ? manual : snapshot.station() != null ? snapshot.station().displayName() : "";
 		final float w = spec.panelWidth(cached.rowLength);
-		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height()));
+		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height(), w));
 		cached.showingIdle = rows.isEmpty();
 		final String idle = snapshot.station() == null ? Tr.t("epaper_no_stop") : Tr.t("term_no_departures");
 		cached.panel = EPaperLayout.layout(header, rows, idle, w, spec.height(), s -> textRenderer.getWidth(s));

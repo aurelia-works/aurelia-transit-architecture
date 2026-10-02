@@ -455,26 +455,23 @@ def sign_variant(kind, left, right):
             el([0, 3.5, 6.5], [16, 10.5, 9.5], "#frame", faces={"north": "#face", "south": "#face"}),
             el([0, 10.5, 6.25], [16, 11, 9.75], "#frame"),
             el([0, 3, 6.25], [16, 3.5, 9.75], "#frame"),
-            el([3.5, 11, 7.5], [4.5, 16, 8.5], "#frame"),
-            el([11.5, 11, 7.5], [12.5, 16, 8.5], "#frame"),
         ]
+        # at most two hanger rods per joined row: one near each free end
         if not left:
-            els.append(el([0, 3, 6.25], [1, 11, 9.75], "#frame"))
+            els += [el([0, 3, 6.25], [1, 11, 9.75], "#frame"), el([3.5, 11, 7.5], [4.5, 16, 8.5], "#frame")]
         if not right:
-            els.append(el([15, 3, 6.25], [16, 11, 9.75], "#frame"))
+            els += [el([15, 3, 6.25], [16, 11, 9.75], "#frame"), el([11.5, 11, 7.5], [12.5, 16, 8.5], "#frame")]
     elif kind == "direction_sign":
         t["face"] = "sign_charcoal"
         els += [
             el([0, 4.5, 7], [16, 10.5, 9], "#frame", faces={"north": "#face", "south": "#face"}),
             el([0, 10.5, 6.75], [16, 11, 9.25], "#frame"),
             el([0, 4, 6.75], [16, 4.5, 9.25], "#frame"),
-            el([3.5, 11, 7.5], [4.5, 16, 8.5], "#frame"),
-            el([11.5, 11, 7.5], [12.5, 16, 8.5], "#frame"),
         ]
         if not left:
-            els.append(el([0, 4, 6.75], [1, 11, 9.25], "#frame"))
+            els += [el([0, 4, 6.75], [1, 11, 9.25], "#frame"), el([3.5, 11, 7.5], [4.5, 16, 8.5], "#frame")]
         if not right:
-            els.append(el([15, 4, 6.75], [16, 11, 9.25], "#frame"))
+            els += [el([15, 4, 6.75], [16, 11, 9.25], "#frame"), el([11.5, 11, 7.5], [12.5, 16, 8.5], "#frame")]
     return model(t, els)
 
 

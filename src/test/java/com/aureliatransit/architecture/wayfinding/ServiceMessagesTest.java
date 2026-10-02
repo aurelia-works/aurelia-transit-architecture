@@ -67,6 +67,19 @@ class ServiceMessagesTest {
 	}
 
 	@Test
+	void messagesFollowTheMtrStationNotAManualOverride() {
+		// B10: a block named "Market Central" by hand that resolves MTR's Market Street keeps Market Street's messages
+		final ServiceMessages set = sample();
+		final String key = ServiceMessages.messageStation("Market Street", "Market Central");
+		assertEquals("Market Street", key);
+		assertEquals(List.of("Severe delays", "Platform 2 closed", "Bus 37 diversion", "Engineering work after 22:00"), texts(set.applicable("", key)));
+		assertEquals("Stadium", ServiceMessages.messageStation("", "Stadium"), "no MTR station: the manual name is the key");
+		assertEquals("Stadium", ServiceMessages.messageStation(null, "Stadium"));
+		assertEquals("Stadium", ServiceMessages.messageStation("  ", "Stadium"));
+		assertEquals("", ServiceMessages.messageStation(null, null));
+	}
+
+	@Test
 	void clearByScope() {
 		final ServiceMessages set = sample();
 		assertEquals(3, set.clearNetwork().size());

@@ -44,6 +44,21 @@ public final class ServiceMessages {
 		return TextSanitizer.sanitize(stationName, MAX_STATION_NAME).replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
 	}
 
+	/**
+	 * The station name a block's messages are looked up by. Messages are added against MTR's station name (the name the
+	 * PIDS use), so a block that resolves an MTR station uses that name even when a manual name override is shown; the
+	 * manual name is the key only when no MTR station resolves.
+	 *
+	 * @param mtrStationName display name of the MTR station the block resolves, or empty/null when none
+	 * @param manualName     the name the block shows (manual override or MTR), may be empty
+	 */
+	public static String messageStation(String mtrStationName, String manualName) {
+		if (mtrStationName != null && !mtrStationName.isBlank()) {
+			return mtrStationName;
+		}
+		return manualName == null ? "" : manualName;
+	}
+
 	/** Every stored message in id order. */
 	public List<ServiceMessage> all() {
 		return messages;

@@ -36,6 +36,18 @@ class WayfindingResolverTest {
 	}
 
 	@Test
+	void manualNameKeepsTheMtrStationForMessages() {
+		final ResolvedWayfinding manual = WayfindingResolver.merge(data(true, "Market Central", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts());
+		assertEquals("Market Central", manual.stationName());
+		assertEquals("Market Street", manual.mtrStationName());
+		assertEquals("Market Street", manual.messageStation(), "B10: messages are looked up by MTR's name");
+		final ResolvedWayfinding noMtr = WayfindingResolver.merge(data(true, "Market Central", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), StationFacts.EMPTY);
+		assertEquals("Market Central", noMtr.messageStation(), "no MTR station: manual name is the fallback");
+		final ResolvedWayfinding off = WayfindingResolver.merge(data(false, "Market Central", List.of(), false, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts());
+		assertEquals("Market Central", off.messageStation(), "station not taken from MTR: manual name");
+	}
+
+	@Test
 	void autoFlagsFillEmptyFields() {
 		final ResolvedWayfinding r = WayfindingResolver.merge(data(true, "", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts());
 		assertEquals("Market Street", r.stationName());

@@ -31,6 +31,10 @@ public final class EPaperLayout {
 	public static final float ROW_SCALE = 0.4F;
 	public static final float ROW_PITCH = 3.2F;
 	public static final float PAD = 0.9F;
+	/** Panel width (model px) at which text is drawn at full size; narrower boards scale it down (1.3.1). */
+	public static final float FULL_SIZE_WIDTH = 46F;
+	/** Smallest text factor, reached by a one-block board (about vanilla sign text size): route, a short destination and the time fit instead of "R…" / "Al…". */
+	public static final float MIN_TEXT_FACTOR = 0.375F;
 
 	/** One arrival line: route chip text, destination, and the pre-formatted time/status. */
 	public record Row(String route, String destination, String status) {
@@ -82,10 +86,26 @@ public final class EPaperLayout {
 	}
 
 	/**
-	 * How many arrival rows fit a panel of the given height.
+	 * Text size factor for a panel width: 1 from {@link #FULL_SIZE_WIDTH} up (three blocks), scaling down linearly to
+	 * {@link #MIN_TEXT_FACTOR} so one- and two-block boards fit a route, a destination and a time on one line.
+	 */
+	public static float textFactor(float panelWidth) {
+		return Math.max(MIN_TEXT_FACTOR, Math.min(1F, panelWidth / FULL_SIZE_WIDTH));
+	}
+
+	/**
+	 * How many arrival rows fit a panel of the given height at full text size.
 	 */
 	public static int maxRows(float panelHeight) {
-		return Math.max(0, Math.min(MAX_ROWS, (int) Math.floor((panelHeight - HEADER_HEIGHT - PAD * 0.5F) / ROW_PITCH)));
+		return maxRows(panelHeight, FULL_SIZE_WIDTH);
+	}
+
+	/**
+	 * How many arrival rows fit a panel of the given size (text scales with {@link #textFactor}).
+	 */
+	public static int maxRows(float panelHeight, float panelWidth) {
+		final float f = textFactor(panelWidth);
+		return Math.max(0, Math.min(MAX_ROWS, (int) Math.floor((panelHeight - HEADER_HEIGHT * f - PAD * 0.5F) / (ROW_PITCH * f))));
 	}
 
 	// ---- layout -------------------------------------------------------------------------------------------------------
@@ -98,27 +118,32 @@ public final class EPaperLayout {
 	public static PanelLayout.Panel layout(String header, List<Row> rows, String idle, float w, float h, ToIntFunction<String> measure) {
 		final List<PanelLayout.Rect> rects = new ArrayList<>();
 		final List<PanelLayout.Label> labels = new ArrayList<>();
+		final float f = textFactor(w);
+		final float headerH = HEADER_HEIGHT * f;
+		final float headerScale = HEADER_SCALE * f;
+		final float rowScale = ROW_SCALE * f;
+		final float pitch = ROW_PITCH * f;
 		final float left = -w / 2 + PAD;
 		final float right = w / 2 - PAD;
 		final float top = h / 2;
 
-		rects.add(new PanelLayout.Rect(0, top - HEADER_HEIGHT / 2, w, HEADER_HEIGHT, INK));
-		final String title = fit(header, (right - left) / HEADER_SCALE, measure);
+		rects.add(new PanelLayout.Rect(0, top - headerH / 2, w, headerH, INK));
+		final String title = fit(header, (right - left) / headerScale, measure);
 		if (!title.isEmpty()) {
-			labels.add(left(title, left, top - HEADER_HEIGHT / 2, HEADER_SCALE, PAPER, measure));
+			labels.add(left(title, left, top - headerH / 2, headerScale, PAPER, measure));
 		}
 
-		final float bodyTop = top - HEADER_HEIGHT - PAD * 0.5F;
-		final int fitting = maxRows(h);
+		final float bodyTop = top - headerH - PAD * 0.5F;
+		final int fitting = maxRows(h, w);
 		if (rows.isEmpty() || fitting == 0) {
 			final float bodyH = bodyTop - (-h / 2);
-			final int maxLines = (int) Math.floor(bodyH / ROW_PITCH);
+			final int maxLines = (int) Math.floor(bodyH / pitch);
 			if (maxLines >= 1) {
-				final List<String> lines = wrap(idle, (right - left) / ROW_SCALE, maxLines, measure);
-				final float firstCy = bodyTop - (bodyH - lines.size() * ROW_PITCH) / 2 - ROW_PITCH / 2;
+				final List<String> lines = wrap(idle, (right - left) / rowScale, maxLines, measure);
+				final float firstCy = bodyTop - (bodyH - lines.size() * pitch) / 2 - pitch / 2;
 				for (int i = 0; i < lines.size(); i++) {
 					final String line = lines.get(i);
-					labels.add(new PanelLayout.Label(line, 0, firstCy - i * ROW_PITCH, ROW_SCALE, INK_DIM, measure.applyAsInt(line)));
+					labels.add(new PanelLayout.Label(line, 0, firstCy - i * pitch, rowScale, INK_DIM, measure.applyAsInt(line)));
 				}
 			}
 			return new PanelLayout.Panel(rects, labels);
@@ -129,29 +154,29 @@ public final class EPaperLayout {
 		float statusW = 0;
 		for (int i = 0; i < count; i++) {
 			final Row row = rows.get(i);
-			chipW = Math.max(chipW, measure.applyAsInt(row.route()) * ROW_SCALE + 1.4F);
-			statusW = Math.max(statusW, measure.applyAsInt(row.status()) * ROW_SCALE);
+			chipW = Math.max(chipW, measure.applyAsInt(row.route()) * rowScale + 1.4F * f);
+			statusW = Math.max(statusW, measure.applyAsInt(row.status()) * rowScale);
 		}
 		chipW = Math.min(chipW, (right - left) * 0.3F);
-		final float destLeft = left + chipW + 1.2F;
-		final float destAvail = right - statusW - 1.2F - destLeft;
+		final float destLeft = left + chipW + 1.2F * f;
+		final float destAvail = right - statusW - 1.2F * f - destLeft;
 
 		for (int i = 0; i < count; i++) {
 			final Row row = rows.get(i);
-			final float cy = bodyTop - ROW_PITCH * (i + 0.5F);
-			final String route = fit(row.route(), (chipW - 1.4F) / ROW_SCALE, measure);
-			rects.add(new PanelLayout.Rect(left + chipW / 2, cy, chipW, ROW_PITCH - 0.8F, INK));
+			final float cy = bodyTop - pitch * (i + 0.5F);
+			final String route = fit(row.route(), (chipW - 1.4F * f) / rowScale + 0.01F, measure); // epsilon: float round trip of the widest chip
+			rects.add(new PanelLayout.Rect(left + chipW / 2, cy, chipW, pitch - 0.8F * f, INK));
 			if (!route.isEmpty()) {
-				labels.add(new PanelLayout.Label(route, left + chipW / 2, cy, ROW_SCALE, PAPER, measure.applyAsInt(route)));
+				labels.add(new PanelLayout.Label(route, left + chipW / 2, cy, rowScale, PAPER, measure.applyAsInt(route)));
 			}
-			final String destination = fit(row.destination(), destAvail / ROW_SCALE, measure);
+			final String destination = fit(row.destination(), destAvail / rowScale, measure);
 			if (!destination.isEmpty()) {
-				labels.add(left(destination, destLeft, cy, ROW_SCALE, INK, measure));
+				labels.add(left(destination, destLeft, cy, rowScale, INK, measure));
 			}
 			final int statusUnits = measure.applyAsInt(row.status());
-			labels.add(new PanelLayout.Label(row.status(), right - statusUnits * ROW_SCALE / 2, cy, ROW_SCALE, INK, statusUnits));
+			labels.add(new PanelLayout.Label(row.status(), right - statusUnits * rowScale / 2, cy, rowScale, INK, statusUnits));
 			if (i < count - 1) {
-				rects.add(new PanelLayout.Rect(0, cy - ROW_PITCH / 2, w - 2 * PAD, 0.2F, RULE));
+				rects.add(new PanelLayout.Rect(0, cy - pitch / 2, w - 2 * PAD, 0.2F, RULE));
 			}
 		}
 		return new PanelLayout.Panel(rects, labels);

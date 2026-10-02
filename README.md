@@ -22,7 +22,7 @@ Forge, NeoForge and other Minecraft versions are **not supported**. Additional v
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.3.0+mc1.20.1-fabric.jar`
+   - `aurelia-transit-architecture-1.3.1+mc1.20.1-fabric.jar`
 3. Start the game. The pieces are in four creative tabs: **ATA Architecture**, **ATA Wayfinding**, **ATA Passenger Equipment** and **ATA Bus / Street Transit**.
 
 Install the mod on both the server and the clients.
@@ -100,10 +100,12 @@ Canopy plates sit at the bottom of their block, so they rest directly on columns
 - The addon uses no mixins and does not modify MTR.
 - **Manual station picker:** lists only the stations MTR has sent to your client, which are the ones near you (in testing, a station ~100 blocks away was listed and one ~210 blocks away was not). Once picked, the link is kept when you move away.
 
-### Known issues (1.3.0)
+### Fixed in 1.3.1
 
-- **Station messages and manual names:** a terminal or station information board with a manual station name doesn't show that station's `/ata_message` station messages, while the PIDS beside it does. Network messages are unaffected. Workaround: leave the name blank so the MTR station name is used. Fix planned for 1.3.1.
-- **Small e-paper bus boards:** on 1- and 2-wide boards the route and destination are cut short ("R…", "Al…"). Use a wider board for now. Fix planned for 1.3.1.
+- **Station messages and manual names:** a terminal or station information board with a manual station name now shows its MTR station's `/ata_message` station messages, like the PIDS beside it. The manual name is used to look messages up only when no MTR station resolves.
+- **Small e-paper bus boards:** text scales with the board width, so 1- and 2-wide boards show the route, destination and time instead of "R…" / "Al…". Three blocks and wider look as before.
+- **Hanging signs and displays:** a joined row hangs from at most two rods, one near each end, whatever its width (before, every block drew two).
+- **Station information board editor:** the direction/destination field (used by the "Trains this side" view) has its own row; before, it was enabled but never shown.
 
 ## Building from source
 

@@ -20,6 +20,7 @@ import java.util.Locale;
  *     (case-insensitive, surrounding whitespace ignored). No configured exit, or no matching exit, gives none.</li>
  *     <li>Service text: "Local" / "Express" / "Limited" for those types, the custom label for CUSTOM (empty label, empty
  *     text), nothing for NONE. MTR has no stopping-pattern data, so the service type is manual only.</li>
+ *     <li>The MTR station's own name is kept beside a manual name, because service messages are keyed by it.</li>
  *     <li>Station code, platform, street label, transfers, destination, arrow, pictogram, accent and language layout are
  *     manual only.</li>
  * </ul>
@@ -41,7 +42,8 @@ public final class WayfindingResolver {
 		final List<LineBadge> lines = data.lines().isEmpty() && data.autoLines() ? bounded(facts.lines()) : data.lines();
 		return new ResolvedWayfinding(name, secondary, data.stationCode(), lines, data.arrow(), data.destination(), data.serviceType(),
 				serviceText(data), data.platform(), data.exitLabel(), exitDestinations(data.exitLabel(), facts.exits()), data.streetLabel(), data.transfers(),
-				data.languageLayout(), data.pictogram(), data.accent(), mtrName, data.autoStation() ? bounded(facts.exits(), MAX_EXITS) : List.of());
+				data.languageLayout(), data.pictogram(), data.accent(), mtrName, data.autoStation() ? bounded(facts.exits(), MAX_EXITS) : List.of(),
+				data.autoStation() && facts.station() != null ? facts.station().displayName() : "");
 	}
 
 	static String serviceText(WayfindingData data) {
