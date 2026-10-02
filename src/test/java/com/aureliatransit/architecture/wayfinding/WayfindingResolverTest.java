@@ -48,6 +48,17 @@ class WayfindingResolverTest {
 	}
 
 	@Test
+	void suffixIsAddedToMtrNamesOnly() {
+		final ResolvedWayfinding auto = WayfindingResolver.merge(data(true, "", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts(),
+				name -> name + " Station");
+		assertEquals("Market Street Station", auto.stationName());
+		assertEquals("Market Street", auto.messageStation(), "messages keep MTR's plain name");
+		final ResolvedWayfinding manual = WayfindingResolver.merge(data(true, "My Stop", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts(),
+				name -> name + " Station");
+		assertEquals("My Stop", manual.stationName(), "a manual name is shown as typed");
+	}
+
+	@Test
 	void autoFlagsFillEmptyFields() {
 		final ResolvedWayfinding r = WayfindingResolver.merge(data(true, "", List.of(), true, "", ServiceType.NONE, "", LanguageLayout.SINGLE, ""), facts());
 		assertEquals("Market Street", r.stationName());

@@ -6,6 +6,8 @@ import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
+import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.StationAssociation;
@@ -128,7 +130,8 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		if (dirty || time >= cached.nextCheck || time < cached.nextCheck - RECHECK_TICKS * 2L) {
 			cached.nextCheck = time + RECHECK_TICKS;
 			final int rowLength = block instanceof WayfindingSignBlock sign ? sign.rowLength(world, entity.getPos(), state) : DEFAULT_ROW;
-			final ResolvedWayfinding resolved = Wayfinding.resolve(entity.getPos(), data);
+			final ResolvedWayfinding resolved = Wayfinding.resolve(entity.getPos(), data,
+					spec.kind() == WayfindingPanelKind.TERMINAL || epaper ? SuffixContext.TERMINALS : SuffixContext.SIGNS);
 			dirty |= cached.rowLength != rowLength || !resolved.equals(cached.resolved);
 			if (spec.kind() == WayfindingPanelKind.BOARD) {
 				final ServiceMessages messages = ClientServiceMessages.get();
@@ -151,7 +154,8 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 				rebuildEPaper(cached, entity.getPos(), spec, now);
 			}
 		} else if (dirty && spec.kind() == WayfindingPanelKind.BOARD) {
-			cached.panel = StationBoardLayout.layout(cached.resolved, data.view(), ClientServiceMessages.allFor(cached.resolved.messageStation()), spec.panelWidth(cached.rowLength),
+			cached.panel = StationBoardLayout.layout(cached.resolved, data.view(), ClientServiceMessages.allFor(cached.resolved.messageStation()), data.exitSettings(),
+					spec.panelWidth(cached.rowLength),
 					spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
 		} else if (dirty && spec.kind() == WayfindingPanelKind.TERMINAL) {
 			cached.panel = TerminalFace.layout(cached.resolved, spec.panelWidth(cached.rowLength), spec.height(), spec.textColor(), s -> textRenderer.getWidth(s));
@@ -166,9 +170,10 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		cached.nextRefreshMillis = now + EPaperLayout.refreshIntervalMillis(pos.asLong());
 		final StationSnapshot snapshot = cached.snapshot;
 		final String manual = cached.resolved.stationName();
-		final String header = !manual.isEmpty() ? manual : snapshot.station() != null ? snapshot.station().displayName() : "";
+		final String header = !manual.isEmpty() ? manual : snapshot.station() != null ? ClientStationSuffixes.apply(snapshot.station().displayName(), SuffixContext.TERMINALS) : "";
 		final float w = spec.panelWidth(cached.rowLength);
-		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height(), w));
+		final List<EPaperLayout.Row> rows = EPaperLayout.rows(snapshot.services(), now, EPaperLayout.maxRows(spec.height(), w)).stream()
+				.map(row -> new EPaperLayout.Row(row.route(), ClientStationSuffixes.apply(row.destination(), SuffixContext.TERMINALS), row.status())).toList();
 		cached.showingIdle = rows.isEmpty();
 		final String idle = snapshot.station() == null ? Tr.t("epaper_no_stop") : Tr.t("term_no_departures");
 		cached.panel = EPaperLayout.layout(header, rows, idle, w, spec.height(), s -> textRenderer.getWidth(s));

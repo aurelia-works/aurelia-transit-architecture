@@ -38,6 +38,15 @@ public interface StationDataProvider {
 	StationSnapshot resolve(BlockPos pos, StationAssociation association, boolean withServices);
 
 	/**
+	 * As {@link #resolve(BlockPos, StationAssociation, boolean)}, optionally with calling-point times
+	 * ({@code ServiceSnapshot.callingAtMillis}). Asking for times may add the calling points' platforms (bounded) to the
+	 * same arrivals request; implementations without times return the plain snapshot.
+	 */
+	default StationSnapshot resolve(BlockPos pos, StationAssociation association, boolean withServices, boolean withCallingTimes) {
+		return resolve(pos, association, withServices);
+	}
+
+	/**
 	 * Stations for manual-selection screens, sorted by name.
 	 */
 	List<StationReference> listStations(int limit);

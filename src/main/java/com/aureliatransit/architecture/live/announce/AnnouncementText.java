@@ -66,19 +66,28 @@ public final class AnnouncementText {
 	}
 
 	public static Announcement build(AnnouncementEvent event) {
+		return build(event, java.util.function.UnaryOperator.identity());
+	}
+
+	/**
+	 * @param stationText how a station name reads in the text (station suffixes, A5); voice-pack fragment keys always
+	 *                    use the plain name, so recorded clips keep matching
+	 */
+	public static Announcement build(AnnouncementEvent event, java.util.function.UnaryOperator<String> stationText) {
+		final java.util.function.UnaryOperator<String> named = stationText == null ? java.util.function.UnaryOperator.identity() : stationText;
 		final List<Fragment> f = new ArrayList<>(16);
 		switch (event.category()) {
 			case APPROACHING -> {
 				phrase(f, Phrase.TRAIN_APPROACHING_PLATFORM);
 				platform(f, event);
-				service(f, event);
-				callingAt(f, event);
+				service(f, event, named);
+				callingAt(f, event, named);
 			}
 			case STANDING -> {
 				phrase(f, Phrase.TRAIN_AT_PLATFORM);
 				platform(f, event);
-				service(f, event);
-				callingAt(f, event);
+				service(f, event, named);
+				callingAt(f, event, named);
 				phrase(f, Phrase.PLEASE_BOARD_NOW);
 			}
 			case TERMINATING -> {
@@ -93,7 +102,7 @@ public final class AnnouncementText {
 					f.add(new Fragment(FragmentKeys.route(event.routeName()), event.routeName()));
 				}
 				phrase(f, Phrase.SERVICE_TO);
-				f.add(new Fragment(FragmentKeys.station(event.destination()), event.destination()));
+				f.add(new Fragment(FragmentKeys.station(event.destination()), named.apply(event.destination())));
 				phrase(f, Phrase.IS_DELAYED_BY);
 				final String number = FragmentKeys.number(event.delayMinutes());
 				f.add(new Fragment(number == null ? "number.invalid" : number, Integer.toString(event.delayMinutes())));
@@ -118,16 +127,16 @@ public final class AnnouncementText {
 		out.add(new Fragment(FragmentKeys.platform(event.platformName()), name));
 	}
 
-	private static void service(List<Fragment> out, AnnouncementEvent event) {
+	private static void service(List<Fragment> out, AnnouncementEvent event, java.util.function.UnaryOperator<String> named) {
 		phrase(out, Phrase.IS_THE);
 		if (!event.routeName().isBlank()) {
 			out.add(new Fragment(FragmentKeys.route(event.routeName()), event.routeName()));
 		}
 		phrase(out, Phrase.SERVICE_TO);
-		out.add(new Fragment(FragmentKeys.station(event.destination()), event.destination()));
+		out.add(new Fragment(FragmentKeys.station(event.destination()), named.apply(event.destination())));
 	}
 
-	private static void callingAt(List<Fragment> out, AnnouncementEvent event) {
+	private static void callingAt(List<Fragment> out, AnnouncementEvent event, java.util.function.UnaryOperator<String> named) {
 		final List<String> stops = event.callingAt();
 		if (stops.isEmpty()) {
 			return;
@@ -146,7 +155,7 @@ public final class AnnouncementText {
 			}
 			// the comma is display-only; the fragment key is what a voice pack sees
 			final boolean commaAfter = i < shown.size() - 2;
-			out.add(new Fragment(FragmentKeys.station(shown.get(i)), commaAfter ? shown.get(i) + "," : shown.get(i)));
+			out.add(new Fragment(FragmentKeys.station(shown.get(i)), commaAfter ? named.apply(shown.get(i)) + "," : named.apply(shown.get(i))));
 		}
 	}
 

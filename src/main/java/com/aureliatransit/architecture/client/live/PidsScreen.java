@@ -25,6 +25,7 @@ final class PidsScreen extends LiveConfigScreen {
 	private int rows;
 	private boolean clock;
 	private boolean callingAt;
+	private boolean callingTimes;
 	private int pageSeconds;
 	private BoardAlignment alignment;
 	private String message;
@@ -38,6 +39,7 @@ final class PidsScreen extends LiveConfigScreen {
 		this.rows = config.rows();
 		this.clock = config.clock();
 		this.callingAt = config.callingAt();
+		this.callingTimes = config.callingTimes();
 		this.pageSeconds = config.pageSeconds();
 		this.alignment = config.alignment();
 		this.message = config.message();
@@ -65,10 +67,16 @@ final class PidsScreen extends LiveConfigScreen {
 		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
 		y += 24;
 		if (kind != DisplayKind.CONCOURSE) {
+			final int half = (COLUMN_WIDTH - 4) / 2;
 			add(ButtonWidget.builder(toggleText("live_calling_at", callingAt), button -> {
 				callingAt = !callingAt;
 				button.setMessage(toggleText("live_calling_at", callingAt));
-			}).dimensions(x, y, COLUMN_WIDTH, 20).build());
+			}).dimensions(x, y, half, 20).build());
+			// calling-point times (A14): off by default, it widens the arrivals request by the calling points' platforms
+			add(ButtonWidget.builder(toggleText("live_calling_times", callingTimes), button -> {
+				callingTimes = !callingTimes;
+				button.setMessage(toggleText("live_calling_times", callingTimes));
+			}).dimensions(x + half + 4, y, COLUMN_WIDTH - half - 4, 20).tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(tr("live_calling_times.tip"))).build());
 			y += 24;
 		}
 		add(ButtonWidget.builder(pageText(), button -> {
@@ -123,7 +131,7 @@ final class PidsScreen extends LiveConfigScreen {
 
 	@Override
 	protected void save() {
-		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds, alignment, message);
+		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds, alignment, message, callingTimes);
 		if (!config.equals(display.config())) {
 			ClientPlayNetworking.send(LiveSystems.UPDATE_DISPLAY, LiveSystems.writeDisplayUpdate(pos, config));
 		}

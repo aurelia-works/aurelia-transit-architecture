@@ -3,6 +3,8 @@ package com.aureliatransit.architecture.client.wayfinding;
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
+import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.live.DisplayStyle;
 import com.aureliatransit.architecture.terminal.MapLine;
 import com.aureliatransit.architecture.terminal.StationInfo;
@@ -154,13 +156,13 @@ public class PassengerTerminalScreen extends Screen {
 
 	private String stationName() {
 		if (!info.stationName().isEmpty()) {
-			return info.stationName();
+			return ClientStationSuffixes.apply(info.stationName(), SuffixContext.TERMINALS);
 		}
-		final String resolved = Wayfinding.resolve(pos, terminal.getWayfinding()).stationName();
+		final String resolved = Wayfinding.resolve(pos, terminal.getWayfinding(), SuffixContext.TERMINALS).stationName();
 		if (!resolved.isEmpty()) {
 			return resolved;
 		}
-		return snapshot.station() == null ? "" : snapshot.station().displayName();
+		return snapshot.station() == null ? "" : ClientStationSuffixes.apply(snapshot.station().displayName(), SuffixContext.TERMINALS);
 	}
 
 	// ---- cached page content --------------------------------------------------------------------------------------

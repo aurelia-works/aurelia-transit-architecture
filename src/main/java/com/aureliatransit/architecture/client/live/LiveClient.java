@@ -92,6 +92,15 @@ public final class LiveClient {
 							context.getSource().sendFeedback(Text.literal("  provider: " + (provider == null ? "none" : provider.describeCaches())));
 							return 1;
 						}))
+						.then(ClientCommandManager.literal("routes").executes(context -> {
+							// what MTR has synced about route timing: the source of calling-point times (A14)
+							if (provider == null) {
+								context.getSource().sendFeedback(Text.literal("No MTR provider"));
+								return 0;
+							}
+							provider.describeRouteTimes().forEach(line -> context.getSource().sendFeedback(Text.literal(line)));
+							return 1;
+						}))
 						.then(ClientCommandManager.literal("debug").then(ClientCommandManager.argument("enabled", BoolArgumentType.bool()).executes(context -> {
 							final boolean enabled = BoolArgumentType.getBool(context, "enabled");
 							LiveDebug.setEnabled(enabled);

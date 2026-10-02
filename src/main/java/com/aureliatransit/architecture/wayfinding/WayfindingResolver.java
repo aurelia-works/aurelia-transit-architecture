@@ -21,6 +21,7 @@ import java.util.Locale;
  *     <li>Service text: "Local" / "Express" / "Limited" for those types, the custom label for CUSTOM (empty label, empty
  *     text), nothing for NONE. MTR has no stopping-pattern data, so the service type is manual only.</li>
  *     <li>The MTR station's own name is kept beside a manual name, because service messages are keyed by it.</li>
+ *     <li>A station suffix (A5) is added to an MTR name only, and only where the caller's context shows it.</li>
  *     <li>Station code, platform, street label, transfers, destination, arrow, pictogram, accent and language layout are
  *     manual only.</li>
  * </ul>
@@ -33,8 +34,17 @@ public final class WayfindingResolver {
 	}
 
 	public static ResolvedWayfinding merge(WayfindingData data, StationFacts facts) {
+		return merge(data, facts, java.util.function.UnaryOperator.identity());
+	}
+
+	/**
+	 * @param suffix applied to an MTR station name only (station suffixes, A5); a manual name is shown as typed
+	 */
+	public static ResolvedWayfinding merge(WayfindingData data, StationFacts facts, java.util.function.UnaryOperator<String> suffix) {
 		final boolean mtrName = data.stationName().isEmpty() && data.autoStation() && facts.station() != null && !facts.station().displayName().isEmpty();
-		final String name = mtrName ? TextSanitizer.sanitize(facts.station().displayName(), WayfindingData.MAX_NAME) : data.stationName();
+		// the suffix goes after the capped name, so a long name never loses its suffix
+		final String name = mtrName ? TextSanitizer.sanitize(suffix.apply(TextSanitizer.sanitize(facts.station().displayName(), WayfindingData.MAX_NAME)),
+				WayfindingData.MAX_NAME + StationSuffixes.MAX_SUFFIX + 1) : data.stationName();
 		String secondary = data.secondaryName();
 		if (secondary.isEmpty() && mtrName && data.languageLayout() != LanguageLayout.SINGLE) {
 			secondary = mtrSecondary(facts.station().rawName(), facts.station().displayName());

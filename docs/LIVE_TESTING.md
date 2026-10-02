@@ -22,6 +22,7 @@ Suggested sizes: CIS 4-6 wide x 1 high, PIDS 6 wide x 1-2 high, concourse board 
 - `/aurelia_live debug true|false` turns the counters on or off (also `-Daurelia.live.debug=true`).
 - `/aurelia_live test <safety|delay|terminating|approaching|standing>` plays a sample announcement at your position.
 - `/aurelia_live voices` lists loaded voice packs.
+- `/aurelia_live routes` (1.4) lists MTR's simplified routes and the arrivals MTR reports for their platforms (route, departure index, platform, seconds to arrival): the data calling-point times are matched from. It adds those platforms to MTR's poll only when run.
 
 ## Stress scenario (about 50 displays, 20 speakers)
 

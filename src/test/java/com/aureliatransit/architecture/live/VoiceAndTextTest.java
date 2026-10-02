@@ -50,6 +50,15 @@ class VoiceAndTextTest {
 	}
 
 	@Test
+	void suffixChangesTheTextButNotTheVoiceKeys() {
+		final AnnouncementText.Announcement plain = AnnouncementText.build(event(AnnouncementCategory.APPROACHING, List.of("Alpha", "Beta")));
+		final AnnouncementText.Announcement suffixed = AnnouncementText.build(event(AnnouncementCategory.APPROACHING, List.of("Alpha", "Beta")),
+				name -> name.equals("Beta") ? "Beta Airport" : name);
+		assertTrue(suffixed.subtitle().contains("Beta Airport"), suffixed.subtitle());
+		assertEquals(plain.fragments().stream().map(AnnouncementText.Fragment::key).toList(), suffixed.fragments().stream().map(AnnouncementText.Fragment::key).toList());
+	}
+
+	@Test
 	void callingAtIsBoundedAndEndsOnTheFinalStop() {
 		final List<String> many = new ArrayList<>();
 		for (int i = 0; i < 12; i++) {

@@ -8,6 +8,9 @@ import java.util.List;
  *
  * @param deviationMillis positive when late, negative when early; only meaningful if {@code realtime}
  * @param callingAt       display names of the remaining stops after this platform, bounded to {@link #MAX_CALLING_AT}
+ * @param departureIndex  MTR's index of this trip's departure (the same at every stop of the trip; repeats per cycle)
+ * @param callingAtMillis local arrival time at each calling point where MTR supplied one (0 = unknown); empty when the
+ *                        display did not ask for calling times
  */
 public record ServiceSnapshot(
 		long routeId,
@@ -22,13 +25,23 @@ public record ServiceSnapshot(
 		long deviationMillis,
 		boolean realtime,
 		boolean terminating,
-		List<String> callingAt
+		List<String> callingAt,
+		long departureIndex,
+		List<Long> callingAtMillis
 ) {
 
 	public static final int MAX_CALLING_AT = 16;
 
 	public ServiceSnapshot {
 		callingAt = List.copyOf(callingAt.size() > MAX_CALLING_AT ? callingAt.subList(0, MAX_CALLING_AT) : callingAt);
+		callingAtMillis = callingAtMillis == null ? List.of() : List.copyOf(callingAtMillis.size() > callingAt.size() ? callingAtMillis.subList(0, callingAt.size()) : callingAtMillis);
+	}
+
+	/** Without trip index and calling times (1.3 shape). */
+	public ServiceSnapshot(long routeId, String routeName, String routeNumber, int routeColor, String destination, long platformId, String platformName,
+						   long arrivalMillis, long departureMillis, long deviationMillis, boolean realtime, boolean terminating, List<String> callingAt) {
+		this(routeId, routeName, routeNumber, routeColor, destination, platformId, platformName, arrivalMillis, departureMillis, deviationMillis, realtime,
+				terminating, callingAt, 0, List.of());
 	}
 
 	public long secondsUntilArrival(long nowMillis) {

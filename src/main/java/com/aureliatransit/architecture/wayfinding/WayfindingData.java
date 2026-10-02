@@ -37,6 +37,7 @@ import java.util.List;
  * @param association   which MTR station the block belongs to when {@code autoStation} is on: AUTO resolves the nearest
  *                      station (the default), MANUAL pins the station (and platforms) the builder picked
  * @param view          what a station information board shows; ignored by every other block
+ * @param exitSettings  per-exit settings of the multi-exit (Exits) board view (1.4, A3); at most {@link #MAX_EXIT_SETTINGS}
  */
 public record WayfindingData(
 		boolean autoStation,
@@ -57,7 +58,8 @@ public record WayfindingData(
 		Pictogram pictogram,
 		AccentPalette accent,
 		StationAssociation association,
-		BoardView view
+		BoardView view,
+		List<ExitSetting> exitSettings
 ) {
 
 	public static final int MAX_NAME = 32;
@@ -69,6 +71,7 @@ public record WayfindingData(
 	public static final int MAX_EXIT_LABEL = 4;
 	public static final int MAX_STREET = 32;
 	public static final int MAX_TRANSFERS = 48;
+	public static final int MAX_EXIT_SETTINGS = 12;
 	public static final String NBT_KEY = "Wayfinding";
 
 	public static final WayfindingData EMPTY = new WayfindingData(true, "", "", "", List.of(), true, SignArrow.NONE, "", ServiceType.NONE, "", "", "", "", "",
@@ -100,6 +103,24 @@ public record WayfindingData(
 		accent = accent == null ? AccentPalette.NONE : accent;
 		association = association == null ? StationAssociation.AUTO : association;
 		view = view == null ? BoardView.TRAINS_THIS_SIDE : view;
+		final List<ExitSetting> exits = new ArrayList<>();
+		if (exitSettings != null) {
+			for (final ExitSetting setting : exitSettings) {
+				if (setting != null && !setting.isEmpty() && !setting.isDefault() && exits.size() < MAX_EXIT_SETTINGS) {
+					exits.add(setting);
+				}
+			}
+		}
+		exitSettings = List.copyOf(exits);
+	}
+
+	/** Without per-exit settings (1.3 shape). */
+	public WayfindingData(boolean autoStation, String stationName, String secondaryName, String stationCode, List<LineBadge> lines, boolean autoLines,
+						  SignArrow arrow, String destination, ServiceType serviceType, String serviceLabel, String platform, String exitLabel,
+						  String streetLabel, String transfers, LanguageLayout languageLayout, Pictogram pictogram, AccentPalette accent,
+						  StationAssociation association, BoardView view) {
+		this(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel, platform, exitLabel,
+				streetLabel, transfers, languageLayout, pictogram, accent, association, view, List.of());
 	}
 
 	/**
@@ -107,17 +128,22 @@ public record WayfindingData(
 	 */
 	public WayfindingData withPictogram(Pictogram value) {
 		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
-				platform, exitLabel, streetLabel, transfers, languageLayout, value, accent, association, view);
+				platform, exitLabel, streetLabel, transfers, languageLayout, value, accent, association, view, exitSettings);
 	}
 
 	public WayfindingData withAssociation(StationAssociation value) {
 		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
-				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, value, view);
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, value, view, exitSettings);
+	}
+
+	public WayfindingData withExitSettings(List<ExitSetting> value) {
+		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, association, view, value);
 	}
 
 	public WayfindingData withView(BoardView value) {
 		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, arrow, destination, serviceType, serviceLabel,
-				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, association, value);
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, association, value, exitSettings);
 	}
 
 	// ---- NBT -----------------------------------------------------------------------------------------------------------
@@ -145,6 +171,11 @@ public record WayfindingData(
 		tag.putInt("Accent", accent.ordinal());
 		association.writeNbt(tag, "Association");
 		tag.putInt("View", view.ordinal());
+		if (!exitSettings.isEmpty()) {
+			final NbtList exits = new NbtList();
+			exitSettings.forEach(setting -> exits.add(setting.toNbt()));
+			tag.put("ExitSettings", exits);
+		}
 		nbt.put(NBT_KEY, tag);
 	}
 
@@ -161,12 +192,17 @@ public record WayfindingData(
 		for (int i = 0; i < Math.min(MAX_LINES, list.size()); i++) {
 			lines.add(LineBadge.fromNbt(list.getCompound(i)));
 		}
+		final NbtList exitList = tag.getList("ExitSettings", NbtElement.COMPOUND_TYPE);
+		final List<ExitSetting> exits = new ArrayList<>();
+		for (int i = 0; i < Math.min(MAX_EXIT_SETTINGS, exitList.size()); i++) {
+			exits.add(ExitSetting.fromNbt(exitList.getCompound(i)));
+		}
 		return new WayfindingData(tag.getBoolean("AutoStation"), tag.getString("Station"), tag.getString("Secondary"), tag.getString("Code"), lines,
 				tag.getBoolean("AutoLines"), SignArrow.byOrdinal(tag.getInt("Arrow")), tag.getString("Destination"),
 				ServiceType.byOrdinal(tag.getInt("Service")), tag.getString("ServiceLabel"), tag.getString("Platform"), tag.getString("Exit"),
 				tag.getString("Street"), tag.getString("Transfers"), LanguageLayout.byOrdinal(tag.getInt("Layout")),
 				Pictogram.byOrdinal(tag.getInt("Pictogram")), AccentPalette.byOrdinal(tag.getInt("Accent")),
-				StationAssociation.readNbt(tag, "Association"), BoardView.byOrdinal(tag.getInt("View")));
+				StationAssociation.readNbt(tag, "Association"), BoardView.byOrdinal(tag.getInt("View")), exits);
 	}
 
 	// ---- packets -------------------------------------------------------------------------------------------------------
@@ -192,6 +228,8 @@ public record WayfindingData(
 		buf.writeVarInt(accent.ordinal());
 		association.write(buf);
 		buf.writeVarInt(view.ordinal());
+		buf.writeVarInt(exitSettings.size());
+		exitSettings.forEach(setting -> setting.write(buf));
 	}
 
 	/**
@@ -210,10 +248,29 @@ public record WayfindingData(
 		for (int i = 0; i < count; i++) {
 			lines.add(LineBadge.read(buf));
 		}
-		return new WayfindingData(autoStation, station, secondary, code, lines, buf.readBoolean(), SignArrow.byOrdinal(buf.readVarInt()),
-				buf.readString(MAX_DESTINATION * 4), ServiceType.byOrdinal(buf.readVarInt()), buf.readString(MAX_SERVICE_LABEL * 4),
-				buf.readString(MAX_PLATFORM * 4), buf.readString(MAX_EXIT_LABEL * 4), buf.readString(MAX_STREET * 4), buf.readString(MAX_TRANSFERS * 4),
-				LanguageLayout.byOrdinal(buf.readVarInt()), Pictogram.byOrdinal(buf.readVarInt()), AccentPalette.byOrdinal(buf.readVarInt()),
-				StationAssociation.read(buf), BoardView.byOrdinal(buf.readVarInt()));
+		final boolean autoLines = buf.readBoolean();
+		final SignArrow arrow = SignArrow.byOrdinal(buf.readVarInt());
+		final String destination = buf.readString(MAX_DESTINATION * 4);
+		final ServiceType service = ServiceType.byOrdinal(buf.readVarInt());
+		final String serviceLabel = buf.readString(MAX_SERVICE_LABEL * 4);
+		final String platform = buf.readString(MAX_PLATFORM * 4);
+		final String exit = buf.readString(MAX_EXIT_LABEL * 4);
+		final String street = buf.readString(MAX_STREET * 4);
+		final String transfers = buf.readString(MAX_TRANSFERS * 4);
+		final LanguageLayout layout = LanguageLayout.byOrdinal(buf.readVarInt());
+		final Pictogram pictogram = Pictogram.byOrdinal(buf.readVarInt());
+		final AccentPalette accent = AccentPalette.byOrdinal(buf.readVarInt());
+		final StationAssociation association = StationAssociation.read(buf);
+		final BoardView view = BoardView.byOrdinal(buf.readVarInt());
+		final int exitCount = buf.readVarInt();
+		if (exitCount < 0 || exitCount > MAX_EXIT_SETTINGS) {
+			throw new IllegalArgumentException("Too many exit settings: " + exitCount);
+		}
+		final List<ExitSetting> exits = new ArrayList<>(exitCount);
+		for (int i = 0; i < exitCount; i++) {
+			exits.add(ExitSetting.read(buf));
+		}
+		return new WayfindingData(autoStation, station, secondary, code, lines, autoLines, arrow, destination, service, serviceLabel, platform, exit, street,
+				transfers, layout, pictogram, accent, association, view, exits);
 	}
 }

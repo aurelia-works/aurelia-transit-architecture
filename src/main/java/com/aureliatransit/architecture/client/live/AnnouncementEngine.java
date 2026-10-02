@@ -8,6 +8,8 @@ import com.aureliatransit.architecture.live.announce.AnnouncementDetector;
 import com.aureliatransit.architecture.live.announce.AnnouncementEvent;
 import com.aureliatransit.architecture.live.announce.AnnouncementQueue;
 import com.aureliatransit.architecture.live.announce.AnnouncementText;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
+import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.live.announce.SpeakerPicker;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationData;
@@ -178,7 +180,7 @@ final class AnnouncementEngine {
 				continue;
 			}
 			final float volume = volumeFor(config);
-			player.start(client, AnnouncementText.build(event), voicePacks.stack(), point.x(), point.y(), point.z(), volume, now);
+			player.start(client, AnnouncementText.build(event, name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), point.x(), point.y(), point.z(), volume, now);
 			queue.markPlayed(event, now);
 			return;
 		}
@@ -199,7 +201,7 @@ final class AnnouncementEngine {
 		final AnnouncementEvent event = new AnnouncementEvent(category, 0, "Test Central", 3, "3", 1, "Test Line", "T1", "Test Junction", 0,
 				now + 30_000, 4, List.of("Alpha Street", "Beta Park", "Test Junction"), now, now + 60_000);
 		final Vec3d pos = client.player.getEyePos();
-		player.start(client, AnnouncementText.build(event), voicePacks.stack(), pos.x, pos.y, pos.z, 1F, now);
+		player.start(client, AnnouncementText.build(event, name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), pos.x, pos.y, pos.z, 1F, now);
 	}
 
 	String describe() {

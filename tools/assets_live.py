@@ -139,6 +139,8 @@ def lang():
         s + "live_rows": "Rows: %s",
         s + "live_clock": "Clock: %s",
         s + "live_calling_at": "Calling at: %s",
+        s + "live_calling_times": "Times: %s",
+        s + "live_calling_times.tip": "Show the arrival time at each calling point where MTR reports one (the same train further down the line). Adds those platforms to this display's arrivals request.",
         s + "live_page_seconds": "Page time: %s s",
         s + "live_radius": "Range: %s blocks",
         s + "live_volume": "Volume: %s%%",

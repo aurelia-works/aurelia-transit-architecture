@@ -5,7 +5,9 @@ import com.aureliatransit.architecture.live.DisplayConfig;
 import com.aureliatransit.architecture.live.DisplayKind;
 import com.aureliatransit.architecture.live.DisplayStyle;
 import com.aureliatransit.architecture.live.display.BoardAnchor;
+import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
 import com.aureliatransit.architecture.live.display.CallingPages;
+import com.aureliatransit.architecture.live.display.CallingTimes;
 import com.aureliatransit.architecture.live.display.DepartureText;
 import com.aureliatransit.architecture.live.display.Marquee;
 import com.aureliatransit.architecture.live.display.Pagination;
@@ -14,6 +16,7 @@ import com.aureliatransit.architecture.transit.StationSnapshot;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
+import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import net.minecraft.client.font.TextRenderer;
 
 import java.util.ArrayList;
@@ -76,7 +79,7 @@ final class BoardBuilder {
 		m.rect(0, 0, vw, vh, style.background(), BoardModel.LAYER_BACKGROUND);
 
 		final float y0 = BoardAnchor.contentTop(config.alignment(), vh, contentH, TOP_MARGIN);
-		final String stationName = snapshot.station() == null ? "" : snapshot.station().displayName();
+		final String stationName = snapshot.station() == null ? "" : ClientStationSuffixes.apply(snapshot.station().displayName(), SuffixContext.DISPLAYS);
 
 		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);
 		if (header) {
@@ -159,7 +162,7 @@ final class BoardBuilder {
 				}
 			}
 
-			fit(m, tr, s.destination(), destX, textY, k, destEnd - destX, style.text(), now);
+			fit(m, tr, ClientStationSuffixes.apply(s.destination(), SuffixContext.DISPLAYS), destX, textY, k, destEnd - destX, style.text(), now);
 
 			if (platW > 0) {
 				final float chipH = 9 * k;
@@ -285,7 +288,9 @@ final class BoardBuilder {
 			if (delayMinutes > 0) {
 				pages.add(Tr.t(delayMinutes == 1 ? "board_delayed_one" : "board_delayed_many", delayMinutes));
 			}
-			pages.addAll(CallingPages.paginate(s.callingAt(), (int) (avail / (AVG_CHAR * sk))));
+			final List<String> stops = s.callingAt().stream().map(name -> ClientStationSuffixes.apply(name, SuffixContext.DISPLAYS)).toList();
+			pages.addAll(CallingPages.paginate(s.callingAtMillis().isEmpty() ? stops : CallingTimes.labels(stops, s.callingAtMillis(), now),
+					(int) (avail / (AVG_CHAR * sk))));
 		}
 		if (pages.isEmpty()) {
 			return;

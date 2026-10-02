@@ -70,6 +70,24 @@ Short notices shown one at a time in a strip at the bottom of PIDS, platform CIS
 - **Long text** is squeezed at most to 85 % width (never unreadable), then scrolled one way, one character at a time from its start. Every new message starts from its beginning.
 - Colours: info uses the board style, notice is amber, disruption red, and severe bright red with a "!!" prefix.
 
+## Station suffixes (1.4, A5)
+
+MTR stores no suffix, so its own name stays short ("Aurelia") on route maps and MTR screens. ATA adds one per station, shown only in the contexts you turn on (operators, permission level 2):
+
+```
+/ata_suffix set "Aurelia" <station|airport|port|terminal>
+/ata_suffix set "Aurelia" custom Central
+/ata_suffix show "Aurelia" <signs|displays|terminals|announcements> <true|false>
+/ata_suffix remove "Aurelia"
+/ata_suffix list
+```
+
+Defaults: **signs** (pylons, wayfinding signs, station information boards) and **terminals** (terminal and kiosk names, e-paper board header and destinations) on; **displays** (PIDS/CIS/concourse header, destinations and calling points) and **announcements** (text only; voice-pack keys keep the plain name) off. The suffix is added to MTR station names only: a manual name on a sign is shown as typed, and service messages keep matching MTR's plain name. Stored per world (`ata_station_suffixes`), synced on join and on change, never polled; at most 128 entries.
+
+## Per-exit settings (1.4, A3)
+
+The station information board's **Exits** view lists every MTR exit. Its editor has an **Exits...** button: one row per exit, each set independently with its own "leads to" text (replaces MTR's destinations; empty keeps them), arrow and Shown/Hidden. A row with a label MTR does not have adds a manual exit (it needs text). At most 12 settings per board (MTR exits fill the editor rows first; Esc or Done keeps the edits, like the main editor), stored with the board (`ExitSettings`); merging is `ExitPlan` (pure, tested).
+
 ## Station association (Auto / Manual)
 
 Entrance pylons, exit signs, passenger information terminals, kiosks, station information boards and bus e-paper boards have a **Station** button in their editor (directional, street and pictogram signs have no station field, so no button):

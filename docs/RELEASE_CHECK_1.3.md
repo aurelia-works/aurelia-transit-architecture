@@ -158,3 +158,18 @@ Ran 2026-10-01 on branch `release/1.3.1`, dev client (`./gradlew runClient`, MTR
 | 6 | **Hanging rods ≤ 2 per row** (new in 1.3.1): hanging wayfinding sign 1/2/4 wide, hanging PIDS 1/2/4, hanging CIS 4, exit sign 3, hanging station name sign 3, direction sign 3. | ✅ Each row shows exactly two rods, one near each end (`hanging-rods-*.jpg`). The block outline (F3/aim box) still includes rods on inner blocks. |
 
 Not run for 1.3.1 (no new display family): stress scenario, shader pass, non-Latin pass. The 1.3.0 results stand for those.
+
+---
+
+## 1.4 package 2 (A5, A3, A14)
+
+Ran 2026-10-01, same dev client and world copy. Screenshots `screenshots/1.4/`. Gates: 221 tests, asset audit OK, z-fighting 0.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | **A5** `/ata_suffix set "Alpha" airport` (default contexts signs + terminals). | ✅ E-paper headers read "Alpha Airport"; PIDS rows keep "Alpha" (displays off); terminal with manual name "Alpha Central" unchanged (`a5-suffix-a3-exits.jpg`). ➖ `show ... displays/announcements true` not checked live (unit-tested). |
+| 2 | **A3** board Exits view with settings A "Town hall" ←, Z "Bus station" →. | ✅ Both rows with their arrows (Alpha has no MTR exits, so both show as manual exits). Editor: Exits... opens one row per exit (`a3-exits-editor.jpg`); setting Z to Hidden and Done left only "A Town hall ←" on the board (saved through the normal sign update). Not checked: a station with MTR-defined exits. |
+| 3 | **A14** Beta PIDS, Calling at + Times on. | ✅ "Calling at Alpha (1 min)" on both rows (`a14-calling-times.jpg`). |
+| 4 | Counters, one PIDS with times in view, 60 s. | provider_refresh +64, arrival_requests +32, board_rebuilds +63: one request per 2 s for one platform set, as without times. Pass. |
+
+Not run: shader pass and non-Latin pass (no new display family; suffix text uses the existing text paths).

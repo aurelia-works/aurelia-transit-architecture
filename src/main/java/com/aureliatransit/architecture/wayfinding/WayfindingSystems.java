@@ -13,11 +13,18 @@ public final class WayfindingSystems {
 	}
 
 	public static void init() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> ServiceMessageCommand.register(dispatcher));
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+			ServiceMessageCommand.register(dispatcher);
+			StationSuffixCommand.register(dispatcher);
+		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
 			final ServiceMessages messages = ServiceMessageState.get(server).messages();
 			if (!messages.isEmpty()) {
 				ServiceMessageSync.send(handler.getPlayer(), messages);
+			}
+			final StationSuffixes suffixes = StationSuffixState.get(server).suffixes();
+			if (!suffixes.isEmpty()) {
+				StationSuffixSync.send(handler.getPlayer(), suffixes);
 			}
 		});
 	}

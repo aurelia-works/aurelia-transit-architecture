@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.wayfinding;
 
 import com.aureliatransit.architecture.text.PanelLayout;
+import com.aureliatransit.architecture.text.SignArrow;
 import com.aureliatransit.architecture.text.Tr;
 
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ import java.util.function.ToIntFunction;
 public final class StationBoardLayout {
 
 	private static final float PAD = 0.9F;
+	/** MTR exits plus manual ones the Exits view lays out (rows beyond the board's capacity become "+N more"). */
+	private static final int MAX_EXITS = 16;
 	private static final float HEADER_FRACTION = 0.22F;
 	private static final float MAX_ROW_SCALE = 0.62F;
 	private static final float MIN_ROW_SCALE = 0.31F;
@@ -35,6 +38,14 @@ public final class StationBoardLayout {
 	 */
 	public static PanelLayout.Panel layout(ResolvedWayfinding r, BoardView view, List<ServiceMessage> notices, float w, float h, int textColor,
 										   ToIntFunction<String> measure) {
+		return layout(r, view, notices, List.of(), w, h, textColor, measure);
+	}
+
+	/**
+	 * @param exitSettings the board's per-exit settings (A3), applied to the Exits view ({@link ExitPlan})
+	 */
+	public static PanelLayout.Panel layout(ResolvedWayfinding r, BoardView view, List<ServiceMessage> notices, List<ExitSetting> exitSettings, float w, float h,
+										   int textColor, ToIntFunction<String> measure) {
 		if (w <= 2 * PAD || h <= 2 * PAD) {
 			return PanelLayout.Panel.EMPTY;
 		}
@@ -44,7 +55,7 @@ public final class StationBoardLayout {
 			case PLATFORM_TRACK -> delegated(c, r, WayfindingPanelKind.PLATFORM, "board_view.platform", textColor);
 			case SERVICE_CHANGE -> serviceChange(c, notices, textColor);
 			case TRANSFER -> transfer(c, r, textColor);
-			case EXITS -> exits(c, r, textColor);
+			case EXITS -> exits(c, ExitPlan.merge(r.allExits(), exitSettings, MAX_EXITS), textColor);
 		}
 		return c.panel();
 	}
@@ -123,9 +134,8 @@ public final class StationBoardLayout {
 		}
 	}
 
-	private static void exits(Canvas c, ResolvedWayfinding r, int textColor) {
+	private static void exits(Canvas c, List<ExitPlan.Shown> exits, int textColor) {
 		final float headerH = c.header(Tr.t("board_view.exits"));
-		final List<ExitInfo> exits = r.allExits();
 		if (exits.isEmpty()) {
 			c.text(Tr.t("board_no_exits"), 0, c.top() - headerH - (c.h - headerH) / 2, c.w - 2 * PAD, MAX_ROW_SCALE, DIM);
 			return;
@@ -135,7 +145,7 @@ public final class StationBoardLayout {
 		final boolean overflow = exits.size() > capacity;
 		final int shown = overflow ? capacity - 1 : exits.size();
 		for (int i = 0; i < shown; i++) {
-			final ExitInfo exit = exits.get(i);
+			final ExitPlan.Shown exit = exits.get(i);
 			final float cy = rows.centre(i);
 			final float chipW = Math.max(rows.rowH * 0.9F, c.measure.applyAsInt(exit.label()) * rows.scale() + 1.2F);
 			final float chipCx = -c.w / 2 + PAD + chipW / 2;
@@ -143,7 +153,15 @@ public final class StationBoardLayout {
 			c.labels.add(new PanelLayout.Label(exit.label(), chipCx, cy, rows.scale(), 0xFFFFFFFF, c.measure.applyAsInt(exit.label())));
 			final float left = -c.w / 2 + PAD + chipW + 0.8F;
 			final String where = exit.destinations().isEmpty() ? "" : String.join(", ", exit.destinations());
-			c.textLeft(where, left, cy, c.w / 2 - PAD - left, rows.scale(), textColor);
+			// per-exit arrow (A3) at the right end of its row
+			float right = c.w / 2 - PAD;
+			if (exit.arrow() != SignArrow.NONE) {
+				final String glyph = exit.arrow().glyph();
+				final float glyphW = c.measure.applyAsInt(glyph) * rows.scale();
+				c.labels.add(new PanelLayout.Label(glyph, right - glyphW / 2, cy, rows.scale(), textColor, c.measure.applyAsInt(glyph)));
+				right -= glyphW + 0.8F;
+			}
+			c.textLeft(where, left, cy, right - left, rows.scale(), textColor);
 		}
 		if (overflow) {
 			c.textLeft(Tr.t("board_more", exits.size() - shown), -c.w / 2 + PAD, rows.centre(shown), c.w - 2 * PAD, rows.scale(), DIM);

@@ -188,11 +188,14 @@ public class WayfindingEditScreen extends Screen {
 			y += ROW;
 		}
 		if (fields.view()) {
-			addDrawableChild(EditorWidgets.cycler(left, y, WIDTH, List.of(BoardView.values()), view, value -> Text.translatable(EditorWidgets.KEY + "wf_view",
+			addDrawableChild(EditorWidgets.cycler(left, y, COLUMN, List.of(BoardView.values()), view, value -> Text.translatable(EditorWidgets.KEY + "wf_view",
 					Text.translatable(EditorWidgets.KEY + "wf_view." + value.id())), value -> {
 				view = value;
 				previewDirty = true;
 			}));
+			// per-exit settings of the Exits view (A3)
+			addDrawableChild(ButtonWidget.builder(Text.translatable(EditorWidgets.KEY + "wf_exits_button", seed.exitSettings().size()), button -> openExitSettings())
+					.dimensions(right, y, COLUMN, 20).build());
 			y += ROW;
 		}
 		if (fields.secondary() || fields.code()) {
@@ -324,6 +327,16 @@ public class WayfindingEditScreen extends Screen {
 		}));
 	}
 
+	private void openExitSettings() {
+		final WayfindingData edited = current();
+		switching = true;
+		final java.util.List<com.aureliatransit.architecture.wayfinding.ExitInfo> mtrExits = Wayfinding.resolve(pos, edited.withExitSettings(List.of())).allExits();
+		client.setScreen(new ExitSettingsScreen(this, mtrExits, edited.exitSettings(), () -> !sign.isRemoved(), settings -> {
+			seed = edited.withExitSettings(settings);
+			previewDirty = true;
+		}));
+	}
+
 	private String destinationKey() {
 		return kind == WayfindingPanelKind.PICTOGRAM ? "wf_caption" : kind == WayfindingPanelKind.EXIT ? "wf_exit_text" : "wf_destination";
 	}
@@ -363,7 +376,7 @@ public class WayfindingEditScreen extends Screen {
 				text(serviceLabelField, seed.serviceLabel()), text(platformField, seed.platform()), text(exitField, seed.exitLabel()),
 				text(streetField, seed.streetLabel()), text(transfersField, seed.transfers()), fields.secondary() ? languageLayout : seed.languageLayout(),
 				fields.pictogram() ? pictogram : seed.pictogram(), fields.accent() ? accent : seed.accent(),
-				fields.station() ? association : seed.association(), fields.view() ? view : seed.view());
+				fields.station() ? association : seed.association(), fields.view() ? view : seed.view(), seed.exitSettings());
 	}
 
 	private float previewScale() {
@@ -390,10 +403,10 @@ public class WayfindingEditScreen extends Screen {
 			previewDirty = false;
 			final WayfindingData data = current();
 			preview = kind == WayfindingPanelKind.BOARD
-					? StationBoardLayout.layout(Wayfinding.resolve(pos, data), data.view(), ClientServiceMessages.allFor(Wayfinding.resolve(pos, data).messageStation()), panelWidth(),
+					? StationBoardLayout.layout(Wayfinding.resolve(pos, data), data.view(), ClientServiceMessages.allFor(Wayfinding.resolve(pos, data).messageStation()), data.exitSettings(), panelWidth(),
 					panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
 					: kind == WayfindingPanelKind.TERMINAL
-					? TerminalFace.layout(Wayfinding.resolve(pos, data), panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
+					? TerminalFace.layout(Wayfinding.resolve(pos, data, com.aureliatransit.architecture.wayfinding.SuffixContext.TERMINALS), panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(), s -> textRenderer.getWidth(s))
 					: WayfindingLayout.layout(Wayfinding.resolve(pos, data), kind, panelWidth(), panelHeight(), spec == null ? 0xFFFFFFFF : spec.textColor(),
 					s -> textRenderer.getWidth(s));
 		}

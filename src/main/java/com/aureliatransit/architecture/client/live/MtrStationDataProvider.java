@@ -7,6 +7,7 @@ import com.aureliatransit.architecture.live.cache.ServerClockOffset;
 import com.aureliatransit.architecture.live.cache.ServiceOrder;
 import com.aureliatransit.architecture.live.cache.SnapshotVersions;
 import com.aureliatransit.architecture.live.cache.TimedLruCache;
+import com.aureliatransit.architecture.live.display.CallingTimes;
 import com.aureliatransit.architecture.transit.PlatformReference;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationAssociation;
@@ -62,13 +63,19 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	private static final int PLATFORM_SEARCH_RADIUS = 5;
 	private static final int PLATFORM_SEARCH_DROP = 4;
 
-	private record SnapshotKey(long pos, StationAssociation association, boolean withServices) {
+	private record SnapshotKey(long pos, StationAssociation association, boolean withServices, boolean withTimes) {
 	}
 
 	private record ResolutionKey(long pos, StationAssociation association) {
 	}
 
-	private record ServiceKey(List<Long> platformIds) {
+	/** {@code withTimes}: also request the calling points' platforms (bounded) to match calling-point times (A14). */
+	private record ServiceKey(List<Long> platformIds, boolean withTimes) {
+	}
+
+	/** Calling points of one service: display names and, index for index, the platform MTR stops at. */
+	private record Calling(List<String> names, List<Long> platformIds) {
+		static final Calling NONE = new Calling(List.of(), List.of());
 	}
 
 	private record Resolution(StationReference station, List<PlatformReference> platforms, List<Long> platformIds, long nearestPlatformId) {
@@ -98,12 +105,19 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 
 	@Override
 	public StationSnapshot resolve(BlockPos pos, StationAssociation association, boolean withServices) {
+		return resolve(pos, association, withServices, false);
+	}
+
+	@Override
+	public StationSnapshot resolve(BlockPos pos, StationAssociation association, boolean withServices, boolean withCallingTimes) {
 		final long posKey = pos.asLong();
-		return snapshots.get(new SnapshotKey(posKey, association, withServices), (key, previous) -> {
+		final boolean times = withServices && withCallingTimes;
+		return snapshots.get(new SnapshotKey(posKey, association, withServices, times), (key, previous) -> {
 			LiveDebug.count(LiveDebug.Counter.PROVIDER_REFRESH);
 			final Resolution resolution = resolution(pos, association);
 			final List<ServiceSnapshot> list = withServices && !resolution.platformIds().isEmpty()
-					? services.get(new ServiceKey(resolution.platformIds()), (serviceKey, old) -> HeldServices.next(old, buildServices(serviceKey.platformIds()), clock.getAsLong())).services()
+					? services.get(new ServiceKey(resolution.platformIds(), times),
+					(serviceKey, old) -> HeldServices.next(old, buildServices(serviceKey.platformIds(), serviceKey.withTimes()), clock.getAsLong())).services()
 					: List.of();
 			return versions.stabilize(previous, resolution.station(), resolution.platforms(), list);
 		});
@@ -223,24 +237,38 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 
 	// ---- services ----------------------------------------------------------------------------------------------------
 
-	private List<ServiceSnapshot> buildServices(List<Long> platformIds) {
+	private List<ServiceSnapshot> buildServices(List<Long> platformIds, boolean withTimes) {
+		final MinecraftClientData data = MinecraftClientData.getInstance();
 		final LongArrayList ids = new LongArrayList(platformIds.size());
 		for (final long id : platformIds) {
 			ids.add(id);
+		}
+		if (withTimes) {
+			addCallingPlatforms(data, platformIds, ids);
 		}
 		LiveDebug.count(LiveDebug.Counter.ARRIVAL_REQUESTS);
 		final ObjectArrayList<ArrivalResponse> arrivals = ArrivalsCacheClient.INSTANCE.requestArrivals(ids);
 		final long offset = serverOffset.stabilize(ArrivalsCacheClient.INSTANCE.getMillisOffset());
 		final long now = clock.getAsLong();
-		final MinecraftClientData data = MinecraftClientData.getInstance();
+		final List<CallingTimes.Arrival> all = new ArrayList<>(withTimes ? arrivals.size() : 0);
+		if (withTimes) {
+			for (final ArrivalResponse arrival : arrivals) {
+				all.add(new CallingTimes.Arrival(arrival.getRouteId(), arrival.getDepartureIndex(), arrival.getPlatformId(),
+						ServerClockOffset.toLocalSecond(arrival.getArrival(), offset)));
+			}
+		}
 		final List<ServiceSnapshot> out = new ArrayList<>(arrivals.size());
 		for (final ArrivalResponse arrival : arrivals) {
+			if (withTimes && !platformIds.contains(arrival.getPlatformId())) {
+				continue; // a calling point's platform, requested only for its times
+			}
 			// to local client time with a held offset, quantised to whole seconds, so jitter does not change snapshot content
 			final long arrivalMillis = ServerClockOffset.toLocalSecond(arrival.getArrival(), offset);
 			final long departureMillis = ServerClockOffset.toLocalSecond(arrival.getDeparture(), offset);
 			if (departureMillis < now - 1_000) {
 				continue;
 			}
+			final Calling calling = callingAt(data, arrival.getRouteId(), arrival.getPlatformId());
 			out.add(new ServiceSnapshot(
 					arrival.getRouteId(),
 					StationNames.display(arrival.getRouteName()),
@@ -254,38 +282,101 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 					arrival.getDeviation(),
 					arrival.getRealtime(),
 					arrival.getIsTerminating(),
-					callingAt(data, arrival)));
+					calling.names(),
+					arrival.getDepartureIndex(),
+					withTimes ? CallingTimes.match(arrival.getRouteId(), arrival.getDepartureIndex(), departureMillis, calling.platformIds(), all) : List.of()));
 		}
 		out.sort(ServiceOrder.COMPARATOR);
 		return out.size() > StationSnapshot.MAX_SERVICES ? List.copyOf(out.subList(0, StationSnapshot.MAX_SERVICES)) : List.copyOf(out);
 	}
 
 	/**
+	 * Adds the platforms of the calling points after {@code platformIds} on every route serving them, at most
+	 * {@link CallingTimes#MAX_EXTRA_PLATFORMS} extra, nearest stops first and round-robin across routes, so one long
+	 * route cannot use up the bound before the others get their next stop.
+	 */
+	private static void addCallingPlatforms(MinecraftClientData data, List<Long> platformIds, LongArrayList ids) {
+		final int limit = ids.size() + CallingTimes.MAX_EXTRA_PLATFORMS;
+		final List<List<Long>> ahead = new ArrayList<>();
+		for (final SimplifiedRoute route : data.simplifiedRouteIdMap.values()) {
+			final ObjectArrayList<SimplifiedRoutePlatform> stops = route.getPlatforms();
+			for (int i = 0; i < stops.size() - 1; i++) {
+				if (platformIds.contains(stops.get(i).getPlatformId())) {
+					final List<Long> next = new ArrayList<>();
+					for (int j = i + 1; j < stops.size() && next.size() < CallingTimes.MAX_EXTRA_PLATFORMS; j++) {
+						next.add(stops.get(j).getPlatformId());
+					}
+					ahead.add(next);
+				}
+			}
+		}
+		for (int depth = 0; depth < CallingTimes.MAX_EXTRA_PLATFORMS && ids.size() < limit; depth++) {
+			for (final List<Long> next : ahead) {
+				if (depth < next.size() && ids.size() < limit && !ids.contains((long) next.get(depth))) {
+					ids.add((long) next.get(depth));
+				}
+			}
+		}
+	}
+
+	/**
 	 * Stops after this platform on the service's route, display names, consecutive duplicates removed.
 	 */
-	private static List<String> callingAt(MinecraftClientData data, ArrivalResponse arrival) {
-		final SimplifiedRoute route = data.simplifiedRouteIdMap.get(arrival.getRouteId());
+	private static Calling callingAt(MinecraftClientData data, long routeId, long platformId) {
+		final SimplifiedRoute route = data.simplifiedRouteIdMap.get(routeId);
 		if (route == null) {
-			return List.of();
+			return Calling.NONE;
 		}
 		final ObjectArrayList<SimplifiedRoutePlatform> platforms = route.getPlatforms();
-		final int index = route.getPlatformIndex(arrival.getPlatformId());
+		final int index = route.getPlatformIndex(platformId);
 		if (index < 0 || index >= platforms.size() - 1) {
-			return List.of();
+			return Calling.NONE;
 		}
 		String previous = StationNames.display(platforms.get(index).getStationName());
 		final List<String> stops = new ArrayList<>();
+		final List<Long> stopPlatforms = new ArrayList<>();
 		for (int i = index + 1; i < platforms.size() && stops.size() < ServiceSnapshot.MAX_CALLING_AT; i++) {
 			final String name = StationNames.display(platforms.get(i).getStationName());
 			if (!name.isEmpty() && !name.equals(previous)) {
 				stops.add(name);
+				stopPlatforms.add(platforms.get(i).getPlatformId());
 				previous = name;
 			}
 		}
-		return stops;
+		return new Calling(stops, stopPlatforms);
 	}
 
 	// ---- diagnostics -------------------------------------------------------------------------------------------------
+
+	/**
+	 * Diagnostic: per simplified route, its stops; then MTR's cached arrivals for every one of those platforms (route,
+	 * departure index, platform, seconds to arrival). Run twice: the first call puts the platforms into MTR's poll.
+	 */
+	public List<String> describeRouteTimes() {
+		final List<String> lines = new ArrayList<>();
+		final MinecraftClientData data = MinecraftClientData.getInstance();
+		final LongArrayList ids = new LongArrayList();
+		lines.add("Simplified routes: " + data.simplifiedRouteIdMap.size() + ", full routes: " + data.routes.size());
+		for (final SimplifiedRoute route : data.simplifiedRouteIdMap.values()) {
+			final StringBuilder stops = new StringBuilder();
+			for (final SimplifiedRoutePlatform stop : route.getPlatforms()) {
+				stops.append(StationNames.display(stop.getStationName())).append('/').append(stop.getPlatformId() % 1000).append(' ');
+				if (ids.size() < 16 && !ids.contains(stop.getPlatformId())) {
+					ids.add(stop.getPlatformId());
+				}
+			}
+			lines.add(StationNames.display(route.getName()) + " (" + route.getId() % 1000 + "): " + stops.toString().trim());
+		}
+		final long now = System.currentTimeMillis();
+		final long offset = ArrivalsCacheClient.INSTANCE.getMillisOffset();
+		for (final ArrivalResponse arrival : ArrivalsCacheClient.INSTANCE.requestArrivals(ids)) {
+			if (lines.size() > 40) {
+				break;
+			}
+			lines.add("r" + arrival.getRouteId() % 1000 + " dep#" + arrival.getDepartureIndex() + " p" + arrival.getPlatformId() % 1000 + " arr+" + (arrival.getArrival() - offset - now) / 1000 + "s");
+		}
+		return lines;
+	}
 
 	public String describeCaches() {
 		return "snapshots=" + snapshots.size() + " (hits " + snapshots.hitCount() + ", refreshes " + snapshots.refreshCount() + ", evicted " + snapshots.evictionCount()

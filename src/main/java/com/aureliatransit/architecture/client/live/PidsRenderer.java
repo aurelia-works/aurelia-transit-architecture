@@ -150,14 +150,14 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 			final StationSnapshot station = provider.resolve(entity.getPos(), config.association(), false);
 			if (station.station() != null && station.station().id() > 0) {
 				final StationSnapshot platform = provider.resolve(entity.getPos(),
-						new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), List.of(nearest)), true);
+						new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), List.of(nearest)), true, config.callingTimes() && config.callingAt());
 				if (platform.hasStation()) {
 					snapshot = platform;
 				}
 			}
 		}
 		if (snapshot == null) {
-			snapshot = provider.resolve(entity.getPos(), config.association(), true);
+			snapshot = provider.resolve(entity.getPos(), config.association(), true, config.callingTimes() && config.callingAt());
 		}
 		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now, clock(world));
 		cache.nextRebuild = now + (cache.model.stripScroll ? MessageRotation.STEP_MILLIS : cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.4 (in progress on `release/1.3.1`)
+
+- **Station suffixes (A5):** `/ata_suffix` adds "Station", "Airport", "Port", "Terminal" or custom text to an MTR station's name, per context (signs, displays, terminals, announcements). MTR's own name is unchanged.
+- **Per-exit settings (A3):** the station information board's Exits view sets each exit's text, arrow and visibility independently, and can add manual exits.
+- **Calling-point times (A14):** PIDS/CIS "Calling at" can show minutes to each stop where MTR reports the same trip there (option **Times**, off by default). `/aurelia_live routes` shows the data.
+
 ## 1.3.1
 
 Fixes for the 1.3.0 release check. No new blocks.

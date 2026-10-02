@@ -46,6 +46,14 @@ These are covered by `BoardStabilityTest`. It also reproduces the 1.1.0 behaviou
 
 `listStations(limit)` is cached for 5 s and sorted by display name. `listPlatforms(stationId)` is sorted numerically-aware ("2" before "10").
 
+## Calling-point times (1.4, A14)
+
+MTR 4.0.5 syncs no route timetable to the client: `MinecraftClientData.routes` was empty in the release-check world (checked with `/aurelia_live routes`, 2026-10-01), so there are no durations or dwell times to add up. What MTR does supply is an `ArrivalResponse` per train per platform, and its `getDepartureIndex()` is the same for one trip at every platform of the route (checked live: dep#1 reached three platforms at +32 s, +52 s, +72 s). It repeats after a full cycle.
+
+So a calling point's time is MTR's own arrival at that stop's platform for the same route and departure index, taking the earliest one not before the previous stop and within 2 hours (`CallingTimes.match`, unit-tested). No match: the stop shows without a time. Nothing is estimated.
+
+Cost: the display option **Times** (off by default; needs Calling at) adds the calling points' platforms, at most 16 extra, to the arrivals request the display already makes every 2 s, round-robin across routes, nearest stops first. There is no new polling interval, but the services cache key carries the flag: a station with displays both with and without times makes one widened request and one plain request per refresh (one per distinct platform set and flag, not per display). Measured live with one display: `arrival_requests` +32 and `provider_refresh` +64 in 60 s, as without times.
+
 ## Platform blocks and train doors
 
 MTR 4 opens a vehicle doorway only when a block near it is one of MTR's platform blocks. The check is `RenderVehicleHelper.canOpenDoors`, which looks at blocks from one block beside the doorway box and from two blocks below to two above. A block counts if it implements `org.mtr.mod.block.PlatformHelper`, or if it is an unlocked PSD/APG door. The check looks at the block's **type only**. Shapes and collision are never consulted.
@@ -67,6 +75,7 @@ From this build, ATA's walkable platform surfaces implement MTR's `PlatformHelpe
 
 ## Known limitations (deliberately not faked)
 
+- **Calling-point times** exist only where MTR reports the same trip at that stop's platform (see above); otherwise the stop has no time.
 - **Non-stopping / through trains** never appear in MTR's arrival data, so there are no "through service" announcements or displays. Nothing is invented.
 - **Platform alterations / cancellations** are not exposed by MTR. `ServiceSnapshot.platformId` is whatever MTR reports.
 - **Delays** are only known when MTR reports `realtime` data; `deviation` below one minute is not flagged.
