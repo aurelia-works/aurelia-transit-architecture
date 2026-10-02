@@ -16,7 +16,13 @@ public enum SignStyle {
 	/** Bus stop plate: stop name and route badges. */
 	BUS_STOP(false, false, false, false, true, false, 0xFF1E2A33, 0xFF46535E),
 	/** Lift status panel (1.4, A8): lift name and the levels it serves; the status bar comes from the block state. */
-	LIFT(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFC9D6E6);
+	LIFT(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFC9D6E6),
+	/** Platform screen door text panel (1.4, A17): text typed by hand (destination, door number, notice); amber on black. */
+	PSD(true, true, true, false, false, false, 0xFFFFB84D, 0xFFE6D3AE),
+	/** Stand-back warning for non-stopping trains (1.4, A16): set by hand, never automatic; dark text on yellow. */
+	WARNING(true, false, false, false, false, false, 0xFF161616, 0xFF2B2B2B),
+	/** Train composition / coach board (1.4, A18): car labels and sector letters typed by hand. */
+	COMPOSITION(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFB8C4D0);
 
 	public static final int MAX_ROUTES = 4;
 

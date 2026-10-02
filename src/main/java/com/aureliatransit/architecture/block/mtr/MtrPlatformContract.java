@@ -56,6 +56,21 @@ public final class MtrPlatformContract {
 		return AVAILABLE ? MtrPlatformBlocks.curve(settings) : new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings);
 	}
 
+	/**
+	 * An always-open platform screen door doorway (1.4), with the door marker so train doors open beside it.
+	 */
+	public static Block screenDoorway(AbstractBlock.Settings settings) {
+		return AVAILABLE ? MtrPlatformBlocks.screenDoorway(settings) : new com.aureliatransit.architecture.block.elevated.CurvedScreenDoorBlock(settings, true);
+	}
+
+	/**
+	 * A platform edge with a train-keyed moving part (1.4: drop-down barrier, boarding step), with the door marker.
+	 */
+	public static Block trainEdge(AbstractBlock.Settings settings, VoxelShape northShape, com.aureliatransit.architecture.block.elevated.TrainEdgeBlock.Mode mode) {
+		return AVAILABLE ? MtrPlatformBlocks.trainEdge(settings, northShape, mode)
+				: new com.aureliatransit.architecture.block.elevated.TrainEdgeBlock(settings, northShape, mode);
+	}
+
 	private static boolean detect() {
 		try {
 			final Class<?> marker = Class.forName(PLATFORM_HELPER, false, MtrPlatformContract.class.getClassLoader());

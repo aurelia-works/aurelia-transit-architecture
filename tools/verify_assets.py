@@ -58,6 +58,9 @@ EXPECTED_PROPERTIES = {
     "HandrailBlock": {"kind", "north", "east", "south", "west"},
     "TactileJunctionBlock": {"facing", "kind"},
     "PlatformEdgeCurveBlock": {"facing", "kind"},
+    # 1.4
+    "CurvedScreenDoorBlock": {"facing", "kind"},
+    "TrainEdgeBlock": {"facing", "part"},
 }
 
 problems = []
@@ -82,7 +85,8 @@ def registered_blocks():
     # Workstreams add their block classes to EXPECTED_PROPERTIES below.
     # MtrPlatformContract factories build the same block classes, optionally carrying MTR's platform marker.
     pattern = re.compile(r'register\("([a-z0-9_]+)",\s*BlockFamily\.(\w+),\s*RenderKind\.(\w+),\s*(?:new (\w+)|MtrPlatformContract\.(\w+))\(')
-    contract = {"surface": "Block", "edge": "FacingShapedBlock", "curve": "PlatformEdgeCurveBlock"}
+    contract = {"surface": "Block", "edge": "FacingShapedBlock", "curve": "PlatformEdgeCurveBlock",
+                "screenDoorway": "CurvedScreenDoorBlock", "trainEdge": "TrainEdgeBlock"}
     return [(m.group(1), m.group(2), m.group(3), m.group(4) or contract[m.group(5)]) for m in pattern.finditer(source)]
 
 
@@ -159,7 +163,7 @@ def main():
             if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
                        "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
                        "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock",
-                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock"):
+                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

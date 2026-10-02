@@ -6,7 +6,9 @@ import com.aureliatransit.architecture.block.InfoDisplayBlock;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.ClockBlockEntity;
 import com.aureliatransit.architecture.block.entity.InfoDisplayBlockEntity;
+import com.aureliatransit.architecture.block.elevated.TrainEdgeBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
+import com.aureliatransit.architecture.block.entity.TrainEdgeBlockEntity;
 import net.minecraft.block.Block;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.registry.Registries;
@@ -32,6 +34,12 @@ public final class ModBlockEntities {
 			Registries.BLOCK_ENTITY_TYPE,
 			AureliaTransitArchitecture.id("clock"),
 			BlockEntityType.Builder.create(ClockBlockEntity::new, blocks(block -> block instanceof ClockBlock)).build(null)
+	);
+
+	public static final BlockEntityType<TrainEdgeBlockEntity> TRAIN_EDGE = Registry.register(
+			Registries.BLOCK_ENTITY_TYPE,
+			AureliaTransitArchitecture.id("train_edge"),
+			BlockEntityType.Builder.create(TrainEdgeBlockEntity::new, blocks(block -> block instanceof TrainEdgeBlock)).build(null)
 	);
 
 	private ModBlockEntities() {

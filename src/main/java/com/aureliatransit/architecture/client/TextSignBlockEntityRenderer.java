@@ -5,9 +5,9 @@ import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
-import com.aureliatransit.architecture.text.LiftPanelLayout;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.SignData;
+import com.aureliatransit.architecture.text.SignPanels;
 import com.aureliatransit.architecture.text.SignStyle;
 import com.aureliatransit.architecture.text.TextSanitizer;
 import com.aureliatransit.architecture.transit.StationAssociation;
@@ -87,10 +87,7 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 				cached.primary = primary;
 				cached.status = status;
 				final float width = layout.joins() ? rowLength * 16 - JOIN_MARGIN : layout.width();
-				cached.panel = status >= 0
-						? LiftPanelLayout.layout(primary, data.secondary(), LiftPanelLayout.status(status), width, layout.height(), layout.style().textColor(),
-						layout.style().secondaryColor(), s -> textRenderer.getWidth(s))
-						: PanelLayout.sign(data, primary, layout.style(), width, layout.height(), s -> textRenderer.getWidth(s));
+				cached.panel = SignPanels.layout(data, primary, layout.style(), status, width, layout.height(), s -> textRenderer.getWidth(s));
 			}
 		}
 		if (cached.panel.isEmpty()) {

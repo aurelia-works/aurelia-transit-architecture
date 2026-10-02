@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,part=base": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_base"
+    },
+    "facing=east,part=base": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_base",
+      "y": 90
+    },
+    "facing=south,part=base": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_base",
+      "y": 180
+    },
+    "facing=west,part=base": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_base",
+      "y": 270
+    },
+    "facing=north,part=moving": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_moving"
+    },
+    "facing=east,part=moving": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_moving",
+      "y": 90
+    },
+    "facing=south,part=moving": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_moving",
+      "y": 180
+    },
+    "facing=west,part=moving": {
+      "model": "aurelia_transit_architecture:block/boarding_step_edge_moving",
+      "y": 270
+    }
+  }
+}

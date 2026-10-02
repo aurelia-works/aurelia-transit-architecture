@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=north,kind=straight": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_straight"
+    },
+    "facing=east,kind=straight": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_straight",
+      "y": 90
+    },
+    "facing=south,kind=straight": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_straight",
+      "y": 180
+    },
+    "facing=west,kind=straight": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_straight",
+      "y": 270
+    },
+    "facing=north,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_diagonal"
+    },
+    "facing=east,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_diagonal",
+      "y": 90
+    },
+    "facing=south,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_diagonal",
+      "y": 180
+    },
+    "facing=west,kind=diagonal": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_diagonal",
+      "y": 270
+    },
+    "facing=north,kind=outer": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_outer"
+    },
+    "facing=east,kind=outer": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_outer",
+      "y": 90
+    },
+    "facing=south,kind=outer": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_outer",
+      "y": 180
+    },
+    "facing=west,kind=outer": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_outer",
+      "y": 270
+    },
+    "facing=north,kind=inner": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_inner"
+    },
+    "facing=east,kind=inner": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_inner",
+      "y": 90
+    },
+    "facing=south,kind=inner": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_inner",
+      "y": 180
+    },
+    "facing=west,kind=inner": {
+      "model": "aurelia_transit_architecture:block/screen_door_panel_inner",
+      "y": 270
+    }
+  }
+}

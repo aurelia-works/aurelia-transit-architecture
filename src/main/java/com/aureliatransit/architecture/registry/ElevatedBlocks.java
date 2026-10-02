@@ -7,6 +7,9 @@ import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.elevated.CardReaderBlock;
 import com.aureliatransit.architecture.block.elevated.CctvCameraBlock;
+import com.aureliatransit.architecture.block.elevated.CurvedScreenDoorBlock;
+import com.aureliatransit.architecture.block.elevated.TrainEdgeBlock;
+import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
 import com.aureliatransit.architecture.block.elevated.FareGateBlock;
 import com.aureliatransit.architecture.block.elevated.HandrailBlock;
 import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
@@ -90,6 +93,19 @@ public final class ElevatedBlocks {
 	public static final Block LIFT_STATUS_PANEL = ModBlocks.register("lift_status_panel", BlockFamily.ACCESSIBILITY, RenderKind.CUTOUT,
 			new LiftStatusPanelBlock(ModBlocks.metal().luminance(state -> 6), new TextLayout(8.5F, 11, 12, 13.4F, -1, false, SignStyle.LIFT),
 					box(2, 3, 13.5, 14, 14, 16)), TIP + "lift_status");
+
+	// ---- 1.4: platform screen doors and train-keyed edges (DESIGN_1.4 b-d) ----------------------------------------
+
+	private static final net.minecraft.util.shape.VoxelShape EDGE = union(box(0, 12, 0, 16, 16, 16), box(0, 0, 2, 16, 12, 16));
+
+	public static final Block SCREEN_DOOR_PANEL = ModBlocks.register("screen_door_panel", BlockFamily.PLATFORMS, RenderKind.TRANSLUCENT,
+			new CurvedScreenDoorBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL), false), TIP_STYLE, TIP + "screen_door_panel");
+	public static final Block SCREEN_DOOR_DOORWAY = ModBlocks.register("screen_door_doorway", BlockFamily.PLATFORMS, RenderKind.CUTOUT,
+			MtrPlatformContract.screenDoorway(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "screen_door_doorway");
+	public static final Block DROP_BARRIER_EDGE = ModBlocks.register("drop_barrier_edge", BlockFamily.PLATFORMS, RenderKind.CUTOUT,
+			MtrPlatformContract.trainEdge(ModBlocks.paving(MapColor.STONE_GRAY).nonOpaque(), EDGE, TrainEdgeBlock.Mode.BARRIER), TIP + "drop_barrier_edge");
+	public static final Block BOARDING_STEP_EDGE = ModBlocks.register("boarding_step_edge", BlockFamily.PLATFORMS, RenderKind.CUTOUT,
+			MtrPlatformContract.trainEdge(ModBlocks.paving(MapColor.STONE_GRAY).nonOpaque(), EDGE, TrainEdgeBlock.Mode.STEP), TIP + "boarding_step_edge");
 
 	private ElevatedBlocks() {
 	}

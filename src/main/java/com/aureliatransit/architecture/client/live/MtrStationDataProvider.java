@@ -284,7 +284,8 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 					arrival.getIsTerminating(),
 					calling.names(),
 					arrival.getDepartureIndex(),
-					withTimes ? CallingTimes.match(arrival.getRouteId(), arrival.getDepartureIndex(), departureMillis, calling.platformIds(), all) : List.of()));
+					withTimes ? CallingTimes.match(arrival.getRouteId(), arrival.getDepartureIndex(), departureMillis, calling.platformIds(), all) : List.of(),
+					origin(data, arrival.getRouteId())));
 		}
 		out.sort(ServiceOrder.COMPARATOR);
 		return out.size() > StationSnapshot.MAX_SERVICES ? List.copyOf(out.subList(0, StationSnapshot.MAX_SERVICES)) : List.copyOf(out);
@@ -317,6 +318,12 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 				}
 			}
 		}
+	}
+
+	/** First stop of the route as MTR defines it, display name; empty when MTR has not sent the route. */
+	private static String origin(MinecraftClientData data, long routeId) {
+		final SimplifiedRoute route = data.simplifiedRouteIdMap.get(routeId);
+		return route == null || route.getPlatforms().isEmpty() ? "" : StationNames.display(route.getPlatforms().get(0).getStationName());
 	}
 
 	/**

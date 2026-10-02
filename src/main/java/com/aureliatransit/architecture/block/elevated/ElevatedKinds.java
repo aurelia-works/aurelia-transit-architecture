@@ -250,4 +250,41 @@ public final class ElevatedKinds {
 			return ordinal >= 0 && ordinal < values().length ? values()[ordinal] : IN_SERVICE;
 		}
 	}
+
+	/** Plan of a platform screen door piece (1.4): straight, or following the 45 degree / convex / concave edges. */
+	public enum ScreenCurveKind implements StringIdentifiable {
+		STRAIGHT(null),
+		DIAGONAL(CurveKind.DIAGONAL),
+		OUTER(CurveKind.OUTER),
+		INNER(CurveKind.INNER);
+
+		private final CurveKind curve;
+
+		ScreenCurveKind(CurveKind curve) {
+			this.curve = curve;
+		}
+
+		/** The platform edge piece this screen stands on, or null for the straight edge. */
+		public CurveKind curve() {
+			return curve;
+		}
+
+		@Override
+		public String asString() {
+			return id(this);
+		}
+	}
+
+	/** What a train-keyed edge block moves (1.4): drop-down barrier bars, or a boarding step. */
+	public enum EdgePart implements StringIdentifiable {
+		/** The placed block: edge, posts or step housing. */
+		BASE,
+		/** The moving part, only ever drawn by the block entity renderer (never placed). */
+		MOVING;
+
+		@Override
+		public String asString() {
+			return id(this);
+		}
+	}
 }

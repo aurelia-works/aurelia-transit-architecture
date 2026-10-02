@@ -188,3 +188,17 @@ Ran 2026-10-01, dev client, scene `ata_test:v14_props` (`tools/release_check/gen
 | 4 | Fare gate bank (end, gate, gate, wide, end), card readers, booth window ×2, CCTV wall/pendant/dome. | ✅ All placed and drawn. Walking through a gate passage was not tried live (cabinet-only collision is set in code). Looks: **needs human eye**. |
 | 5 | Light shader pack. | ➖ **Skipped:** the dev client crashes when Iris loads any shader pack (`ClassNotFoundException: org.anarres.cpp.PreprocessorListener`, Iris's preprocessor library missing from the dev run). The 1.3 shader pass used the Prism instance, which this run does not touch. |
 | 6 | Stress counters. | ➖ Not applicable: none of these blocks has a ticking or live part (the lift panel is a static text sign, the rest are models). |
+
+---
+
+## 1.4 package 4 (concourse board, screen doors, drop barrier, boarding step)
+
+Ran 2026-10-01, dev client, scene `ata_test:v14_platform`. Gates: 233 tests, asset audit OK, z-fighting 0.
+
+| # | Check | Result |
+|---|---|---|
+| a | 6×3 concourse board at Alpha with Arrivals + Summary. | ✅ "Arrivals - Alpha", "From" column heading, origin from MTR's route (the renamed Gamma, Москва Курская), summary "2 platforms". "This is platform N" did not show because that board is not within 5 blocks of a platform; covered by `ConcourseOptionsTest`. Departures-mode headings: **needs human eye** (`a-concourse-arrivals-b-screen-doors.jpg`). |
+| b | Straight panel / doorway / panel on Alpha P1; curved panels and doorways on 45°/convex/concave edges. | ✅ Rendered. Train doors open beside them (doors open along P1, which also has marked edges). Whether a doorway alone opens doors (no marked edge near it) was not isolated. Curved pieces: **needs human eye** (`b-curved-screens.jpg`). |
+| c | Drop-barrier edges ×4 on P1; `/aurelia_live edge` diagnostic. | ✅ Lookup: Alpha, platform 658, 10 s dwell. With a train standing the bars are down; otherwise up (`c-drop-barrier-up-and-down.jpg`). The trigger is MTR's schedule window for the platform (arrival to departure, about 9 s here). |
+| d | Boarding-step edges ×4 on P1. | ➖ Same code path as (c); the step sliding out was **not captured**: **needs human eye**. |
+| F | Counters, 8 train-keyed edges + boards in view, 60 s. | arrival_requests +62 (about 1/s: two shared platform sets), provider_refresh +785 (cached per-block lookups, 2 per edge per 2 s; no server traffic), board_rebuilds +124. Within the contract: requests are per platform, not per block. |

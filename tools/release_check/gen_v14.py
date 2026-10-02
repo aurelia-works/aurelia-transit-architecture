@@ -42,3 +42,28 @@ L.append('tellraw @a {"text":"1.4 props scene placed (z -105..-83).","color":"gr
 L.append(f"tp @a 16 {Y + 1} {Z + 11} 180 10")
 open(os.path.join(os.path.dirname(__file__), "ata_test/data/ata_test/functions/v14_props.mcfunction"), "w").write("\n".join(L) + "\n")
 print(len(L))
+
+# ---- package 4: train-keyed edges on Alpha P1 (edge row z 2, facing north), screen doors, concourse options ----------
+P = []
+for x in range(10, 14):
+    P.append(f"setblock {x} {Y} 2 {A}drop_barrier_edge[facing=north,part=base]")
+for x in range(16, 20):
+    P.append(f"setblock {x} {Y} 2 {A}boarding_step_edge[facing=north,part=base]")
+# straight screen doors on the edge row next to the step edges: panel, doorway, panel (one block above the edge)
+P.append(f"setblock 21 {Y + 1} 2 {A}screen_door_panel[facing=north,kind=straight]")
+P.append(f"setblock 22 {Y + 1} 2 {A}screen_door_doorway[facing=north,kind=straight]")
+P.append(f"setblock 23 {Y + 1} 2 {A}screen_door_panel[facing=north,kind=straight]")
+# a 6 x 3 concourse board on the back of Alpha's wall (z 10, facing south), arrivals + summary on its owner
+for x in range(2, 8):
+    for y in range(Y + 1, Y + 4):
+        left, right, up, down = x > 2, x < 7, y < Y + 3, y > Y + 1
+        P.append(f"setblock {x} {y} 10 {A}concourse_board[facing=south,left={str(left).lower()},right={str(right).lower()},up={str(up).lower()},down={str(down).lower()}]")
+P.append(f"data merge block 2 {Y + 3} 10 {{Arrivals:1b,Summary:1b,Rows:6}}")
+# curved screens on curved edge pieces in the open area west of the props scene
+for i, kind in enumerate(("diagonal", "outer", "inner")):
+    P.append(f"setblock {34 + i * 3} {Y} {Z} {A}platform_edge_curve[facing=north,kind={kind}]")
+    P.append(f"setblock {34 + i * 3} {Y + 1} {Z} {A}screen_door_panel[facing=north,kind={kind}]")
+    P.append(f"setblock {34 + i * 3} {Y} {Z + 2} {A}platform_edge_curve[facing=north,kind={kind}]")
+    P.append(f"setblock {34 + i * 3} {Y + 1} {Z + 2} {A}screen_door_doorway[facing=north,kind={kind}]")
+P.append('tellraw @a {"text":"1.4 platform scene placed (Alpha P1 x 10-23, board behind the wall, curved screens x 34-40).","color":"green"}')
+open(os.path.join(os.path.dirname(__file__), "ata_test/data/ata_test/functions/v14_platform.mcfunction"), "w").write("\n".join(P) + "\n")

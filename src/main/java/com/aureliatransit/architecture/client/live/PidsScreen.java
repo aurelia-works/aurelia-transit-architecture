@@ -26,6 +26,8 @@ final class PidsScreen extends LiveConfigScreen {
 	private boolean clock;
 	private boolean callingAt;
 	private boolean callingTimes;
+	private boolean arrivals;
+	private boolean summary;
 	private int pageSeconds;
 	private BoardAlignment alignment;
 	private String message;
@@ -40,6 +42,8 @@ final class PidsScreen extends LiveConfigScreen {
 		this.clock = config.clock();
 		this.callingAt = config.callingAt();
 		this.callingTimes = config.callingTimes();
+		this.arrivals = config.arrivals();
+		this.summary = config.summary();
 		this.pageSeconds = config.pageSeconds();
 		this.alignment = config.alignment();
 		this.message = config.message();
@@ -78,6 +82,18 @@ final class PidsScreen extends LiveConfigScreen {
 				button.setMessage(toggleText("live_calling_times", callingTimes));
 			}).dimensions(x + half + 4, y, COLUMN_WIDTH - half - 4, 20).tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(tr("live_calling_times.tip"))).build());
 			y += 24;
+		} else {
+			// concourse board (1.4): departures or arrivals, and the station summary line
+			final int half = (COLUMN_WIDTH - 4) / 2;
+			add(ButtonWidget.builder(modeText(), button -> {
+				arrivals = !arrivals;
+				button.setMessage(modeText());
+			}).dimensions(x, y, half, 20).build());
+			add(ButtonWidget.builder(toggleText("live_summary", summary), button -> {
+				summary = !summary;
+				button.setMessage(toggleText("live_summary", summary));
+			}).dimensions(x + half + 4, y, COLUMN_WIDTH - half - 4, 20).build());
+			y += 24;
 		}
 		add(ButtonWidget.builder(pageText(), button -> {
 			int index = 0;
@@ -112,6 +128,10 @@ final class PidsScreen extends LiveConfigScreen {
 		return tr("live_style", Text.translatable("screen.aurelia_transit_architecture." + style.translationKey()));
 	}
 
+	private Text modeText() {
+		return tr(arrivals ? "live_mode_arrivals" : "live_mode_departures");
+	}
+
 	private Text rowsText() {
 		return tr("live_rows", rows);
 	}
@@ -131,7 +151,7 @@ final class PidsScreen extends LiveConfigScreen {
 
 	@Override
 	protected void save() {
-		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds, alignment, message, callingTimes);
+		final DisplayConfig config = new DisplayConfig(association(), style, rows, clock, callingAt, pageSeconds, alignment, message, callingTimes, arrivals, summary);
 		if (!config.equals(display.config())) {
 			ClientPlayNetworking.send(LiveSystems.UPDATE_DISPLAY, LiveSystems.writeDisplayUpdate(pos, config));
 		}

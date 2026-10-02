@@ -48,6 +48,7 @@ public final class LiveClient {
 		}
 
 		BlockEntityRendererFactories.register(LiveBlocks.PIDS_ENTITY, PidsRenderer::new);
+		BlockEntityRendererFactories.register(com.aureliatransit.architecture.registry.ModBlockEntities.TRAIN_EDGE, TrainEdgeRenderer::new);
 
 		PidsBlock.openEditor = pos -> {
 			final MinecraftClient client = MinecraftClient.getInstance();
@@ -99,6 +100,16 @@ public final class LiveClient {
 								return 0;
 							}
 							provider.describeRouteTimes().forEach(line -> context.getSource().sendFeedback(Text.literal(line)));
+							return 1;
+						}))
+						.then(ClientCommandManager.literal("edge").executes(context -> {
+							// what a train-keyed edge under the crosshair sees (1.4)
+							final var hit = net.minecraft.client.MinecraftClient.getInstance().crosshairTarget;
+							if (!(hit instanceof net.minecraft.util.hit.BlockHitResult block)) {
+								context.getSource().sendFeedback(Text.literal("Look at a block"));
+								return 0;
+							}
+							context.getSource().sendFeedback(Text.literal(TrainEdgeRenderer.describe(block.getBlockPos(), System.currentTimeMillis())));
 							return 1;
 						}))
 						.then(ClientCommandManager.literal("debug").then(ClientCommandManager.argument("enabled", BoolArgumentType.bool()).executes(context -> {

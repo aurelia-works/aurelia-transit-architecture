@@ -1,0 +1,145 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/barrier_stripes",
+    "bar": "aurelia_transit_architecture:block/barrier_stripes"
+  },
+  "elements": [
+    {
+      "from": [
+        2.5,
+        20,
+        1.25
+      ],
+      "to": [
+        13.5,
+        21,
+        2.25
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2.5,
+            13.75,
+            13.5,
+            14.75
+          ],
+          "texture": "#bar"
+        },
+        "up": {
+          "uv": [
+            2.5,
+            1.25,
+            13.5,
+            2.25
+          ],
+          "texture": "#bar"
+        },
+        "north": {
+          "uv": [
+            2.5,
+            0.0,
+            13.5,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "south": {
+          "uv": [
+            2.5,
+            0.0,
+            13.5,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "west": {
+          "uv": [
+            1.25,
+            0.0,
+            2.25,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "east": {
+          "uv": [
+            13.75,
+            0.0,
+            14.75,
+            1.0
+          ],
+          "texture": "#bar"
+        }
+      }
+    },
+    {
+      "from": [
+        2.5,
+        26,
+        1.25
+      ],
+      "to": [
+        13.5,
+        27,
+        2.25
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2.5,
+            13.75,
+            13.5,
+            14.75
+          ],
+          "texture": "#bar"
+        },
+        "up": {
+          "uv": [
+            2.5,
+            1.25,
+            13.5,
+            2.25
+          ],
+          "texture": "#bar"
+        },
+        "north": {
+          "uv": [
+            2.5,
+            0.0,
+            13.5,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "south": {
+          "uv": [
+            2.5,
+            0.0,
+            13.5,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "west": {
+          "uv": [
+            1.25,
+            0.0,
+            2.25,
+            1.0
+          ],
+          "texture": "#bar"
+        },
+        "east": {
+          "uv": [
+            13.75,
+            0.0,
+            14.75,
+            1.0
+          ],
+          "texture": "#bar"
+        }
+      }
+    }
+  ]
+}

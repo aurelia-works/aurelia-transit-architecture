@@ -89,6 +89,10 @@
     "aurelia_transit_architecture:card_reader",
     "aurelia_transit_architecture:booth_window",
     "aurelia_transit_architecture:cctv_camera",
-    "aurelia_transit_architecture:lift_status_panel"
+    "aurelia_transit_architecture:lift_status_panel",
+    "aurelia_transit_architecture:screen_door_panel",
+    "aurelia_transit_architecture:screen_door_doorway",
+    "aurelia_transit_architecture:drop_barrier_edge",
+    "aurelia_transit_architecture:boarding_step_edge"
   ]
 }

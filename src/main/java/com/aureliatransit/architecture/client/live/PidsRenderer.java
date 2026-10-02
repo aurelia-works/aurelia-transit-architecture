@@ -140,11 +140,11 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		final var config = entity.config();
 		final StationDataProvider provider = StationData.provider();
 		long nearest = 0;
-		if (provider instanceof NearestPlatformProvider nearestProvider && !block.kind().stationWide()) {
+		if (provider instanceof NearestPlatformProvider nearestProvider && (!block.kind().stationWide() || config.summary())) {
 			nearest = nearestProvider.nearestPlatformId(entity.getPos(), config.association());
 		}
 		StationSnapshot snapshot = null;
-		if (nearest != 0) {
+		if (nearest != 0 && !block.kind().stationWide()) {
 			// An AUTO platform display shows one platform. Resolving the whole station would cap the list at the
 			// station's first MAX_SERVICES departures, so this platform's trains could drop out behind other platforms'.
 			final StationSnapshot station = provider.resolve(entity.getPos(), config.association(), false);

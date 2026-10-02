@@ -10,6 +10,7 @@ import com.aureliatransit.architecture.block.elevated.ElevatedKinds;
 import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
 import com.aureliatransit.architecture.text.LiftPanelLayout;
 import com.aureliatransit.architecture.text.PanelLayout;
+import com.aureliatransit.architecture.text.SignPanels;
 import com.aureliatransit.architecture.text.RouteBadge;
 import com.aureliatransit.architecture.text.SignArrow;
 import com.aureliatransit.architecture.text.SignData;
@@ -192,7 +193,9 @@ public class TextSignEditScreen extends Screen {
 
 	private int faceColor() {
 		return switch (style) {
-			case DIRECTION, LIFT -> 0xFF2C2F33;
+			case DIRECTION, LIFT, PSD -> 0xFF2C2F33;
+			case WARNING -> 0xFFF2C230;
+			case COMPOSITION -> 0xFF1D2733;
 			case BUS_STOP -> 0xFFF2F2EE;
 			default -> 0xFF1D375A;
 		};
@@ -213,10 +216,8 @@ public class TextSignEditScreen extends Screen {
 		if (previewDirty) {
 			previewDirty = false;
 			final SignData data = current();
-			preview = status != null
-					? LiftPanelLayout.layout(data.primary(), data.secondary(), LiftPanelLayout.status(status.ordinal()), panelWidth(), panelHeight(), style.textColor(),
-					style.secondaryColor(), s -> textRenderer.getWidth(s))
-					: PanelLayout.sign(data, TextSignBlockEntityRenderer.resolvePrimary(data, style, pos), style, panelWidth(), panelHeight(), s -> textRenderer.getWidth(s));
+			preview = SignPanels.layout(data, TextSignBlockEntityRenderer.resolvePrimary(data, style, pos), style, status == null ? -1 : status.ordinal(), panelWidth(),
+					panelHeight(), s -> textRenderer.getWidth(s));
 		}
 		final float scale = previewScale();
 		final int previewWidth = Math.round(panelWidth() * scale);

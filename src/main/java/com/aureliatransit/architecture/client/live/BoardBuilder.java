@@ -6,6 +6,7 @@ import com.aureliatransit.architecture.live.DisplayKind;
 import com.aureliatransit.architecture.live.DisplayStyle;
 import com.aureliatransit.architecture.live.display.BoardAnchor;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
+import com.aureliatransit.architecture.live.display.BoardSummary;
 import com.aureliatransit.architecture.live.display.CallingPages;
 import com.aureliatransit.architecture.live.display.CallingTimes;
 import com.aureliatransit.architecture.live.display.DepartureText;
@@ -39,6 +40,8 @@ final class BoardBuilder {
 	private static final float AVG_CHAR = 5.2F;
 	/** Height (virtual units) of the service-message strip at the bottom of a board, reserved only while a message exists. */
 	private static final float MESSAGE_STRIP_H = 10F;
+	private static final float COLUMN_HEADING_H = 7F;
+	private static final float SUMMARY_H = 8F;
 	private static final float STRIP_TEXT_SCALE = 0.85F;
 	/** The message strip is squeezed at most this much before it scrolls instead, so text never gets unreadably narrow. */
 	private static final float STRIP_MIN_SQUEEZE = 0.85F;
@@ -65,7 +68,12 @@ final class BoardBuilder {
 		// service message (local > station > network): its strip height is part of the content so rows never overlap it
 		final List<ServiceMessage> messages = ClientServiceMessages.applicable(config.message(), snapshot.station() == null ? "" : snapshot.station().displayName());
 		final float stripH = messages.isEmpty() ? 0 : MESSAGE_STRIP_H;
-		final float contentH = headerH + rows * rowH + 1.5F + stripH;
+		// concourse boards (1.4): a column heading row, and optionally a station summary line under the rows
+		final boolean concourse = kind == DisplayKind.CONCOURSE;
+		final boolean arrivals = concourse && config.arrivals();
+		final float columnsH = concourse ? COLUMN_HEADING_H : 0;
+		final float summaryH = concourse && config.summary() ? SUMMARY_H : 0;
+		final float contentH = headerH + columnsH + rows * rowH + 1.5F + summaryH + stripH;
 
 		final float boardW = widthBlocks - 2 * FRAME;
 		final float boardH = heightBlocks - 2 * FRAME - topInsetPixels / 16F;
@@ -81,10 +89,11 @@ final class BoardBuilder {
 		final float y0 = BoardAnchor.contentTop(config.alignment(), vh, contentH, TOP_MARGIN);
 		final String stationName = snapshot.station() == null ? "" : ClientStationSuffixes.apply(snapshot.station().displayName(), SuffixContext.DISPLAYS);
 
-		final List<ServiceSnapshot> services = visible(kind, snapshot, nearestPlatformId, now);
+		final List<ServiceSnapshot> services = arrivals ? arrivals(snapshot, stationName(snapshot), now) : visible(kind, snapshot, nearestPlatformId, now);
 		if (header) {
 			m.rect(0, y0, vw, headerH, style.header(), BoardModel.LAYER_BAND);
-			final String title = kind == DisplayKind.CONCOURSE ? (stationName.isEmpty() ? Tr.t("board_departures") : Tr.t("board_departures_at", stationName)) : stationName;
+			final String title = !concourse ? stationName : arrivals ? (stationName.isEmpty() ? Tr.t("board_arrivals") : Tr.t("board_arrivals_at", stationName))
+					: (stationName.isEmpty() ? Tr.t("board_departures") : Tr.t("board_departures_at", stationName));
 			float right = vw - MARGIN;
 			if (config.clock()) {
 				final float cw = tr.getWidth(clock) * 0.9F;
@@ -101,8 +110,11 @@ final class BoardBuilder {
 			fit(m, tr, title, MARGIN, y0 + (headerH - 7.2F) / 2, 0.9F, right - MARGIN - 2, style.text(), now);
 		}
 
-		final float rowsTop = y0 + headerH;
+		final float rowsTop = y0 + headerH + columnsH;
 		messageStrip(m, tr, messages, vw, vh, style, now);
+		if (summaryH > 0) {
+			summary(m, tr, snapshot, nearestPlatformId, rowsTop + rows * rowH + 1, vw, style, now);
+		}
 		if (services.isEmpty()) {
 			idle(m, tr, kind, snapshot, stationName, rowsTop, rows * rowH, vw, style, k, now);
 			return;
@@ -130,6 +142,18 @@ final class BoardBuilder {
 		final float platW = multiplePlatforms ? Math.max(9 * k, platformWidth + 4) : 0;
 		final float destX = left + (chipW > 0 ? chipW + 3 : 0);
 		final float destEnd = right - statusWidth - 4 - (platW > 0 ? platW + 3 : 0);
+		if (columnsH > 0) {
+			// explicit column headings: Destination (or From), Platform, Time
+			final float hk = 0.6F;
+			final float hy = rowsTop - columnsH + (columnsH - 8 * hk) / 2;
+			m.text(Tr.t(arrivals ? "board_col_from" : "board_col_destination"), destX, hy, hk, 1, style.dim());
+			if (platW > 0) {
+				final String plat = tr.trimToWidth(Tr.t("board_col_platform"), (int) ((platW + 3 + statusWidth) / hk));
+				m.text(plat, right - statusWidth - 4 - platW, hy, hk, 1, style.dim());
+			}
+			final String time = Tr.t("board_col_time");
+			m.text(time, right - tr.getWidth(time) * hk, hy, hk, 1, style.dim());
+		}
 
 		for (int i = from; i < to; i++) {
 			final ServiceSnapshot s = services.get(i);
@@ -162,7 +186,8 @@ final class BoardBuilder {
 				}
 			}
 
-			fit(m, tr, ClientStationSuffixes.apply(s.destination(), SuffixContext.DISPLAYS), destX, textY, k, destEnd - destX, style.text(), now);
+			final String place = arrivals ? (s.origin().isEmpty() ? s.routeName() : s.origin()) : s.destination();
+			fit(m, tr, ClientStationSuffixes.apply(place, SuffixContext.DISPLAYS), destX, textY, k, destEnd - destX, style.text(), now);
 
 			if (platW > 0) {
 				final float chipH = 9 * k;
@@ -263,6 +288,32 @@ final class BoardBuilder {
 		final int length = text.length();
 		final int visibleChars = Math.max(1, (int) (length * availUnits / width));
 		return Math.max(1, length - visibleChars);
+	}
+
+	/**
+	 * Arrivals board: every train that has not left yet, except those starting here (they do not arrive), in arrival
+	 * order. "From" is MTR's first stop of the route.
+	 */
+	private static List<ServiceSnapshot> arrivals(StationSnapshot snapshot, String plainStation, long now) {
+		final List<ServiceSnapshot> out = new ArrayList<>(snapshot.services().size());
+		for (final ServiceSnapshot s : snapshot.services()) {
+			if (s.departureMillis() >= now && !(s.origin().equals(plainStation) && !plainStation.isEmpty())) {
+				out.add(s);
+			}
+		}
+		return out;
+	}
+
+	private static String stationName(StationSnapshot snapshot) {
+		return snapshot.station() == null ? "" : snapshot.station().displayName();
+	}
+
+	/** Station summary (1.4): "N platforms", and "This is platform X" when a platform is beside the board. */
+	private static void summary(BoardModel m, TextRenderer tr, StationSnapshot snapshot, long nearestPlatformId, float y, float vw, DisplayStyle style, long now) {
+		final String text = BoardSummary.text(snapshot.platforms().size(), BoardSummary.platformName(snapshot.platforms(), nearestPlatformId));
+		if (!text.isEmpty()) {
+			fit(m, tr, text, MARGIN, y + (SUMMARY_H - 8 * 0.7F) / 2, 0.7F, vw - 2 * MARGIN, style.dim(), now);
+		}
 	}
 
 	private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, long nearestPlatformId, long now) {

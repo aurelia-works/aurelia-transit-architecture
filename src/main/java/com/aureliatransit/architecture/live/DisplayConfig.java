@@ -14,9 +14,11 @@ import net.minecraft.network.PacketByteBuf;
  * @param message     local service message of this display (1.2; empty = none), shown by the live-information layer
  * @param callingTimes show calling-point times where MTR supplies them (1.4, A14; off by default: it widens the arrivals
  *                     request by the calling points' platforms)
+ * @param arrivals     concourse boards: list arrivals ("from ...") instead of departures (1.4)
+ * @param summary      concourse boards: station summary line (platform count, the platform beside the board) (1.4)
  */
 public record DisplayConfig(StationAssociation association, DisplayStyle style, int rows, boolean clock, boolean callingAt, int pageSeconds,
-                            BoardAlignment alignment, String message, boolean callingTimes) {
+                            BoardAlignment alignment, String message, boolean callingTimes, boolean arrivals, boolean summary) {
 
 	public static final int MIN_PAGE_SECONDS = 3;
 	public static final int MAX_PAGE_SECONDS = 20;
@@ -34,7 +36,7 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 	/** 1.3 shape: no calling times. */
 	public DisplayConfig(StationAssociation association, DisplayStyle style, int rows, boolean clock, boolean callingAt, int pageSeconds,
 						 BoardAlignment alignment, String message) {
-		this(association, style, rows, clock, callingAt, pageSeconds, alignment, message, false);
+		this(association, style, rows, clock, callingAt, pageSeconds, alignment, message, false, false, false);
 	}
 
 	/**
@@ -53,7 +55,7 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 	 */
 	public DisplayConfig forKind(DisplayKind kind) {
 		final int clamped = kind.clampRows(rows);
-		return clamped == rows ? this : new DisplayConfig(association, style, clamped, clock, callingAt, pageSeconds, alignment, message, callingTimes);
+		return clamped == rows ? this : new DisplayConfig(association, style, clamped, clock, callingAt, pageSeconds, alignment, message, callingTimes, arrivals, summary);
 	}
 
 	public void writeNbt(NbtCompound nbt) {
@@ -66,6 +68,8 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		nbt.putInt("Align", alignment.ordinal());
 		nbt.putString("Message", message);
 		nbt.putBoolean("CallingTimes", callingTimes);
+		nbt.putBoolean("Arrivals", arrivals);
+		nbt.putBoolean("Summary", summary);
 	}
 
 	public static DisplayConfig readNbt(NbtCompound nbt, DisplayKind kind) {
@@ -74,7 +78,7 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		}
 		return new DisplayConfig(StationAssociation.readNbt(nbt, "Association"), DisplayStyle.byOrdinal(nbt.getInt("Style")), nbt.getInt("Rows"),
 				nbt.getBoolean("Clock"), nbt.getBoolean("CallingAt"), nbt.getInt("PageSeconds"), BoardAlignment.byOrdinal(nbt.getInt("Align")),
-				nbt.getString("Message"), nbt.getBoolean("CallingTimes")).forKind(kind);
+				nbt.getString("Message"), nbt.getBoolean("CallingTimes"), nbt.getBoolean("Arrivals"), nbt.getBoolean("Summary")).forKind(kind);
 	}
 
 	public void write(PacketByteBuf buf) {
@@ -87,6 +91,8 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		buf.writeVarInt(alignment.ordinal());
 		buf.writeString(message, MAX_MESSAGE * 4);
 		buf.writeBoolean(callingTimes);
+		buf.writeBoolean(arrivals);
+		buf.writeBoolean(summary);
 	}
 
 	/**
@@ -100,6 +106,6 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		final boolean callingAt = buf.readBoolean();
 		final int pageSeconds = buf.readVarInt();
 		return new DisplayConfig(association, style, Math.max(0, Math.min(64, rows)), clock, callingAt, pageSeconds, BoardAlignment.byOrdinal(buf.readVarInt()),
-				buf.readString(MAX_MESSAGE * 4), buf.readBoolean());
+				buf.readString(MAX_MESSAGE * 4), buf.readBoolean(), buf.readBoolean(), buf.readBoolean());
 	}
 }
