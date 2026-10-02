@@ -14,7 +14,9 @@ public enum SignStyle {
 	/** Platform number plate: a large number with an optional caption. */
 	PLATFORM_NUMBER(false, false, true, false, false, true, 0xFFFFFFFF, 0xFFC9D6E6),
 	/** Bus stop plate: stop name and route badges. */
-	BUS_STOP(false, false, false, false, true, false, 0xFF1E2A33, 0xFF46535E);
+	BUS_STOP(false, false, false, false, true, false, 0xFF1E2A33, 0xFF46535E),
+	/** Lift status panel (1.4, A8): lift name and the levels it serves; the status bar comes from the block state. */
+	LIFT(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFC9D6E6);
 
 	public static final int MAX_ROUTES = 4;
 

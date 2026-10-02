@@ -3,7 +3,9 @@ package com.aureliatransit.architecture.client;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
+import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
+import com.aureliatransit.architecture.text.LiftPanelLayout;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.SignData;
 import com.aureliatransit.architecture.text.SignStyle;
@@ -41,6 +43,7 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 		SignData data;
 		int rowLength;
 		String primary;
+		int status = -1;
 		PanelLayout.Panel panel = PanelLayout.Panel.EMPTY;
 		long nextCheck;
 		int rowLengthChecked = -1;
@@ -76,13 +79,18 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 			cached.nextCheck = time + RECHECK_TICKS;
 			final int rowLength = layout.joins() ? rowLength(world, entity.getPos(), state, block) : 1;
 			final String primary = resolvePrimary(data, layout.style(), entity.getPos());
-			if (cached.data != data || cached.rowLengthChecked != rowLength || !primary.equals(cached.primary)) {
+			final int status = state.getBlock() instanceof LiftStatusPanelBlock ? state.get(LiftStatusPanelBlock.STATUS).ordinal() : -1;
+			if (cached.data != data || cached.rowLengthChecked != rowLength || !primary.equals(cached.primary) || cached.status != status) {
 				cached.data = data;
 				cached.rowLengthChecked = rowLength;
 				cached.rowLength = rowLength;
 				cached.primary = primary;
+				cached.status = status;
 				final float width = layout.joins() ? rowLength * 16 - JOIN_MARGIN : layout.width();
-				cached.panel = PanelLayout.sign(data, primary, layout.style(), width, layout.height(), s -> textRenderer.getWidth(s));
+				cached.panel = status >= 0
+						? LiftPanelLayout.layout(primary, data.secondary(), LiftPanelLayout.status(status), width, layout.height(), layout.style().textColor(),
+						layout.style().secondaryColor(), s -> textRenderer.getWidth(s))
+						: PanelLayout.sign(data, primary, layout.style(), width, layout.height(), s -> textRenderer.getWidth(s));
 			}
 		}
 		if (cached.panel.isEmpty()) {

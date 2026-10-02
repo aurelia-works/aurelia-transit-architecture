@@ -1,0 +1,184 @@
+{
+  "variants": {
+    "facing=north,left=false,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service"
+    },
+    "facing=north,left=false,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service"
+    },
+    "facing=north,left=false,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance"
+    },
+    "facing=north,left=false,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service"
+    },
+    "facing=north,left=false,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service"
+    },
+    "facing=north,left=false,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance"
+    },
+    "facing=north,left=true,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service"
+    },
+    "facing=north,left=true,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service"
+    },
+    "facing=north,left=true,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance"
+    },
+    "facing=north,left=true,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service"
+    },
+    "facing=north,left=true,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service"
+    },
+    "facing=north,left=true,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance"
+    },
+    "facing=east,left=false,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 90
+    },
+    "facing=east,left=false,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 90
+    },
+    "facing=east,left=false,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 90
+    },
+    "facing=east,left=false,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 90
+    },
+    "facing=east,left=false,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 90
+    },
+    "facing=east,left=false,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 90
+    },
+    "facing=east,left=true,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 90
+    },
+    "facing=east,left=true,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 90
+    },
+    "facing=east,left=true,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 90
+    },
+    "facing=east,left=true,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 90
+    },
+    "facing=east,left=true,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 90
+    },
+    "facing=east,left=true,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 90
+    },
+    "facing=south,left=false,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 180
+    },
+    "facing=south,left=false,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 180
+    },
+    "facing=south,left=false,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 180
+    },
+    "facing=south,left=false,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 180
+    },
+    "facing=south,left=false,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 180
+    },
+    "facing=south,left=false,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 180
+    },
+    "facing=south,left=true,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 180
+    },
+    "facing=south,left=true,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 180
+    },
+    "facing=south,left=true,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 180
+    },
+    "facing=south,left=true,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 180
+    },
+    "facing=south,left=true,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 180
+    },
+    "facing=south,left=true,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 180
+    },
+    "facing=west,left=false,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 270
+    },
+    "facing=west,left=false,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 270
+    },
+    "facing=west,left=false,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 270
+    },
+    "facing=west,left=false,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 270
+    },
+    "facing=west,left=false,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 270
+    },
+    "facing=west,left=false,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 270
+    },
+    "facing=west,left=true,right=false,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 270
+    },
+    "facing=west,left=true,right=false,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 270
+    },
+    "facing=west,left=true,right=false,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 270
+    },
+    "facing=west,left=true,right=true,status=in_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_in_service",
+      "y": 270
+    },
+    "facing=west,left=true,right=true,status=out_of_service": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_out_of_service",
+      "y": 270
+    },
+    "facing=west,left=true,right=true,status=maintenance": {
+      "model": "aurelia_transit_architecture:block/lift_status_panel_maintenance",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "variants": {
+    "facing=north,kind=solid": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid"
+    },
+    "facing=east,kind=solid": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid",
+      "y": 90
+    },
+    "facing=south,kind=solid": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid",
+      "y": 180
+    },
+    "facing=west,kind=solid": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid",
+      "y": 270
+    },
+    "facing=north,kind=solid_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_half"
+    },
+    "facing=east,kind=solid_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_half",
+      "y": 90
+    },
+    "facing=south,kind=solid_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_half",
+      "y": 180
+    },
+    "facing=west,kind=solid_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_half",
+      "y": 270
+    },
+    "facing=north,kind=glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass"
+    },
+    "facing=east,kind=glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass",
+      "y": 90
+    },
+    "facing=south,kind=glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass",
+      "y": 180
+    },
+    "facing=west,kind=glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass",
+      "y": 270
+    },
+    "facing=north,kind=glass_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass_half"
+    },
+    "facing=east,kind=glass_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass_half",
+      "y": 90
+    },
+    "facing=south,kind=glass_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass_half",
+      "y": 180
+    },
+    "facing=west,kind=glass_half": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_glass_half",
+      "y": 270
+    },
+    "facing=north,kind=solid_glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_glass"
+    },
+    "facing=east,kind=solid_glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_glass",
+      "y": 90
+    },
+    "facing=south,kind=solid_glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_glass",
+      "y": 180
+    },
+    "facing=west,kind=solid_glass": {
+      "model": "aurelia_transit_architecture:block/noise_barrier_solid_glass",
+      "y": 270
+    }
+  }
+}

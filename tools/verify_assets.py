@@ -47,6 +47,11 @@ EXPECTED_PROPERTIES = {
     "StationStairBlock": {"facing", "half", "shape"},
     "StairEnclosureBlock": {"facing", "kind"},
     "PlatformWindscreenBlock": {"facing", "kind"},
+    "NoiseBarrierBlock": {"facing", "kind"},
+    "FareGateBlock": {"facing", "kind"},
+    "CardReaderBlock": {"facing", "kind"},
+    "CctvCameraBlock": {"facing", "kind"},
+    "LiftStatusPanelBlock": {"facing", "left", "right", "status"},
     "PlatformFasciaBlock": {"facing", "kind"},
     "StationFenceBlock": {"kind", "north", "east", "south", "west"},
     "UtilityRunBlock": {"axis", "kind"},
@@ -153,7 +158,8 @@ def main():
                     check_model(v["model"], seen_models)
             if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
                        "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
-                       "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock"):
+                       "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock",
+                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

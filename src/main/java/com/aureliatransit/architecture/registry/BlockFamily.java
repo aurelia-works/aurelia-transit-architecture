@@ -14,6 +14,8 @@ public enum BlockFamily {
 	WAYFINDING(Tab.WAYFINDING),
 	PASSENGER_INFO(Tab.PASSENGER_EQUIPMENT),
 	ACCESSIBILITY(Tab.PASSENGER_EQUIPMENT),
+	/** 1.4 station equipment props: fare gates, card readers, booth windows, CCTV (no fare logic). */
+	STATION_EQUIPMENT(Tab.PASSENGER_EQUIPMENT),
 	BUS(Tab.BUS_STREET),
 	STREET(Tab.BUS_STREET);
 

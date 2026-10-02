@@ -173,3 +173,18 @@ Ran 2026-10-01, same dev client and world copy. Screenshots `screenshots/1.4/`. 
 | 4 | Counters, one PIDS with times in view, 60 s. | provider_refresh +64, arrival_requests +32, board_rebuilds +63: one request per 2 s for one platform set, as without times. Pass. |
 
 Not run: shader pass and non-Latin pass (no new display family; suffix text uses the existing text paths).
+
+---
+
+## 1.4 package 3 (A8 lift status panel, A12 noise barriers, A10 props)
+
+Ran 2026-10-01, dev client, scene `ata_test:v14_props` (`tools/release_check/gen_v14.py`). Gates: 225 tests, asset audit OK (252 models), z-fighting 0.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Lift status panels, one per status. | ✅ "Lift A/B/C", levels line, green "In service", red "Out of service", amber "Maintenance" bars (`a8-a10-props.jpg`). The editor's Status cycler was not clicked live: **needs human eye**. |
+| 2 | Lift panel names: Arabic, CJK, Cyrillic (`ata_test:v14_names`). | ✅ All drawn inside the panel, no overflow. Arabic is unshaped, the known Minecraft limit (`a8-lift-panel-non-latin.jpg`). |
+| 3 | Noise barriers, every kind 3 wide, plus 3-high solid and glass stacks. | ✅ Rendered, stacks continuous (`a12-noise-barriers.jpg`). Looks: **needs human eye**. |
+| 4 | Fare gate bank (end, gate, gate, wide, end), card readers, booth window ×2, CCTV wall/pendant/dome. | ✅ All placed and drawn. Walking through a gate passage was not tried live (cabinet-only collision is set in code). Looks: **needs human eye**. |
+| 5 | Light shader pack. | ➖ **Skipped:** the dev client crashes when Iris loads any shader pack (`ClassNotFoundException: org.anarres.cpp.PreprocessorListener`, Iris's preprocessor library missing from the dev run). The 1.3 shader pass used the Prism instance, which this run does not touch. |
+| 6 | Stress counters. | ➖ Not applicable: none of these blocks has a ticking or live part (the lift panel is a static text sign, the rest are models). |

@@ -1,0 +1,149 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/cam_body",
+    "body": "aurelia_transit_architecture:block/cam_body",
+    "lens": "aurelia_transit_architecture:block/cam_lens",
+    "bracket": "aurelia_transit_architecture:block/steel_dark",
+    "dome": "aurelia_transit_architecture:block/cam_dome"
+  },
+  "elements": [
+    {
+      "from": [
+        7,
+        8,
+        12
+      ],
+      "to": [
+        9,
+        10,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            4
+          ],
+          "texture": "#bracket"
+        },
+        "up": {
+          "uv": [
+            7,
+            12,
+            9,
+            16.0
+          ],
+          "texture": "#bracket"
+        },
+        "north": {
+          "uv": [
+            7,
+            6,
+            9,
+            8
+          ],
+          "texture": "#bracket"
+        },
+        "south": {
+          "uv": [
+            7,
+            6,
+            9,
+            8
+          ],
+          "texture": "#bracket",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            12,
+            6,
+            16.0,
+            8
+          ],
+          "texture": "#bracket"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            6,
+            4,
+            8
+          ],
+          "texture": "#bracket"
+        }
+      }
+    },
+    {
+      "from": [
+        5.5,
+        9,
+        4
+      ],
+      "to": [
+        10.5,
+        13,
+        13
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5.5,
+            3,
+            10.5,
+            12
+          ],
+          "texture": "#body"
+        },
+        "up": {
+          "uv": [
+            5.5,
+            4,
+            10.5,
+            13
+          ],
+          "texture": "#body"
+        },
+        "north": {
+          "uv": [
+            0,
+            1.6,
+            16,
+            14.4
+          ],
+          "texture": "#lens"
+        },
+        "south": {
+          "uv": [
+            5.5,
+            3,
+            10.5,
+            7
+          ],
+          "texture": "#body"
+        },
+        "west": {
+          "uv": [
+            4,
+            3,
+            13,
+            7
+          ],
+          "texture": "#body"
+        },
+        "east": {
+          "uv": [
+            3,
+            3,
+            12,
+            7
+          ],
+          "texture": "#body"
+        }
+      }
+    }
+  ]
+}

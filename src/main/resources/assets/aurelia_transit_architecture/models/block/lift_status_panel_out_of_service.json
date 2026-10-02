@@ -1,0 +1,139 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel_dark",
+    "shell": "aurelia_transit_architecture:block/steel_dark",
+    "face": "aurelia_transit_architecture:block/lift_face",
+    "lamp": "aurelia_transit_architecture:block/lift_lamp_out_of_service"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        3,
+        13.5
+      ],
+      "to": [
+        14,
+        14,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            2.5
+          ],
+          "texture": "#shell"
+        },
+        "up": {
+          "uv": [
+            2,
+            13.5,
+            14,
+            16.0
+          ],
+          "texture": "#shell"
+        },
+        "north": {
+          "uv": [
+            2,
+            2,
+            14,
+            13
+          ],
+          "texture": "#face"
+        },
+        "south": {
+          "uv": [
+            2,
+            2,
+            14,
+            13
+          ],
+          "texture": "#shell",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            13.5,
+            2,
+            16.0,
+            13
+          ],
+          "texture": "#shell"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            2,
+            2.5,
+            13
+          ],
+          "texture": "#shell"
+        }
+      }
+    },
+    {
+      "from": [
+        11.5,
+        12,
+        13
+      ],
+      "to": [
+        13,
+        13.5,
+        13.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#lamp"
+        },
+        "up": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#lamp"
+        },
+        "north": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#lamp"
+        },
+        "west": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#lamp"
+        },
+        "east": {
+          "uv": [
+            5,
+            5,
+            11,
+            11
+          ],
+          "texture": "#lamp"
+        }
+      }
+    }
+  ]
+}

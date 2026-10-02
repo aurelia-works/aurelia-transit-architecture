@@ -2,7 +2,15 @@ package com.aureliatransit.architecture.registry;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.AxisShapedBlock;
+import com.aureliatransit.architecture.block.FacingShapedBlock;
+import com.aureliatransit.architecture.block.Placement;
+import com.aureliatransit.architecture.block.TextLayout;
+import com.aureliatransit.architecture.block.elevated.CardReaderBlock;
+import com.aureliatransit.architecture.block.elevated.CctvCameraBlock;
+import com.aureliatransit.architecture.block.elevated.FareGateBlock;
 import com.aureliatransit.architecture.block.elevated.HandrailBlock;
+import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
+import com.aureliatransit.architecture.block.elevated.NoiseBarrierBlock;
 import com.aureliatransit.architecture.block.elevated.PlatformFasciaBlock;
 import com.aureliatransit.architecture.block.elevated.PlatformWindscreenBlock;
 import com.aureliatransit.architecture.block.elevated.StairEnclosureBlock;
@@ -14,6 +22,7 @@ import com.aureliatransit.architecture.block.elevated.ViaductBeamBlock;
 import com.aureliatransit.architecture.block.elevated.ViaductBraceBlock;
 import com.aureliatransit.architecture.block.elevated.ViaductColumnBlock;
 import net.minecraft.block.Block;
+import com.aureliatransit.architecture.text.SignStyle;
 import net.minecraft.block.MapColor;
 
 import static com.aureliatransit.architecture.util.Shapes.box;
@@ -64,6 +73,23 @@ public final class ElevatedBlocks {
 			new HandrailBlock(ModBlocks.metal()), TIP_STYLE, TIP_JOINS_RAIL);
 	public static final Block TACTILE_JUNCTION = ModBlocks.register("tactile_junction", BlockFamily.ACCESSIBILITY, RenderKind.SOLID,
 			new TactileJunctionBlock(ModBlocks.paving(MapColor.YELLOW)), TIP_STYLE);
+
+	// ---- 1.4: noise barriers (A12), station equipment props (A10), lift status panel (A8) -------------------------
+
+	public static final Block NOISE_BARRIER = ModBlocks.register("noise_barrier", BlockFamily.ELEVATED, RenderKind.TRANSLUCENT,
+			new NoiseBarrierBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL)), TIP_STYLE, TIP + "noise_barrier");
+	public static final Block FARE_GATE = ModBlocks.register("fare_gate", BlockFamily.STATION_EQUIPMENT, RenderKind.TRANSLUCENT,
+			new FareGateBlock(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "prop_only");
+	public static final Block CARD_READER = ModBlocks.register("card_reader", BlockFamily.STATION_EQUIPMENT, RenderKind.CUTOUT,
+			new CardReaderBlock(ModBlocks.metal().nonOpaque().luminance(state -> 4)), TIP_STYLE, TIP + "prop_only");
+	public static final Block BOOTH_WINDOW = ModBlocks.register("booth_window", BlockFamily.STATION_EQUIPMENT, RenderKind.TRANSLUCENT,
+			new FacingShapedBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL), Placement.TOWARD_PLAYER,
+					union(box(0, 0, 12, 16, 16, 16), box(0, 6, 8, 16, 7, 12))), TIP + "prop_only");
+	public static final Block CCTV_CAMERA = ModBlocks.register("cctv_camera", BlockFamily.STATION_EQUIPMENT, RenderKind.CUTOUT,
+			new CctvCameraBlock(ModBlocks.metal().nonOpaque().noCollision()), TIP_STYLE, TIP + "prop_only");
+	public static final Block LIFT_STATUS_PANEL = ModBlocks.register("lift_status_panel", BlockFamily.ACCESSIBILITY, RenderKind.CUTOUT,
+			new LiftStatusPanelBlock(ModBlocks.metal().luminance(state -> 6), new TextLayout(8.5F, 11, 12, 13.4F, -1, false, SignStyle.LIFT),
+					box(2, 3, 13.5, 14, 14, 16)), TIP + "lift_status");
 
 	private ElevatedBlocks() {
 	}

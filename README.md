@@ -27,7 +27,7 @@ Forge, NeoForge and other Minecraft versions are **not supported**. Additional v
 
 Install the mod on both the server and the clients.
 
-## Feature families (83 blocks)
+## Feature families (89 blocks)
 
 | Family | Pieces |
 |---|---|
@@ -37,10 +37,17 @@ Install the mod on both the server and the clients.
 | **Furniture** (6) | Perforated steel bench, timber slat bench, waste bin, bollard, platform lamp, information pillar |
 | **Architecture** (17) | Square and round steel columns, structural beam, branching roof support, framed glass wall, glass panel, glass barrier, flat canopy, canopy edge, sloped canopy (lower and upper), wave canopy rise, crest and flattening, canopy corner cap, canopy skylight, canopy light panel |
 | **Catenary** (4) | Catenary mast, cantilever, gantry beam, insulator (decorative) |
-| **Elevated** (10) | Viaduct column (heavy/narrow, steel/concrete), viaduct beam (crossbeam, girder, stringer, platform support; steel or concrete), brace (diagonal or canopy knee), station stair, stair enclosure panel (clad, windowed, glazed), platform wind screen (lower, upper), platform fascia (plain, panelled, ribbed), station fence (platform, trackside), utility run (cable tray, conduit), under-deck light |
+| **Elevated** (11) | Noise barrier (solid, glass, solid + glass; full or half height), viaduct column (heavy/narrow, steel/concrete), viaduct beam (crossbeam, girder, stringer, platform support; steel or concrete), brace (diagonal or canopy knee), station stair, stair enclosure panel (clad, windowed, glazed), platform wind screen (lower, upper), platform fascia (plain, panelled, ribbed), station fence (platform, trackside), utility run (cable tray, conduit), under-deck light |
 | **Wayfinding** (6) | Entrance pylon (two blocks tall), wall and hanging wayfinding signs (join side by side), exit sign, street / landmark / connection blade, station information board (trains this side, platform, service changes, transfers, exits) |
-| **Accessibility** (6) | Pictogram sign (accessible route, lift, stairs, help point, exit and more from one block), tactile guidance paving, tactile junction (turn, tee, crossing), help point, boarding marker (door / accessible / wait / ramp / assistance), handrail (handrail, glass balustrade, ramp edge rail) |
+| **Accessibility** (7) | Lift status panel (in service / out of service / maintenance, set by hand), pictogram sign (accessible route, lift, stairs, help point, exit and more from one block), tactile guidance paving, tactile junction (turn, tee, crossing), help point, boarding marker (door / accessible / wait / ramp / assistance), handrail (handrail, glass balustrade, ramp edge rail) |
+| **Station equipment** (4) | Fare gate (gate, wide, end), card reader (post, wall), booth window, CCTV camera (wall, pendant, dome). Decorative: no fare logic |
 | **Bus** (8) | Bus stop sign, timetable case, shelter glass wall, shelter roof, shelter seat, boarding curb (full height and low), low-refresh e-paper bus arrival board |
+
+### What 1.4 adds (in progress)
+
+- **Station suffixes** (`/ata_suffix`): "Aurelia Airport" on chosen contexts while MTR keeps "Aurelia".
+- **Per-exit settings** on the station information board's Exits view; **calling-point times** on PIDS/CIS where MTR reports them.
+- **Lift status panel, noise barriers, station equipment props.** See [CHANGELOG.md](CHANGELOG.md).
 
 ### What 1.3 adds (Urban Infrastructure)
 

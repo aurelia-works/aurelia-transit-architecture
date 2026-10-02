@@ -1,0 +1,49 @@
+{
+  "variants": {
+    "facing=north,kind=wall": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_wall"
+    },
+    "facing=east,kind=wall": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_wall",
+      "y": 90
+    },
+    "facing=south,kind=wall": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_wall",
+      "y": 180
+    },
+    "facing=west,kind=wall": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_wall",
+      "y": 270
+    },
+    "facing=north,kind=pendant": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_pendant"
+    },
+    "facing=east,kind=pendant": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_pendant",
+      "y": 90
+    },
+    "facing=south,kind=pendant": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_pendant",
+      "y": 180
+    },
+    "facing=west,kind=pendant": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_pendant",
+      "y": 270
+    },
+    "facing=north,kind=dome": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_dome"
+    },
+    "facing=east,kind=dome": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_dome",
+      "y": 90
+    },
+    "facing=south,kind=dome": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_dome",
+      "y": 180
+    },
+    "facing=west,kind=dome": {
+      "model": "aurelia_transit_architecture:block/cctv_camera_dome",
+      "y": 270
+    }
+  }
+}

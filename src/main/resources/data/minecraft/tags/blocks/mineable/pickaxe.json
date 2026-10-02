@@ -83,6 +83,12 @@
     "aurelia_transit_architecture:deck_light",
     "aurelia_transit_architecture:handrail",
     "aurelia_transit_architecture:tactile_junction",
-    "aurelia_transit_architecture:platform_edge_curve"
+    "aurelia_transit_architecture:platform_edge_curve",
+    "aurelia_transit_architecture:noise_barrier",
+    "aurelia_transit_architecture:fare_gate",
+    "aurelia_transit_architecture:card_reader",
+    "aurelia_transit_architecture:booth_window",
+    "aurelia_transit_architecture:cctv_camera",
+    "aurelia_transit_architecture:lift_status_panel"
   ]
 }
