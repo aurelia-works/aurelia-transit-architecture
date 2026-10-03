@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.4.0 (unreleased, branch `release/1.3.1`)
+## 1.4.0
 
 - **Station suffixes (A5):** `/ata_suffix` adds "Station", "Airport", "Port", "Terminal" or custom text to an MTR station's name, per context (signs, displays, terminals, announcements). MTR's own name is unchanged.
 - **Per-exit settings (A3):** the station information board's Exits view sets each exit's text, arrow and visibility independently, and can add manual exits.
