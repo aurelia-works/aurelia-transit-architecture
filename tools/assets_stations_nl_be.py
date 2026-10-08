@@ -6,6 +6,7 @@ generated from fixed seeds. Models stay at six cuboids or fewer.
 """
 import math
 
+import assets_glass as glass_pane
 import generate_assets as g
 
 MOD = g.MOD
@@ -117,6 +118,22 @@ def textures():
             put(img, 8, y, g.shade(get(img, 8, y), -9))
     t[P + "wave_top"] = wave_top
     t[P + "wave_under"] = wave_under
+    # the same roof sheet for the panel and edge, whose crest runs north-south: light follows the slope along x, so the rising flank
+    # is lit, the falling flank in shade, and crest and trough stay neutral; the shading wraps, so a row of panels is seamless
+    wave_top_x = g.noisy(WHITE_STEEL, 2, P + "wave_top_x")
+    wave_under_x = g.noisy(WHITE_STEEL, 2, P + "wave_under_x")
+    for x in range(16):
+        slope = math.cos(2 * math.pi * (x - 4 + 0.5) / 16)
+        for y in range(16):
+            put(wave_top_x, x, y, g.shade(get(wave_top_x, x, y), 10 * slope + (4 if x in (7, 8) else 0)))
+            put(wave_under_x, x, y, g.shade(get(wave_under_x, x, y), -8 + 3 * slope))
+    for y in range(16):  # standing seam every 8 px along z
+        for img in (wave_top_x, wave_under_x):
+            if y % 8 == 0:
+                for x in range(16):
+                    put(img, x, y, g.shade(get(img, x, y), -9))
+    t[P + "wave_top_x"] = wave_top_x
+    t[P + "wave_under_x"] = wave_under_x
 
     white = g.noisy(WHITE_STEEL, 2, P + "white_steel")
     for x in range(16):
@@ -124,13 +141,15 @@ def textures():
             put(white, x, y, g.shade(get(white, x, y), 7 - x * 1.0))
     t[P + "white_steel"] = white
 
-    facade = g.glass(P + "hall_glass", tint=(176, 206, 214), alpha=58)
-    for i in range(16):
-        put(facade, i, 0, (232, 234, 232), 255)
-        put(facade, i, 15, (216, 218, 216), 255)
-        put(facade, 0, i, (232, 234, 232), 255)
-        put(facade, 15, i, (216, 218, 216), 255)
-        put(facade, i, 8, (226, 228, 226), 255)
+    # large clear low-iron pane: faint cool tint, a soft reflection streak that wraps across neighbouring blocks, no rim (the
+    # mullions are model elements on the block edges, so a wall of facades reads as one glass hall front)
+    facade = glass_pane.pane(P + "hall_glass", (196, 220, 228), 30, (196, 220, 228), 30, streak=9, noise=1, ring=False)
+    px = facade.load()
+    for d in (11, 12):  # one crisp specular line along the same diagonal
+        for y in range(16):
+            x = (d - y) % 16
+            px[x, y] = (232, 244, 248, 74)
+    t[P + "hall_mullion"] = mullion()
     t[P + "hall_glass"] = facade
 
     tile = g.noisy((178, 180, 180), 3, P + "floor_tile")
@@ -445,23 +464,32 @@ def marble_floor():
     return img
 
 
+def mullion():
+    """Slim light-grey anodised steel: faint brushing and a lit top-left, shaded bottom-right."""
+    img = g.noisy((206, 209, 211), 2, P + "hall_mullion")
+    for y in range(16):
+        for x in range(16):
+            put(img, x, y, g.shade(get(img, x, y), 5 - x * 0.7 + (2 if y % 4 == 0 else 0)))
+    return img
+
+
 def gilt_trim():
-    """Rows 2..9 are the visible face: moulding lines, a leaf scroll and a bead-and-reel band."""
-    img = gilt(P + "gilt_trim")
-    for x in range(16):
-        put(img, x, 2, g.shade(GOLD, 26))
-        put(img, x, 3, g.shade(GOLD, -26))
-        put(img, x, 8, g.shade(GOLD, -26))
-        put(img, x, 9, g.shade(GOLD, -36))
-    for x in range(0, 16, 4):
-        put(img, x, 5, g.shade(GOLD, 24))
-        put(img, x + 1, 4, g.shade(GOLD, 24))
-        put(img, x + 2, 4, g.shade(GOLD, -22))
-        put(img, x + 3, 5, g.shade(GOLD, -22))
-        put(img, x + 1, 6, g.shade(GOLD, 44))
-        put(img, x + 2, 6, g.shade(GOLD, 8))
-        put(img, x + 1, 7, g.shade(GOLD, -8))
-        put(img, x + 2, 7, g.shade(GOLD, -42))
+    """Gilded moulding sheet. Rows follow the model: 2-3 cornice lip front (lit upper half, shadowed lower), 5-6 faces that look up
+    (brightest, the lip top and bead tops catch the light), 8-9 bead front (highlight over deep shadow), 13 base fillet front.
+    Metal reads from hard highlight and shadow lines with a few glints, not noise; everything repeats every 8 px so it is seamless."""
+    img = g.new()
+    deep, dark, mid, bright, spec = (96, 66, 18), (150, 106, 28), (210, 168, 66), (242, 208, 108), (255, 240, 176)
+    rows = {2: (bright, spec), 3: (dark, deep), 5: (bright, spec), 6: (mid, bright), 8: (spec, bright), 9: (dark, deep), 13: (mid, dark)}
+    for y in range(16):
+        base, glint = rows.get(y, (mid, bright))
+        for x in range(16):
+            tone = glint if x % 8 in (2, 3) and y in (2, 5, 8) else base
+            if y in (4, 7, 10, 12, 14):
+                tone = dark if y in (4, 7, 10) else mid
+            put(img, x, y, tone)
+    for x in range(16):  # soft gradient along the length of the mouldings, so the glints sit on a lit area
+        for y in range(16):
+            put(img, x, y, g.shade(get(img, x, y), 6 * math.cos(2 * math.pi * (x - 2) / 8)))
     return img
 
 
@@ -481,14 +509,24 @@ def stepped(profile, texs, step=4, thickness=2):
     return g.model(texs, els)
 
 
+T22 = math.tan(math.radians(22.5))
+
+
 def blocks():
     b = {}
     wave = {"particle": P + "white_steel", "top": P + "wave_top", "under": P + "wave_under", "side": P + "white_steel"}
-    b["utrecht_wave_roof_panel"] = ("simple", {"": g.model(wave, [g.el([0, 0, 0], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under"})])})
-    b["utrecht_wave_roof_rise"] = ("facing", {"": stepped(g.WAVE_RISE, wave)})
-    b["utrecht_wave_roof_edge"] = ("facing", {"": g.model(wave, [
-        g.el([0, 0, 2], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under", "north": None}),
-        g.el([0, 0, 0], [16, 4, 2], "#side", faces={"up": "#top", "down": "#under"}),
+    # panel: a soft crest across the block (crest lines run north-south) from five shallow chords, level at both x edges so a row
+    # of panels continues the wave (trough at the edges, crest in the middle)
+    wave_x = {**wave, "top": P + "wave_top_x", "under": P + "wave_under_x"}
+    crest = [(0, 0), (1.5, 0), (6.5, 5 * T22), (9.5, 5 * T22), (14.5, 0), (16, 0)]
+    b["utrecht_wave_roof_panel"] = ("simple", {"": g.model(wave_x, g.ribbon(crest, 2, along="x", faces={"up": "#top", "down": "#under"}))})
+    # rise: flat, then 22.5 degrees, then 45 degrees, easing up 8 px over the block like the stepped collision shape
+    tail = 8 - 8 * T22  # the 45 degree run that makes up the rest of the 8 px rise
+    b["utrecht_wave_roof_rise"] = ("facing", {"": g.model(wave, g.ribbon(
+        [(0, 0), (8 - tail, 0), (16 - tail, 8 * T22), (16, 8)], 2, faces={"up": "#top", "down": "#under"}))})
+    b["utrecht_wave_roof_edge"] = ("facing", {"": g.model(wave_x, g.ribbon(
+        crest, 2, along="x", span=(2, 16), faces={"up": "#top", "down": "#under", "north": None}) + [
+        g.el([0, 0, 0], [16, 4.5, 2], "#side"),  # white fascia closing the end of the wave
     ])})
     col = {"particle": P + "white_steel", "side": P + "white_steel"}
     b["utrecht_tree_column_white"] = ("simple", {"": g.model(col, [
@@ -497,11 +535,15 @@ def blocks():
         g.el([3.5, 11, 3.5], [12.5, 14, 12.5], "#side"),
         g.el([1, 14, 1], [15, 16, 15], "#side"),
     ])})
-    b["utrecht_hall_glass_facade"] = ("facing", {"": g.model({"particle": P + "white_steel", "glass": P + "hall_glass", "frame": P + "white_steel"}, [
+    # structural glass: one large clear pane (z 7.5-8.5) and slim light-grey mullions on the block edges only, 0.5 px each, so
+    # two neighbours make a 1 px mullion between panes and nothing crosses the glass
+    hall = {"particle": P + "hall_mullion", "glass": P + "hall_glass", "frame": P + "hall_mullion"}
+    b["utrecht_hall_glass_facade"] = ("facing", {"": g.model(hall, [
         g.el([0, 0, 7.5], [16, 16, 8.5], "#glass", faces={"up": None, "down": None, "east": None, "west": None}),
-        g.el([0, 0, 6.5], [1, 16, 9.5], "#frame"),
-        g.el([15, 0, 6.5], [16, 16, 9.5], "#frame"),
-        g.el([1, 14.5, 6.5], [15, 16, 9.5], "#frame", faces={"east": None, "west": None}),
+        g.el([0, 0, 6.75], [0.5, 16, 9.25], "#frame"),
+        g.el([15.5, 0, 6.75], [16, 16, 9.25], "#frame"),
+        g.el([0.5, 0, 6.75], [15.5, 0.5, 9.25], "#frame", faces={"east": None, "west": None}),
+        g.el([0.5, 15.5, 6.75], [15.5, 16, 9.25], "#frame", faces={"east": None, "west": None}),
     ])})
     b["utrecht_light_grey_floor_tile"] = ("simple", {"": cube_all(P + "floor_tile")})
 
@@ -533,7 +575,8 @@ def blocks():
 
     sp = {"particle": P + "stainless", "side": P + "stainless"}
     b["rotterdam_stainless_roof_panel"] = ("simple", {"": g.model(sp, [g.el([0, 0, 0], [16, 2, 16], "#side")])})
-    b["rotterdam_stainless_roof_slope"] = ("facing", {"": stepped(g.SLOPE_LOWER, {**sp, "top": P + "stainless", "under": P + "stainless"})})
+    # slope: one 22.5 degree stainless plate (2.7 px thick) rising 6.6 px over the block; the stepped collision shape reaches 8
+    b["rotterdam_stainless_roof_slope"] = ("facing", {"": g.model(sp, g.ribbon([(0, 0), (16, 16 * T22)], 2.7))})
     b["rotterdam_timber_slat_ceiling"] = ("simple", {"": cube_all(P + "slats")})
     b["rotterdam_black_stone_floor"] = ("simple", {"": cube_all(P + "black_stone")})
 
@@ -541,10 +584,14 @@ def blocks():
     b["antwerp_polished_marble_wall"] = ("simple", {"": cube_all(P + "marble_wall")})
     b["antwerp_marble_floor_tile"] = ("simple", {"": cube_all(P + "marble_floor")})
     b["antwerp_iron_glass_vault"] = ("facing", {"": vault()})
-    b["antwerp_gilded_ornament_trim"] = ("facing", {"": g.model({"particle": P + "gilt", "side": P + "gilt", "orn": P + "gilt_trim"}, [
-        g.el([0, 4, 13], [16, 12, 16], "#side", faces={"north": ("#orn", [0, 2, 16, 10])}),
-        g.el([0, 12, 12], [16, 14, 16], "#side"),
-        g.el([0, 2, 12], [16, 4, 16], "#side"),
+    # gilded moulding on a limestone band: a cornice lip on top, a bead mid-height and a base fillet, all gilt (4 cuboids)
+    gold = {"particle": P + "gilt", "stone": P + "limestone", "gilt": P + "gilt_trim"}
+    top_lit = ("#gilt", [0, 5, 16, 7])
+    b["antwerp_gilded_ornament_trim"] = ("facing", {"": g.model(gold, [
+        g.el([0, 2, 13], [16, 12, 16], "#stone", faces={"up": None, "down": None}),
+        g.el([0, 12, 12], [16, 14, 16], "#gilt", faces={"up": top_lit, "down": ("#gilt", [0, 3, 16, 4])}),
+        g.el([0, 6, 12.5], [16, 8, 13], "#gilt", faces={"up": top_lit, "down": ("#gilt", [0, 9, 16, 10]), "south": None, "east": None, "west": None}),
+        g.el([0, 2, 12.5], [16, 3.5, 13], "#gilt", faces={"up": top_lit, "south": None, "east": None, "west": None}),
     ])})
 
     sign = {}

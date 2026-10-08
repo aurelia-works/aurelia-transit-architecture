@@ -117,3 +117,13 @@ It runs six steps and prints PASS or FAIL for each, then a one-line verdict. Eve
    Run it by hand with `python3 tools/render_preview.py --tab glass` or `--block frankfurt_hall_truss_arch`. It needs Pillow and reads the Minecraft pictures from the jar Gradle already downloaded.
 
 What this cannot tell you: how it looks with lighting and shaders, sounds, and whether a build feels right to walk through. Those still need a quick look in game.
+
+## In-game screenshot tour
+
+`bash tools/release_check/shoot.sh [--views views.json] [--keep]` flies a spectator camera through the 1.5 scene and captures only the
+Minecraft window (CoreGraphics window id, `screencapture -l`; no Accessibility permission, no keystrokes). It sets `fov:0.0`, `hideGui`
+and hidden chat in `run/client/options.txt` (restored on exit), regenerates the scene, runs `tools/release_check/tour.py` (load tag,
+tick tag with a per-run tag, one function per view, 100 ticks apart, first 200 ticks after joining), launches the client, and waits for
+each view's `ATA_TOUR_VIEW n name` log line before capturing, so shots line up with views. Output: `build/tour/<view>.png`,
+`build/tour/sheet.png`. The tour ends in `tour_end`; the script quits the client and removes the tags and functions
+(`tour.py --clean`). Coordinates come from the layout constants in `gen_v15.py`.

@@ -55,14 +55,14 @@ public final class GlassBlocks {
 	public static final Block FROSTED_GLASS_PANE = ModBlocks.register("frosted_glass_pane", BlockFamily.GLASS, RenderKind.TRANSLUCENT,
 			new ArchGlassPaneBlock(ModBlocks.glass()));
 
-	public static final Block FRITTED_GLASS = ModBlocks.register("fritted_glass", BlockFamily.GLASS, RenderKind.CUTOUT,
+	public static final Block FRITTED_GLASS = ModBlocks.register("fritted_glass", BlockFamily.GLASS, RenderKind.TRANSLUCENT,
 			new ArchGlassBlock(ModBlocks.glass()), TIP + "glass_fritted");
-	public static final Block FRITTED_GLASS_PANE = ModBlocks.register("fritted_glass_pane", BlockFamily.GLASS, RenderKind.CUTOUT,
+	public static final Block FRITTED_GLASS_PANE = ModBlocks.register("fritted_glass_pane", BlockFamily.GLASS, RenderKind.TRANSLUCENT,
 			new ArchGlassPaneBlock(ModBlocks.glass()));
 
-	public static final Block WIRED_GLASS = ModBlocks.register("wired_glass", BlockFamily.GLASS, RenderKind.CUTOUT,
+	public static final Block WIRED_GLASS = ModBlocks.register("wired_glass", BlockFamily.GLASS, RenderKind.TRANSLUCENT,
 			new ArchGlassBlock(ModBlocks.glass()), TIP + "glass_wired");
-	public static final Block WIRED_GLASS_PANE = ModBlocks.register("wired_glass_pane", BlockFamily.GLASS, RenderKind.CUTOUT,
+	public static final Block WIRED_GLASS_PANE = ModBlocks.register("wired_glass_pane", BlockFamily.GLASS, RenderKind.TRANSLUCENT,
 			new ArchGlassPaneBlock(ModBlocks.glass()));
 
 	public static final Block GLASS_BRICK = ModBlocks.register("glass_brick", BlockFamily.GLASS, RenderKind.TRANSLUCENT,

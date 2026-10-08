@@ -4,6 +4,8 @@ and Roma Termini.
 Same extension interface as the other assets_*.py modules. Textures are 16x16 like the rest of the mod. All art is original
 and generic: no operator logos or lettering (the German-style sign only borrows the colours white and black).
 """
+import math
+
 import generate_assets as g
 
 MOD = g.MOD
@@ -403,6 +405,20 @@ def truss_span(tex, paint, rot=None, along_z=False):
     return g.model({"particle": paint, "truss": tex, "paint": paint}, els)
 
 
+def truss_arch(tex, paint):
+    """One curved arch segment as three tilted lattice girders (45, 22.5 and 0 degrees, 6 px deep, 3 px wide) that follow a curve
+    flattening towards +z. Everything stays inside the block; the flat end meets the next segment's flat end or the ridge, the steep
+    end sits on the leg or the segment below."""
+    knee = 9.2 + 6 * math.tan(math.radians(22.5))
+    path = [(0, 4.2), (5, 9.2), (11, knee), (16, knee)]
+    faces = {"east": "#truss", "west": "#truss"}
+    els = g.ribbon(path, 6, span=(6.5, 9.5), tex="#paint", faces=faces, centerline=True)
+    for e in els:  # the whole lattice height shows on the 6 px girder
+        for side in ("east", "west"):
+            e["faces"][side]["uv"][1], e["faces"][side]["uv"][3] = 0, 16
+    return g.model({"particle": paint, "truss": tex, "paint": paint}, els)
+
+
 def truss_leg_model(tex, paint):
     flat = {f: None for f in ("north", "south", "east", "west", "up", "down")}
     chord = lambda x1, x2: g.el([x1, 0, 6.5], [x2, 16, 9.5], "#paint", faces={f: "#paint" for f in flat} | {"north": "#truss", "south": "#truss"})
@@ -510,7 +526,7 @@ def blocks():
     b["frankfurt_sandstone_cornice"] = ("facing", {"": cornice()})
     b["frankfurt_hall_truss"] = ("axis", {"": truss_span("frankfurt_truss", "frankfurt_truss_paint")})
     b["frankfurt_hall_truss_leg"] = ("simple", {"": truss_leg_model("frankfurt_truss_leg", "frankfurt_truss_paint")})
-    b["frankfurt_hall_truss_arch"] = ("facing", {"": truss_span("frankfurt_truss", "frankfurt_truss_paint", rot=("x", 22.5, [8, 8, 8]), along_z=True)})
+    b["frankfurt_hall_truss_arch"] = ("facing", {"": truss_arch("frankfurt_truss", "frankfurt_truss_paint")})
     b["frankfurt_ridge_skylight"] = ("facing", {"": ridge_skylight()})
     b["munich_ribbed_roof_deck"] = ("simple", {"": roof_deck()})
     b["hamburg_hall_truss"] = ("axis", {"": truss_span("hamburg_truss", "hamburg_truss_paint")})

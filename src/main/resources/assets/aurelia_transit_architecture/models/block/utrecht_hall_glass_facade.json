@@ -1,9 +1,9 @@
 {
   "parent": "block/block",
   "textures": {
-    "particle": "aurelia_transit_architecture:block/nlbe_white_steel",
+    "particle": "aurelia_transit_architecture:block/nlbe_hall_mullion",
     "glass": "aurelia_transit_architecture:block/nlbe_hall_glass",
-    "frame": "aurelia_transit_architecture:block/nlbe_white_steel"
+    "frame": "aurelia_transit_architecture:block/nlbe_hall_mullion"
   },
   "elements": [
     {
@@ -42,20 +42,20 @@
       "from": [
         0,
         0,
-        6.5
+        6.75
       ],
       "to": [
-        1,
+        0.5,
         16,
-        9.5
+        9.25
       ],
       "faces": {
         "down": {
           "uv": [
             0.0,
-            6.5,
-            1,
-            9.5
+            6.75,
+            0.5,
+            9.25
           ],
           "texture": "#frame",
           "cullface": "down"
@@ -63,16 +63,16 @@
         "up": {
           "uv": [
             0.0,
-            6.5,
-            1,
-            9.5
+            6.75,
+            0.5,
+            9.25
           ],
           "texture": "#frame",
           "cullface": "up"
         },
         "north": {
           "uv": [
-            15,
+            15.5,
             0.0,
             16.0,
             16.0
@@ -83,16 +83,16 @@
           "uv": [
             0.0,
             0.0,
-            1,
+            0.5,
             16.0
           ],
           "texture": "#frame"
         },
         "west": {
           "uv": [
-            6.5,
+            6.75,
             0.0,
-            9.5,
+            9.25,
             16.0
           ],
           "texture": "#frame",
@@ -100,9 +100,9 @@
         },
         "east": {
           "uv": [
-            6.5,
+            6.75,
             0.0,
-            9.5,
+            9.25,
             16.0
           ],
           "texture": "#frame"
@@ -111,32 +111,32 @@
     },
     {
       "from": [
-        15,
+        15.5,
         0,
-        6.5
+        6.75
       ],
       "to": [
         16,
         16,
-        9.5
+        9.25
       ],
       "faces": {
         "down": {
           "uv": [
-            15,
-            6.5,
+            15.5,
+            6.75,
             16.0,
-            9.5
+            9.25
           ],
           "texture": "#frame",
           "cullface": "down"
         },
         "up": {
           "uv": [
-            15,
-            6.5,
+            15.5,
+            6.75,
             16.0,
-            9.5
+            9.25
           ],
           "texture": "#frame",
           "cullface": "up"
@@ -145,14 +145,14 @@
           "uv": [
             0.0,
             0.0,
-            1,
+            0.5,
             16.0
           ],
           "texture": "#frame"
         },
         "south": {
           "uv": [
-            15,
+            15.5,
             0.0,
             16.0,
             16.0
@@ -161,18 +161,18 @@
         },
         "west": {
           "uv": [
-            6.5,
+            6.75,
             0.0,
-            9.5,
+            9.25,
             16.0
           ],
           "texture": "#frame"
         },
         "east": {
           "uv": [
-            6.5,
+            6.75,
             0.0,
-            9.5,
+            9.25,
             16.0
           ],
           "texture": "#frame",
@@ -182,50 +182,101 @@
     },
     {
       "from": [
-        1,
-        14.5,
-        6.5
+        0.5,
+        0,
+        6.75
       ],
       "to": [
-        15,
-        16,
-        9.5
+        15.5,
+        0.5,
+        9.25
       ],
       "faces": {
         "down": {
           "uv": [
-            1,
-            6.5,
-            15,
-            9.5
+            0.5,
+            6.75,
+            15.5,
+            9.25
+          ],
+          "texture": "#frame",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.5,
+            6.75,
+            15.5,
+            9.25
+          ],
+          "texture": "#frame"
+        },
+        "north": {
+          "uv": [
+            0.5,
+            15.5,
+            15.5,
+            16.0
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            0.5,
+            15.5,
+            15.5,
+            16.0
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "from": [
+        0.5,
+        15.5,
+        6.75
+      ],
+      "to": [
+        15.5,
+        16,
+        9.25
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.5,
+            6.75,
+            15.5,
+            9.25
           ],
           "texture": "#frame"
         },
         "up": {
           "uv": [
-            1,
-            6.5,
-            15,
-            9.5
+            0.5,
+            6.75,
+            15.5,
+            9.25
           ],
           "texture": "#frame",
           "cullface": "up"
         },
         "north": {
           "uv": [
-            1,
+            0.5,
             0.0,
-            15,
-            1.5
+            15.5,
+            0.5
           ],
           "texture": "#frame"
         },
         "south": {
           "uv": [
-            1,
+            0.5,
             0.0,
-            15,
-            1.5
+            15.5,
+            0.5
           ],
           "texture": "#frame"
         }

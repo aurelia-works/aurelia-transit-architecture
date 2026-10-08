@@ -3,7 +3,7 @@ brick, curtain wall panel, structural fin and glass floor panel.
 
 Same extension interface as the other assets_*.py modules. All textures are 16x16 like the rest of the mod; realism comes from a
 faint tint, low alpha (vanilla glass is about 40-60 inside a fully opaque rim), a soft diagonal streak and a slightly darker 1 px
-edge. Wired and fritted glass are fully clear between their opaque wire/dots, so they render CUTOUT; the rest need blending.
+edge. Wired and fritted glass are float glass (same faint tint and alpha) with opaque wire/dots on top, so they render translucent.
 Panes reuse the block texture for their faces and vanilla's pane templates (one cuboid per part) for geometry.
 """
 import math
@@ -57,27 +57,35 @@ def edge_texture(name, color, alpha, noise=2):
 
 
 def frit(name):
-    """Clear glass with staggered ceramic dots."""
-    img = g.new()
+    """Float glass with staggered ceramic dots: opaque white enamel with a soft shadow pixel to the right and below, so it reads as
+    fired frit in the glass rather than a loose white pixel. The glass between the dots is faint float glass."""
+    img = pane(name, (172, 212, 194), 44, (106, 158, 134), 120, noise=1, ring=False)
     px = img.load()
-    for y in range(16):
-        for x in range(16):
-            if (x % 4 == 1 and y % 4 == 1) or (x % 4 == 3 and y % 4 == 3):
-                px[x, y] = (238, 242, 240, 255)
+    dots = [(x, y) for y in range(16) for x in range(16) if (x % 4 == 1 and y % 4 == 1) or (x % 4 == 3 and y % 4 == 3)]
+    for x, y in dots:
+        px[x, y] = (246, 249, 247, 255) if (x % 4, y % 4) == (1, 1) else (236, 241, 239, 255)
+    for x, y in dots:
+        for dx, dy in ((1, 0), (0, 1)):  # wrapped, so tiles stay seamless
+            sx, sy = (x + dx) % 16, (y + dy) % 16
+            if px[sx, sy][3] < 255:
+                px[sx, sy] = (104, 136, 124, 92)
     return img
 
 
 def wired(name):
-    """Clear glass with a thin grey square wire mesh."""
+    """Float glass with a thin grey square wire mesh (opaque, so the wire stays crisp inside the faint glass)."""
     r = g.rng(name)
-    img = g.new()
+    img = pane(name, (172, 212, 194), 44, (106, 158, 134), 120, noise=1, ring=False)
     px = img.load()
     for y in range(16):
         for x in range(16):
-            row, col = y % 8 == 3, x % 8 == 3
-            if row or col:
-                tone = 128 + r.randint(-6, 6)
+            if y % 8 == 3 or x % 8 == 3:
+                tone = 136 + r.randint(-6, 6) + (10 if (y % 8 == 3 and x % 8 != 3) else 0)
                 px[x, y] = (tone, tone + 5, tone + 7, 255)
+    for y in range(16):  # soft shadow under the horizontal wires
+        for x in range(16):
+            if y % 8 == 4 and px[x, y][3] < 255:
+                px[x, y] = (96, 124, 114, 84)
     return img
 
 
@@ -124,8 +132,8 @@ TYPES = (
      dict(color=(196, 206, 210), alpha=225)),
 )
 CUTOUT_TYPES = (
-    ("fritted_glass", "Fritted Glass", "glass_fritted", dict(color=(176, 196, 190), alpha=255)),
-    ("wired_glass", "Wired Glass", "glass_wired", dict(color=(150, 170, 160), alpha=255)),
+    ("fritted_glass", "Fritted Glass", "glass_fritted", dict(color=(100, 156, 130), alpha=150)),
+    ("wired_glass", "Wired Glass", "glass_wired", dict(color=(100, 156, 130), alpha=150)),
 )
 BRICK = ("glass_brick", "Glass Brick", "glass_brick")
 

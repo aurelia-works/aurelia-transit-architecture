@@ -382,6 +382,63 @@ def el(f, t, tex, faces=None, skip=(), rot=None, shade_=True, cull=True):
     return element
 
 
+def chord(p0, p1, thickness, span=(0, 16), tex="#side", faces=None, inset=(0, 0), grow=(0, 0), uv_range=None, along="z"):
+    """Thin plate whose centre line runs from p0 to p1, each (position, y) in block pixels, tilted by 0, 22.5 or 45 degrees (the
+    verifier enforces the angle). along="z": the line runs in the z-y plane (tilt about X) and `span` is the plate's x extent;
+    along="x": the line runs in the x-y plane (tilt about Z) and `span` is its z extent. `thickness` is perpendicular to the line.
+    `inset` pulls the two ends in along the line (so the end corners of a tilted plate do not poke out of the block), `grow` pushes
+    them out (to close the wedge between two chords at a bend). `uv_range` = (start, end) texture rows (along z) or columns (along
+    x) the up and down faces span; it defaults to the line's own extent so the texture runs on continuously across chords."""
+    (c0, y0), (c1, y1) = p0, p1
+    length = math.hypot(c1 - c0, y1 - y0)
+    uc, uy = (c1 - c0) / length, (y1 - y0) / length
+    a = (c0 + uc * (inset[0] - grow[0]), y0 + uy * (inset[0] - grow[0]))
+    b = (c1 - uc * (inset[1] - grow[1]), y1 - uy * (inset[1] - grow[1]))
+    cc, yc = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+    half = math.hypot(b[0] - a[0], b[1] - a[1]) / 2
+    angle = round(math.degrees(math.atan2(y1 - y0, c1 - c0)), 1)
+    lo, hi = uv_range if uv_range else (c0, c1)
+    face_map = dict(faces or {})
+    if along == "z":
+        defaults = {"up": [span[0], lo, span[1], hi], "down": [span[0], 16 - hi, span[1], 16 - lo]}
+        f, t = [span[0], yc - thickness / 2, cc - half], [span[1], yc + thickness / 2, cc + half]
+        rot = ("x", -angle, [8, round(yc, 4), round(cc, 4)]) if angle else None  # +angle about X lowers the +z end
+    else:
+        defaults = {"up": [lo, span[0], hi, span[1]], "down": [lo, 16 - span[1], hi, 16 - span[0]]}
+        f, t = [cc - half, yc - thickness / 2, span[0]], [cc + half, yc + thickness / 2, span[1]]
+        rot = ("z", angle, [round(cc, 4), round(yc, 4), 8]) if angle else None  # +angle about Z raises the +x end
+    for key, uv in defaults.items():
+        spec = face_map.get(key, tex)
+        if spec is not None and not isinstance(spec, tuple):
+            face_map[key] = (spec, uv)
+    return el(f, t, tex, faces=face_map, rot=rot)
+
+
+def ribbon(points, vertical, along="z", span=(0, 16), tex="#side", faces=None, bound=(0, 16), centerline=False):
+    """A smooth-looking plate built from tilted chords following the polyline `points` [(position, y), ...] (the plate's underside).
+    Every chord keeps the same vertical thickness; the ends that touch the block boundary are pulled in so no corner pokes out,
+    and bends are closed with a small overlap. Angles between points must be 0, 22.5 or 45 degrees. With centerline=True the points
+    are the centre line and `vertical` is the constant thickness perpendicular to it (an arch); otherwise they are the underside."""
+    out = []
+    n = len(points) - 1
+    angles = [math.degrees(math.atan2(points[i + 1][1] - points[i][1], points[i + 1][0] - points[i][0])) for i in range(n)]
+    for i in range(n):
+        (c0, y0), (c1, y1) = points[i], points[i + 1]
+        rad = math.radians(angles[i])
+        perp = vertical if centerline else vertical * math.cos(rad)
+        pull = abs(perp / 2 * math.tan(rad))
+        inset, grow = [0.0, 0.0], [0.0, 0.0]
+        for end, (neighbour, at_edge) in enumerate(((i - 1, c0 <= bound[0]), (i + 1, c1 >= bound[1]))):
+            if at_edge:
+                inset[end] = pull
+            elif 0 <= neighbour < n:
+                bend = abs(math.radians(angles[neighbour] - angles[i]))
+                grow[end] = perp / 2 * math.tan(bend / 2) + 0.05
+        out.append(chord((c0, y0 + (0 if centerline else vertical / 2)), (c1, y1 + (0 if centerline else vertical / 2)), perp, span=span, tex=tex, faces=faces,
+                           inset=tuple(inset), grow=tuple(grow), along=along))
+    return out
+
+
 def model(textures, elements, parent="block/block", ao=True):
     m = {"parent": parent, "textures": {k: tx(v) for k, v in textures.items()}, "elements": elements}
     if not ao:

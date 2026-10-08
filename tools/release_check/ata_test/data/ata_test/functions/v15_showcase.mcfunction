@@ -1,5 +1,5 @@
-fill -2 -60 -152 80 -52 -106 minecraft:air
-fill -2 -61 -152 80 -61 -106 minecraft:smooth_stone
+fill -2 -60 -152 80 -52 -92 minecraft:air
+fill -2 -61 -152 80 -61 -92 minecraft:smooth_stone
 setblock 0 -60 -148 aurelia_transit_architecture:clear_float_glass
 setblock 2 -60 -148 aurelia_transit_architecture:clear_float_glass_pane
 setblock 4 -60 -148 aurelia_transit_architecture:low_iron_glass
@@ -174,6 +174,52 @@ setblock 25 -60 -126 aurelia_transit_architecture:clear_float_glass_pane
 setblock 28 -60 -130 aurelia_transit_architecture:structural_glass_fin
 setblock 30 -60 -130 aurelia_transit_architecture:glass_floor_panel
 setblock 32 -60 -130 aurelia_transit_architecture:glass_brick
+setblock 36 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 36 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 36 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 37 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 37 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 37 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 38 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 38 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 38 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 39 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 39 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 39 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 40 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 40 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 40 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 41 -60 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 41 -59 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 41 -58 -130 aurelia_transit_architecture:utrecht_hall_glass_facade[facing=south]
+setblock 44 -60 -130 aurelia_transit_architecture:wired_glass
+setblock 48 -60 -130 aurelia_transit_architecture:fritted_glass
+setblock 44 -59 -130 aurelia_transit_architecture:wired_glass
+setblock 48 -59 -130 aurelia_transit_architecture:fritted_glass
+setblock 44 -58 -130 aurelia_transit_architecture:wired_glass
+setblock 48 -58 -130 aurelia_transit_architecture:fritted_glass
+setblock 45 -60 -130 aurelia_transit_architecture:wired_glass
+setblock 49 -60 -130 aurelia_transit_architecture:fritted_glass
+setblock 45 -59 -130 aurelia_transit_architecture:wired_glass
+setblock 49 -59 -130 aurelia_transit_architecture:fritted_glass
+setblock 45 -58 -130 aurelia_transit_architecture:wired_glass
+setblock 49 -58 -130 aurelia_transit_architecture:fritted_glass
+setblock 46 -60 -130 aurelia_transit_architecture:wired_glass
+setblock 50 -60 -130 aurelia_transit_architecture:fritted_glass
+setblock 46 -59 -130 aurelia_transit_architecture:wired_glass
+setblock 50 -59 -130 aurelia_transit_architecture:fritted_glass
+setblock 46 -58 -130 aurelia_transit_architecture:wired_glass
+setblock 50 -58 -130 aurelia_transit_architecture:fritted_glass
+setblock 16 -58 -130 aurelia_transit_architecture:fritted_glass_pane
+setblock 17 -58 -130 aurelia_transit_architecture:wired_glass_pane
+setblock 18 -58 -130 aurelia_transit_architecture:fritted_glass_pane
+setblock 19 -58 -130 aurelia_transit_architecture:wired_glass_pane
+setblock 20 -58 -130 aurelia_transit_architecture:fritted_glass_pane
+setblock 21 -58 -130 aurelia_transit_architecture:wired_glass_pane
+setblock 22 -58 -130 aurelia_transit_architecture:fritted_glass_pane
+setblock 23 -58 -130 aurelia_transit_architecture:wired_glass_pane
+setblock 24 -58 -130 aurelia_transit_architecture:fritted_glass_pane
+setblock 25 -58 -130 aurelia_transit_architecture:wired_glass_pane
 setblock 0 -60 -120 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=north]
 setblock 3 -60 -120 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=east]
 setblock 6 -60 -120 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=south]
@@ -186,36 +232,78 @@ setblock 0 -60 -114 aurelia_transit_architecture:antwerp_iron_glass_vault[facing
 setblock 3 -60 -114 aurelia_transit_architecture:antwerp_iron_glass_vault[facing=east]
 setblock 6 -60 -114 aurelia_transit_architecture:antwerp_iron_glass_vault[facing=south]
 setblock 9 -60 -114 aurelia_transit_architecture:antwerp_iron_glass_vault[facing=west]
-fill -2 -60 -112 40 -57 -112 minecraft:stone_bricks
-setblock 0 -60 -110 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=false]
-setblock 0 -59 -111 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=true]
-setblock 2 -60 -110 aurelia_transit_architecture:uk_car_stop_marker[cars=6,facing=south,wall=false]
-setblock 2 -59 -111 aurelia_transit_architecture:uk_car_stop_marker[cars=6,facing=south,wall=true]
-setblock 4 -60 -110 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=false]
-setblock 4 -59 -111 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=true]
-setblock 6 -60 -110 aurelia_transit_architecture:uk_car_stop_marker[cars=12,facing=south,wall=false]
-setblock 6 -59 -111 aurelia_transit_architecture:uk_car_stop_marker[cars=12,facing=south,wall=true]
-setblock 12 -60 -110 aurelia_transit_architecture:german_stop_board[cars=4,facing=south,wall=false]
-setblock 12 -59 -111 aurelia_transit_architecture:german_stop_board[cars=4,facing=south,wall=true]
-setblock 14 -60 -110 aurelia_transit_architecture:german_stop_board[cars=6,facing=south,wall=false]
-setblock 14 -59 -111 aurelia_transit_architecture:german_stop_board[cars=6,facing=south,wall=true]
-setblock 16 -60 -110 aurelia_transit_architecture:german_stop_board[cars=8,facing=south,wall=false]
-setblock 16 -59 -111 aurelia_transit_architecture:german_stop_board[cars=8,facing=south,wall=true]
-setblock 18 -60 -110 aurelia_transit_architecture:german_stop_board[cars=12,facing=south,wall=false]
-setblock 18 -59 -111 aurelia_transit_architecture:german_stop_board[cars=12,facing=south,wall=true]
-setblock 20 -60 -110 aurelia_transit_architecture:german_stop_board[cars=0,facing=south,wall=false]
-setblock 20 -59 -111 aurelia_transit_architecture:german_stop_board[cars=0,facing=south,wall=true]
-setblock 24 -60 -110 aurelia_transit_architecture:dutch_stop_board[cars=4,facing=south,wall=false]
-setblock 24 -59 -111 aurelia_transit_architecture:dutch_stop_board[cars=4,facing=south,wall=true]
-setblock 26 -60 -110 aurelia_transit_architecture:dutch_stop_board[cars=6,facing=south,wall=false]
-setblock 26 -59 -111 aurelia_transit_architecture:dutch_stop_board[cars=6,facing=south,wall=true]
-setblock 28 -60 -110 aurelia_transit_architecture:dutch_stop_board[cars=8,facing=south,wall=false]
-setblock 28 -59 -111 aurelia_transit_architecture:dutch_stop_board[cars=8,facing=south,wall=true]
-setblock 30 -60 -110 aurelia_transit_architecture:dutch_stop_board[cars=12,facing=south,wall=false]
-setblock 30 -59 -111 aurelia_transit_architecture:dutch_stop_board[cars=12,facing=south,wall=true]
-setblock 32 -60 -110 aurelia_transit_architecture:dutch_stop_board[cars=0,facing=south,wall=false]
-setblock 32 -59 -111 aurelia_transit_architecture:dutch_stop_board[cars=0,facing=south,wall=true]
-setblock 40 -60 -110 aurelia_transit_architecture:sign_pole
-setblock 40 -59 -110 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=false]
-tellraw @a {"text":"1.5 scene placed: 132 blocks by tab (z -148..-136), glass z -130, angled pieces z -120..-114 (north, east, south, west), car stop boards z -110.","color":"green"}
-tp @a 20 -59 -102 180 10
+setblock 0 -60 -111 aurelia_transit_architecture:utrecht_wave_roof_rise[facing=north]
+setblock 3 -60 -111 aurelia_transit_architecture:utrecht_wave_roof_rise[facing=east]
+setblock 6 -60 -111 aurelia_transit_architecture:utrecht_wave_roof_rise[facing=south]
+setblock 9 -60 -111 aurelia_transit_architecture:utrecht_wave_roof_rise[facing=west]
+setblock 0 -60 -108 aurelia_transit_architecture:rotterdam_stainless_roof_slope[facing=north]
+setblock 3 -60 -108 aurelia_transit_architecture:rotterdam_stainless_roof_slope[facing=east]
+setblock 6 -60 -108 aurelia_transit_architecture:rotterdam_stainless_roof_slope[facing=south]
+setblock 9 -60 -108 aurelia_transit_architecture:rotterdam_stainless_roof_slope[facing=west]
+setblock 0 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_edge[facing=north]
+setblock 3 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_edge[facing=east]
+setblock 6 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_edge[facing=south]
+setblock 9 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_edge[facing=west]
+setblock 14 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 15 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 16 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 17 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 18 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 19 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 20 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 21 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+fill -2 -60 -102 40 -57 -102 minecraft:stone_bricks
+setblock 0 -60 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=false]
+setblock 0 -59 -101 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=true]
+setblock 2 -60 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=6,facing=south,wall=false]
+setblock 2 -59 -101 aurelia_transit_architecture:uk_car_stop_marker[cars=6,facing=south,wall=true]
+setblock 4 -60 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=false]
+setblock 4 -59 -101 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=true]
+setblock 6 -60 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=12,facing=south,wall=false]
+setblock 6 -59 -101 aurelia_transit_architecture:uk_car_stop_marker[cars=12,facing=south,wall=true]
+setblock 12 -60 -100 aurelia_transit_architecture:german_stop_board[cars=4,facing=south,wall=false]
+setblock 12 -59 -101 aurelia_transit_architecture:german_stop_board[cars=4,facing=south,wall=true]
+setblock 14 -60 -100 aurelia_transit_architecture:german_stop_board[cars=6,facing=south,wall=false]
+setblock 14 -59 -101 aurelia_transit_architecture:german_stop_board[cars=6,facing=south,wall=true]
+setblock 16 -60 -100 aurelia_transit_architecture:german_stop_board[cars=8,facing=south,wall=false]
+setblock 16 -59 -101 aurelia_transit_architecture:german_stop_board[cars=8,facing=south,wall=true]
+setblock 18 -60 -100 aurelia_transit_architecture:german_stop_board[cars=12,facing=south,wall=false]
+setblock 18 -59 -101 aurelia_transit_architecture:german_stop_board[cars=12,facing=south,wall=true]
+setblock 20 -60 -100 aurelia_transit_architecture:german_stop_board[cars=0,facing=south,wall=false]
+setblock 20 -59 -101 aurelia_transit_architecture:german_stop_board[cars=0,facing=south,wall=true]
+setblock 24 -60 -100 aurelia_transit_architecture:dutch_stop_board[cars=4,facing=south,wall=false]
+setblock 24 -59 -101 aurelia_transit_architecture:dutch_stop_board[cars=4,facing=south,wall=true]
+setblock 26 -60 -100 aurelia_transit_architecture:dutch_stop_board[cars=6,facing=south,wall=false]
+setblock 26 -59 -101 aurelia_transit_architecture:dutch_stop_board[cars=6,facing=south,wall=true]
+setblock 28 -60 -100 aurelia_transit_architecture:dutch_stop_board[cars=8,facing=south,wall=false]
+setblock 28 -59 -101 aurelia_transit_architecture:dutch_stop_board[cars=8,facing=south,wall=true]
+setblock 30 -60 -100 aurelia_transit_architecture:dutch_stop_board[cars=12,facing=south,wall=false]
+setblock 30 -59 -101 aurelia_transit_architecture:dutch_stop_board[cars=12,facing=south,wall=true]
+setblock 32 -60 -100 aurelia_transit_architecture:dutch_stop_board[cars=0,facing=south,wall=false]
+setblock 32 -59 -101 aurelia_transit_architecture:dutch_stop_board[cars=0,facing=south,wall=true]
+setblock 40 -60 -100 aurelia_transit_architecture:sign_pole
+setblock 40 -59 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=8,facing=south,wall=false]
+setblock 0 -60 -96 aurelia_transit_architecture:dutch_station_sign[facing=south]
+data merge block 0 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 1 -60 -96 aurelia_transit_architecture:dutch_station_sign[facing=south]
+data merge block 1 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 2 -60 -96 aurelia_transit_architecture:dutch_station_sign[facing=south]
+data merge block 2 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 4 -60 -96 aurelia_transit_architecture:german_station_sign[facing=south]
+data merge block 4 -60 -96 {Sign:{Primary:"Frankfurt Hbf",Secondary:"Gleis 1-9",Platform:"3"}}
+setblock 5 -60 -96 aurelia_transit_architecture:german_station_sign[facing=south]
+data merge block 5 -60 -96 {Sign:{Primary:"Frankfurt Hbf",Secondary:"Gleis 1-9",Platform:"3"}}
+setblock 6 -60 -96 aurelia_transit_architecture:german_station_sign[facing=south]
+data merge block 6 -60 -96 {Sign:{Primary:"Frankfurt Hbf",Secondary:"Gleis 1-9",Platform:"3"}}
+setblock 8 -60 -96 aurelia_transit_architecture:station_name_sign[facing=south]
+data merge block 8 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 9 -60 -96 aurelia_transit_architecture:station_name_sign[facing=south]
+data merge block 9 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 10 -60 -96 aurelia_transit_architecture:station_name_sign[facing=south]
+data merge block 10 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 12 -60 -96 aurelia_transit_architecture:dutch_station_sign[facing=south]
+data merge block 12 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+setblock 14 -60 -96 aurelia_transit_architecture:station_name_sign[facing=south]
+data merge block 14 -60 -96 {Sign:{Primary:"Utrecht Centraal",Secondary:"Spoor 5-12",Platform:"5"}}
+tellraw @a {"text":"1.5 scene placed: 132 blocks by tab (z -148..-136), glass z -130, angled pieces z -120..-105 (north, east, south, west), car stop boards z -100, signs z -96.","color":"green"}
+tp @a 20 -59 -88 180 10
