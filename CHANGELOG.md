@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0 (unreleased)
+
+- **ATA Glass tab:** 22 new glass blocks in their own creative tab. Clear float, low-iron, grey, bronze and blue tinted, reflective, frosted, fritted and wired glass, each as a full block and a connecting pane; plus glass brick, curtain wall glass, structural glass fin and glass floor panel.
+- **Lightweight:** no block entities or ticking, vanilla-style face culling, one cuboid per model; wired and fritted glass render cutout, the rest translucent. Full glass blocks join the `impermeable` tag like vanilla glass.
+- **Shorter tooltips and names:** every tooltip is now one short plain sentence, and a few long block names and chat messages are trimmed. No ids or lang keys changed.
+
 ## 1.4.0
 
 - **Station suffixes (A5):** `/ata_suffix` adds "Station", "Airport", "Port", "Terminal" or custom text to an MTR station's name, per context (signs, displays, terminals, announcements). MTR's own name is unchanged.

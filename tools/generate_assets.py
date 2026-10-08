@@ -691,25 +691,25 @@ NAMES = {
     "platform_paving_dark": "Dark Platform Paving",
     "tactile_warning_paving": "Tactile Warning Paving",
     "platform_edge": "Platform Edge",
-    "platform_edge_warning": "Platform Edge with Warning Line",
+    "platform_edge_warning": "Warning Platform Edge",
     "platform_ramp_lower": "Platform Ramp (Lower)",
     "platform_ramp_upper": "Platform Ramp (Upper)",
-    "station_name_sign": "Freestanding Station Name Sign",
+    "station_name_sign": "Station Name Sign",
     "hanging_station_sign": "Hanging Station Name Sign",
     "platform_number_sign": "Platform Number Sign",
     "direction_sign": "Directional Sign",
     "information_case": "Information Case",
     "sign_pole": "Sign Pole",
-    "steel_bench": "Perforated Steel Bench",
-    "wooden_bench": "Timber Slat Bench",
+    "steel_bench": "Steel Bench",
+    "wooden_bench": "Wooden Bench",
     "waste_bin": "Waste Bin",
     "bollard": "Bollard",
     "platform_lamp": "Platform Lamp",
     "information_pillar": "Information Pillar",
     "steel_column_square": "Square Steel Column",
     "steel_column_round": "Round Steel Column",
-    "structural_beam": "Structural Steel Beam",
-    "roof_support": "Branching Roof Support",
+    "structural_beam": "Steel Beam",
+    "roof_support": "Roof Support",
     "glass_wall": "Framed Glass Wall",
     "glass_panel": "Glass Panel",
     "glass_barrier": "Glass Barrier",
@@ -720,34 +720,35 @@ NAMES = {
     "canopy_wave_rise": "Wave Canopy Rise",
     "canopy_wave_crest": "Wave Canopy Crest",
     "canopy_skylight": "Canopy Skylight",
-    "canopy_light": "Canopy Light Panel",
+    "canopy_light": "Canopy Light",
     "catenary_mast": "Catenary Mast",
     "catenary_cantilever": "Catenary Cantilever",
-    "catenary_gantry": "Catenary Gantry Beam",
+    "catenary_gantry": "Catenary Gantry",
     "catenary_insulator": "Catenary Insulator",
     "bus_stop_sign": "Bus Stop Sign",
     "bus_timetable_case": "Bus Timetable Case",
-    "bus_shelter_glass": "Bus Shelter Glass Wall",
+    "bus_shelter_glass": "Shelter Glass",
     "bus_shelter_roof": "Bus Shelter Roof",
     "bus_shelter_seat": "Bus Shelter Seat",
-    "bus_curb": "Bus Boarding Curb",
-    "bus_curb_low": "Low Bus Boarding Curb",
+    "bus_curb": "Bus Curb",
+    "bus_curb_low": "Low Bus Curb",
 }
 
 EXTRA_LANG = {
-    f"tooltip.{MOD}.sign_pole": "Joins a sign placed on top of it or hanging below it",
+    f"tooltip.{MOD}.sign_pole": "Joins signs above and below it",
     f"itemGroup.{MOD}.main": "ATA Architecture",
     f"itemGroup.{MOD}.wayfinding": "ATA Wayfinding",
     f"itemGroup.{MOD}.passenger_equipment": "ATA Passenger Equipment",
     f"itemGroup.{MOD}.bus_street": "ATA Bus / Street Transit",
+    f"itemGroup.{MOD}.glass": "ATA Glass",
     f"screen.{MOD}.edit_sign": "Edit Sign Text",
     f"screen.{MOD}.line": "Line %s",
-    f"tooltip.{MOD}.editable": "Right-click with an empty hand to edit the text",
-    f"tooltip.{MOD}.joins": "Place side by side to form one wide sign",
+    f"tooltip.{MOD}.editable": "Right-click with an empty hand to edit",
+    f"tooltip.{MOD}.joins": "Joins neighbours into one wide sign",
     f"tooltip.{MOD}.faces_you": "Faces you when placed",
-    f"tooltip.{MOD}.points_away": "The edge points the way you are looking",
-    f"tooltip.{MOD}.wall_mounted": "Mounts against the side you are looking at",
-    f"tooltip.{MOD}.slope": "The low end points the way you are looking",
+    f"tooltip.{MOD}.points_away": "Edge points the way you look",
+    f"tooltip.{MOD}.wall_mounted": "Sticks to the wall you aim at",
+    f"tooltip.{MOD}.slope": "Low end points the way you look",
 }
 
 
@@ -887,7 +888,7 @@ def icon():
     return img
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass")
 
 
 def load_extensions():

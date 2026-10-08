@@ -19,7 +19,7 @@ DISPLAYS = {
     "hanging_platform_cis": ((6.5, 9.5), True, 3, "Hanging Platform CIS Board"),
     "platform_pids": ((12.5, 16.0), False, 0, "Platform PIDS"),
     "hanging_platform_pids": ((6.5, 9.5), True, 3, "Hanging Platform PIDS"),
-    "concourse_board": ((11.5, 16.0), False, 0, "Concourse Departure Board"),
+    "concourse_board": ((11.5, 16.0), False, 0, "Concourse Board"),
 }
 SPEAKERS = {
     "wall_speaker": "Wall Speaker",
@@ -123,10 +123,10 @@ def lang():
     p = f"tooltip.{MOD}."
     s = f"screen.{MOD}."
     lg = {
-        p + "live_config": "Right-click to choose the MTR station and style",
-        p + "live_joins": "Displays with the same facing that touch join into one larger screen",
-        p + "live_hanging": "Hangs from a ceiling; readable from both sides",
-        p + "live_speaker": "Right-click to configure; plays station announcements",
+        p + "live_config": "Right-click to pick a station and style",
+        p + "live_joins": "Joins neighbours into one big screen",
+        p + "live_hanging": "Hangs from the ceiling; readable both sides",
+        p + "live_speaker": "Right-click to set up; plays announcements",
         s + "live_display_title": "Passenger Information Display",
         s + "live_speaker_title": "Announcement Speaker",
         s + "live_mode_auto": "Station: Automatic",
@@ -143,7 +143,7 @@ def lang():
         s + "live_mode_departures": "Departures",
         s + "live_mode_arrivals": "Arrivals",
         s + "live_summary": "Summary: %s",
-        s + "live_calling_times.tip": "Show the arrival time at each calling point where MTR reports one (the same train further down the line). Adds those platforms to this display's arrivals request.",
+        s + "live_calling_times.tip": "Show arrival times at each stop",
         s + "live_page_seconds": "Page time: %s s",
         s + "live_radius": "Range: %s blocks",
         s + "live_volume": "Volume: %s%%",

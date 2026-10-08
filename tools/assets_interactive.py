@@ -56,8 +56,8 @@ def names():
 
 def lang():
     text = {
-        f"tooltip.{MOD}.sit": "Right-click with an empty hand to sit",
-        f"tooltip.{MOD}.clock": "Shows world time (24-hour)",
+        f"tooltip.{MOD}.sit": "Right-click to sit",
+        f"tooltip.{MOD}.clock": "Shows the world time",
         KEY + "edit_sign": "Edit Sign",
         KEY + "edit_info": "Edit Information Text",
         KEY + "heading": "Heading",

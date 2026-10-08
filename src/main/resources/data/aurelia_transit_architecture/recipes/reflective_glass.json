@@ -1,0 +1,25 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "aurelia_transit_architecture:clear_float_glass"
+    },
+    {
+      "item": "aurelia_transit_architecture:clear_float_glass"
+    },
+    {
+      "item": "aurelia_transit_architecture:clear_float_glass"
+    },
+    {
+      "item": "aurelia_transit_architecture:clear_float_glass"
+    },
+    {
+      "item": "minecraft:iron_nugget"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:reflective_glass",
+    "count": 4
+  }
+}

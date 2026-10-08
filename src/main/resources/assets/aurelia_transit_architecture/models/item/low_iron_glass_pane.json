@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "aurelia_transit_architecture:block/low_iron_glass"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_post",
+  "textures": {
+    "pane": "aurelia_transit_architecture:block/frosted_glass",
+    "edge": "aurelia_transit_architecture:block/frosted_glass_edge"
+  }
+}

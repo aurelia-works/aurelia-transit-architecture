@@ -6,6 +6,7 @@ import com.aureliatransit.architecture.fare.FareSystems;
 import com.aureliatransit.architecture.interactive.InteractiveSystems;
 import com.aureliatransit.architecture.live.LiveSystems;
 import com.aureliatransit.architecture.network.ModPackets;
+import com.aureliatransit.architecture.registry.GlassBlocks;
 import com.aureliatransit.architecture.registry.InteractiveBlocks;
 import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
@@ -36,6 +37,7 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		InteractiveBlocks.init();
 		WayfindingBlocks.init();
 		ElevatedBlocks.init();
+		GlassBlocks.init();
 		ModBlockEntities.init();
 		ModItems.init();
 		ModItemGroups.init();

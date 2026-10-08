@@ -382,7 +382,7 @@ def names():
         "deck_light": "Under-Deck Light",
         "handrail": "Handrail and Balustrade",
         "tactile_junction": "Tactile Guidance Junction",
-        "platform_edge_curve": "Angled / Curved Platform Edge",
+        "platform_edge_curve": "Curved Platform Edge",
     }
 
 
@@ -392,10 +392,10 @@ def pretty(value):
 
 def lang():
     lg = {
-        TIP + "style_cycle": "Right-click with an empty hand to change the style",
-        TIP + "style_cycle_beam": "Right-click with an empty hand to change the beam type; sneak + right-click switches steel / concrete",
-        TIP + "railing_joins": "Joins neighbouring railings, fences and walls",
-        TIP + "brace_facing": "Rises toward the direction you are facing",
+        TIP + "style_cycle": "Right-click to change the style",
+        TIP + "style_cycle_beam": "Right-click to change type; sneak to swap material",
+        TIP + "railing_joins": "Joins nearby railings and fences",
+        TIP + "brace_facing": "Rises toward where you look",
         MSG + "viaduct_beam.steel": "Beam material: steel",
         MSG + "viaduct_beam.concrete": "Beam material: concrete",
     }

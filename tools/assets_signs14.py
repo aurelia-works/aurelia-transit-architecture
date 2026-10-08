@@ -79,9 +79,9 @@ def names():
 
 def lang():
     return {
-        TIP + "psd_text_panel": "Text typed by hand for platform screen doors; MTR's own PSD text is not reachable",
-        TIP + "stand_back_sign": "Warning for non-stopping trains, set by hand (MTR does not report through trains). Empty text reads \"Stand back\"",
-        TIP + "composition_board": "Cars typed by hand left to right (\"1+ 2 3 | 4 5!\": + first class, ! accessible, | unit gap); second line: sector letters",
+        TIP + "psd_text_panel": "Platform door text, typed by hand",
+        TIP + "stand_back_sign": "Warning sign; text set by hand",
+        TIP + "composition_board": "Train car layout; right-click to edit",
         SCREEN + "warning_default_primary": "Stand back",
         SCREEN + "warning_default_secondary": "Non-stopping trains",
     }
