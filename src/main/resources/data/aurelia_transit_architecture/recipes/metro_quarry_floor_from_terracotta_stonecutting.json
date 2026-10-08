@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:terracotta"
+  },
+  "result": "aurelia_transit_architecture:metro_quarry_floor",
+  "count": 2
+}

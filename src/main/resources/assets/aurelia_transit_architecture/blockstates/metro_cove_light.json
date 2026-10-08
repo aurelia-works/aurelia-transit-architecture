@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/metro_cove_light"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/metro_cove_light",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/metro_cove_light",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/metro_cove_light",
+      "y": 270
+    }
+  }
+}

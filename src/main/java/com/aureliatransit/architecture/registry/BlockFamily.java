@@ -23,7 +23,9 @@ public enum BlockFamily {
 	/** 1.5 Dutch and Belgian station architecture. */
 	STATIONS_NL_BE(Tab.STATIONS),
 	/** 1.5 German and Italian station architecture (Frankfurt, Munich, Hamburg, S-Bahn, Roma Termini). */
-	STATIONS_DE_IT(Tab.STATIONS);
+	STATIONS_DE_IT(Tab.STATIONS),
+	/** 1.5 metro (underground) station finishes. */
+	METRO(Tab.METRO);
 
 	/**
 	 * The dedicated creative tabs. Tab ids are not stored in worlds, so regrouping never touches block or item ids.
@@ -35,7 +37,8 @@ public enum BlockFamily {
 		BUS_STREET("bus_street"),
 		GLASS("glass"),
 
-		STATIONS("stations");
+		STATIONS("stations"),
+		METRO("metro");
 
 		private final String id;
 

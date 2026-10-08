@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/metro_flashing_edge"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/metro_flashing_edge",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/metro_flashing_edge",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/metro_flashing_edge",
+      "y": 270
+    }
+  }
+}

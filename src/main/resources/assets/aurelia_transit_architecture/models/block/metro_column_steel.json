@@ -1,0 +1,77 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/metro_steel_cladding",
+    "c": "aurelia_transit_architecture:block/metro_steel_cladding"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        3
+      ],
+      "to": [
+        13,
+        16,
+        13
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#c"
+        },
+        "up": {
+          "uv": [
+            3,
+            3,
+            13,
+            13
+          ],
+          "texture": "#c"
+        },
+        "north": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "south": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "west": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "east": {
+          "uv": [
+            3,
+            0.0,
+            13,
+            16.0
+          ],
+          "texture": "#c"
+        }
+      }
+    }
+  ]
+}

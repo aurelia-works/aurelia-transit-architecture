@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "aurelia_transit_architecture:block/metro_concrete_plain",
+    "side": "aurelia_transit_architecture:block/metro_concrete_plain",
+    "bottom": "aurelia_transit_architecture:block/metro_acoustic_ceiling"
+  }
+}
