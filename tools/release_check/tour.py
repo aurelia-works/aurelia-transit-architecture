@@ -58,9 +58,17 @@ def default_views():
     v.append(view("glass_pane_run", 21, gz + 1, back=4.6, up=2.8, pitch=25))
     v.append(view("glass_hall_facade_wall", 39, gz + 1, back=6.5, up=3.0, pitch=15))
     v.append(view("glass_wired_and_fritted_walls", 47, gz + 1, back=6.5, up=3.0, pitch=15))
+    # the car stop wall (CZ - 2) stands south of these pieces, so they are viewed from the NORTH (yaw 0, camera at z - back) with the wall as backdrop; rows are 3 apart in z (row r at AZ + 3r), the four facings at x 0, 3, 6, 9; the wall of car stops is far south of them
     for r, block in enumerate(scene.ANGLED):
-        v.append(view(f"angled_{block}", 5, scene.AZ + 3 * r, back=4.2, up=2.6, pitch=30))
-    v.append(view("wave_roof_panel_strip", 18, scene.AZ + 15, back=4.0, up=2.4, pitch=30))
+        v.append(view(f"angled_{block}", 4, scene.AZ + 3 * r, back=-6.0, up=3.2, pitch=25, yaw=0))
+    sz = scene.AZ + 15  # strip row: waves x 14..21, arch chain x 24..26, gilded trim x 29..32
+    v.append(view("wave_roof_panel_strip", 17, sz, back=-5.5, up=3.0, pitch=25, yaw=0))
+    v.append(view("wave_roof_panel_close", 15, sz, back=-3.0, up=1.8, pitch=25, yaw=0))
+    v.append(view("wave_roof_rise_close", 1, scene.AZ + 9, back=-3.0, up=1.8, pitch=25, yaw=0))
+    v.append(view("wave_roof_edge_close", 1, sz, back=-3.0, up=1.8, pitch=25, yaw=0))
+    v.append(view("stainless_roof_slope_close", 1, scene.AZ + 12, back=-3.0, up=1.8, pitch=25, yaw=0))
+    v.append(view("arch_chain", 25, sz, back=-4.0, up=2.2, pitch=25, yaw=0))
+    v.append(view("gilded_trim_row", 30, sz, back=-3.5, up=2.0, pitch=25, yaw=0))
     for name, cx in (("uk", 4), ("german", 16), ("dutch", 28)):
         v.append(view(f"car_stops_{name}", cx, scene.CZ, back=4.6, up=2.8, pitch=22))
     for name, cx in (("dutch_station_sign", 1.5), ("german_station_sign", 5.5), ("original_station_name_sign", 9.5), ("single_block_signs", 13.5)):

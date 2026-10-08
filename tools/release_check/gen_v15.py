@@ -88,6 +88,10 @@ def main():
             sb(i * 3, Y, az + row * 3, f"{block}[facing={facing}]")
     for dx in range(8):  # a strip of wave roof panels: the wave should run on from panel to panel
         sb(14 + dx, Y, az + 15, "utrecht_wave_roof_panel")
+    for dx in range(3):  # a chain of arch segments: the arch should run on across the joins
+        sb(24 + dx, Y, az + 15, "frankfurt_hall_truss_arch[facing=north]")
+    for dx in range(4):  # a short trim run
+        sb(29 + dx, Y, az + 15, "antwerp_gilded_ornament_trim")
     # ---- car stop boards: a platform-end row (4, 6, 8 and 12 cars per style, then the stop-here board), freestanding on their post,
     #      then the same numbers wall-mounted on a short wall behind. Boards face south; look at them from the south.
     cz = CZ

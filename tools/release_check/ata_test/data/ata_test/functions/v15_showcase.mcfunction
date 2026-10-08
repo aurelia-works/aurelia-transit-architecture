@@ -252,6 +252,13 @@ setblock 18 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
 setblock 19 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
 setblock 20 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
 setblock 21 -60 -105 aurelia_transit_architecture:utrecht_wave_roof_panel
+setblock 24 -60 -105 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=north]
+setblock 25 -60 -105 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=north]
+setblock 26 -60 -105 aurelia_transit_architecture:frankfurt_hall_truss_arch[facing=north]
+setblock 29 -60 -105 aurelia_transit_architecture:antwerp_gilded_ornament_trim
+setblock 30 -60 -105 aurelia_transit_architecture:antwerp_gilded_ornament_trim
+setblock 31 -60 -105 aurelia_transit_architecture:antwerp_gilded_ornament_trim
+setblock 32 -60 -105 aurelia_transit_architecture:antwerp_gilded_ornament_trim
 fill -2 -60 -102 40 -57 -102 minecraft:stone_bricks
 setblock 0 -60 -100 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=false]
 setblock 0 -59 -101 aurelia_transit_architecture:uk_car_stop_marker[cars=4,facing=south,wall=true]

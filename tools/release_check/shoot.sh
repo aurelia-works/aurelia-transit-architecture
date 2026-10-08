@@ -7,6 +7,7 @@
 #   --views <json>  custom views instead of the defaults (see tour.py)
 #   --keep          leave the client running and the tour datapack in place when finished (default: quit and clean up)
 #
+# Safe to run in the background while you use the Mac, but do not minimize Minecraft, lock the screen or move it to another Space.
 # Output: build/tour/<view>.png for every view, build/tour/sheet.png (labelled contact sheet), build/tour/views.json, build/tour/client.log
 # Steps: back up run/client/options.txt and set fov 70 + hidden GUI (restored on exit, even on Ctrl-C) -> stop any running dev client ->
 # gen_v15 + tour.py + rsync of the ata_test pack into the save -> runClient -> wait for "joined the game" in a fresh latest.log ->
@@ -36,6 +37,11 @@ mkdir -p "$OUT"
 rm -f "$OUT"/*.png
 BACKUP="$OUT/options.txt.bak"
 cp "$OPTIONS" "$BACKUP"
+# world state: level.dat (gamerules, forceload) and playerdata (gamemode) are restored on exit
+WBAK="$OUT/world.bak"
+rm -rf "$WBAK"; mkdir -p "$WBAK"
+cp "$SAVE/level.dat" "$WBAK/level.dat"
+[ -d "$SAVE/playerdata" ] && cp -R "$SAVE/playerdata" "$WBAK/playerdata"
 
 client_pids() { pgrep -f 'net.fabricmc.devlaunchinjector.Main|KnotClient'; }
 
@@ -48,6 +54,11 @@ cleanup() {
 		rm -f "$SAVE/session.lock"
 		"$PY" tools/release_check/tour.py --clean
 	fi
+	if [ -f "$WBAK/level.dat" ]; then
+		cp "$WBAK/level.dat" "$SAVE/level.dat"
+		rm -rf "$SAVE/playerdata"; [ -d "$WBAK/playerdata" ] && cp -R "$WBAK/playerdata" "$SAVE/playerdata"
+		echo "level.dat and playerdata restored"
+	fi
 	cp "$BACKUP" "$OPTIONS" && echo "options.txt restored"
 }
 trap cleanup EXIT INT TERM
@@ -59,6 +70,7 @@ set_option() { # key value
 set_option fov 0.0
 set_option hideGui true
 set_option chatVisibility 2
+set_option pauseOnLostFocus false   # keep the game ticking when the window is not focused (the tour is scheduled by ticks)
 
 # 2. stop any running dev client
 for p in $(client_pids); do kill "$p" 2>/dev/null; done
