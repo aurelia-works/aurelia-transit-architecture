@@ -1,0 +1,82 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/nlbe_brick",
+    "wall": "aurelia_transit_architecture:block/nlbe_brick",
+    "window": "aurelia_transit_architecture:block/nlbe_window"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        6
+      ],
+      "to": [
+        16,
+        16,
+        10
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            6,
+            16.0,
+            10
+          ],
+          "texture": "#wall",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            6,
+            16.0,
+            10
+          ],
+          "texture": "#wall",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#window"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#window"
+        },
+        "west": {
+          "uv": [
+            6,
+            0.0,
+            10,
+            16.0
+          ],
+          "texture": "#wall",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            6,
+            0.0,
+            10,
+            16.0
+          ],
+          "texture": "#wall",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}
