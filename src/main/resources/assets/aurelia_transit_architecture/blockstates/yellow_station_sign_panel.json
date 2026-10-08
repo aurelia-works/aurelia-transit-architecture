@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/yellow_station_sign_panel"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/yellow_station_sign_panel",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/yellow_station_sign_panel",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/yellow_station_sign_panel",
+      "y": 270
+    }
+  }
+}

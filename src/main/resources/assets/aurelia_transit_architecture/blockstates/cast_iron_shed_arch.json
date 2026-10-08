@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/cast_iron_shed_arch"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/cast_iron_shed_arch",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/cast_iron_shed_arch",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/cast_iron_shed_arch",
+      "y": 270
+    }
+  }
+}

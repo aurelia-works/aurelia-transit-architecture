@@ -20,7 +20,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "StationBlocksNlBe.java")
 
 EXPECTED_PROPERTIES = {
     "Block": set(),
