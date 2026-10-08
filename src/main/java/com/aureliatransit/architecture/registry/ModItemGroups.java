@@ -27,6 +27,7 @@ public final class ModItemGroups {
 		register(BlockFamily.Tab.WAYFINDING, () -> ModBlocks.STATION_NAME_SIGN);
 		register(BlockFamily.Tab.PASSENGER_EQUIPMENT, () -> LiveBlocks.PLATFORM_PIDS);
 		register(BlockFamily.Tab.BUS_STREET, () -> ModBlocks.BUS_STOP_SIGN);
+		register(BlockFamily.Tab.STATIONS, () -> StationBlocksDeIt.FRANKFURT_HALL_TRUSS_ARCH);
 	}
 
 	private ModItemGroups() {

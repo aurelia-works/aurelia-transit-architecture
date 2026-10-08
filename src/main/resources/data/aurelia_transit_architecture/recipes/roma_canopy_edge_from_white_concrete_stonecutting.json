@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:white_concrete"
+  },
+  "result": "aurelia_transit_architecture:roma_canopy_edge",
+  "count": 1
+}
