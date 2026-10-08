@@ -436,11 +436,21 @@ def canopy_strips(profile):
                  strips(profile, 2, {"up": "#top", "down": "#under"}))
 
 
-def sign_variant(kind, left, right, face="sign_blue", frame="steel"):
-    """Joined signs: caps/legs only appear on unconnected ends (left = model -X, right = model +X)."""
+def sign_variant(kind, left, right, face="sign_blue", frame="steel", compact=False):
+    """Joined signs: caps/legs only appear on unconnected ends (left = model -X, right = model +X).
+    compact: station-name sign in at most 6 cuboids (the element budget): the face runs up to the top edge instead of having a separate top lip."""
     t = {"particle": frame, "frame": frame, "face": face}
     els = []
-    if kind == "station_name_sign":
+    if kind == "station_name_sign" and compact:
+        els += [
+            el([0, 7.5, 6.5], [16, 16, 9.5], "#frame", faces={"north": ("#face", [0, 0, 16, 8.5]), "south": ("#face", [0, 0, 16, 8.5])}),
+            el([0, 7, 6.25], [16, 7.5, 9.75], "#frame"),
+        ]
+        if not left:
+            els += [el([0, 7, 6.25], [1, 16, 9.75], "#frame"), el([1, 0, 7], [3, 7, 9], "#frame")]
+        if not right:
+            els += [el([15, 7, 6.25], [16, 16, 9.75], "#frame"), el([13, 0, 7], [15, 7, 9], "#frame")]
+    elif kind == "station_name_sign":
         els += [
             el([0, 7.5, 6.5], [16, 15.5, 9.5], "#frame", faces={"north": "#face", "south": "#face"}),
             el([0, 15.5, 6.25], [16, 16, 9.75], "#frame"),

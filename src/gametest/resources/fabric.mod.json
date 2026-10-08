@@ -1,0 +1,18 @@
+{
+	"schemaVersion": 1,
+	"id": "aurelia_transit_architecture_gametest",
+	"version": "1.0.0",
+	"name": "Aurelia Transit Architecture game tests",
+	"description": "Headless in-game tests for Aurelia Transit Architecture. Dev and CI only: never part of the release jar.",
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"com.aureliatransit.architecture.gametest.AureliaGameTests"
+		]
+	},
+	"depends": {
+		"aurelia_transit_architecture": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

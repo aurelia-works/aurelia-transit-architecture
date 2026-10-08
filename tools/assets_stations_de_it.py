@@ -427,7 +427,7 @@ def ridge_skylight():
         g.el([14.5, 0, 0], [16, 2.7, 16], "#frame"),
         g.el([0.12, 2.65, 0], [8.12, 3.15, 16], "#glass", faces=no_sides, rot=("z", 22.5, [4, 2.9, 8])),
         g.el([7.88, 2.65, 0], [15.88, 3.15, 16], "#glass", faces=no_sides, rot=("z", -22.5, [12, 2.9, 8])),
-        g.el([6.8, 5.4, 0], [9.2, 6.4, 16], "#frame"),
+        g.el([6.8, 4.0, 0], [9.2, 6.4, 16], "#frame"),  # the glass peaks reach y 4.7: the cap sits on them, no gap
     ])
 
 
@@ -517,7 +517,7 @@ def blocks():
     b["hamburg_glass_roof"] = ("simple", {"": hamburg_glass_roof()})
     b["sbahn_shelter"] = ("facing", {"": shelter()})
     b["german_station_sign"] = ("sign", {("_l" if left else "") + ("_r" if right else ""): g.sign_variant(
-        "station_name_sign", left, right, face="german_sign_face", frame="german_sign_frame") for left in (False, True) for right in (False, True)})
+        "station_name_sign", left, right, face="german_sign_face", frame="german_sign_frame", compact=True) for left in (False, True) for right in (False, True)})
     b["sbahn_platform_light"] = ("simple", {"": lamp()})
     b["roma_ribbon_window"] = ("facing", {"": ribbon_window()})
     b["roma_canopy_edge"] = ("facing", {"": canopy_edge()})

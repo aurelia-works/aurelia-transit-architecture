@@ -14,7 +14,7 @@
       ],
       "to": [
         16,
-        15.5,
+        16,
         9.5
       ],
       "faces": {
@@ -34,113 +34,43 @@
             16.0,
             9.5
           ],
-          "texture": "#frame"
-        },
-        "north": {
-          "uv": [
-            0.0,
-            0.5,
-            16.0,
-            8.5
-          ],
-          "texture": "#face"
-        },
-        "south": {
-          "uv": [
-            0.0,
-            0.5,
-            16.0,
-            8.5
-          ],
-          "texture": "#face"
-        },
-        "west": {
-          "uv": [
-            6.5,
-            0.5,
-            9.5,
-            8.5
-          ],
-          "texture": "#frame",
-          "cullface": "west"
-        },
-        "east": {
-          "uv": [
-            6.5,
-            0.5,
-            9.5,
-            8.5
-          ],
-          "texture": "#frame",
-          "cullface": "east"
-        }
-      }
-    },
-    {
-      "from": [
-        0,
-        15.5,
-        6.25
-      ],
-      "to": [
-        16,
-        16,
-        9.75
-      ],
-      "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            6.25,
-            16.0,
-            9.75
-          ],
-          "texture": "#frame"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            6.25,
-            16.0,
-            9.75
-          ],
           "texture": "#frame",
           "cullface": "up"
         },
         "north": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            0.5
+            0,
+            0,
+            16,
+            8.5
           ],
-          "texture": "#frame"
+          "texture": "#face"
         },
         "south": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            0.5
+            0,
+            0,
+            16,
+            8.5
           ],
-          "texture": "#frame"
+          "texture": "#face"
         },
         "west": {
           "uv": [
-            6.25,
+            6.5,
             0.0,
-            9.75,
-            0.5
+            9.5,
+            8.5
           ],
           "texture": "#frame",
           "cullface": "west"
         },
         "east": {
           "uv": [
-            6.25,
+            6.5,
             0.0,
-            9.75,
-            0.5
+            9.5,
+            8.5
           ],
           "texture": "#frame",
           "cullface": "east"

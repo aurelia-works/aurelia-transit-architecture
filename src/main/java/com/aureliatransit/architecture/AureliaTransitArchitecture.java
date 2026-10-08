@@ -33,8 +33,11 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		return new Identifier(MOD_ID, path);
 	}
 
-	@Override
-	public void onInitialize() {
+	/**
+	 * Registers every block, block entity type and item. Idempotent (class loading does the work), and public because
+	 * Fabric collects the game test functions before this mod's initializer has run: the tests call it before listing blocks.
+	 */
+	public static void registerContent() {
 		ModBlocks.init();
 		LiveBlocks.init();
 		InteractiveBlocks.init();
@@ -46,6 +49,11 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		MetroBlocks.init();
 		ModBlockEntities.init();
 		ModItems.init();
+	}
+
+	@Override
+	public void onInitialize() {
+		registerContent();
 		ModItemGroups.init();
 		ModPackets.registerServerReceivers();
 		LiveSystems.init();

@@ -550,7 +550,7 @@ def blocks():
     sign = {}
     for left in (False, True):
         for right in (False, True):
-            sign[("_l" if left else "") + ("_r" if right else "")] = g.sign_variant("station_name_sign", left, right, face=P + "sign_yellow", frame=P + "sign_frame")
+            sign[("_l" if left else "") + ("_r" if right else "")] = g.sign_variant("station_name_sign", left, right, face=P + "sign_yellow", frame=P + "sign_frame", compact=True)
     b["dutch_station_sign"] = ("sign", sign)
     b["dutch_platform_sign"] = ("sign_single", {"": g.platform_number_model(P + "sign_frame", P + "platform_sign")})
     b["dutch_column_band"] = ("simple", {"": g.model({"particle": P + "column_band", "side": P + "column_band"}, [

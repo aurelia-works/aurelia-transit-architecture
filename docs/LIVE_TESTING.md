@@ -94,3 +94,26 @@ The board updates only every 15 to 30 seconds (each board has its own offset), s
 7. **Elevated kit:** build a short viaduct: columns, crossbeams, girders, stringers and braces. Then a platform with platform support beam, fascia, wind screens (lower + upper), knee braces under a canopy, fences, handrails, glass balustrade, ramp rail, utility runs and under-deck lights. Check that each item cycles its styles with an empty-hand right-click and that a beam switches steel/concrete with sneak. Look for model gaps, fence/handrail joins at corners and T-junctions, and the stair in every shape inside an enclosure.
 8. **Curved edges:** line an MTR platform rail on a 45° or curved track with angled/curved edge pieces. Doors open beside them, exactly as with straight edges.
 9. **Inventory:** the Architecture tab gained 11 items (10 elevated + the curved edge), Wayfinding 1, Passenger equipment 2. The entrance pylon icon shows the whole pylon.
+
+## Automatic checks without playing (1.5 harness)
+
+One command runs everything that can be checked without a person in the game:
+
+    tools/harness.sh
+
+It runs six steps and prints PASS or FAIL for each, then a one-line verdict. Every step runs even if an earlier one fails, and the log of each is in `build/harness/`. Add `GRADLE_ARGS=--offline` in front if Gradle should not touch the network.
+
+1. **Assets up to date.** `generate_assets.py` is run and must change nothing (stale checked-in models or textures fail here).
+2. **`verify_assets.py`.** The Java block list against blockstates, models, textures, loot tables and names, plus a limit of 6 cuboids per block model. Old models over the limit only give warnings; a new one fails.
+3. **`check_zfighting.py`.** Flat faces that would flicker.
+4. **`./gradlew test`.** The unit tests.
+5. **`./gradlew runGametest`.** Starts a real (headless) game server and runs the tests in `src/gametest`. They are not part of the mod jar. The run ends with a failure code if any test fails. For every block of the mod it places up to 64 block states and checks they stay put and have shapes, that decorative blocks have no block entity or ticking (functional blocks are on a list in `AureliaGameTests`; a new block with a block entity must be added there on purpose), and that breaking it drops what the loot table says. It also checks car stop board clicking, the editable regional signs, glass pane and sign pole connections, and that blocks end up facing the way their tooltip says when placed looking north, east, south and west.
+6. **`render_preview.py --changed`.** Draws pictures of the changed blocks without a graphics card, into `build/previews/`:
+   - `tab_<tab>.png`: one sheet per creative tab (look for missing textures, odd shapes);
+   - `orientation_<tab>.png`: every block with a facing, shown for north, east, south and west with a top view, a side view and an arrow for the direction the player looks while placing it (check that arches and slopes rise the way the tooltip says);
+   - `panes.png`: glass panes as a post, with one side, corner, T and cross;
+   - `tiled_walls.png`: 3x3 walls of every full glass and station block (check the textures tile).
+
+   Run it by hand with `python3 tools/render_preview.py --tab glass` or `--block frankfurt_hall_truss_arch`. It needs Pillow and reads the Minecraft pictures from the jar Gradle already downloaded.
+
+What this cannot tell you: how it looks with lighting and shaders, sounds, and whether a build feels right to walk through. Those still need a quick look in game.
