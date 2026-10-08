@@ -1,0 +1,64 @@
+{
+  "variants": {
+    "facing=north,left=false,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign"
+    },
+    "facing=north,left=false,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_r"
+    },
+    "facing=north,left=true,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l"
+    },
+    "facing=north,left=true,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l_r"
+    },
+    "facing=east,left=false,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign",
+      "y": 90
+    },
+    "facing=east,left=false,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_r",
+      "y": 90
+    },
+    "facing=east,left=true,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l",
+      "y": 90
+    },
+    "facing=east,left=true,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l_r",
+      "y": 90
+    },
+    "facing=south,left=false,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign",
+      "y": 180
+    },
+    "facing=south,left=false,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_r",
+      "y": 180
+    },
+    "facing=south,left=true,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l",
+      "y": 180
+    },
+    "facing=south,left=true,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l_r",
+      "y": 180
+    },
+    "facing=west,left=false,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign",
+      "y": 270
+    },
+    "facing=west,left=false,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_r",
+      "y": 270
+    },
+    "facing=west,left=true,right=false": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l",
+      "y": 270
+    },
+    "facing=west,left=true,right=true": {
+      "model": "aurelia_transit_architecture:block/dutch_station_sign_l_r",
+      "y": 270
+    }
+  }
+}

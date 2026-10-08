@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "aurelia_transit_architecture:clear_float_glass",
+    "aurelia_transit_architecture:low_iron_glass",
+    "aurelia_transit_architecture:grey_tinted_glass",
+    "aurelia_transit_architecture:bronze_tinted_glass",
+    "aurelia_transit_architecture:blue_tinted_glass",
+    "aurelia_transit_architecture:reflective_glass",
+    "aurelia_transit_architecture:frosted_glass",
+    "aurelia_transit_architecture:fritted_glass",
+    "aurelia_transit_architecture:wired_glass",
+    "aurelia_transit_architecture:glass_brick"
+  ]
+}

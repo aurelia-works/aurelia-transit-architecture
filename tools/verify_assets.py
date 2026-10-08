@@ -10,6 +10,7 @@ Checks, for every block registered in ModBlocks.java:
 """
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -20,7 +21,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksDeIt.java", "MetroBlocks.java")
 
 EXPECTED_PROPERTIES = {
     "Block": set(),
@@ -62,9 +63,20 @@ EXPECTED_PROPERTIES = {
     # 1.4
     "CurvedScreenDoorBlock": {"facing", "kind"},
     "TrainEdgeBlock": {"facing", "part"},
+    # 1.5
+    "CarStopMarkerBlock": {"facing", "wall", "cars"},
+    "StopBoardBlock": {"facing", "wall", "cars"},
+    "ArchGlassBlock": set(),
+    "ArchGlassPaneBlock": {"north", "east", "south", "west"},
+    "GlassFinBlock": {"axis"},
+    "GlassFloorBlock": set(),
 }
 
+ELEMENT_BUDGET = 6  # cuboids per block model; keeps chunk meshing cheap
+BASE_BRANCH = "release/1.3.1"  # models that already existed at its merge base are grandfathered (warning, not failure)
+
 problems = []
+warnings = []
 
 
 def problem(msg):
@@ -123,6 +135,34 @@ def check_model(ref, seen):
         check_model(m["parent"], seen)
 
 
+def models_before_1_5():
+    """Repo paths of block models that existed at `git merge-base HEAD release/1.3.1`; None if git cannot tell."""
+    try:
+        base = subprocess.check_output(["git", "merge-base", "HEAD", BASE_BRANCH], cwd=ROOT, text=True, stderr=subprocess.DEVNULL).strip()
+        listing = subprocess.check_output(["git", "ls-tree", "-r", "--name-only", base, "src/main/resources/assets/" + MOD + "/models/block"],
+                                          cwd=ROOT, text=True, stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return None
+    return set(listing.split())
+
+
+def check_element_budget():
+    """At most ELEMENT_BUDGET cuboids per block model. Offenders that predate 1.5 only warn; new ones fail."""
+    old = models_before_1_5()
+    if old is None:
+        print(f"note: git history unavailable, element budget offenders are reported as warnings only")
+    for path in sorted((ASSETS / "models" / "block").glob("*.json")):
+        count = len(load(path).get("elements", []))
+        if count <= ELEMENT_BUDGET:
+            continue
+        rel = path.relative_to(ROOT).as_posix()
+        message = f"model {path.stem} has {count} elements (budget {ELEMENT_BUDGET})"
+        if old is None or rel in old:
+            warnings.append(message + ", predates 1.5 (in release/1.3.1)")
+        else:
+            problem(message + "; merge cuboids or simplify (added in 1.5)")
+
+
 def main():
     blocks = registered_blocks()
     if not blocks:
@@ -164,7 +204,8 @@ def main():
             if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
                        "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
                        "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock",
-                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock"):
+                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock",
+                       "CarStopMarkerBlock", "StopBoardBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")
@@ -177,7 +218,7 @@ def main():
         if f"{MOD}:{block_id}" not in tag["values"]:
             problem(f"{block_id}: not in mineable/pickaxe tag")
 
-    for key in (f"itemGroup.{MOD}.main", f"itemGroup.{MOD}.wayfinding", f"itemGroup.{MOD}.passenger_equipment", f"itemGroup.{MOD}.bus_street"):
+    for key in (f"itemGroup.{MOD}.main", f"itemGroup.{MOD}.wayfinding", f"itemGroup.{MOD}.passenger_equipment", f"itemGroup.{MOD}.bus_street", f"itemGroup.{MOD}.glass"):
         if key not in lang:
             problem(f"missing lang key {key}")
     java_tooltips = set(re.findall(r'TIP \+ "([a-z_]+)"', "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())))
@@ -204,7 +245,12 @@ def main():
     print(f"Registered blocks: {len(blocks)} (each with a BlockItem)")
     for family, count in families.items():
         print(f"  {family:<13} {count}")
+    check_element_budget()
     print(f"Models checked: {len([m for m in seen_models if m.startswith(MOD)])}, recipes: {recipe_count}")
+    if warnings:
+        print(f"\n{len(warnings)} warning(s), not failures:")
+        for w in warnings:
+            print("  ~ " + w)
     if problems:
         print(f"\n{len(problems)} PROBLEM(S):")
         for p in problems:

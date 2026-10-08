@@ -382,6 +382,63 @@ def el(f, t, tex, faces=None, skip=(), rot=None, shade_=True, cull=True):
     return element
 
 
+def chord(p0, p1, thickness, span=(0, 16), tex="#side", faces=None, inset=(0, 0), grow=(0, 0), uv_range=None, along="z"):
+    """Thin plate whose centre line runs from p0 to p1, each (position, y) in block pixels, tilted by 0, 22.5 or 45 degrees (the
+    verifier enforces the angle). along="z": the line runs in the z-y plane (tilt about X) and `span` is the plate's x extent;
+    along="x": the line runs in the x-y plane (tilt about Z) and `span` is its z extent. `thickness` is perpendicular to the line.
+    `inset` pulls the two ends in along the line (so the end corners of a tilted plate do not poke out of the block), `grow` pushes
+    them out (to close the wedge between two chords at a bend). `uv_range` = (start, end) texture rows (along z) or columns (along
+    x) the up and down faces span; it defaults to the line's own extent so the texture runs on continuously across chords."""
+    (c0, y0), (c1, y1) = p0, p1
+    length = math.hypot(c1 - c0, y1 - y0)
+    uc, uy = (c1 - c0) / length, (y1 - y0) / length
+    a = (c0 + uc * (inset[0] - grow[0]), y0 + uy * (inset[0] - grow[0]))
+    b = (c1 - uc * (inset[1] - grow[1]), y1 - uy * (inset[1] - grow[1]))
+    cc, yc = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+    half = math.hypot(b[0] - a[0], b[1] - a[1]) / 2
+    angle = round(math.degrees(math.atan2(y1 - y0, c1 - c0)), 1)
+    lo, hi = uv_range if uv_range else (c0, c1)
+    face_map = dict(faces or {})
+    if along == "z":
+        defaults = {"up": [span[0], lo, span[1], hi], "down": [span[0], 16 - hi, span[1], 16 - lo]}
+        f, t = [span[0], yc - thickness / 2, cc - half], [span[1], yc + thickness / 2, cc + half]
+        rot = ("x", -angle, [8, round(yc, 4), round(cc, 4)]) if angle else None  # +angle about X lowers the +z end
+    else:
+        defaults = {"up": [lo, span[0], hi, span[1]], "down": [lo, 16 - span[1], hi, 16 - span[0]]}
+        f, t = [cc - half, yc - thickness / 2, span[0]], [cc + half, yc + thickness / 2, span[1]]
+        rot = ("z", angle, [round(cc, 4), round(yc, 4), 8]) if angle else None  # +angle about Z raises the +x end
+    for key, uv in defaults.items():
+        spec = face_map.get(key, tex)
+        if spec is not None and not isinstance(spec, tuple):
+            face_map[key] = (spec, uv)
+    return el(f, t, tex, faces=face_map, rot=rot)
+
+
+def ribbon(points, vertical, along="z", span=(0, 16), tex="#side", faces=None, bound=(0, 16), centerline=False):
+    """A smooth-looking plate built from tilted chords following the polyline `points` [(position, y), ...] (the plate's underside).
+    Every chord keeps the same vertical thickness; the ends that touch the block boundary are pulled in so no corner pokes out,
+    and bends are closed with a small overlap. Angles between points must be 0, 22.5 or 45 degrees. With centerline=True the points
+    are the centre line and `vertical` is the constant thickness perpendicular to it (an arch); otherwise they are the underside."""
+    out = []
+    n = len(points) - 1
+    angles = [math.degrees(math.atan2(points[i + 1][1] - points[i][1], points[i + 1][0] - points[i][0])) for i in range(n)]
+    for i in range(n):
+        (c0, y0), (c1, y1) = points[i], points[i + 1]
+        rad = math.radians(angles[i])
+        perp = vertical if centerline else vertical * math.cos(rad)
+        pull = abs(perp / 2 * math.tan(rad))
+        inset, grow = [0.0, 0.0], [0.0, 0.0]
+        for end, (neighbour, at_edge) in enumerate(((i - 1, c0 <= bound[0]), (i + 1, c1 >= bound[1]))):
+            if at_edge:
+                inset[end] = pull
+            elif 0 <= neighbour < n:
+                bend = abs(math.radians(angles[neighbour] - angles[i]))
+                grow[end] = perp / 2 * math.tan(bend / 2) + 0.05
+        out.append(chord((c0, y0 + (0 if centerline else vertical / 2)), (c1, y1 + (0 if centerline else vertical / 2)), perp, span=span, tex=tex, faces=faces,
+                           inset=tuple(inset), grow=tuple(grow), along=along))
+    return out
+
+
 def model(textures, elements, parent="block/block", ao=True):
     m = {"parent": parent, "textures": {k: tx(v) for k, v in textures.items()}, "elements": elements}
     if not ao:
@@ -436,11 +493,21 @@ def canopy_strips(profile):
                  strips(profile, 2, {"up": "#top", "down": "#under"}))
 
 
-def sign_variant(kind, left, right):
-    """Joined signs: caps/legs only appear on unconnected ends (left = model -X, right = model +X)."""
-    t = {"particle": "steel", "frame": "steel", "face": "sign_blue"}
+def sign_variant(kind, left, right, face="sign_blue", frame="steel", compact=False):
+    """Joined signs: caps/legs only appear on unconnected ends (left = model -X, right = model +X).
+    compact: station-name sign in at most 6 cuboids (the element budget): the face runs up to the top edge instead of having a separate top lip."""
+    t = {"particle": frame, "frame": frame, "face": face}
     els = []
-    if kind == "station_name_sign":
+    if kind == "station_name_sign" and compact:
+        els += [
+            el([0, 7.5, 6.5], [16, 16, 9.5], "#frame", faces={"north": ("#face", [0, 0, 16, 8.5]), "south": ("#face", [0, 0, 16, 8.5])}),
+            el([0, 7, 6.25], [16, 7.5, 9.75], "#frame"),
+        ]
+        if not left:
+            els += [el([0, 7, 6.25], [1, 16, 9.75], "#frame"), el([1, 0, 7], [3, 7, 9], "#frame")]
+        if not right:
+            els += [el([15, 7, 6.25], [16, 16, 9.75], "#frame"), el([13, 0, 7], [15, 7, 9], "#frame")]
+    elif kind == "station_name_sign":
         els += [
             el([0, 7.5, 6.5], [16, 15.5, 9.5], "#frame", faces={"north": "#face", "south": "#face"}),
             el([0, 15.5, 6.25], [16, 16, 9.75], "#frame"),
@@ -475,6 +542,14 @@ def sign_variant(kind, left, right):
     return model(t, els)
 
 
+def platform_number_model(frame, face):
+    """The platform number plate on a short post; shared by regional variants (same shape as the Java box union)."""
+    return model({"particle": frame, "frame": frame, "face": face}, [
+        el([3, 2, 7], [13, 12, 9], "#frame", faces={"north": "#face", "south": "#face"}),
+        el([7.5, 12, 7.5], [8.5, 16, 8.5], "#frame"),
+    ])
+
+
 def blocks():
     b = {}
 
@@ -495,11 +570,7 @@ def blocks():
                 suffix = ("_l" if left else "") + ("_r" if right else "")
                 variants[suffix] = sign_variant(kind, left, right)
         b[kind] = ("sign", variants)
-    b["platform_number_sign"] = ("sign_single", {"": model(
-        {"particle": "steel", "frame": "steel", "face": "platform_number"}, [
-            el([3, 2, 7], [13, 12, 9], "#frame", faces={"north": "#face", "south": "#face"}),
-            el([7.5, 12, 7.5], [8.5, 16, 8.5], "#frame"),
-        ])})
+    b["platform_number_sign"] = ("sign_single", {"": platform_number_model("steel", "platform_number")})
     b["information_case"] = ("facing", {"": model(
         {"particle": "steel", "frame": "steel", "face": "information_poster"}, [
             el([1, 2, 14], [15, 15, 16], "#frame", faces={"north": "#face"}),
@@ -691,25 +762,25 @@ NAMES = {
     "platform_paving_dark": "Dark Platform Paving",
     "tactile_warning_paving": "Tactile Warning Paving",
     "platform_edge": "Platform Edge",
-    "platform_edge_warning": "Platform Edge with Warning Line",
+    "platform_edge_warning": "Warning Platform Edge",
     "platform_ramp_lower": "Platform Ramp (Lower)",
     "platform_ramp_upper": "Platform Ramp (Upper)",
-    "station_name_sign": "Freestanding Station Name Sign",
+    "station_name_sign": "Station Name Sign",
     "hanging_station_sign": "Hanging Station Name Sign",
     "platform_number_sign": "Platform Number Sign",
     "direction_sign": "Directional Sign",
     "information_case": "Information Case",
     "sign_pole": "Sign Pole",
-    "steel_bench": "Perforated Steel Bench",
-    "wooden_bench": "Timber Slat Bench",
+    "steel_bench": "Steel Bench",
+    "wooden_bench": "Wooden Bench",
     "waste_bin": "Waste Bin",
     "bollard": "Bollard",
     "platform_lamp": "Platform Lamp",
     "information_pillar": "Information Pillar",
     "steel_column_square": "Square Steel Column",
     "steel_column_round": "Round Steel Column",
-    "structural_beam": "Structural Steel Beam",
-    "roof_support": "Branching Roof Support",
+    "structural_beam": "Steel Beam",
+    "roof_support": "Roof Support",
     "glass_wall": "Framed Glass Wall",
     "glass_panel": "Glass Panel",
     "glass_barrier": "Glass Barrier",
@@ -720,34 +791,35 @@ NAMES = {
     "canopy_wave_rise": "Wave Canopy Rise",
     "canopy_wave_crest": "Wave Canopy Crest",
     "canopy_skylight": "Canopy Skylight",
-    "canopy_light": "Canopy Light Panel",
+    "canopy_light": "Canopy Light",
     "catenary_mast": "Catenary Mast",
     "catenary_cantilever": "Catenary Cantilever",
-    "catenary_gantry": "Catenary Gantry Beam",
+    "catenary_gantry": "Catenary Gantry",
     "catenary_insulator": "Catenary Insulator",
     "bus_stop_sign": "Bus Stop Sign",
     "bus_timetable_case": "Bus Timetable Case",
-    "bus_shelter_glass": "Bus Shelter Glass Wall",
+    "bus_shelter_glass": "Shelter Glass",
     "bus_shelter_roof": "Bus Shelter Roof",
     "bus_shelter_seat": "Bus Shelter Seat",
-    "bus_curb": "Bus Boarding Curb",
-    "bus_curb_low": "Low Bus Boarding Curb",
+    "bus_curb": "Bus Curb",
+    "bus_curb_low": "Low Bus Curb",
 }
 
 EXTRA_LANG = {
-    f"tooltip.{MOD}.sign_pole": "Joins a sign placed on top of it or hanging below it",
+    f"tooltip.{MOD}.sign_pole": "Joins signs above and below it",
     f"itemGroup.{MOD}.main": "ATA Architecture",
     f"itemGroup.{MOD}.wayfinding": "ATA Wayfinding",
     f"itemGroup.{MOD}.passenger_equipment": "ATA Passenger Equipment",
     f"itemGroup.{MOD}.bus_street": "ATA Bus / Street Transit",
+    f"itemGroup.{MOD}.glass": "ATA Glass",
     f"screen.{MOD}.edit_sign": "Edit Sign Text",
     f"screen.{MOD}.line": "Line %s",
-    f"tooltip.{MOD}.editable": "Right-click with an empty hand to edit the text",
-    f"tooltip.{MOD}.joins": "Place side by side to form one wide sign",
+    f"tooltip.{MOD}.editable": "Right-click with an empty hand to edit",
+    f"tooltip.{MOD}.joins": "Joins neighbours into one wide sign",
     f"tooltip.{MOD}.faces_you": "Faces you when placed",
-    f"tooltip.{MOD}.points_away": "The edge points the way you are looking",
-    f"tooltip.{MOD}.wall_mounted": "Mounts against the side you are looking at",
-    f"tooltip.{MOD}.slope": "The low end points the way you are looking",
+    f"tooltip.{MOD}.points_away": "Edge points the way you look",
+    f"tooltip.{MOD}.wall_mounted": "Sticks to the wall you aim at",
+    f"tooltip.{MOD}.slope": "Low end points the way you look",
 }
 
 
@@ -834,7 +906,9 @@ FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 # still covers it: sign y 9 going up (all panels span y 7..11), sign y 7 going down.
 POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True), ("_up_down", True, True))
 POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
-               "hanging_wayfinding_sign", "exit_sign", "pictogram_sign")
+               "hanging_wayfinding_sign", "exit_sign", "pictogram_sign",
+               "dutch_station_sign", "dutch_platform_sign", "german_station_sign",
+               "uk_car_stop_marker", "german_stop_board", "dutch_stop_board")
 
 
 def sign_pole(up, down):
@@ -859,6 +933,15 @@ def blockstate(block_id, kind, variant_names):
             for align in ("centre",) + tuple(FACING_Y):
                 key = f"align={align},down={str(down).lower()},up={str(up).lower()}"
                 variants[key] = {"model": ref(suffix)} if align == "centre" else {"model": ref("_post")} | ({"y": FACING_Y[align]} if FACING_Y[align] else {})
+        return {"variants": variants}
+    if kind in ("car_stop", "stop_board"):
+        # cars=N (1-12, or 0-12 with the stop-here board), freestanding or wall; models _post_N / _wall_N, front north
+        variants = {}
+        for n in range(1 if kind == "car_stop" else 0, 13):
+            for f, y in FACING_Y.items():
+                for wall in (False, True):
+                    model_ref = ref(f"_{'wall' if wall else 'post'}_{n}")
+                    variants[f"cars={n},facing={f},wall={str(wall).lower()}"] = {"model": model_ref} | ({"y": y} if y else {})
         return {"variants": variants}
     if kind == "axis":
         return {"variants": {"axis=x": {"model": ref("")}, "axis=z": {"model": ref(""), "y": 90}}}
@@ -887,7 +970,7 @@ def icon():
     return img
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_metro", "assets_car_stops")
 
 
 def load_extensions():

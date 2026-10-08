@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:sbahn_platform_slab"
+  },
+  "result": "aurelia_transit_architecture:sbahn_platform_edge",
+  "count": 1
+}

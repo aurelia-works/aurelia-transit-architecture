@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/utrecht_wave_roof_rise"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/utrecht_wave_roof_rise",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/utrecht_wave_roof_rise",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/utrecht_wave_roof_rise",
+      "y": 270
+    }
+  }
+}

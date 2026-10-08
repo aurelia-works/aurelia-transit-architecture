@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:glass"
+  },
+  "result": "aurelia_transit_architecture:fritted_glass",
+  "count": 1
+}

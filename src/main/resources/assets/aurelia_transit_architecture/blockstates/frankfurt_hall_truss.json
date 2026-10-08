@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/frankfurt_hall_truss"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/frankfurt_hall_truss",
+      "y": 90
+    }
+  }
+}

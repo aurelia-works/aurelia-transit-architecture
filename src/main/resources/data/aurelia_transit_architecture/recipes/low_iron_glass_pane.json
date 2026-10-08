@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GGG",
+    "GGG"
+  ],
+  "key": {
+    "G": {
+      "item": "aurelia_transit_architecture:low_iron_glass"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:low_iron_glass_pane",
+    "count": 16
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:light_gray_concrete"
+  },
+  "result": "aurelia_transit_architecture:utrecht_light_grey_floor_tile",
+  "count": 2
+}

@@ -23,6 +23,11 @@ public class DescribedBlockItem extends BlockItem {
 		this.tooltipKeys = tooltipKeys;
 	}
 
+	/** The translation keys of the usage hints shown under the name (the game tests check placement against them). */
+	public List<String> tooltipKeys() {
+		return tooltipKeys;
+	}
+
 	@Override
 	public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
 		super.appendTooltip(stack, world, tooltip, context);

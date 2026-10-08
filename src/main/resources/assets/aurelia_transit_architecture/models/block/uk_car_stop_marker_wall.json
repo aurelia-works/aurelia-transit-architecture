@@ -1,0 +1,70 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/cs_uk_edge",
+    "edge": "aurelia_transit_architecture:block/cs_uk_edge",
+    "post": "aurelia_transit_architecture:block/steel",
+    "face": "aurelia_transit_architecture:block/cs_uk_4"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        5,
+        14.5
+      ],
+      "to": [
+        12,
+        12,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            1.5
+          ],
+          "texture": "#edge"
+        },
+        "up": {
+          "uv": [
+            4,
+            14.5,
+            12,
+            16.0
+          ],
+          "texture": "#edge"
+        },
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            14
+          ],
+          "texture": "#face"
+        },
+        "west": {
+          "uv": [
+            14.5,
+            4,
+            16.0,
+            11
+          ],
+          "texture": "#edge"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            4,
+            1.5,
+            11
+          ],
+          "texture": "#edge"
+        }
+      }
+    }
+  ]
+}

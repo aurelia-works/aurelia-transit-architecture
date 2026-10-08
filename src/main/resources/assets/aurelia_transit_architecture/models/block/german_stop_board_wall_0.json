@@ -1,0 +1,6 @@
+{
+  "parent": "aurelia_transit_architecture:block/german_stop_board_wall",
+  "textures": {
+    "face": "aurelia_transit_architecture:block/cs_de_0"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:iron_ingot"
+  },
+  "result": "aurelia_transit_architecture:rotterdam_stainless_roof_slope",
+  "count": 4
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:oak_planks"
+  },
+  "result": "aurelia_transit_architecture:rotterdam_timber_slat_ceiling",
+  "count": 2
+}

@@ -17,7 +17,15 @@ public enum BlockFamily {
 	/** 1.4 station equipment props: fare gates, card readers, booth windows, CCTV (no fare logic). */
 	STATION_EQUIPMENT(Tab.PASSENGER_EQUIPMENT),
 	BUS(Tab.BUS_STREET),
-	STREET(Tab.BUS_STREET);
+	STREET(Tab.BUS_STREET),
+	/** 1.5 architectural glass: float, tinted, reflective, frosted, fritted and wired glass, glass brick, curtain wall pieces. */
+	GLASS(Tab.GLASS),
+	/** 1.5 Dutch and Belgian station architecture. */
+	STATIONS_NL_BE(Tab.STATIONS),
+	/** 1.5 German and Italian station architecture (Frankfurt, Munich, Hamburg, S-Bahn, Roma Termini). */
+	STATIONS_DE_IT(Tab.STATIONS),
+	/** 1.5 metro (underground) station finishes. */
+	METRO(Tab.METRO);
 
 	/**
 	 * The dedicated creative tabs. Tab ids are not stored in worlds, so regrouping never touches block or item ids.
@@ -26,7 +34,11 @@ public enum BlockFamily {
 		ARCHITECTURE("main"),
 		WAYFINDING("wayfinding"),
 		PASSENGER_EQUIPMENT("passenger_equipment"),
-		BUS_STREET("bus_street");
+		BUS_STREET("bus_street"),
+		GLASS("glass"),
+
+		STATIONS("stations"),
+		METRO("metro");
 
 		private final String id;
 

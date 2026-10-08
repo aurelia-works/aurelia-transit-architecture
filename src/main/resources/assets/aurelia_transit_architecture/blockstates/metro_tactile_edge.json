@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/metro_tactile_edge"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/metro_tactile_edge",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/metro_tactile_edge",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/metro_tactile_edge",
+      "y": 270
+    }
+  }
+}

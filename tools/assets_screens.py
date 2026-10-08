@@ -176,10 +176,10 @@ def names():
 
 def lang():
     lg = {
-        TIP + "screen_door_panel": "Fixed platform screen; follows straight, 45° and curved platform edges",
-        TIP + "screen_door_doorway": "Always-open screen door opening; train doors open beside it (MTR platform marker)",
-        TIP + "drop_barrier_edge": "Platform edge whose barrier drops while a train stands at the platform (visual; no collision); opens MTR train doors",
-        TIP + "boarding_step_edge": "Platform edge with a gap-filler step that extends while a train stands at the platform (visual); opens MTR train doors",
+        TIP + "screen_door_panel": "Fixed platform screen door panel",
+        TIP + "screen_door_doorway": "Open screen door gap; train doors open here",
+        TIP + "drop_barrier_edge": "Barrier drops when a train stops",
+        TIP + "boarding_step_edge": "Step slides out when a train stops",
     }
     for block in ("screen_door_panel", "screen_door_doorway"):
         for kind in KINDS:

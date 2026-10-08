@@ -1,0 +1,233 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/frankfurt_truss_paint",
+    "truss": "aurelia_transit_architecture:block/frankfurt_truss",
+    "paint": "aurelia_transit_architecture:block/frankfurt_truss_paint"
+  },
+  "elements": [
+    {
+      "from": [
+        6.5,
+        4.9893,
+        1.4304
+      ],
+      "to": [
+        9.5,
+        10.9893,
+        6.1482
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.5,
+            11,
+            9.5,
+            16
+          ],
+          "texture": "#paint"
+        },
+        "up": {
+          "uv": [
+            6.5,
+            0,
+            9.5,
+            5
+          ],
+          "texture": "#paint"
+        },
+        "north": {
+          "uv": [
+            6.5,
+            5.0107,
+            9.5,
+            11.0107
+          ],
+          "texture": "#paint"
+        },
+        "south": {
+          "uv": [
+            6.5,
+            5.0107,
+            9.5,
+            11.0107
+          ],
+          "texture": "#paint"
+        },
+        "west": {
+          "uv": [
+            1.4304,
+            0,
+            6.1482,
+            16
+          ],
+          "texture": "#truss"
+        },
+        "east": {
+          "uv": [
+            9.8518,
+            0,
+            14.5696,
+            16
+          ],
+          "texture": "#truss"
+        }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          7.9893,
+          3.7893
+        ],
+        "axis": "x",
+        "angle": -45.0
+      }
+    },
+    {
+      "from": [
+        6.5,
+        7.4426,
+        4.1061
+      ],
+      "to": [
+        9.5,
+        13.4426,
+        11.8939
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.5,
+            5,
+            9.5,
+            11
+          ],
+          "texture": "#paint"
+        },
+        "up": {
+          "uv": [
+            6.5,
+            5,
+            9.5,
+            11
+          ],
+          "texture": "#paint"
+        },
+        "north": {
+          "uv": [
+            6.5,
+            2.5574,
+            9.5,
+            8.5574
+          ],
+          "texture": "#paint"
+        },
+        "south": {
+          "uv": [
+            6.5,
+            2.5574,
+            9.5,
+            8.5574
+          ],
+          "texture": "#paint"
+        },
+        "west": {
+          "uv": [
+            4.1061,
+            0,
+            11.8939,
+            16
+          ],
+          "texture": "#truss"
+        },
+        "east": {
+          "uv": [
+            4.1061,
+            0,
+            11.8939,
+            16
+          ],
+          "texture": "#truss"
+        }
+      },
+      "rotation": {
+        "origin": [
+          8,
+          10.4426,
+          8.0
+        ],
+        "axis": "x",
+        "angle": -22.5
+      }
+    },
+    {
+      "from": [
+        6.5,
+        8.6853,
+        10.3533
+      ],
+      "to": [
+        9.5,
+        14.6853,
+        16.0
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            6.5,
+            0,
+            9.5,
+            5
+          ],
+          "texture": "#paint"
+        },
+        "up": {
+          "uv": [
+            6.5,
+            11,
+            9.5,
+            16
+          ],
+          "texture": "#paint"
+        },
+        "north": {
+          "uv": [
+            6.5,
+            1.3147,
+            9.5,
+            7.3147
+          ],
+          "texture": "#paint"
+        },
+        "south": {
+          "uv": [
+            6.5,
+            1.3147,
+            9.5,
+            7.3147
+          ],
+          "texture": "#paint",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            10.3533,
+            0,
+            16.0,
+            16
+          ],
+          "texture": "#truss"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0,
+            5.6467,
+            16
+          ],
+          "texture": "#truss"
+        }
+      }
+    }
+  ]
+}

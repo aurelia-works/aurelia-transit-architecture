@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_noside_alt",
+  "textures": {
+    "pane": "aurelia_transit_architecture:block/bronze_tinted_glass",
+    "edge": "aurelia_transit_architecture:block/bronze_tinted_glass_edge"
+  }
+}

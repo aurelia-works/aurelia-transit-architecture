@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:smooth_stone"
+  },
+  "result": "aurelia_transit_architecture:metro_cable_wall",
+  "count": 2
+}

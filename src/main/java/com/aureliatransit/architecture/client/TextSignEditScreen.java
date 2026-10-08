@@ -196,7 +196,8 @@ public class TextSignEditScreen extends Screen {
 			case DIRECTION, LIFT, PSD -> 0xFF2C2F33;
 			case WARNING -> 0xFFF2C230;
 			case COMPOSITION -> 0xFF1D2733;
-			case BUS_STOP -> 0xFFF2F2EE;
+			case BUS_STOP, GERMAN_STATION -> 0xFFF2F2EE;
+			case DUTCH_STATION, DUTCH_PLATFORM -> 0xFFF2BE18;
 			default -> 0xFF1D375A;
 		};
 	}

@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/antwerp_iron_glass_vault"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/antwerp_iron_glass_vault",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/antwerp_iron_glass_vault",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/antwerp_iron_glass_vault",
+      "y": 270
+    }
+  }
+}

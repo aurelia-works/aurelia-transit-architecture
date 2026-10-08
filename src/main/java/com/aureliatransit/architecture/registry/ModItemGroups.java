@@ -27,6 +27,9 @@ public final class ModItemGroups {
 		register(BlockFamily.Tab.WAYFINDING, () -> ModBlocks.STATION_NAME_SIGN);
 		register(BlockFamily.Tab.PASSENGER_EQUIPMENT, () -> LiveBlocks.PLATFORM_PIDS);
 		register(BlockFamily.Tab.BUS_STREET, () -> ModBlocks.BUS_STOP_SIGN);
+		register(BlockFamily.Tab.GLASS, () -> GlassBlocks.CLEAR_FLOAT_GLASS);
+		register(BlockFamily.Tab.STATIONS, () -> StationBlocksNlBe.UTRECHT_WAVE_ROOF_PANEL);
+		register(BlockFamily.Tab.METRO, () -> MetroBlocks.METRO_COFFER_CEILING);
 	}
 
 	private ModItemGroups() {

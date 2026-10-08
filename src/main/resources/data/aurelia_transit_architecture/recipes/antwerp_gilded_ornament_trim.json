@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:gold_nugget"
+    },
+    {
+      "item": "minecraft:smooth_sandstone"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:antwerp_gilded_ornament_trim",
+    "count": 2
+  }
+}

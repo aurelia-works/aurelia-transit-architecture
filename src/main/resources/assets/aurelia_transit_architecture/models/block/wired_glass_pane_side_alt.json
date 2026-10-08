@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/template_glass_pane_side_alt",
+  "textures": {
+    "pane": "aurelia_transit_architecture:block/wired_glass",
+    "edge": "aurelia_transit_architecture:block/wired_glass_edge"
+  }
+}

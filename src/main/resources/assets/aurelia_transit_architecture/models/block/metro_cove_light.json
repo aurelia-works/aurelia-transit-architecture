@@ -1,0 +1,204 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/metro_steel_cladding",
+    "metal": "aurelia_transit_architecture:block/metro_steel_cladding",
+    "lit": "aurelia_transit_architecture:block/metro_cove_lit"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        8,
+        13
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            3
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            13,
+            16.0,
+            16.0
+          ],
+          "texture": "#metal",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            8
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            8
+          ],
+          "texture": "#metal",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            13,
+            0.0,
+            16.0,
+            8
+          ],
+          "texture": "#metal",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            3,
+            8
+          ],
+          "texture": "#metal",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        8,
+        9
+      ],
+      "to": [
+        16,
+        10,
+        13
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            3,
+            16.0,
+            7
+          ],
+          "texture": "#metal"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            9,
+            16.0,
+            13
+          ],
+          "texture": "#metal"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            6,
+            16.0,
+            8
+          ],
+          "texture": "#metal"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            6,
+            16.0,
+            8
+          ],
+          "texture": "#metal"
+        },
+        "west": {
+          "uv": [
+            9,
+            6,
+            13,
+            8
+          ],
+          "texture": "#metal",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            3,
+            6,
+            7,
+            8
+          ],
+          "texture": "#metal",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        10,
+        10
+      ],
+      "to": [
+        16,
+        12,
+        13
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            0.0,
+            10,
+            16.0,
+            13
+          ],
+          "texture": "#lit"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            4,
+            16.0,
+            6
+          ],
+          "texture": "#lit"
+        },
+        "west": {
+          "uv": [
+            10,
+            4,
+            13,
+            6
+          ],
+          "texture": "#lit",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            3,
+            4,
+            6,
+            6
+          ],
+          "texture": "#lit",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}

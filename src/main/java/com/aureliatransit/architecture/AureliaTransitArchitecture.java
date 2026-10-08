@@ -6,6 +6,7 @@ import com.aureliatransit.architecture.fare.FareSystems;
 import com.aureliatransit.architecture.interactive.InteractiveSystems;
 import com.aureliatransit.architecture.live.LiveSystems;
 import com.aureliatransit.architecture.network.ModPackets;
+import com.aureliatransit.architecture.registry.GlassBlocks;
 import com.aureliatransit.architecture.registry.InteractiveBlocks;
 import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
@@ -13,6 +14,9 @@ import com.aureliatransit.architecture.registry.ModBlocks;
 import com.aureliatransit.architecture.registry.ModItemGroups;
 import com.aureliatransit.architecture.registry.ModItems;
 import com.aureliatransit.architecture.registry.ElevatedBlocks;
+import com.aureliatransit.architecture.registry.StationBlocksNlBe;
+import com.aureliatransit.architecture.registry.StationBlocksDeIt;
+import com.aureliatransit.architecture.registry.MetroBlocks;
 import com.aureliatransit.architecture.registry.WayfindingBlocks;
 import com.aureliatransit.architecture.wayfinding.WayfindingSystems;
 import net.fabricmc.api.ModInitializer;
@@ -29,15 +33,27 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		return new Identifier(MOD_ID, path);
 	}
 
-	@Override
-	public void onInitialize() {
+	/**
+	 * Registers every block, block entity type and item. Idempotent (class loading does the work), and public because
+	 * Fabric collects the game test functions before this mod's initializer has run: the tests call it before listing blocks.
+	 */
+	public static void registerContent() {
 		ModBlocks.init();
 		LiveBlocks.init();
 		InteractiveBlocks.init();
 		WayfindingBlocks.init();
 		ElevatedBlocks.init();
+		GlassBlocks.init();
+		StationBlocksNlBe.init();
+		StationBlocksDeIt.init();
+		MetroBlocks.init();
 		ModBlockEntities.init();
 		ModItems.init();
+	}
+
+	@Override
+	public void onInitialize() {
+		registerContent();
 		ModItemGroups.init();
 		ModPackets.registerServerReceivers();
 		LiveSystems.init();

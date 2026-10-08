@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/antwerp_gilded_ornament_trim"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/antwerp_gilded_ornament_trim",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/antwerp_gilded_ornament_trim",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/antwerp_gilded_ornament_trim",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "GGG",
+    "GGG"
+  ],
+  "key": {
+    "G": {
+      "item": "aurelia_transit_architecture:reflective_glass"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:reflective_glass_pane",
+    "count": 16
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/structural_glass_fin"
+    },
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/structural_glass_fin",
+      "y": 90
+    }
+  }
+}

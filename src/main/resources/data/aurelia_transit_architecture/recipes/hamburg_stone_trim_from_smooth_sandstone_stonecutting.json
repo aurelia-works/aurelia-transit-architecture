@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:smooth_sandstone"
+  },
+  "result": "aurelia_transit_architecture:hamburg_stone_trim",
+  "count": 1
+}

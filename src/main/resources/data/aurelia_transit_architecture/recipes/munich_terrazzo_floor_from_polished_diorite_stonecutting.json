@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:polished_diorite"
+  },
+  "result": "aurelia_transit_architecture:munich_terrazzo_floor",
+  "count": 1
+}
