@@ -14,6 +14,8 @@ import com.aureliatransit.architecture.block.SignPoleBlock;
 import com.aureliatransit.architecture.block.TextLayout;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
+import com.aureliatransit.architecture.block.wayfinding.CarStopMarkerBlock;
+import com.aureliatransit.architecture.block.wayfinding.StopBoardBlock;
 import com.aureliatransit.architecture.text.SignStyle;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
@@ -52,6 +54,7 @@ public final class ModBlocks {
 	private static final String TIP_WALL = TIP + "wall_mounted";
 	private static final String TIP_SLOPE = TIP + "slope";
 	private static final String TIP_SIT = TIP + "sit";
+	private static final String TIP_CAR_STOP = TIP + "car_stop_cycle";
 
 	// Profiles shared by models (tools/generate_assets.py) and collision: underside height in pixels as a function of z (0 = north).
 	public static final DoubleUnaryOperator SLOPE_LOWER = z -> z / 2;
@@ -109,6 +112,16 @@ public final class ModBlocks {
 					new TextLayout(7, 7.5F, 8, 7, 9, false, SignStyle.PLATFORM_NUMBER),
 					union(box(3, 2, 7, 13, 12, 9), box(7.5, 12, 7.5, 8.5, 16, 8.5))),
 			TIP_EDITABLE);
+	// 1.5 car stop boards: the number is a block state; thin post or wall mount, cycled with an empty hand
+	public static final Block UK_CAR_STOP_MARKER = register("uk_car_stop_marker", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new CarStopMarkerBlock(metal(), union(box(4, 6, 7, 12, 13, 9), box(7.5, 0, 7.5, 8.5, 6, 8.5)), box(4, 5, 14.5, 12, 12, 16)),
+			TIP_CAR_STOP, TIP_WALL);
+	public static final Block GERMAN_STOP_BOARD = register("german_stop_board", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new StopBoardBlock(metal(), union(box(4, 6, 7, 12, 14, 9), box(7.5, 0, 7.5, 8.5, 6, 8.5)), box(4, 4, 14.5, 12, 12, 16)),
+			TIP_CAR_STOP, TIP_WALL);
+	public static final Block DUTCH_STOP_BOARD = register("dutch_stop_board", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new StopBoardBlock(metal(), union(box(4, 6, 7, 12, 14, 9), box(7.5, 0, 7.5, 8.5, 6, 8.5)), box(4, 4, 14.5, 12, 12, 16)),
+			TIP_CAR_STOP, TIP_WALL);
 	public static final Block DIRECTION_SIGN = register("direction_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
 			new TextSignBlock(metal().luminance(state -> 4),
 					new TextLayout(7.5F, 6, 16, 7, 9, true, SignStyle.DIRECTION),

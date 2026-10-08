@@ -200,6 +200,9 @@
     "aurelia_transit_architecture:metro_tactile_edge",
     "aurelia_transit_architecture:metro_recessed_light",
     "aurelia_transit_architecture:metro_column_tiled",
-    "aurelia_transit_architecture:metro_column_steel"
+    "aurelia_transit_architecture:metro_column_steel",
+    "aurelia_transit_architecture:uk_car_stop_marker",
+    "aurelia_transit_architecture:german_stop_board",
+    "aurelia_transit_architecture:dutch_stop_board"
   ]
 }

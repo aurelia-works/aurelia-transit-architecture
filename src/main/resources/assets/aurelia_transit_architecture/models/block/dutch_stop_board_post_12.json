@@ -1,0 +1,6 @@
+{
+  "parent": "aurelia_transit_architecture:block/dutch_stop_board",
+  "textures": {
+    "face": "aurelia_transit_architecture:block/cs_nl_12"
+  }
+}

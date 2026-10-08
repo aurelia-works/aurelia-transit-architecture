@@ -63,6 +63,8 @@ EXPECTED_PROPERTIES = {
     "CurvedScreenDoorBlock": {"facing", "kind"},
     "TrainEdgeBlock": {"facing", "part"},
     # 1.5
+    "CarStopMarkerBlock": {"facing", "wall", "cars"},
+    "StopBoardBlock": {"facing", "wall", "cars"},
     "ArchGlassBlock": set(),
     "ArchGlassPaneBlock": {"north", "east", "south", "west"},
     "GlassFinBlock": {"axis"},
@@ -169,7 +171,8 @@ def main():
             if cls in ("FacingShapedBlock", "GlassFacingBlock", "TextSignBlock", "SeatBlock", "InfoDisplayBlock", "ClockBlock", "WayfindingPlateBlock",
                        "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
                        "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock",
-                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock"):
+                       "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock",
+                       "CarStopMarkerBlock", "StopBoardBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

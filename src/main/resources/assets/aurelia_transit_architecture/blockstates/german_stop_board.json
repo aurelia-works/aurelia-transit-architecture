@@ -1,0 +1,394 @@
+{
+  "variants": {
+    "cars=0,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_0"
+    },
+    "cars=0,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_0"
+    },
+    "cars=0,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_0",
+      "y": 90
+    },
+    "cars=0,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_0",
+      "y": 90
+    },
+    "cars=0,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_0",
+      "y": 180
+    },
+    "cars=0,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_0",
+      "y": 180
+    },
+    "cars=0,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_0",
+      "y": 270
+    },
+    "cars=0,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_0",
+      "y": 270
+    },
+    "cars=1,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_1"
+    },
+    "cars=1,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_1"
+    },
+    "cars=1,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_1",
+      "y": 90
+    },
+    "cars=1,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_1",
+      "y": 90
+    },
+    "cars=1,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_1",
+      "y": 180
+    },
+    "cars=1,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_1",
+      "y": 180
+    },
+    "cars=1,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_1",
+      "y": 270
+    },
+    "cars=1,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_1",
+      "y": 270
+    },
+    "cars=2,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_2"
+    },
+    "cars=2,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_2"
+    },
+    "cars=2,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_2",
+      "y": 90
+    },
+    "cars=2,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_2",
+      "y": 90
+    },
+    "cars=2,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_2",
+      "y": 180
+    },
+    "cars=2,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_2",
+      "y": 180
+    },
+    "cars=2,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_2",
+      "y": 270
+    },
+    "cars=2,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_2",
+      "y": 270
+    },
+    "cars=3,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_3"
+    },
+    "cars=3,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_3"
+    },
+    "cars=3,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_3",
+      "y": 90
+    },
+    "cars=3,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_3",
+      "y": 90
+    },
+    "cars=3,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_3",
+      "y": 180
+    },
+    "cars=3,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_3",
+      "y": 180
+    },
+    "cars=3,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_3",
+      "y": 270
+    },
+    "cars=3,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_3",
+      "y": 270
+    },
+    "cars=4,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_4"
+    },
+    "cars=4,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_4"
+    },
+    "cars=4,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_4",
+      "y": 90
+    },
+    "cars=4,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_4",
+      "y": 90
+    },
+    "cars=4,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_4",
+      "y": 180
+    },
+    "cars=4,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_4",
+      "y": 180
+    },
+    "cars=4,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_4",
+      "y": 270
+    },
+    "cars=4,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_4",
+      "y": 270
+    },
+    "cars=5,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_5"
+    },
+    "cars=5,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_5"
+    },
+    "cars=5,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_5",
+      "y": 90
+    },
+    "cars=5,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_5",
+      "y": 90
+    },
+    "cars=5,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_5",
+      "y": 180
+    },
+    "cars=5,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_5",
+      "y": 180
+    },
+    "cars=5,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_5",
+      "y": 270
+    },
+    "cars=5,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_5",
+      "y": 270
+    },
+    "cars=6,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_6"
+    },
+    "cars=6,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_6"
+    },
+    "cars=6,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_6",
+      "y": 90
+    },
+    "cars=6,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_6",
+      "y": 90
+    },
+    "cars=6,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_6",
+      "y": 180
+    },
+    "cars=6,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_6",
+      "y": 180
+    },
+    "cars=6,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_6",
+      "y": 270
+    },
+    "cars=6,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_6",
+      "y": 270
+    },
+    "cars=7,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_7"
+    },
+    "cars=7,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_7"
+    },
+    "cars=7,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_7",
+      "y": 90
+    },
+    "cars=7,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_7",
+      "y": 90
+    },
+    "cars=7,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_7",
+      "y": 180
+    },
+    "cars=7,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_7",
+      "y": 180
+    },
+    "cars=7,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_7",
+      "y": 270
+    },
+    "cars=7,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_7",
+      "y": 270
+    },
+    "cars=8,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_8"
+    },
+    "cars=8,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_8"
+    },
+    "cars=8,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_8",
+      "y": 90
+    },
+    "cars=8,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_8",
+      "y": 90
+    },
+    "cars=8,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_8",
+      "y": 180
+    },
+    "cars=8,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_8",
+      "y": 180
+    },
+    "cars=8,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_8",
+      "y": 270
+    },
+    "cars=8,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_8",
+      "y": 270
+    },
+    "cars=9,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_9"
+    },
+    "cars=9,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_9"
+    },
+    "cars=9,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_9",
+      "y": 90
+    },
+    "cars=9,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_9",
+      "y": 90
+    },
+    "cars=9,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_9",
+      "y": 180
+    },
+    "cars=9,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_9",
+      "y": 180
+    },
+    "cars=9,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_9",
+      "y": 270
+    },
+    "cars=9,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_9",
+      "y": 270
+    },
+    "cars=10,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_10"
+    },
+    "cars=10,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_10"
+    },
+    "cars=10,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_10",
+      "y": 90
+    },
+    "cars=10,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_10",
+      "y": 90
+    },
+    "cars=10,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_10",
+      "y": 180
+    },
+    "cars=10,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_10",
+      "y": 180
+    },
+    "cars=10,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_10",
+      "y": 270
+    },
+    "cars=10,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_10",
+      "y": 270
+    },
+    "cars=11,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_11"
+    },
+    "cars=11,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_11"
+    },
+    "cars=11,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_11",
+      "y": 90
+    },
+    "cars=11,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_11",
+      "y": 90
+    },
+    "cars=11,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_11",
+      "y": 180
+    },
+    "cars=11,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_11",
+      "y": 180
+    },
+    "cars=11,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_11",
+      "y": 270
+    },
+    "cars=11,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_11",
+      "y": 270
+    },
+    "cars=12,facing=north,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_12"
+    },
+    "cars=12,facing=north,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_12"
+    },
+    "cars=12,facing=east,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_12",
+      "y": 90
+    },
+    "cars=12,facing=east,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_12",
+      "y": 90
+    },
+    "cars=12,facing=south,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_12",
+      "y": 180
+    },
+    "cars=12,facing=south,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_12",
+      "y": 180
+    },
+    "cars=12,facing=west,wall=false": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_post_12",
+      "y": 270
+    },
+    "cars=12,facing=west,wall=true": {
+      "model": "aurelia_transit_architecture:block/german_stop_board_wall_12",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "parent": "aurelia_transit_architecture:block/uk_car_stop_marker",
+  "textures": {
+    "face": "aurelia_transit_architecture:block/cs_uk_1"
+  }
+}

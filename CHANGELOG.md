@@ -9,6 +9,7 @@
   - Germany and Italy (27): Frankfurt sandstone and iron hall truss; Munich concrete and terrazzo; Hamburg clinker brick and hall roof; a small S-Bahn station; Roma travertine and ribbon window.
   - Dutch and German station signs and the Dutch platform sign use the existing editable sign: right-click to type text. The Dutch column band is plain.
 - **ATA Metro tab (27):** tiles, ceilings, floors, columns and tunnel finishes inspired by the Munich, Frankfurt, Amsterdam, Rotterdam, Lisbon and Washington metros.
+- **Car stop boards (3, Wayfinding tab):** UK car stop marker, German stop board (with an "H" board) and Dutch stop board (with a red and white stop-here board), numbers 1-12 for a train of that many cars. Right-click with an empty hand to change the number, sneak-right-click to go back. Freestanding on a thin post (faces you) or mounted on the wall you aim at; a sign pole joins a freestanding board. No block entity, no ticking.
 - **No operator logos:** colours and shapes only, no operator wordmarks or symbols.
 - **Lightweight:** no new ticking, at most six cuboids per model. Only the three editable signs have block entities, the same non-ticking kind as the existing signs.
 

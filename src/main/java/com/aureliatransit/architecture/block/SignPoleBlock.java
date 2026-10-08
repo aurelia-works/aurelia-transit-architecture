@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.block;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
+import com.aureliatransit.architecture.block.wayfinding.CarStopBlock;
 import com.aureliatransit.architecture.registry.WayfindingBlocks;
 import com.aureliatransit.architecture.util.Shapes;
 import net.minecraft.block.Block;
@@ -88,11 +89,16 @@ public class SignPoleBlock extends Block {
 		} else {
 			align = Align.CENTRE;
 		}
-		return state.with(ALIGN, align).with(UP, align == Align.CENTRE && above.isIn(POLE_MOUNTS));
+		return state.with(ALIGN, align).with(UP, align == Align.CENTRE && joins(above));
 	}
 
 	private static BlockState withBelow(BlockState state, BlockState below) {
-		return state.with(DOWN, below.isIn(POLE_MOUNTS));
+		return state.with(DOWN, joins(below));
+	}
+
+	/** A tagged sign the pole can run into. A wall-mounted car stop board has no post of its own, so the pole stops short of it. */
+	private static boolean joins(BlockState sign) {
+		return sign.isIn(POLE_MOUNTS) && !(sign.contains(CarStopBlock.WALL) && sign.get(CarStopBlock.WALL));
 	}
 
 	/** Where the pole stands: centred, or under the post of a street sign facing that way. */

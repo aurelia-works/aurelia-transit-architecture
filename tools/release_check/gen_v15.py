@@ -66,7 +66,21 @@ az = Z + 20
 for row, block in enumerate(("frankfurt_hall_truss_arch", "frankfurt_ridge_skylight", "antwerp_iron_glass_vault")):
     for i, facing in enumerate(("north", "east", "south", "west")):
         sb(i * 3, Y, az + row * 3, f"{block}[facing={facing}]")
-L.append(f'tellraw @a {{"text":"1.5 scene placed: {count} blocks by tab (z {Z - 8}..{Z + 4}), glass z {gz}, angled pieces z {az}..{az + 6} (north, east, south, west).","color":"green"}}')
+# ---- car stop boards: a platform-end row (4, 6, 8 and 12 cars per style, then the stop-here board), freestanding on their post,
+#      then the same numbers wall-mounted on a short wall behind. Boards face south; look at them from the south.
+cz = Z + 30
+L.append(f"fill -2 {Y} {cz - 2} 40 {Y + 3} {cz - 2} minecraft:stone_bricks")
+for row, (block, first) in enumerate((("uk_car_stop_marker", 4), ("german_stop_board", 0), ("dutch_stop_board", 0))):
+    numbers = [4, 6, 8, 12] + ([0] if first == 0 else [])
+    for i, cars in enumerate(numbers):
+        x = row * 12 + i * 2
+        sb(x, Y, cz, f"{block}[cars={cars},facing=south,wall=false]")
+        sb(x, Y + 1, cz - 1, f"{block}[cars={cars},facing=south,wall=true]")
+    count += len(numbers) * 2
+# a sign pole under a freestanding board: the pole joins it (it does not join a wall-mounted board)
+sb(40, Y, cz, "sign_pole")
+sb(40, Y + 1, cz, "uk_car_stop_marker[cars=8,facing=south,wall=false]")
+L.append(f'tellraw @a {{"text":"1.5 scene placed: {count} blocks by tab (z {Z - 8}..{Z + 4}), glass z {gz}, angled pieces z {az}..{az + 6} (north, east, south, west), car stop boards z {cz}.","color":"green"}}')
 L.append(f"tp @a 20 {Y + 1} {Z + 38} 180 10")
 open(os.path.join(os.path.dirname(__file__), "ata_test/data/ata_test/functions/v15_showcase.mcfunction"), "w").write("\n".join(L) + "\n")
 print(len(L), "commands,", count, "blocks")

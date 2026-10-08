@@ -51,6 +51,7 @@ Install the mod on both the server and the clients.
 - **Shorter, plainer tooltips and city-named blocks.**
 - **ATA Glass tab (22):** architectural glass and panes, curtain wall, fin and floor panel.
 - **ATA European Stations tab (55):** Netherlands and Belgium (Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp) and Germany and Italy (Frankfurt, Munich, Hamburg, S-Bahn, Roma). Dutch and German station signs and the Dutch platform sign are editable.
+- **Car stop boards (3):** UK, German and Dutch boards at the platform end showing where to stop a train of 1-12 cars; right-click to change the number, post or wall mount.
 - **ATA Metro tab (27):** station finishes inspired by Munich, Frankfurt, Amsterdam, Rotterdam, Lisbon and Washington.
 - **No operator logos.** No new ticking and no heavy models.
 

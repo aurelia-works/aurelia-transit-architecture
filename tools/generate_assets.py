@@ -840,7 +840,8 @@ FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True), ("_up_down", True, True))
 POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
                "hanging_wayfinding_sign", "exit_sign", "pictogram_sign",
-               "dutch_station_sign", "dutch_platform_sign", "german_station_sign")
+               "dutch_station_sign", "dutch_platform_sign", "german_station_sign",
+               "uk_car_stop_marker", "german_stop_board", "dutch_stop_board")
 
 
 def sign_pole(up, down):
@@ -865,6 +866,15 @@ def blockstate(block_id, kind, variant_names):
             for align in ("centre",) + tuple(FACING_Y):
                 key = f"align={align},down={str(down).lower()},up={str(up).lower()}"
                 variants[key] = {"model": ref(suffix)} if align == "centre" else {"model": ref("_post")} | ({"y": FACING_Y[align]} if FACING_Y[align] else {})
+        return {"variants": variants}
+    if kind in ("car_stop", "stop_board"):
+        # cars=N (1-12, or 0-12 with the stop-here board), freestanding or wall; models _post_N / _wall_N, front north
+        variants = {}
+        for n in range(1 if kind == "car_stop" else 0, 13):
+            for f, y in FACING_Y.items():
+                for wall in (False, True):
+                    model_ref = ref(f"_{'wall' if wall else 'post'}_{n}")
+                    variants[f"cars={n},facing={f},wall={str(wall).lower()}"] = {"model": model_ref} | ({"y": y} if y else {})
         return {"variants": variants}
     if kind == "axis":
         return {"variants": {"axis=x": {"model": ref("")}, "axis=z": {"model": ref(""), "y": 90}}}
@@ -893,7 +903,7 @@ def icon():
     return img
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_metro")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_metro", "assets_car_stops")
 
 
 def load_extensions():
