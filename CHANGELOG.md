@@ -2,9 +2,15 @@
 
 ## 1.5.0 (unreleased)
 
-- **ATA Glass tab:** 22 new glass blocks in their own creative tab. Clear float, low-iron, grey, bronze and blue tinted, reflective, frosted, fritted and wired glass, each as a full block and a connecting pane; plus glass brick, curtain wall glass, structural glass fin and glass floor panel.
-- **Lightweight:** no block entities or ticking, vanilla-style face culling, one cuboid per model; wired and fritted glass render cutout, the rest translucent. Full glass blocks join the `impermeable` tag like vanilla glass.
-- **Shorter tooltips and names:** every tooltip is now one short plain sentence, and a few long block names and chat messages are trimmed. No ids or lang keys changed.
+- **Wording pass:** tooltips are short and plain (50 characters or fewer, no full stops), and block names name their city. No lang keys of existing blocks changed.
+- **ATA Glass tab (22 blocks):** clear float, low-iron, grey, bronze and blue tinted, reflective, frosted, fritted and wired glass, each as a block and a pane, plus glass brick, curtain wall glass, structural glass fin and glass floor panel.
+- **ATA European Stations tab:**
+  - Netherlands and Belgium (28): Utrecht wave roof, tree column and hall glass; Leidsche Rijn timber soffit and cladding; Amsterdam red brick, stone cornice, cast iron shed and clock face; Rotterdam stainless roof and timber ceiling; Antwerp limestone, marble and glass vault.
+  - Germany and Italy (27): Frankfurt sandstone and iron hall truss; Munich concrete and terrazzo; Hamburg clinker brick and hall roof; a small S-Bahn station; Roma travertine and ribbon window.
+  - Dutch and German station signs and the Dutch platform sign use the existing editable sign: right-click to type text. The Dutch column band is plain.
+- **ATA Metro tab (27):** tiles, ceilings, floors, columns and tunnel finishes inspired by the Munich, Frankfurt, Amsterdam, Rotterdam, Lisbon and Washington metros.
+- **No operator logos:** colours and shapes only, no operator wordmarks or symbols.
+- **Lightweight:** no new ticking, at most six cuboids per model. Only the three editable signs have block entities, the same non-ticking kind as the existing signs.
 
 ## 1.4.0
 

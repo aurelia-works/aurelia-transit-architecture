@@ -31,7 +31,7 @@ NAMES = {
     "metro_tile_blue": "Munich Metro Tile, Blue",
     "metro_tile_green": "Munich Metro Tile, Green",
     "metro_tile_yellow": "Munich Metro Tile, Yellow",
-    "metro_ceiling_strip": "Munich Metro Aluminium Ceiling",
+    "metro_ceiling_strip": "Munich Metro Aluminum Ceiling",
     "metro_granite_floor": "Munich Metro Granite Floor",
     "metro_ribbed_concrete": "Frankfurt Metro Ribbed Concrete",
     "metro_ochre_tile": "Frankfurt Metro Ochre Tile",

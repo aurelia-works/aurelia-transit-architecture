@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:stonecutting",
-  "ingredient": {
-    "item": "minecraft:iron_ingot"
-  },
-  "result": "aurelia_transit_architecture:stainless_roof_panel",
-  "count": 4
-}

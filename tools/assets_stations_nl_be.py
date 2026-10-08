@@ -280,24 +280,16 @@ def textures():
     t[P + "marble_floor"] = marble_floor()
     t[P + "gilt_trim"] = gilt_trim()
 
-    # ---- Dutch-style signage: colours only
-    sign = g.noisy(SIGN_YELLOW, 2, P + "sign_yellow")
-    t[P + "sign_yellow"] = sign
-    face = g.noisy(SIGN_YELLOW, 2, P + "sign_face")
-    for y in range(5, 11):
-        for x in range(16):
-            put(face, x, y, g.shade(SIGN_NAVY, g.rng(f"sign{x}{y}").randint(-3, 3)))
-    for x in range(16):
-        put(face, x, 11, g.shade(SIGN_YELLOW, -18))
-    t[P + "sign_face"] = face
-
+    # ---- Dutch-style signage: colours only (text is drawn by the sign renderer)
+    t[P + "sign_yellow"] = g.noisy(SIGN_YELLOW, 2, P + "sign_yellow")
+    t[P + "sign_frame"] = g.noisy(SIGN_NAVY, 2, P + "sign_frame")
     plate = g.noisy(SIGN_YELLOW, 2, P + "platform_sign")
-    for y in range(16):
-        for x in range(16):
-            if (x + 0.5 - 8) ** 2 + (y + 0.5 - 9) ** 2 <= 16.5:
-                put(plate, x, y, g.shade(SIGN_NAVY, ((x * 7 + y * 3) % 5) - 2))
-    for i in range(3, 13):
-        put(plate, i, 14, g.shade(SIGN_YELLOW, -16))
+    for i in range(4, 12):
+        put(plate, i, 5, SIGN_NAVY)
+        put(plate, i, 12, SIGN_NAVY)
+    for i in range(5, 13):
+        put(plate, 4, i, SIGN_NAVY)
+        put(plate, 11, i, SIGN_NAVY)
     t[P + "platform_sign"] = plate
 
     band_tex = g.noisy(SIGN_YELLOW, 2, P + "column_band")
@@ -392,28 +384,44 @@ def limestone():
 
 
 def marble_wall():
+    """Polished warm cream marble with soft grey veining. Veins are continuous wrapped paths and the clouds use whole-number
+    sine waves, so the tile is seamless."""
+    tau = 2 * math.pi / 16
     r = g.rng(P + "marble_wall")
-    palette = [(228, 220, 204), (178, 112, 102), (104, 132, 112), (214, 196, 170), (120, 78, 72), (232, 228, 220)]
-    seeds = [(r.uniform(0, 16), r.uniform(0, 16), palette[i % len(palette)]) for i in range(9)]
+    cream = (233, 226, 211)
+    vein = (132, 130, 130)
     img = g.new()
     for y in range(16):
         for x in range(16):
-            cell, dist = None, 99
-            second = 99
-            for sx, sy, colour in seeds:
-                best = min(math.hypot(x - sx + ox, y - sy + oy) for ox in (-16, 0, 16) for oy in (-16, 0, 16))
-                if best < dist:
-                    second, dist, cell = dist, best, colour
-                elif best < second:
-                    second = best
-            c = g.shade(cell, r.randint(-5, 5) + 7 * math.sin((x + y) / 3.0))
-            if second - dist < 0.8:
-                c = g.shade(c, 26)
-            put(img, x, y, c)
-    for y in range(16):
-        for x in range(16):
-            if (x + y) in (7, 8, 23):
-                put(img, x, y, g.shade(get(img, x, y), 14))
+            cloud = 3.0 * math.sin(tau * (x + y) + 0.5) + 2.5 * math.sin(tau * (2 * x - y) + 2.0) + 2.0 * math.sin(tau * (x - 2 * y) + 4.0)
+            put(img, x, y, g.shade(cream, cloud + r.randint(-1, 1)))
+
+    def lay(path, strength):
+        for (x, y) in path:  # soft halo first, then the core, so the vein reads as a blurred line
+            for dy, w in ((-2, 0.1), (-1, 0.35), (1, 0.35), (2, 0.1), (0, 1.0)):
+                base = get(img, x % 16, (y + dy) % 16)
+                k = strength * w
+                put(img, x % 16, (y + dy) % 16, tuple(int(base[c] + (vein[c] - base[c]) * k) for c in range(3)))
+
+    main, branch = [], []
+    prev = None
+    for x in range(16):
+        y = 3 + x + round(1.6 * math.sin(tau * x + 0.6) + 0.7 * math.sin(tau * 2 * x + 1.9))
+        if prev is not None:
+            lo, hi = sorted((prev, y))
+            main += [(x, yy) for yy in range(lo + 1, hi)]
+        main.append((x, y))
+        prev = y
+    prev = None
+    for x in range(16):
+        y = 13 - x + round(1.2 * math.sin(tau * x + 2.2))
+        if prev is not None:
+            lo, hi = sorted((prev, y))
+            branch += [(x, yy) for yy in range(lo + 1, hi)]
+        branch.append((x, y))
+        prev = y
+    lay(main, 0.5)
+    lay(branch, 0.12)
     return img
 
 
@@ -476,77 +484,76 @@ def stepped(profile, texs, step=4, thickness=2):
 def blocks():
     b = {}
     wave = {"particle": P + "white_steel", "top": P + "wave_top", "under": P + "wave_under", "side": P + "white_steel"}
-    b["wave_roof_panel"] = ("simple", {"": g.model(wave, [g.el([0, 0, 0], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under"})])})
-    b["wave_roof_rise"] = ("facing", {"": stepped(g.WAVE_RISE, wave)})
-    b["wave_roof_edge"] = ("facing", {"": g.model(wave, [
+    b["utrecht_wave_roof_panel"] = ("simple", {"": g.model(wave, [g.el([0, 0, 0], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under"})])})
+    b["utrecht_wave_roof_rise"] = ("facing", {"": stepped(g.WAVE_RISE, wave)})
+    b["utrecht_wave_roof_edge"] = ("facing", {"": g.model(wave, [
         g.el([0, 0, 2], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under", "north": None}),
         g.el([0, 0, 0], [16, 4, 2], "#side", faces={"up": "#top", "down": "#under"}),
     ])})
     col = {"particle": P + "white_steel", "side": P + "white_steel"}
-    b["tree_column_white"] = ("simple", {"": g.model(col, [
+    b["utrecht_tree_column_white"] = ("simple", {"": g.model(col, [
         g.el([6.5, 0, 6.5], [9.5, 8, 9.5], "#side"),
         g.el([5.5, 8, 5.5], [10.5, 11, 10.5], "#side"),
         g.el([3.5, 11, 3.5], [12.5, 14, 12.5], "#side"),
         g.el([1, 14, 1], [15, 16, 15], "#side"),
     ])})
-    b["hall_glass_facade"] = ("facing", {"": g.model({"particle": P + "white_steel", "glass": P + "hall_glass", "frame": P + "white_steel"}, [
+    b["utrecht_hall_glass_facade"] = ("facing", {"": g.model({"particle": P + "white_steel", "glass": P + "hall_glass", "frame": P + "white_steel"}, [
         g.el([0, 0, 7.5], [16, 16, 8.5], "#glass", faces={"up": None, "down": None, "east": None, "west": None}),
         g.el([0, 0, 6.5], [1, 16, 9.5], "#frame"),
         g.el([15, 0, 6.5], [16, 16, 9.5], "#frame"),
         g.el([1, 14.5, 6.5], [15, 16, 9.5], "#frame", faces={"east": None, "west": None}),
     ])})
-    b["light_grey_floor_tile"] = ("simple", {"": cube_all(P + "floor_tile")})
+    b["utrecht_light_grey_floor_tile"] = ("simple", {"": cube_all(P + "floor_tile")})
 
-    b["timber_soffit_canopy"] = ("simple", {"": g.model({"particle": P + "soffit", "top": P + "dark_roof", "under": P + "soffit", "side": P + "dark_steel"}, [
+    b["leidsche_rijn_timber_soffit_canopy"] = ("simple", {"": g.model({"particle": P + "soffit", "top": P + "dark_roof", "under": P + "soffit", "side": P + "dark_steel"}, [
         g.el([0, 0, 0], [16, 3, 16], "#side", faces={"up": "#top", "down": "#under"}),
     ])})
-    b["perforated_anthracite_cladding"] = ("simple", {"": cube_all(P + "perforated")})
-    b["concrete_platform_paver"] = ("simple", {"": g.cube_bottom_top(P + "paver", "concrete_light", "concrete_light")})
+    b["leidsche_rijn_perforated_cladding"] = ("simple", {"": cube_all(P + "perforated")})
+    b["leidsche_rijn_concrete_platform_paver"] = ("simple", {"": g.cube_bottom_top(P + "paver", "concrete_light", "concrete_light")})
 
-    b["dark_red_brick"] = ("simple", {"": cube_all(P + "brick")})
-    b["red_brick_sandstone_band"] = ("simple", {"": cube_all(P + "brick_band_side")})
+    b["amsterdam_red_brick"] = ("simple", {"": cube_all(P + "brick")})
+    b["amsterdam_brick_sandstone_band"] = ("simple", {"": cube_all(P + "brick_band_side")})
     st = {"particle": P + "sandstone", "side": P + "sandstone", "dentil": P + "dentil"}
-    b["ornamental_stone_cornice"] = ("facing", {"": g.model(st, [
+    b["amsterdam_stone_cornice"] = ("facing", {"": g.model(st, [
         g.el([0, 0, 10], [16, 5, 16], "#side"),
         g.el([0, 5, 7], [16, 9, 16], "#side", faces={"north": "#dentil"}),
         g.el([0, 9, 3], [16, 12, 16], "#side"),
         g.el([0, 12, 1], [16, 16, 16], "#side"),
     ])})
-    b["arched_window_brick"] = ("facing", {"": g.model({"particle": P + "brick", "wall": P + "brick", "window": P + "window"}, [
+    b["amsterdam_arched_window"] = ("facing", {"": g.model({"particle": P + "brick", "wall": P + "brick", "window": P + "window"}, [
         g.el([0, 0, 6], [16, 16, 10], "#wall", faces={"north": "#window", "south": "#window"}),
     ])})
     for kind in ("leg", "arch"):
-        b[f"cast_iron_shed_{kind}"] = ("facing", {"": g.model({"particle": P + "cast_iron", "side": P + "cast_iron", "truss": P + f"shed_{kind}"}, [
+        b[f"amsterdam_cast_iron_shed_{kind}"] = ("facing", {"": g.model({"particle": P + "cast_iron", "side": P + "cast_iron", "truss": P + f"shed_{kind}"}, [
             g.el([0, 0, 7], [16, 16, 9], "#side", faces={"north": "#truss", "south": "#truss"}),
         ])})
-    b["gilded_clock_face_panel"] = ("facing", {"": g.model({"particle": P + "gilt", "side": P + "gilt", "face": P + "clock_panel"}, [
+    b["amsterdam_clock_face_panel"] = ("facing", {"": g.model({"particle": P + "gilt", "side": P + "gilt", "face": P + "clock_panel"}, [
         g.el([1, 1, 13], [15, 15, 16], "#side", faces={"north": ("#face", [1, 1, 15, 15])}),
     ])})
 
     sp = {"particle": P + "stainless", "side": P + "stainless"}
-    b["stainless_roof_panel"] = ("simple", {"": g.model(sp, [g.el([0, 0, 0], [16, 2, 16], "#side")])})
-    b["stainless_roof_slope"] = ("facing", {"": stepped(g.SLOPE_LOWER, {**sp, "top": P + "stainless", "under": P + "stainless"})})
-    b["timber_slat_ceiling"] = ("simple", {"": cube_all(P + "slats")})
-    b["black_stone_floor"] = ("simple", {"": cube_all(P + "black_stone")})
+    b["rotterdam_stainless_roof_panel"] = ("simple", {"": g.model(sp, [g.el([0, 0, 0], [16, 2, 16], "#side")])})
+    b["rotterdam_stainless_roof_slope"] = ("facing", {"": stepped(g.SLOPE_LOWER, {**sp, "top": P + "stainless", "under": P + "stainless"})})
+    b["rotterdam_timber_slat_ceiling"] = ("simple", {"": cube_all(P + "slats")})
+    b["rotterdam_black_stone_floor"] = ("simple", {"": cube_all(P + "black_stone")})
 
-    b["ornate_limestone"] = ("simple", {"": cube_all(P + "limestone")})
-    b["polished_marble_wall"] = ("simple", {"": cube_all(P + "marble_wall")})
-    b["marble_floor_tile"] = ("simple", {"": cube_all(P + "marble_floor")})
-    b["iron_glass_vault"] = ("facing", {"": vault()})
-    b["gilded_ornament_trim"] = ("facing", {"": g.model({"particle": P + "gilt", "side": P + "gilt", "orn": P + "gilt_trim"}, [
+    b["antwerp_ornate_limestone"] = ("simple", {"": cube_all(P + "limestone")})
+    b["antwerp_polished_marble_wall"] = ("simple", {"": cube_all(P + "marble_wall")})
+    b["antwerp_marble_floor_tile"] = ("simple", {"": cube_all(P + "marble_floor")})
+    b["antwerp_iron_glass_vault"] = ("facing", {"": vault()})
+    b["antwerp_gilded_ornament_trim"] = ("facing", {"": g.model({"particle": P + "gilt", "side": P + "gilt", "orn": P + "gilt_trim"}, [
         g.el([0, 4, 13], [16, 12, 16], "#side", faces={"north": ("#orn", [0, 2, 16, 10])}),
         g.el([0, 12, 12], [16, 14, 16], "#side"),
         g.el([0, 2, 12], [16, 4, 16], "#side"),
     ])})
 
-    b["yellow_station_sign_panel"] = ("facing", {"": g.model({"particle": P + "sign_yellow", "frame": P + "sign_yellow", "face": P + "sign_face"}, [
-        g.el([0, 4, 13], [16, 12, 16], "#frame", faces={"north": ("#face", [0, 4, 16, 12])}),
-    ])})
-    b["yellow_blue_platform_sign"] = ("facing", {"": g.model({"particle": P + "sign_yellow", "frame": P + "sign_yellow", "face": P + "platform_sign", "pole": "steel_dark"}, [
-        g.el([3, 2, 7], [13, 12, 9], "#frame", faces={"north": ("#face", [3, 4, 13, 14]), "south": ("#face", [3, 4, 13, 14])}),
-        g.el([7.5, 12, 7.5], [8.5, 16, 8.5], "#pole"),
-    ])})
-    b["yellow_column_band"] = ("simple", {"": g.model({"particle": P + "column_band", "side": P + "column_band"}, [
+    sign = {}
+    for left in (False, True):
+        for right in (False, True):
+            sign[("_l" if left else "") + ("_r" if right else "")] = g.sign_variant("station_name_sign", left, right, face=P + "sign_yellow", frame=P + "sign_frame")
+    b["dutch_station_sign"] = ("sign", sign)
+    b["dutch_platform_sign"] = ("sign_single", {"": g.platform_number_model(P + "sign_frame", P + "platform_sign")})
+    b["dutch_column_band"] = ("simple", {"": g.model({"particle": P + "column_band", "side": P + "column_band"}, [
         g.el([3.5, 5, 3.5], [12.5, 11, 12.5], "#side"),
     ])})
     return b
@@ -567,34 +574,34 @@ def vault():
 
 def names():
     return {
-        "wave_roof_panel": "Utrecht Wave Roof Panel",
-        "wave_roof_rise": "Utrecht Wave Roof Rise",
-        "wave_roof_edge": "Utrecht Wave Roof Edge",
-        "tree_column_white": "Utrecht Tree Column",
-        "hall_glass_facade": "Utrecht Hall Glass Facade",
-        "light_grey_floor_tile": "Utrecht Light Grey Floor Tile",
-        "timber_soffit_canopy": "Leidsche Rijn Timber Soffit Canopy",
-        "perforated_anthracite_cladding": "Leidsche Rijn Perforated Cladding",
-        "concrete_platform_paver": "Leidsche Rijn Concrete Platform Paver",
-        "dark_red_brick": "Amsterdam Dark Red Brick",
-        "red_brick_sandstone_band": "Amsterdam Brick with Sandstone Band",
-        "ornamental_stone_cornice": "Amsterdam Stone Cornice",
-        "arched_window_brick": "Amsterdam Arched Window",
-        "cast_iron_shed_leg": "Amsterdam Cast Iron Shed Leg",
-        "cast_iron_shed_arch": "Amsterdam Cast Iron Shed Arch",
-        "gilded_clock_face_panel": "Amsterdam Gilded Clock Face Panel",
-        "stainless_roof_panel": "Rotterdam Stainless Roof Panel",
-        "stainless_roof_slope": "Rotterdam Stainless Roof Slope",
-        "timber_slat_ceiling": "Rotterdam Timber Slat Ceiling",
-        "black_stone_floor": "Rotterdam Black Stone Floor",
-        "ornate_limestone": "Antwerpen Ornate Limestone",
-        "polished_marble_wall": "Antwerpen Polished Marble Wall",
-        "marble_floor_tile": "Antwerpen Marble Floor Tile",
-        "iron_glass_vault": "Antwerpen Iron and Glass Vault",
-        "gilded_ornament_trim": "Antwerpen Gilded Ornament Trim",
-        "yellow_station_sign_panel": "Yellow Station Sign Panel",
-        "yellow_blue_platform_sign": "Yellow and Blue Platform Sign",
-        "yellow_column_band": "Yellow Column Band",
+        "utrecht_wave_roof_panel": "Utrecht Wave Roof Panel",
+        "utrecht_wave_roof_rise": "Utrecht Wave Roof Rise",
+        "utrecht_wave_roof_edge": "Utrecht Wave Roof Edge",
+        "utrecht_tree_column_white": "Utrecht Tree Column",
+        "utrecht_hall_glass_facade": "Utrecht Hall Glass Facade",
+        "utrecht_light_grey_floor_tile": "Utrecht Light Grey Floor Tile",
+        "leidsche_rijn_timber_soffit_canopy": "Leidsche Rijn Timber Soffit Canopy",
+        "leidsche_rijn_perforated_cladding": "Leidsche Rijn Perforated Cladding",
+        "leidsche_rijn_concrete_platform_paver": "Leidsche Rijn Concrete Platform Paver",
+        "amsterdam_red_brick": "Amsterdam Red Brick",
+        "amsterdam_brick_sandstone_band": "Amsterdam Brick with Sandstone Band",
+        "amsterdam_stone_cornice": "Amsterdam Stone Cornice",
+        "amsterdam_arched_window": "Amsterdam Arched Window",
+        "amsterdam_cast_iron_shed_leg": "Amsterdam Cast Iron Shed Leg",
+        "amsterdam_cast_iron_shed_arch": "Amsterdam Cast Iron Shed Arch",
+        "amsterdam_clock_face_panel": "Amsterdam Clock Face Panel",
+        "rotterdam_stainless_roof_panel": "Rotterdam Stainless Roof Panel",
+        "rotterdam_stainless_roof_slope": "Rotterdam Stainless Roof Slope",
+        "rotterdam_timber_slat_ceiling": "Rotterdam Timber Slat Ceiling",
+        "rotterdam_black_stone_floor": "Rotterdam Black Stone Floor",
+        "antwerp_ornate_limestone": "Antwerp Ornate Limestone",
+        "antwerp_polished_marble_wall": "Antwerp Polished Marble Wall",
+        "antwerp_marble_floor_tile": "Antwerp Marble Floor Tile",
+        "antwerp_iron_glass_vault": "Antwerp Iron and Glass Vault",
+        "antwerp_gilded_ornament_trim": "Antwerp Gilded Ornament Trim",
+        "dutch_station_sign": "Dutch Station Sign",
+        "dutch_platform_sign": "Dutch Platform Sign",
+        "dutch_column_band": "Dutch Column Band",
     }
 
 
@@ -614,29 +621,29 @@ def recipes():
                      "ingredients": [g.item(i) if not i.startswith("#") else {"tag": i[1:]} for i in ingredients],
                      "result": {"item": f"{MOD}:{result}", "count": count}}
 
-    for result in ("wave_roof_panel", "wave_roof_rise", "wave_roof_edge", "stainless_roof_panel", "stainless_roof_slope"):
+    for result in ("utrecht_wave_roof_panel", "utrecht_wave_roof_rise", "utrecht_wave_roof_edge", "rotterdam_stainless_roof_panel", "rotterdam_stainless_roof_slope"):
         cut(result, "minecraft:iron_ingot", 4)
-    cut("tree_column_white", "minecraft:iron_ingot", 2)
-    cut("hall_glass_facade", "minecraft:glass", 2)
-    cut("light_grey_floor_tile", "minecraft:light_gray_concrete", 2)
-    shapeless("timber_soffit_canopy", ["minecraft:iron_ingot", "#minecraft:planks"], 4)
-    cut("perforated_anthracite_cladding", "minecraft:iron_ingot", 2)
-    cut("concrete_platform_paver", "minecraft:light_gray_concrete", 2)
-    cut("dark_red_brick", "minecraft:bricks")
-    shapeless("red_brick_sandstone_band", [f"{MOD}:dark_red_brick", "minecraft:smooth_sandstone"])
-    cut("ornamental_stone_cornice", "minecraft:smooth_sandstone", 2)
-    shapeless("arched_window_brick", [f"{MOD}:dark_red_brick", "minecraft:glass_pane"])
-    shapeless("cast_iron_shed_leg", ["minecraft:iron_ingot", "minecraft:green_dye"])
-    shapeless("cast_iron_shed_arch", ["minecraft:iron_ingot", "minecraft:green_dye", "minecraft:iron_nugget"])
-    shapeless("gilded_clock_face_panel", ["minecraft:clock", "minecraft:gold_nugget", "minecraft:blue_dye"], 1)
-    cut("timber_slat_ceiling", "minecraft:oak_planks", 2)
-    cut("black_stone_floor", "minecraft:polished_blackstone", 2)
-    cut("ornate_limestone", "minecraft:smooth_sandstone")
-    cut("polished_marble_wall", "minecraft:quartz_block")
-    cut("marble_floor_tile", "minecraft:quartz_block", 2)
-    shapeless("iron_glass_vault", ["minecraft:glass", "minecraft:iron_ingot"])
-    shapeless("gilded_ornament_trim", ["minecraft:gold_nugget", "minecraft:smooth_sandstone"])
-    shapeless("yellow_station_sign_panel", ["minecraft:iron_ingot", "minecraft:yellow_dye", "minecraft:blue_dye"])
-    shapeless("yellow_blue_platform_sign", ["minecraft:iron_ingot", "minecraft:yellow_dye", "minecraft:blue_dye", "minecraft:chain"])
-    shapeless("yellow_column_band", ["minecraft:paper", "minecraft:yellow_dye", "minecraft:blue_dye"])
+    cut("utrecht_tree_column_white", "minecraft:iron_ingot", 2)
+    cut("utrecht_hall_glass_facade", "minecraft:glass", 2)
+    cut("utrecht_light_grey_floor_tile", "minecraft:light_gray_concrete", 2)
+    shapeless("leidsche_rijn_timber_soffit_canopy", ["minecraft:iron_ingot", "#minecraft:planks"], 4)
+    cut("leidsche_rijn_perforated_cladding", "minecraft:iron_ingot", 2)
+    cut("leidsche_rijn_concrete_platform_paver", "minecraft:light_gray_concrete", 2)
+    cut("amsterdam_red_brick", "minecraft:bricks")
+    shapeless("amsterdam_brick_sandstone_band", [f"{MOD}:amsterdam_red_brick", "minecraft:smooth_sandstone"])
+    cut("amsterdam_stone_cornice", "minecraft:smooth_sandstone", 2)
+    shapeless("amsterdam_arched_window", [f"{MOD}:amsterdam_red_brick", "minecraft:glass_pane"])
+    shapeless("amsterdam_cast_iron_shed_leg", ["minecraft:iron_ingot", "minecraft:green_dye"])
+    shapeless("amsterdam_cast_iron_shed_arch", ["minecraft:iron_ingot", "minecraft:green_dye", "minecraft:iron_nugget"])
+    shapeless("amsterdam_clock_face_panel", ["minecraft:clock", "minecraft:gold_nugget", "minecraft:blue_dye"], 1)
+    cut("rotterdam_timber_slat_ceiling", "minecraft:oak_planks", 2)
+    cut("rotterdam_black_stone_floor", "minecraft:polished_blackstone", 2)
+    cut("antwerp_ornate_limestone", "minecraft:smooth_sandstone")
+    cut("antwerp_polished_marble_wall", "minecraft:quartz_block")
+    cut("antwerp_marble_floor_tile", "minecraft:quartz_block", 2)
+    shapeless("antwerp_iron_glass_vault", ["minecraft:glass", "minecraft:iron_ingot"])
+    shapeless("antwerp_gilded_ornament_trim", ["minecraft:gold_nugget", "minecraft:smooth_sandstone"])
+    shapeless("dutch_station_sign", ["minecraft:iron_ingot", "minecraft:yellow_dye", "minecraft:blue_dye", "minecraft:glowstone_dust"])
+    shapeless("dutch_platform_sign", ["minecraft:iron_ingot", "minecraft:yellow_dye", "minecraft:blue_dye", "minecraft:chain"])
+    shapeless("dutch_column_band", ["minecraft:paper", "minecraft:yellow_dye", "minecraft:blue_dye"])
     return r

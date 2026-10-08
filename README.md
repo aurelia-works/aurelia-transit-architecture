@@ -27,7 +27,7 @@ Forge, NeoForge and other Minecraft versions are not supported.
 
 Install the mod on both the server and the clients.
 
-## Feature families (118 blocks)
+## Feature families (200 blocks)
 
 | Family | Pieces |
 |---|---|
@@ -43,11 +43,16 @@ Install the mod on both the server and the clients.
 | **Station equipment** (4) | Fare gate (charges MTR fares), card reader, booth window, CCTV camera |
 | **Bus** (8) | Bus stop sign, timetable case, shelter glass and roof, shelter seat, bus curb (full and low), e-paper arrival board |
 | **Glass** (22) | Clear float, low-iron, grey / bronze / blue tinted, reflective, frosted, fritted and wired glass (each a block and a pane), glass brick, curtain wall glass, structural glass fin, glass floor panel |
+| **European stations** (55) | Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp, Frankfurt, Munich, Hamburg, S-Bahn and Roma: roofs, trusses, brick and stone, floors, glazing, Dutch and German signs |
+| **Metro** (27) | Tiles, ceilings, floors, columns and tunnel finishes |
 
 ### What 1.5 adds
 
-- **ATA Glass tab:** realistic architectural glass, light on the game: no block entities, no ticking, vanilla-style culling.
-- **Shorter, plainer tooltips.**
+- **Shorter, plainer tooltips and city-named blocks.**
+- **ATA Glass tab (22):** architectural glass and panes, curtain wall, fin and floor panel.
+- **ATA European Stations tab (55):** Netherlands and Belgium (Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp) and Germany and Italy (Frankfurt, Munich, Hamburg, S-Bahn, Roma). Dutch and German station signs and the Dutch platform sign are editable.
+- **ATA Metro tab (27):** station finishes inspired by Munich, Frankfurt, Amsterdam, Rotterdam, Lisbon and Washington.
+- **No operator logos.** No new ticking and no heavy models.
 
 ### What 1.4 adds
 
@@ -86,7 +91,7 @@ Install the mod on both the server and the clients.
 
 ### Editable signs
 
-The station name signs, hanging signs, directional signs, platform number signs and bus stop signs have editable text. Right-click one with an empty hand to edit it. The editor has buttons for inserting wayfinding arrows (← → ↑ ↓ ↖ ↗).
+The station name signs, hanging signs, directional signs, platform number signs, bus stop signs and the Dutch and German station signs have editable text. Right-click one with an empty hand to edit it. The editor has buttons for inserting wayfinding arrows (← → ↑ ↓ ↖ ↗).
 
 Station name, hanging and directional signs placed side by side with the same facing **join into one wide sign**. The frame is continuous and the text is centred across the whole row.
 

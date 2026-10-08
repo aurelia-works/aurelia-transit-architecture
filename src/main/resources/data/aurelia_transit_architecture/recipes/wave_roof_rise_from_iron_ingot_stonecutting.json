@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:stonecutting",
-  "ingredient": {
-    "item": "minecraft:iron_ingot"
-  },
-  "result": "aurelia_transit_architecture:wave_roof_rise",
-  "count": 4
-}

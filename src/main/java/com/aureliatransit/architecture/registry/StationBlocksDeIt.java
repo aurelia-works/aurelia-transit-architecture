@@ -5,7 +5,10 @@ import com.aureliatransit.architecture.block.AxisShapedBlock;
 import com.aureliatransit.architecture.block.FacingShapedBlock;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.ShapedBlock;
+import com.aureliatransit.architecture.block.TextLayout;
+import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
+import com.aureliatransit.architecture.text.SignStyle;
 import net.minecraft.block.Block;
 import net.minecraft.block.MapColor;
 import net.minecraft.util.shape.VoxelShape;
@@ -15,7 +18,7 @@ import static com.aureliatransit.architecture.util.Shapes.union;
 
 /**
  * ATA 1.5 European stations, German and Italian set (creative tab: European Stations): Frankfurt, Munich and Hamburg
- * main stations, a small S-Bahn station and Roma Termini. Plain blocks only: no block entities, no ticking.
+ * main stations, a small S-Bahn station and Roma Termini. Plain blocks plus one editable sign (the existing non-ticking text sign type).
  */
 public final class StationBlocksDeIt {
 
@@ -28,7 +31,6 @@ public final class StationBlocksDeIt {
 	private static final VoxelShape CORNICE = union(box(0, 0, 3, 16, 8, 16), box(0, 8, 1.5, 16, 12, 16), box(0, 12, 0, 16, 16, 16));
 	private static final VoxelShape SKYLIGHT = box(0, 0, 0, 16, 6.5, 16);
 	private static final VoxelShape SHELTER = union(box(0, 14.5, 0, 16, 16, 16), box(0, 0, 13, 16, 14.5, 15.5));
-	private static final VoxelShape STATION_SIGN = union(box(0, 7, 7, 16, 13, 9), box(1, 0, 7.5, 2.5, 7, 8.5), box(13.5, 0, 7.5, 15, 7, 8.5));
 	private static final VoxelShape LAMP = union(box(7, 0, 7, 9, 13, 9), box(5.5, 13, 5.5, 10.5, 16, 10.5));
 	private static final VoxelShape ROOF_DECK = box(0, 12, 0, 16, 16, 16);
 	private static final VoxelShape GLASS_ROOF = box(0, 12.5, 0, 16, 14.5, 16);
@@ -89,8 +91,11 @@ public final class StationBlocksDeIt {
 			MtrPlatformContract.edge(ModBlocks.paving(MapColor.STONE_GRAY), Placement.AWAY_FROM_PLAYER, FULL), TIP + "points_away");
 	public static final Block SBAHN_SHELTER = ModBlocks.register("sbahn_shelter", BlockFamily.STATIONS_DE_IT, RenderKind.TRANSLUCENT,
 			new FacingShapedBlock(ModBlocks.glass(), Placement.TOWARD_PLAYER, SHELTER), TIP + "faces_you");
-	public static final Block SBAHN_STATION_SIGN = ModBlocks.register("sbahn_station_sign", BlockFamily.STATIONS_DE_IT, RenderKind.CUTOUT,
-			new FacingShapedBlock(ModBlocks.metal(), Placement.TOWARD_PLAYER, STATION_SIGN), TIP + "faces_you");
+	public static final Block GERMAN_STATION_SIGN = ModBlocks.register("german_station_sign", BlockFamily.STATIONS_DE_IT, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6),
+					new TextLayout(11.5F, 8, 16, 6.5F, 9.5F, true, SignStyle.GERMAN_STATION),
+					union(box(0, 7, 6.5, 16, 16, 9.5), box(1, 0, 7, 3, 7, 9), box(13, 0, 7, 15, 7, 9))),
+			TIP + "editable", TIP + "joins");
 	public static final Block SBAHN_PLATFORM_LIGHT = ModBlocks.register("sbahn_platform_light", BlockFamily.STATIONS_DE_IT, RenderKind.CUTOUT,
 			new ShapedBlock(ModBlocks.metal().luminance(state -> 13), LAMP));
 

@@ -2,7 +2,7 @@
 and Roma Termini.
 
 Same extension interface as the other assets_*.py modules. Textures are 16x16 like the rest of the mod. All art is original
-and generic: no operator logos or lettering (the S-Bahn sign only borrows the colours white and black).
+and generic: no operator logos or lettering (the German-style sign only borrows the colours white and black).
 """
 import generate_assets as g
 
@@ -63,6 +63,33 @@ def ashlar(base, joint, name, course=4, chamfer=False, rough=3):
     return img
 
 
+def dressed_ashlar(base, name):
+    """Large dressed ashlar: two 8 px courses, one long stone per course (joints offset by half a tile), thin pale joints
+    and fine vertical chisel tooling. Seamless: every stone wraps across the tile edge."""
+    img = g.noisy(base, 2, name)
+    r = g.rng(name + "-stones")
+    pale = g.shade(base, 20)
+    for course, joint_x in enumerate((10, 2)):
+        y0 = course * 8
+        tone = r.randint(-6, 6)
+        for y in range(y0, y0 + 8):
+            for x in range(16):
+                c = g.shade(get(img, x, y), tone + (4 if y == y0 + 1 else -3 if y == y0 + 7 else 0))
+                put(img, x, y, c)
+        # tooling: faint vertical chisel striations over the whole stone face
+        for x in range(16):
+            stria = r.choice((-3, -2, 0, 0, 2, 3))
+            for y in range(y0 + 2, y0 + 7):
+                put(img, x, y, g.shade(get(img, x, y), stria))
+        for x in range(16):  # pale bed joint on top of the course, soft shadow beneath it
+            put(img, x, y0, g.shade(pale, r.randint(-3, 3)))
+            put(img, x, y0 + 1, g.shade(get(img, x, y0 + 1), -7))
+        for y in range(y0, y0 + 8):  # pale head joint
+            put(img, joint_x, y, g.shade(pale, r.randint(-3, 3)))
+            put(img, (joint_x + 1) % 16, y, g.shade(get(img, joint_x + 1, y), -6))
+    return img
+
+
 def clinker(palette, mortar, name):
     """Running-bond brick, 3 px courses with a 1 px mortar line, bricks 7 px; each brick its own colour."""
     img = g.new()
@@ -105,9 +132,7 @@ def textures():
     t = {}
 
     # ---- Frankfurt: sandstone ----------------------------------------------------------------------------------
-    stone = ashlar(SANDSTONE, g.shade(SANDSTONE, -42), "frankfurt_ashlar")
-    sandstone_grain(stone, g.rng("frankfurt_grain"), 6)
-    t["frankfurt_sandstone_ashlar"] = stone
+    t["frankfurt_sandstone_ashlar"] = dressed_ashlar(SANDSTONE, "frankfurt_ashlar")
 
     rustic = ashlar(g.shade(SANDSTONE, -6), g.shade(SANDSTONE, -62), "frankfurt_rusticated", course=8, chamfer=True, rough=9)
     r = g.rng("frankfurt_rustic_pits")
@@ -213,14 +238,8 @@ def textures():
     t["sbahn_platform_edge_top"] = edge(False)
     t["sbahn_platform_edge_tactile_top"] = edge(True)
 
-    sign = g.noisy((238, 238, 234), 2, "sbahn_sign")
-    for i in range(16):
-        for a, b in ((i, 0), (i, 15), (0, i), (15, i)):
-            put(sign, a, b, (92, 94, 98))
-    for y in range(5, 11):  # text field, left empty
-        for x in range(2, 14):
-            put(sign, x, y, (24, 24, 26))
-    t["sbahn_sign_face"] = sign
+    t["german_sign_face"] = g.noisy((240, 240, 236), 2, "german_sign_face")
+    t["german_sign_frame"] = g.noisy((68, 71, 76), 2, "german_sign_frame")
 
     t["sbahn_lamp_head"] = g.noisy((255, 244, 214), 5, "sbahn_lamp_head")
 
@@ -445,15 +464,6 @@ def shelter():
     ])
 
 
-def station_sign():
-    tex = {"particle": "steel_dark", "frame": "steel_dark", "face": "sbahn_sign_face"}
-    return g.model(tex, [
-        g.el([0, 7, 7], [16, 13, 9], "#frame", faces={"north": "#face", "south": "#face"}),
-        g.el([1, 0, 7.5], [2.5, 7, 8.5], "#frame"),
-        g.el([13.5, 0, 7.5], [15, 7, 8.5], "#frame"),
-    ])
-
-
 def lamp():
     tex = {"particle": "steel_dark", "pole": "steel_dark", "lamp": "sbahn_lamp_head"}
     return g.model(tex, [
@@ -506,7 +516,8 @@ def blocks():
     b["hamburg_hall_truss"] = ("axis", {"": truss_span("hamburg_truss", "hamburg_truss_paint")})
     b["hamburg_glass_roof"] = ("simple", {"": hamburg_glass_roof()})
     b["sbahn_shelter"] = ("facing", {"": shelter()})
-    b["sbahn_station_sign"] = ("facing", {"": station_sign()})
+    b["german_station_sign"] = ("sign", {("_l" if left else "") + ("_r" if right else ""): g.sign_variant(
+        "station_name_sign", left, right, face="german_sign_face", frame="german_sign_frame") for left in (False, True) for right in (False, True)})
     b["sbahn_platform_light"] = ("simple", {"": lamp()})
     b["roma_ribbon_window"] = ("facing", {"": ribbon_window()})
     b["roma_canopy_edge"] = ("facing", {"": canopy_edge()})
@@ -515,40 +526,40 @@ def blocks():
 
 def names():
     return {
-        "frankfurt_sandstone_ashlar": "Sandstone Ashlar (Frankfurt)",
-        "frankfurt_sandstone_rusticated": "Rusticated Sandstone (Frankfurt)",
-        "frankfurt_sandstone_cornice": "Sandstone Cornice (Frankfurt)",
-        "frankfurt_hall_truss": "Iron Hall Truss (Frankfurt)",
-        "frankfurt_hall_truss_leg": "Iron Hall Truss Leg (Frankfurt)",
-        "frankfurt_hall_truss_arch": "Iron Hall Truss Arch (Frankfurt)",
-        "frankfurt_ridge_skylight": "Ridge Skylight (Frankfurt)",
-        "munich_exposed_concrete": "Exposed Concrete (Munich)",
-        "munich_board_formed_concrete": "Board-Formed Concrete (Munich)",
-        "munich_terrazzo_floor": "Terrazzo Floor (Munich)",
-        "munich_ribbed_roof_deck": "Ribbed Steel Roof Deck (Munich)",
-        "hamburg_clinker_brick": "Clinker Brick (Hamburg)",
-        "hamburg_clinker_stone_trim": "Clinker Brick with Stone Trim (Hamburg)",
-        "hamburg_stone_trim": "Stone Trim (Hamburg)",
-        "hamburg_hall_truss": "Iron Hall Truss (Hamburg)",
-        "hamburg_glass_roof": "Glass Hall Roof (Hamburg)",
-        "sbahn_clinker_brick": "Red Clinker Brick (S-Bahn)",
-        "sbahn_platform_slab": "Platform Slab (S-Bahn)",
-        "sbahn_platform_edge": "Platform Edge with White Line (S-Bahn)",
-        "sbahn_platform_edge_tactile": "Platform Edge with Tactile Strip (S-Bahn)",
-        "sbahn_shelter": "Platform Shelter (S-Bahn)",
-        "sbahn_station_sign": "Station Name Sign, Blank (S-Bahn)",
-        "sbahn_platform_light": "Platform Light (S-Bahn)",
-        "roma_travertine": "Travertine Cladding (Roma)",
-        "roma_polished_floor": "Polished Stone Floor (Roma)",
-        "roma_ribbon_window": "Ribbon Window (Roma)",
-        "roma_canopy_edge": "Wavy Canopy Edge (Roma)",
+        "frankfurt_sandstone_ashlar": "Frankfurt Sandstone Ashlar",
+        "frankfurt_sandstone_rusticated": "Frankfurt Rusticated Sandstone",
+        "frankfurt_sandstone_cornice": "Frankfurt Sandstone Cornice",
+        "frankfurt_hall_truss": "Frankfurt Iron Hall Truss",
+        "frankfurt_hall_truss_leg": "Frankfurt Iron Hall Truss Leg",
+        "frankfurt_hall_truss_arch": "Frankfurt Iron Hall Truss Arch",
+        "frankfurt_ridge_skylight": "Frankfurt Ridge Skylight",
+        "munich_exposed_concrete": "Munich Exposed Concrete",
+        "munich_board_formed_concrete": "Munich Board-Formed Concrete",
+        "munich_terrazzo_floor": "Munich Terrazzo Floor",
+        "munich_ribbed_roof_deck": "Munich Ribbed Steel Roof Deck",
+        "hamburg_clinker_brick": "Hamburg Clinker Brick",
+        "hamburg_clinker_stone_trim": "Hamburg Clinker Brick with Stone Trim",
+        "hamburg_stone_trim": "Hamburg Stone Trim",
+        "hamburg_hall_truss": "Hamburg Iron Hall Truss",
+        "hamburg_glass_roof": "Hamburg Glass Hall Roof",
+        "sbahn_clinker_brick": "S-Bahn Red Clinker Brick",
+        "sbahn_platform_slab": "S-Bahn Platform Slab",
+        "sbahn_platform_edge": "S-Bahn Platform Edge with White Line",
+        "sbahn_platform_edge_tactile": "S-Bahn Platform Edge with Tactile Strip",
+        "sbahn_shelter": "S-Bahn Platform Shelter",
+        "german_station_sign": "German Station Sign",
+        "sbahn_platform_light": "S-Bahn Platform Light",
+        "roma_travertine": "Roma Travertine Cladding",
+        "roma_polished_floor": "Roma Polished Stone Floor",
+        "roma_ribbon_window": "Roma Ribbon Window",
+        "roma_canopy_edge": "Roma Wavy Canopy Edge",
     }
 
 
 def lang():
     return {
         f"itemGroup.{MOD}.stations": "ATA European Stations",
-        TIP + "rises_ahead": "Rises toward the way you are looking",
+        TIP + "rises_ahead": "Rises the way you look",
     }
 
 
@@ -580,7 +591,7 @@ def recipes():
     cut("sbahn_platform_edge", f"{MOD}:sbahn_platform_slab")
     shapeless("sbahn_platform_edge_tactile", [f"{MOD}:sbahn_platform_edge", "minecraft:white_dye"])
     shapeless("sbahn_shelter", ["minecraft:iron_ingot", "minecraft:glass_pane", "minecraft:glass_pane"], 2)
-    shapeless("sbahn_station_sign", ["minecraft:iron_ingot", "minecraft:white_dye", "minecraft:black_dye"], 2)
+    shapeless("german_station_sign", ["minecraft:iron_ingot", "minecraft:white_dye", "minecraft:black_dye", "minecraft:glowstone_dust"], 2)
     shapeless("sbahn_platform_light", [f"{MOD}:sign_pole", "minecraft:glowstone_dust"])
     cut("roma_travertine", "minecraft:calcite")
     cut("roma_polished_floor", "minecraft:smooth_quartz")

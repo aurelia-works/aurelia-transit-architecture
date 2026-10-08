@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:stonecutting",
-  "ingredient": {
-    "item": "minecraft:iron_ingot"
-  },
-  "result": "aurelia_transit_architecture:perforated_anthracite_cladding",
-  "count": 2
-}

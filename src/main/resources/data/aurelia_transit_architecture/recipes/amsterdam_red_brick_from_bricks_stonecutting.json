@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:bricks"
+  },
+  "result": "aurelia_transit_architecture:amsterdam_red_brick",
+  "count": 1
+}

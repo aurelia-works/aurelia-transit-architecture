@@ -1,8 +1,0 @@
-{
-  "type": "minecraft:stonecutting",
-  "ingredient": {
-    "item": "minecraft:quartz_block"
-  },
-  "result": "aurelia_transit_architecture:marble_floor_tile",
-  "count": 2
-}

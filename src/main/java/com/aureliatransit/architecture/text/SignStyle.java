@@ -22,7 +22,13 @@ public enum SignStyle {
 	/** Stand-back warning for non-stopping trains (1.4, A16): set by hand, never automatic; dark text on yellow. */
 	WARNING(true, false, false, false, false, false, 0xFF161616, 0xFF2B2B2B),
 	/** Train composition / coach board (1.4, A18): car labels and sector letters typed by hand. */
-	COMPOSITION(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFB8C4D0);
+	COMPOSITION(true, false, false, false, false, false, 0xFFFFFFFF, 0xFFB8C4D0),
+	/** 1.5 Dutch-style station sign: dark blue text on yellow. */
+	DUTCH_STATION(true, true, true, true, false, false, 0xFF0B2A6B, 0xFF28477F),
+	/** 1.5 Dutch-style platform plate: a large dark blue number on yellow. */
+	DUTCH_PLATFORM(false, false, true, false, false, true, 0xFF0B2A6B, 0xFF28477F),
+	/** 1.5 German-style station sign: black text on white. */
+	GERMAN_STATION(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52);
 
 	public static final int MAX_ROUTES = 4;
 

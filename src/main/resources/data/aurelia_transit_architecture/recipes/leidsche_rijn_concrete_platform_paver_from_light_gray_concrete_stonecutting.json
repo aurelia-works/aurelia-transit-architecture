@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:light_gray_concrete"
+  },
+  "result": "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver",
+  "count": 2
+}

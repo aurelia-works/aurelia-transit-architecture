@@ -436,9 +436,9 @@ def canopy_strips(profile):
                  strips(profile, 2, {"up": "#top", "down": "#under"}))
 
 
-def sign_variant(kind, left, right):
+def sign_variant(kind, left, right, face="sign_blue", frame="steel"):
     """Joined signs: caps/legs only appear on unconnected ends (left = model -X, right = model +X)."""
-    t = {"particle": "steel", "frame": "steel", "face": "sign_blue"}
+    t = {"particle": frame, "frame": frame, "face": face}
     els = []
     if kind == "station_name_sign":
         els += [
@@ -475,6 +475,14 @@ def sign_variant(kind, left, right):
     return model(t, els)
 
 
+def platform_number_model(frame, face):
+    """The platform number plate on a short post; shared by regional variants (same shape as the Java box union)."""
+    return model({"particle": frame, "frame": frame, "face": face}, [
+        el([3, 2, 7], [13, 12, 9], "#frame", faces={"north": "#face", "south": "#face"}),
+        el([7.5, 12, 7.5], [8.5, 16, 8.5], "#frame"),
+    ])
+
+
 def blocks():
     b = {}
 
@@ -495,11 +503,7 @@ def blocks():
                 suffix = ("_l" if left else "") + ("_r" if right else "")
                 variants[suffix] = sign_variant(kind, left, right)
         b[kind] = ("sign", variants)
-    b["platform_number_sign"] = ("sign_single", {"": model(
-        {"particle": "steel", "frame": "steel", "face": "platform_number"}, [
-            el([3, 2, 7], [13, 12, 9], "#frame", faces={"north": "#face", "south": "#face"}),
-            el([7.5, 12, 7.5], [8.5, 16, 8.5], "#frame"),
-        ])})
+    b["platform_number_sign"] = ("sign_single", {"": platform_number_model("steel", "platform_number")})
     b["information_case"] = ("facing", {"": model(
         {"particle": "steel", "frame": "steel", "face": "information_poster"}, [
             el([1, 2, 14], [15, 15, 16], "#frame", faces={"north": "#face"}),
