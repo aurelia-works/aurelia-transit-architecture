@@ -1,0 +1,365 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/munich_roof_deck",
+    "deck": "aurelia_transit_architecture:block/munich_roof_deck"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        12,
+        0
+      ],
+      "to": [
+        16,
+        13.5,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            2.5,
+            16.0,
+            4
+          ],
+          "texture": "#deck",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            2.5,
+            16.0,
+            4
+          ],
+          "texture": "#deck",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            2.5,
+            16.0,
+            4
+          ],
+          "texture": "#deck",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            2.5,
+            16.0,
+            4
+          ],
+          "texture": "#deck",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        1,
+        13.5,
+        0
+      ],
+      "to": [
+        3,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            1,
+            0.0,
+            3,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ],
+          "texture": "#deck",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            13,
+            0.0,
+            15,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            1,
+            0.0,
+            3,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        }
+      }
+    },
+    {
+      "from": [
+        5,
+        13.5,
+        0
+      ],
+      "to": [
+        7,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            5,
+            0.0,
+            7,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ],
+          "texture": "#deck",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            9,
+            0.0,
+            11,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            5,
+            0.0,
+            7,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        }
+      }
+    },
+    {
+      "from": [
+        9,
+        13.5,
+        0
+      ],
+      "to": [
+        11,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            9,
+            0.0,
+            11,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ],
+          "texture": "#deck",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            5,
+            0.0,
+            7,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            9,
+            0.0,
+            11,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        13.5,
+        0
+      ],
+      "to": [
+        15,
+        16,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            13,
+            0.0,
+            15,
+            16.0
+          ],
+          "texture": "#deck"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            2
+          ],
+          "texture": "#deck",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            1,
+            0.0,
+            3,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            13,
+            0.0,
+            15,
+            2.5
+          ],
+          "texture": "#deck",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2.5
+          ],
+          "texture": "#deck"
+        }
+      }
+    }
+  ]
+}

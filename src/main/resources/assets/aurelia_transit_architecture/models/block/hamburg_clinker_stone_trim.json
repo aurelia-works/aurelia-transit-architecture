@@ -1,0 +1,8 @@
+{
+  "parent": "minecraft:block/cube_bottom_top",
+  "textures": {
+    "top": "aurelia_transit_architecture:block/hamburg_stone_trim",
+    "side": "aurelia_transit_architecture:block/hamburg_clinker_stone_trim",
+    "bottom": "aurelia_transit_architecture:block/hamburg_clinker_brick"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:smooth_stone"
+  },
+  "result": "aurelia_transit_architecture:sbahn_platform_slab",
+  "count": 1
+}

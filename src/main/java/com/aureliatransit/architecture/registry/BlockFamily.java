@@ -21,7 +21,9 @@ public enum BlockFamily {
 	/** 1.5 architectural glass: float, tinted, reflective, frosted, fritted and wired glass, glass brick, curtain wall pieces. */
 	GLASS(Tab.GLASS),
 	/** 1.5 Dutch and Belgian station architecture. */
-	STATIONS_NL_BE(Tab.STATIONS);
+	STATIONS_NL_BE(Tab.STATIONS),
+	/** 1.5 German and Italian station architecture (Frankfurt, Munich, Hamburg, S-Bahn, Roma Termini). */
+	STATIONS_DE_IT(Tab.STATIONS);
 
 	/**
 	 * The dedicated creative tabs. Tab ids are not stored in worlds, so regrouping never touches block or item ids.
@@ -32,6 +34,7 @@ public enum BlockFamily {
 		PASSENGER_EQUIPMENT("passenger_equipment"),
 		BUS_STREET("bus_street"),
 		GLASS("glass"),
+
 		STATIONS("stations");
 
 		private final String id;

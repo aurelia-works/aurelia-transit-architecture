@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:sandstone"
+  },
+  "result": "aurelia_transit_architecture:frankfurt_sandstone_rusticated",
+  "count": 1
+}
