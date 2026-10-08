@@ -839,7 +839,8 @@ FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 # still covers it: sign y 9 going up (all panels span y 7..11), sign y 7 going down.
 POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True), ("_up_down", True, True))
 POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
-               "hanging_wayfinding_sign", "exit_sign", "pictogram_sign")
+               "hanging_wayfinding_sign", "exit_sign", "pictogram_sign",
+               "dutch_station_sign", "dutch_platform_sign", "german_station_sign")
 
 
 def sign_pole(up, down):
