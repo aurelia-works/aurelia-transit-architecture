@@ -29,7 +29,6 @@ public final class ModItemGroups {
 		register(BlockFamily.Tab.BUS_STREET, () -> ModBlocks.BUS_STOP_SIGN);
 		register(BlockFamily.Tab.GLASS, () -> GlassBlocks.CLEAR_FLOAT_GLASS);
 		register(BlockFamily.Tab.STATIONS, () -> StationBlocksNlBe.WAVE_ROOF_PANEL);
-		register(BlockFamily.Tab.STATIONS, () -> StationBlocksDeIt.FRANKFURT_HALL_TRUSS_ARCH);
 		register(BlockFamily.Tab.METRO, () -> MetroBlocks.METRO_COFFER_CEILING);
 	}
 
