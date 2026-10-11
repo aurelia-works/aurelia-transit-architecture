@@ -20,6 +20,17 @@ public record LocalFrame(int ox, int oy, int oz, Heading forward) {
 		return new LocalFrame(px + facing.dx() * ahead + right.dx() * across, py, pz + facing.dz() * ahead + right.dz() * across, facing);
 	}
 
+	/**
+	 * The frame for a station wrench click on the block at (bx, by, bz), with the player looking {@code facing}: rail level is the
+	 * top of that block, and the footprint's first row (the ramps' far end) is on the clicked column, centred across it.
+	 */
+	public static LocalFrame onBlock(int bx, int by, int bz, Heading facing, TrackLayout layout) {
+		final Heading right = facing.right();
+		final int ahead = layout.rampLength();
+		final int across = -(layout.width() / 2);
+		return new LocalFrame(bx + facing.dx() * ahead + right.dx() * across, by + 1, bz + facing.dz() * ahead + right.dz() * across, facing);
+	}
+
 	public int x(int u, int v) {
 		return ox + forward.right().dx() * u + forward.dx() * v;
 	}

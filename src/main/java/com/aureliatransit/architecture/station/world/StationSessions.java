@@ -43,6 +43,8 @@ public final class StationSessions {
 	private static final Map<UUID, StationPreview> PREVIEWS = new HashMap<>();
 	private static final Map<UUID, StationBuildJob> JOBS = new LinkedHashMap<>();
 	private static final Map<UUID, UndoLog> UNDO = new HashMap<>();
+	/** Server tick of each player's last wrench cancel, so a held left-click does not repeat it. */
+	private static final Map<UUID, Integer> LAST_CANCEL = new HashMap<>();
 
 	private StationSessions() {
 	}
@@ -78,6 +80,17 @@ public final class StationSessions {
 	/** A player left: their pending plan and preview go, a running job keeps going. */
 	public static void forgetPlayer(UUID player) {
 		discard(player);
+		LAST_CANCEL.remove(player);
+	}
+
+	/** True (and starts the cooldown) when the player's last wrench cancel is at least {@code cooldown} ticks old. */
+	static boolean cancelCooldown(UUID player, int now, int cooldown) {
+		final Integer last = LAST_CANCEL.get(player);
+		if (last != null && now - last < cooldown && now >= last) {
+			return false;
+		}
+		LAST_CANCEL.put(player, now);
+		return true;
 	}
 
 	// ---- jobs ------------------------------------------------------------------------------------------------------
@@ -141,6 +154,7 @@ public final class StationSessions {
 		PREVIEWS.clear();
 		JOBS.clear();
 		UNDO.clear();
+		LAST_CANCEL.clear();
 	}
 
 	// ---- the one tick ----------------------------------------------------------------------------------------------

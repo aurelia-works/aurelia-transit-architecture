@@ -60,6 +60,8 @@ final class StationText {
 				what = "rail nodes off";
 			} else if (pending.railSkipped()) {
 				what = BlockStateResolver.RAIL_SKIPPED;
+			} else if (keptNode(pending, track.u(), 0) && keptNode(pending, track.u(), layout.platformLength() - 1)) {
+				what = "uses the rail nodes already at " + corner(frame, track.u(), 0) + " and " + corner(frame, track.u(), layout.platformLength() - 1);
 			} else {
 				what = "rail nodes at " + corner(frame, track.u(), 0) + " and " + corner(frame, track.u(), layout.platformLength() - 1)
 						+ ": connect them with an MTR Platform Rail Connector";
@@ -121,6 +123,15 @@ final class StationText {
 		if (!items.isEmpty()) {
 			out.accept(Text.literal(label + String.join(", ", items)).formatted(colour));
 		}
+	}
+
+	/** True when the planned rail node at (u, 0, v) is kept because a node is already there (the survey wrote no op for it). */
+	private static boolean keptNode(StationSessions.Pending pending, int u, int v) {
+		final LocalFrame frame = pending.frame();
+		final int x = frame.x(u, v);
+		final int y = frame.y(0);
+		final int z = frame.z(u, v);
+		return pending.report().ops().stream().noneMatch(op -> op.x() == x && op.y() == y && op.z() == z);
 	}
 
 	private static String corner(LocalFrame frame, int u, int v) {

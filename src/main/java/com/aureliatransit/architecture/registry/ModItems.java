@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.registry;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.fare.TransitCardItem;
+import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import net.minecraft.item.Item;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
@@ -13,6 +14,9 @@ public final class ModItems {
 
 	public static final Item TRANSIT_CARD = Registry.register(Registries.ITEM, AureliaTransitArchitecture.id("transit_card"),
 			new TransitCardItem(new Item.Settings().maxCount(1)));
+	/** Station generator tool; operators only (checked on the server for every action). */
+	public static final Item STATION_WRENCH = Registry.register(Registries.ITEM, AureliaTransitArchitecture.id("station_wrench"),
+			new StationWrenchItem(new Item.Settings().maxCount(1)));
 
 	private ModItems() {
 	}

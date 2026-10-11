@@ -7,6 +7,7 @@ Checks, for every block registered in ModBlocks.java:
   - every model's textures resolve to a PNG (or a vanilla/parent-provided texture)
   - item model, loot table, English name and pickaxe tag entry exist
   - recipe results/ingredients in this namespace refer to registered blocks
+and, for every non-block item in ModItems.java, that its item model (with textures) and English name exist.
 """
 import json
 import re
@@ -225,6 +226,15 @@ def main():
     for tip in java_tooltips:
         if f"tooltip.{MOD}.{tip}" not in lang:
             problem(f"missing tooltip lang key {tip}")
+
+    # Items that are not blocks (ModItems.java): an item model whose textures resolve, and an English name
+    for item_id in re.findall(r'id\("([a-z0-9_]+)"\)', (REGISTRY / "ModItems.java").read_text(encoding="utf-8")):
+        if not (ASSETS / "models" / "item" / f"{item_id}.json").is_file():
+            problem(f"item {item_id}: no item model (models/item/{item_id}.json)")
+        else:
+            check_model(f"{MOD}:item/{item_id}", seen_models)
+        if f"item.{MOD}.{item_id}" not in lang:
+            problem(f"item {item_id}: missing English name")
 
     # Stray assets for unregistered ids
     for path in (ASSETS / "blockstates").glob("*.json"):

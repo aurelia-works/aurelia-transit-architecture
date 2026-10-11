@@ -16,6 +16,20 @@ Operators only (permission level 2), like `/ata_message`.
 | `/ata_station undo` | Reverts your last build, batched. Cells changed since the build are left alone. |
 | `/ata_station status` | Pending plan, job progress, undo. |
 
+## Station Wrench
+
+The **Station Wrench** (Passenger Equipment tab, operators only) does the same without typing commands. It remembers one description.
+
+| With the wrench | What it does |
+|---|---|
+| Right-click a block | Plans the wrench's description on top of that block, facing the way you look: rail level is the top of the block, and the footprint starts at the block, centred on it. The summary and preview appear as with `plan`. |
+| Sneak + right-click a block | Builds the pending plan (`confirm`). Never approves terrain changes. |
+| Left-click a block | Cancels the running build or discards the plan. The wrench never breaks blocks. Left-click in the air does nothing. |
+| Right-click the air | Shows the preview again. |
+| Sneak + right-click the air | Opens the wrench screen: edit the description, then Plan in front of me, Show preview, Build, **Build, replace terrain** (the wrench's only way to approve terrain changes), Cancel or Undo last build. Closing the screen saves the description. |
+
+Every wrench action checks on the server that the player is an operator (level 2). A non-operator's clicks and screen packets do nothing.
+
 Examples:
 
 - `two track dutch station, island platform, 64 long, glass canopy, named Leidsche Rijn`
@@ -82,7 +96,7 @@ The generator never creates rail connections itself, because those live in MTR's
 ## Performance and safety
 
 - One server tick listener for the whole feature, which returns at once when no build or preview is running.
-- No new blocks, items, block entities, packets, client code or mixins.
+- No new blocks, block entities or mixins. The wrench adds one item, one client-to-server packet (hand, action and a description of at most 256 characters, all bounded on read and handled on the server thread) and one client screen.
 - The preview is server-side particles sent only to the planning player (at most about 600 per refresh, every 10 ticks, for 30 s), and it changes nothing.
 - Pending plans, jobs and undo logs live in memory: a server restart forgets them, and a player who leaves loses their pending plan (a running build continues).
 

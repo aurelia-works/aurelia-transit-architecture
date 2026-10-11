@@ -77,6 +77,7 @@ public final class StationBuildJob {
 	private int terrainChanged;
 	private int restored;
 	private int skipped;
+	private int keptNodes;
 	private String stopReason = "";
 
 	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out) {
@@ -158,6 +159,16 @@ public final class StationBuildJob {
 
 	public int skipped() {
 		return skipped;
+	}
+
+	/** Whether this build may change terrain (the player approved it explicitly). */
+	public boolean approved() {
+		return approved;
+	}
+
+	/** Undo only: rail nodes left in place because the player connected them in MTR after the build. */
+	public int keptNodes() {
+		return keptNodes;
 	}
 
 	public String stopReason() {
@@ -290,7 +301,9 @@ public final class StationBuildJob {
 			nameSigns();
 			say(Formatting.GREEN, "Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. /ata_station undo reverts it.");
 		} else {
-			say(Formatting.GREEN, "Undo finished: " + restored + " cells restored" + (skipped > 0 ? ", " + skipped + " skipped (changed since the build)" : "") + ".");
+			say(Formatting.GREEN, "Undo finished: " + restored + " cells restored"
+					+ (keptNodes > 0 ? ", " + keptNodes + " rail nodes kept (connected in MTR since the build)" : "")
+					+ (skipped > 0 ? ", " + skipped + " skipped (changed since the build)" : "") + ".");
 		}
 	}
 
@@ -323,7 +336,10 @@ public final class StationBuildJob {
 		}
 		log.removeLast();
 		done++;
-		if (stillPlaced(world.getBlockState(pos), entry.placed())) {
+		final BlockState current = world.getBlockState(pos);
+		if (connectedNode(current, entry.placed())) {
+			keptNodes++;
+		} else if (stillPlaced(current, entry.placed())) {
 			final BlockState processed = Block.postProcessState(entry.previous(), world, pos);
 			world.setBlockState(pos, processed.getBlock() == entry.previous().getBlock() ? processed : entry.previous(), Block.NOTIFY_ALL);
 			restored++;
@@ -347,6 +363,15 @@ public final class StationBuildJob {
 	 * block counts, not the exact state; but a rail node the player connected in MTR ({@code is_connected} set) stays, because
 	 * removing it with setBlockState would orphan MTR's rail data.
 	 */
+	/** A rail node the build placed unconnected that MTR has connected since. */
+	static boolean connectedNode(BlockState current, BlockState placed) {
+		if (current.getBlock() != placed.getBlock()) {
+			return false;
+		}
+		final Property<?> connected = current.getBlock().getStateManager().getProperty("is_connected");
+		return connected != null && !current.get(connected).equals(placed.get(connected));
+	}
+
 	static boolean stillPlaced(BlockState current, BlockState placed) {
 		if (current.getBlock() != placed.getBlock()) {
 			return false;

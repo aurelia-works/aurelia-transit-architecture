@@ -3,6 +3,7 @@
 ## Unreleased
 
 - **Smart Station Generator (first version):** `/ata_station plan <description>` plans a straight ground-level station from a short English description (1-4 tracks, side or island platforms, length, width, Modern, Dutch, German S-Bahn or Metro style, canopy or hall roof, materials, ramps, name signs), checks it against railway clearances and the ground, and shows a particle outline. `/ata_station confirm` builds it in batches with cancel and undo. Terrain is only changed after `/ata_station confirm replace_terrain`. Fully offline and deterministic. MTR rail nodes are placed at the platform ends for you to connect. Existing MTR rail nodes are never replaced or removed: one already where a node goes is kept. Operators only. See docs/STATION_GENERATOR.md.
+- **Station Wrench:** the station generator without commands. Right-click a block to plan the wrench's description there, sneak + right-click a block to build, left-click to cancel, sneak + right-click the air to edit the description and use Plan, Preview, Build, Build with terrain replacement, Cancel and Undo. Operators only. It never breaks blocks.
 
 ## 1.5.0
 

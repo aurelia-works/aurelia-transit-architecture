@@ -3,6 +3,9 @@ package com.aureliatransit.architecture.gametest;
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
+import com.aureliatransit.architecture.registry.ModItems;
+import com.aureliatransit.architecture.station.world.StationActions;
+import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import com.aureliatransit.architecture.station.CellKind;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalDir;
@@ -36,6 +39,7 @@ import net.minecraft.block.enums.SlabType;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.OperatorEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.BooleanProperty;
@@ -45,6 +49,12 @@ import net.minecraft.test.GameTest;
 import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemUsageContext;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
@@ -390,6 +400,67 @@ public class StationGameTests implements FabricGameTest {
 		context.complete();
 	}
 
+	// ---- station wrench --------------------------------------------------------------------------------------------
+
+	/**
+	 * The wrench as a player uses it: a click plans on the clicked block (the same frame as planning from the feet two blocks
+	 * back), a sneak-click builds without approving terrain, a left-click cancels, and it never breaks blocks. A non-operator's
+	 * clicks and screen packets do nothing.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 120)
+	public void stationWrenchPlansBuildsCancelsAndIsOperatorOnly(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+		final BlockPos feet = context.getAbsolutePos(FEET_Z);
+		player.refreshPositionAndAngles(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, Direction.SOUTH.asRotation(), 0.0F);
+		final UUID id = player.getUuid();
+		final ItemStack wrench = new ItemStack(ModItems.STATION_WRENCH);
+		StationWrenchItem.setDescription(wrench, SMALL);
+		player.setStackInHand(Hand.MAIN_HAND, wrench);
+		final BlockPos clicked = feet.offset(Direction.SOUTH, LocalFrame.GAP_IN_FRONT).down();
+		final StationSessions.Pending fromFeet = StationCommand.prepare(world, SMALL, feet, Heading.SOUTH);
+
+		// not an operator: nothing happens, and the screen packet does not even save the description
+		check(!player.hasPermissionLevel(StationActions.PERMISSION_LEVEL), "the mock player is already an operator; this test needs one that is not");
+		click(player, clicked);
+		StationWrenchItem.perform(player, Hand.MAIN_HAND, StationWrenchItem.Action.PLAN, "4 track metro station");
+		check(StationSessions.pending(id) == null, "a non-operator planned with the wrench");
+		check(StationWrenchItem.description(player.getMainHandStack()).equals(SMALL), "a non-operator changed the wrench description");
+
+		// an explicit level: the test server's default operator level grants nothing
+		world.getServer().getPlayerManager().getOpList().add(new OperatorEntry(player.getGameProfile(), 4, false));
+		check(player.hasPermissionLevel(StationActions.PERMISSION_LEVEL), "op did not take");
+		check(!ModItems.STATION_WRENCH.canMine(world.getBlockState(clicked), world, clicked, player), "the wrench must never break blocks");
+
+		click(player, clicked);
+		final StationSessions.Pending pending = StationSessions.pending(id);
+		check(pending != null && pending.frame().equals(fromFeet.frame()), "click frame " + (pending == null ? "none" : pending.frame()) + ", expected " + fromFeet.frame());
+		check(StationWrenchItem.attack(player, world, Hand.MAIN_HAND) == ActionResult.SUCCESS && StationSessions.pending(id) == null, "left-click did not discard the plan");
+
+		// the screen: save + plan from the feet, then a sneak-click builds
+		StationWrenchItem.perform(player, Hand.MAIN_HAND, StationWrenchItem.Action.PLAN, SMALL + "  ");
+		check(StationWrenchItem.description(player.getMainHandStack()).equals(SMALL), "screen did not save the description");
+		check(StationSessions.pending(id) != null && StationSessions.pending(id).frame().equals(fromFeet.frame()), "screen plan is not in front of the feet");
+		player.setSneaking(true);
+		click(player, clicked);
+		final StationBuildJob job = StationSessions.job(id);
+		check(job != null && !job.approved(), "sneak-click must build without approving terrain");
+		context.waitAndRun(10, () -> {
+			check(job.state() == StationBuildJob.State.DONE, "job " + job.state());
+			checkBuilt(context, fromFeet);
+			StationSessions.cancelJob(id);
+			StationSessions.forgetPlayer(id);
+			world.getServer().getPlayerManager().removeFromOperators(player.getGameProfile());
+			Fixtures.removePlayer(context, player);
+			context.complete();
+		});
+	}
+
+	private static void click(ServerPlayerEntity player, BlockPos clicked) {
+		final BlockHitResult hit = new BlockHitResult(Vec3d.ofCenter(clicked).add(0, 0.5, 0), Direction.UP, clicked, false);
+		player.getMainHandStack().useOnBlock(new ItemUsageContext(player, Hand.MAIN_HAND, hit));
+	}
+
 	@GameTest(templateName = SITE_X)
 	public void eastFacingStationAndConnectedRailNodeSurvivesUndo(TestContext context) {
 		final ServerWorld world = context.getWorld();
@@ -421,7 +492,7 @@ public class StationGameTests implements FabricGameTest {
 		}
 		check(world.getBlockState(nodes.get(0)) == connected, "undo removed a connected rail node");
 		check(world.getBlockState(nodes.get(1)).isAir(), "undo left an unconnected rail node");
-		check(undo.skipped() == 1, "skipped " + undo.skipped());
+		check(undo.keptNodes() == 1 && undo.skipped() == 0, "kept nodes " + undo.keptNodes() + ", skipped " + undo.skipped());
 		context.complete();
 	}
 

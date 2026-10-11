@@ -5,6 +5,8 @@ import com.aureliatransit.architecture.block.InfoDisplayBlock;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.InfoDisplayBlockEntity;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
+import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import com.aureliatransit.architecture.text.ConfigurableTextData;
 import com.aureliatransit.architecture.text.SignData;
 import com.aureliatransit.architecture.wayfinding.WayfindingData;
@@ -17,11 +19,13 @@ import net.minecraft.block.BlockState;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 
 /**
- * Client-to-server configuration packets of the interactive content: sign text and information text. Every handler
+ * Client-to-server configuration packets of the interactive content: sign text and information text, and the station wrench
+ * screen. Every handler
  * decodes with bounded reads, then on the server thread checks permission and reach ({@link EditValidation}), the
  * block type and the block entity before applying re-sanitized data.
  */
@@ -32,6 +36,8 @@ public final class ModPackets {
 	public static final Identifier UPDATE_WAYFINDING = AureliaTransitArchitecture.id("update_wayfinding");
 	/** Lift status panel status (A8): block position + status ordinal. */
 	public static final Identifier UPDATE_LIFT_STATUS = AureliaTransitArchitecture.id("update_lift_status");
+	/** Station wrench screen: hand + action + description; the server saves the description on the wrench and runs the action. */
+	public static final Identifier STATION_WRENCH = AureliaTransitArchitecture.id("station_wrench");
 
 	private ModPackets() {
 	}
@@ -64,7 +70,33 @@ public final class ModPackets {
 		return buf;
 	}
 
+	public static PacketByteBuf writeStationWrench(Hand hand, StationWrenchItem.Action action, String description) {
+		final PacketByteBuf buf = PacketByteBufs.create();
+		buf.writeVarInt(hand.ordinal());
+		buf.writeVarInt(action.ordinal());
+		buf.writeString(description, StationDescriptionParser.MAX_INPUT);
+		return buf;
+	}
+
 	public static void registerServerReceivers() {
+		ServerPlayNetworking.registerGlobalReceiver(STATION_WRENCH, (server, player, handler, buf, responseSender) -> {
+			final Hand hand;
+			final StationWrenchItem.Action action;
+			final String description;
+			try {
+				final int handIndex = buf.readVarInt();
+				final int actionIndex = buf.readVarInt();
+				if (handIndex < 0 || handIndex >= Hand.values().length || actionIndex < 0 || actionIndex >= StationWrenchItem.Action.values().length) {
+					return;
+				}
+				hand = Hand.values()[handIndex];
+				action = StationWrenchItem.Action.values()[actionIndex];
+				description = buf.readString(StationDescriptionParser.MAX_INPUT);
+			} catch (RuntimeException e) {
+				return;
+			}
+			server.execute(() -> StationWrenchItem.perform(player, hand, action, description));
+		});
 		ServerPlayNetworking.registerGlobalReceiver(UPDATE_WAYFINDING, (server, player, handler, buf, responseSender) -> {
 			final BlockPos pos;
 			final WayfindingData data;
