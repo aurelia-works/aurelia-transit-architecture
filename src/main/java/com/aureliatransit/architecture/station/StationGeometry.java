@@ -41,6 +41,23 @@ public final class StationGeometry {
 	/** Ramp cells beyond each platform end for step-free access (lower half, upper half). */
 	public static final int RAMP_LENGTH = 2;
 
+	/** Station building: entrance apron (the entrance ramp's two cells) on the street side ... */
+	public static final int APRON = 2;
+	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall). */
+	public static final int BUILDING_DEPTH = 9;
+	/** Ground storey: floor at y = 0, rooms y = 1..4, upper slab (and footbridge deck) at y = UPPER_FLOOR_Y ... */
+	public static final int UPPER_FLOOR_Y = ENVELOPE_HEIGHT;
+	/** ... upper storey walking level ... */
+	public static final int UPPER_WALK_Y = UPPER_FLOOR_Y + 1;
+	/** ... and the flat roof (footbridge roof too) above three clear blocks. */
+	public static final int BUILDING_ROOF_Y = UPPER_WALK_Y + HEADROOM;
+	/** Facade bay width along the tracks, pilaster to pilaster. */
+	public static final int BAY = 6;
+	/** Footbridge corridor: clear width inside its walls. */
+	public static final int BRIDGE_WIDTH = 3;
+	/** Stairs from a walking level to the footbridge or upper floor: one step per block of rise. */
+	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
+
 	private StationGeometry() {
 	}
 
@@ -78,8 +95,20 @@ public final class StationGeometry {
 			}
 			previousTrack = track;
 		}
-		final int width = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
-		return new TrackLayout(width, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms);
+		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
+		final int shift = spec.hasBuilding() ? APRON + BUILDING_DEPTH : 0;
+		if (shift == 0) {
+			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms);
+		}
+		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
+		for (final TrackLayout.Track track : tracks) {
+			shiftedTracks.add(new TrackLayout.Track(track.number(), track.u() + shift, track.platformLeft(), track.platformRight()));
+		}
+		final List<TrackLayout.PlatformBand> shiftedPlatforms = new ArrayList<>();
+		for (final TrackLayout.PlatformBand band : platforms) {
+			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight()));
+		}
+		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift);
 	}
 
 	/** Bands left to right: 'T' for a track, 'P' for a platform. */

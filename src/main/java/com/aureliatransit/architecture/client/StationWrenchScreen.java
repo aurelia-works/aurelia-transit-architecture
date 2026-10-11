@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.client;
 import com.aureliatransit.architecture.client.interactive.EditorWidgets;
 import com.aureliatransit.architecture.network.ModPackets;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.MinecraftClient;
@@ -17,13 +18,17 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 
 /**
- * The station wrench screen: edit the remembered description and run a generator action. Every button sends one packet
+ * The station wrench screen: edit the remembered description, fill it from a preset, and run a generator action. Preset buttons
+ * only change the text field; every action button sends one packet
  * (hand, action, description) and closes the screen so the chat summary and the preview are visible; closing without a button
  * only saves a changed description. The server re-checks the operator level and bounds everything it reads.
  */
 public class StationWrenchScreen extends Screen {
 
 	private static final int WIDTH = 300;
+	private static final int PRESET_COLUMNS = 4;
+	/** From the top of the description field to the first action row, before the preset rows. */
+	private static final int TEXT_HEIGHT = 46;
 	private static final String KEY = EditorWidgets.KEY + "station_wrench.";
 
 	private final Hand hand;
@@ -49,14 +54,26 @@ public class StationWrenchScreen extends Screen {
 	protected void init() {
 		final int left = (width - WIDTH) / 2;
 		final int half = (WIDTH - 4) / 2;
-		int y = height / 2 - 70;
+		int y = top();
 		final String text = descriptionField == null ? initial : descriptionField.getText();
 		descriptionField = new TextFieldWidget(textRenderer, left, y, WIDTH, 18, Text.translatable(KEY + "description"));
 		descriptionField.setMaxLength(StationDescriptionParser.MAX_INPUT);
 		descriptionField.setText(text);
 		descriptionField.setPlaceholder(Text.translatable(KEY + "description").formatted(Formatting.DARK_GRAY));
 		addDrawableChild(descriptionField);
-		y += 46;
+		y += TEXT_HEIGHT;
+		final int presetWidth = (WIDTH - (PRESET_COLUMNS - 1) * 4) / PRESET_COLUMNS;
+		for (int i = 0; i < StationPresets.ALL.size(); i++) {
+			final StationPresets.Preset preset = StationPresets.ALL.get(i);
+			final int column = i % PRESET_COLUMNS;
+			final ButtonWidget button = ButtonWidget.builder(Text.translatable(KEY + "preset." + preset.key()), b -> {
+				descriptionField.setText(preset.description());
+				descriptionField.setCursorToStart();
+			}).dimensions(left + column * (presetWidth + 4), y + i / PRESET_COLUMNS * 22, presetWidth, 20).build();
+			button.setTooltip(Tooltip.of(Text.literal(preset.description())));
+			addDrawableChild(button);
+		}
+		y += presetRows() * 22 + 6;
 		addDrawableChild(action(left, y, half, "plan", StationWrenchItem.Action.PLAN));
 		addDrawableChild(action(left + half + 4, y, half, "preview", StationWrenchItem.Action.PREVIEW));
 		y += 24;
@@ -87,10 +104,20 @@ public class StationWrenchScreen extends Screen {
 		renderBackground(context);
 		super.render(context, mouseX, mouseY, delta);
 		final int left = (width - WIDTH) / 2;
-		final int top = height / 2 - 70;
+		final int top = top();
 		context.drawCenteredTextWithShadow(textRenderer, title, width / 2, top - 16, 0xFFFFFF);
 		context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "example"), left, top + 22, 0x9AA0A6);
 		context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "hint"), left, top + 32, 0x9AA0A6);
+	}
+
+	private static int presetRows() {
+		return (StationPresets.ALL.size() + PRESET_COLUMNS - 1) / PRESET_COLUMNS;
+	}
+
+	/** The description field's y; the whole screen is centred vertically. */
+	private int top() {
+		final int total = TEXT_HEIGHT + presetRows() * 22 + 6 + 24 + 24 + 28 + 20;
+		return Math.max(20, (height - total) / 2);
 	}
 
 	@Override

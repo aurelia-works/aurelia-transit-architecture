@@ -11,10 +11,13 @@ import java.util.Objects;
  * @param platformLength platform length along the track in blocks
  * @param platformWidth  width of every platform in blocks
  * @param name           station name for the name signs; empty means no name signs
+ * @param building       the station building's style; {@link BuildingStyle#NONE} for platforms only
+ * @param footbridge     a footbridge over the tracks to every platform was asked for (a building adds one when a platform
+ *                       needs it)
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
-		boolean railNodes, String name) {
+		boolean railNodes, String name, BuildingStyle building, boolean footbridge) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 4;
@@ -36,11 +39,15 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(surface, "surface");
 		Objects.requireNonNull(roofMaterial, "roofMaterial");
 		Objects.requireNonNull(name, "name");
+		Objects.requireNonNull(building, "building");
 		check(trackCount, MIN_TRACKS, MAX_TRACKS, "trackCount");
 		check(platformLength, MIN_LENGTH, MAX_LENGTH, "platformLength");
 		check(platformWidth, MIN_WIDTH, MAX_WIDTH, "platformWidth");
 		if (platformLayout == PlatformLayout.ISLAND && trackCount < 2) {
 			throw new IllegalArgumentException("an island platform needs at least two tracks");
+		}
+		if (roof == RoofType.HALL && (building != BuildingStyle.NONE || footbridge)) {
+			throw new IllegalArgumentException("a hall roof cannot be combined with a station building or footbridge yet");
 		}
 		if (name.length() > MAX_NAME) {
 			throw new IllegalArgumentException("name longer than " + MAX_NAME + " characters");
@@ -65,7 +72,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public Builder toBuilder() {
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
-				.railNodes(railNodes).name(name);
+				.railNodes(railNodes).name(name).building(building).footbridge(footbridge);
+	}
+
+	public boolean hasBuilding() {
+		return building != BuildingStyle.NONE;
 	}
 
 	/** Mutable builder; starts at {@link #defaults()}. {@link #build()} applies the constructor's checks. */
@@ -84,6 +95,8 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean furniture = true;
 		private boolean railNodes = true;
 		private String name = "";
+		private BuildingStyle building = BuildingStyle.NONE;
+		private boolean footbridge;
 
 		private Builder() {
 		}
@@ -153,9 +166,19 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder building(BuildingStyle value) {
+			building = value;
+			return this;
+		}
+
+		public Builder footbridge(boolean value) {
+			footbridge = value;
+			return this;
+		}
+
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name);
+					tactile, furniture, railNodes, name, building, footbridge);
 		}
 	}
 }

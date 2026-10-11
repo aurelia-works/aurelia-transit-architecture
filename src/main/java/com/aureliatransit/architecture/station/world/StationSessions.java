@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.station.world;
 
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
+import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.SurveyReport;
@@ -36,7 +37,7 @@ public final class StationSessions {
 	 * @param railSkipped rail nodes will be left out because MTR is not loaded
 	 */
 	public record Pending(ParseResult parse, StationSpec spec, StationPlan plan, LocalFrame frame, RegistryKey<World> dimension,
-			List<Violation> violations, SurveyReport report, boolean railSkipped) {
+			List<Violation> violations, StationAudit.Result audit, SurveyReport report, boolean railSkipped) {
 	}
 
 	private static final Map<UUID, Pending> PENDING = new HashMap<>();

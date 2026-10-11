@@ -391,4 +391,19 @@ class StationDescriptionParserTest {
 			}
 		}
 	}
+
+	@Test
+	void stationBuildingsAndLandmarks() {
+		assertEquals(BuildingStyle.MODERN, spec("station building").building());
+		assertEquals(BuildingStyle.MODERN, spec("two track station with ticket hall").building());
+		assertEquals(BuildingStyle.AMSTERDAM, spec("amsterdam station building").building());
+		assertEquals(BuildingStyle.GOTHIC_BRICK, spec("st pancras station building").building());
+		assertEquals(BuildingStyle.ANTWERP, spec("antwerp central with building").building());
+		assertEquals(BuildingStyle.BEAUX_ARTS, spec("grand central station building").building());
+		assertEquals(BuildingStyle.BEAUX_ARTS, spec("union station with building").building());
+		assertEquals(BuildingStyle.NONE, spec("no station building").building());
+		assertTrue(spec("station with footbridge").footbridge());
+		assertTrue(spec("station building with footbridge").footbridge());
+		assertTrue(StationDescriptionParser.parse("station building with hall roof").warnings().stream().anyMatch(w -> w.contains("hall roof")));
+	}
 }

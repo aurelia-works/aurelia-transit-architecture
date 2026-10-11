@@ -40,6 +40,7 @@ public final class LayoutValidator {
 		add(all, check.unsupportedColumns());
 		add(all, check.unsupportedRoof());
 		add(all, check.roofSpans());
+		add(all, check.deckSpans());
 		add(all, check.floatingFixtures());
 		return all;
 	}
@@ -87,6 +88,18 @@ public final class LayoutValidator {
 			if (blocks != null) {
 				for (final PlannedBlock block : blocks) {
 					if (block.role().platformFloor()) {
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+
+		private boolean isFlatFloor(int u, int y, int v) {
+			final List<PlannedBlock> blocks = cells.get(new Cell(u, y, v));
+			if (blocks != null) {
+				for (final PlannedBlock block : blocks) {
+					if (block.role().flatFloor()) {
 						return true;
 					}
 				}
@@ -310,11 +323,11 @@ public final class LayoutValidator {
 		}
 
 		List<Violation> unsupportedRoof() {
-			// For every (u, v) within the cantilever of a support point: the lowest carrier (cap or beam) y that reaches it.
+			// For every (u, v) within the cantilever of a support point: the lowest carrier (cap, beam or bridge pier) y that reaches it.
 			final Map<Long, Integer> reach = new HashMap<>();
 			final int reachLimit = StationGeometry.MAX_CANTILEVER;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role() != Role.COLUMN_CAP && block.role() != Role.BEAM) {
+				if (block.role() != Role.COLUMN_CAP && block.role() != Role.BEAM && block.role() != Role.BRIDGE_PIER) {
 					continue;
 				}
 				for (int du = -reachLimit; du <= reachLimit; du++) {
@@ -407,11 +420,83 @@ public final class LayoutValidator {
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
 				if ((role == Role.LAMP || role == Role.BENCH || role == Role.BIN || role == Role.NAME_SIGN)
-						&& !isPlatformFloor(block.u(), block.y() - 1, block.v())) {
-					found.add(at(Violation.Kind.FLOATING_FIXTURE, block, where(block) + " does not stand on a platform floor"));
+						&& !isFlatFloor(block.u(), block.y() - 1, block.v())) {
+					found.add(at(Violation.Kind.FLOATING_FIXTURE, block, where(block) + " does not stand on a flat floor"));
 				}
 			}
 			return found;
+		}
+
+		/** Footbridge deck runs must be carried by piers: overhangs of at most 4 and spans of at most 12. */
+		List<Violation> deckSpans() {
+			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.BRIDGE_DECK) {
+					lines.computeIfAbsent(((long) block.y() << 32) ^ (block.v() & 0xFFFFFFFFL), k -> new TreeMap<>()).put(block.u(), block);
+				}
+			}
+			final List<Violation> found = new ArrayList<>();
+			for (final Map.Entry<Long, TreeMap<Integer, PlannedBlock>> entry : lines.entrySet()) {
+				final TreeMap<Integer, PlannedBlock> line = entry.getValue();
+				int runStart = Integer.MIN_VALUE;
+				int previous = Integer.MIN_VALUE;
+				for (final int u : line.keySet()) {
+					if (runStart == Integer.MIN_VALUE) {
+						runStart = u;
+					} else if (u != previous + 1) {
+						checkDeckRun(found, line.get(runStart), runStart, previous);
+						runStart = u;
+					}
+					previous = u;
+				}
+				if (runStart != Integer.MIN_VALUE) {
+					checkDeckRun(found, line.get(runStart), runStart, previous);
+				}
+			}
+			return found;
+		}
+
+		private void checkDeckRun(List<Violation> found, PlannedBlock first, int uStart, int uEnd) {
+			final int y = first.y();
+			final int v = first.v();
+			final List<Integer> piers = new ArrayList<>();
+			for (int u = uStart; u <= uEnd; u++) {
+				if (has(u, y - 1, v, Role.BRIDGE_PIER) || has(u, y - 1, v - 1, Role.BRIDGE_PIER) || has(u, y - 1, v + 1, Role.BRIDGE_PIER)) {
+					piers.add(u);
+				}
+			}
+			// the building wall and slab carry the deck where they meet (same row or next to it)
+			for (int dv = -1; dv <= 1; dv++) {
+				if (has(uStart - 1, y, v + dv, Role.FLOOR) || has(uStart - 1, y, v + dv, Role.LIGHT_PANEL) || has(uStart - 1, y, v + dv, Role.WALL)
+						|| has(uStart - 1, y, v + dv, Role.BRIDGE_PIER) || has(uStart - 1, y - 1, v + dv, Role.BRIDGE_PIER)) {
+					piers.add(0, uStart - 1);
+					break;
+				}
+			}
+			if (piers.isEmpty()) {
+				found.add(new Violation(Violation.Kind.ROOF_SPAN, uStart, y, v,
+						"footbridge deck at v=" + v + " u=" + uStart + ".." + uEnd + " has no pier under it"));
+				return;
+			}
+			if (piers.get(0) - uStart > StationGeometry.MAX_CANTILEVER) {
+				found.add(new Violation(Violation.Kind.ROOF_SPAN, uStart, y, v,
+						"footbridge deck at v=" + v + " overhangs " + (piers.get(0) - uStart) + " cells past its first pier (max "
+								+ StationGeometry.MAX_CANTILEVER + ")"));
+			}
+			for (int i = 0; i + 1 < piers.size(); i++) {
+				final int gap = piers.get(i + 1) - piers.get(i);
+				if (gap > StationGeometry.MAX_BEAM_SPAN) {
+					found.add(new Violation(Violation.Kind.ROOF_SPAN, piers.get(i), y, v,
+							"footbridge deck at v=" + v + " spans " + gap + " cells between piers at u=" + piers.get(i) + " and u=" + piers.get(i + 1)
+									+ " (max " + StationGeometry.MAX_BEAM_SPAN + ")"));
+				}
+			}
+			final int lastPier = piers.get(piers.size() - 1);
+			if (uEnd - lastPier > StationGeometry.MAX_CANTILEVER) {
+				found.add(new Violation(Violation.Kind.ROOF_SPAN, uEnd, y, v,
+						"footbridge deck at v=" + v + " overhangs " + (uEnd - lastPier) + " cells past its last pier (max " + StationGeometry.MAX_CANTILEVER
+								+ ")"));
+			}
 		}
 	}
 }

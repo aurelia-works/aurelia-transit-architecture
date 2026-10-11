@@ -190,4 +190,24 @@ class StylePaletteTest {
 			return false;
 		}
 	}
+
+	@Test
+	void buildingMaterialsExistForEveryStyle() {
+		final Set<String> checked = new HashSet<>();
+		for (final BuildingStyle style : BuildingStyle.values()) {
+			if (style == BuildingStyle.NONE) {
+				continue;
+			}
+			final StylePalette.Building building = StylePalette.Building.of(style);
+			for (final String id : new String[]{building.wall(), building.trim(), building.plinth(), building.cornice(), building.window(), building.floor(),
+					building.upperFloor(), building.roof(), building.light(), building.stair(), building.deck(), building.bridgeWall(), building.bridgeRoof(),
+					building.bridgeLight(), building.pier(), building.bench(), building.interiorWall()}) {
+				assertTrue(id.startsWith(ATA) || id.startsWith("minecraft:"), style + " " + id);
+				if (id.startsWith(ATA) && checked.add(id)) {
+					assertTrue(hasBlockstate(id.substring(ATA.length())), "no blockstate for " + id + " (" + style + ")");
+				}
+			}
+		}
+		assertTrue(checked.size() > 20, "expected many building blocks, got " + checked.size());
+	}
 }

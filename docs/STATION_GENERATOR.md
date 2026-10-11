@@ -26,9 +26,13 @@ The **Station Wrench** (Passenger Equipment tab, operators only) does the same w
 | Sneak + right-click a block | Builds the pending plan (`confirm`). Never approves terrain changes. |
 | Left-click a block | Cancels the running build or discards the plan. The wrench never breaks blocks. Left-click in the air does nothing. |
 | Right-click the air | Shows the preview again. |
-| Sneak + right-click the air | Opens the wrench screen: edit the description, then Plan in front of me, Show preview, Build, **Build, replace terrain** (the wrench's only way to approve terrain changes), Cancel or Undo last build. Closing the screen saves the description. |
+| Sneak + right-click the air | Opens the wrench screen: edit the description or pick a preset, then Plan in front of me, Show preview, Build, **Build, replace terrain** (the wrench's only way to approve terrain changes), Cancel or Undo last build. Closing the screen saves the description. |
 
 Every wrench action checks on the server that the player is an operator (level 2). A non-operator's clicks and screen packets do nothing.
+
+**Presets.** Eight buttons on the wrench screen fill in a complete description, one per building look: Utrecht, Amsterdam, St Pancras, Antwerp, Frankfurt, Hamburg, Munich and Grand Central. Each is a 2-4 track station with a building, a footbridge and a name (hover a button to read it). A preset only fills the text field; nothing is planned until you press Plan. They live in `StationPresets`, and a unit test keeps each one fully understood, free of design-rule breaks and buildable.
+
+**Guide book.** An operator gets the *Station Generator Guide*, a written book, the first time they join as an operator (a command tag remembers it, so it is given once). `/ata_guide` (operators) gives another copy.
 
 Examples:
 
@@ -50,6 +54,9 @@ Examples:
 | Floor | `light/dark paving`, `concrete`, `terrazzo`, `granite` | style's own |
 | Access | `step-free` (ramps at both platform ends), `no ramps`; `no tactile` | ramps and tactile edges on |
 | Other | `no benches`, `no rail nodes`, `named "X"` / `called X` | benches, rail nodes, no name signs |
+| Building | `station building`, `ticket hall`, `concourse`, `furnished`, `centraal`, `hauptbahnhof`, `no station building` | none |
+| Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts). Landmarks (`st pancras`, `antwerp`, `grand central`...) also ask for a building. | the style's own look |
+| Footbridge | `footbridge`, `bridge`, `overbridge`, `skywalk`, `no footbridge` | none |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 
@@ -72,20 +79,31 @@ Out-of-range values are clamped with a warning. A contradiction gives a warning 
    - Beam spans may be at most 12.
    - Fixtures must stand on a platform floor.
    - A plan that breaks any rule is never built. Example: side platforms with 3-4 tracks cannot carry a hall roof, because the beam span would be too long.
-5. **Site check** (`SiteSurvey` over `WorldSiteProbe`):
+5. **Station checks** (`StationAudit`), measured from the planned blocks, never copied from the description, so a planner bug shows up here:
+   - Track corridors: as many as requested.
+   - Boarding faces: the platform edge cells facing each track are counted; every face must be one unbroken run of the requested length, and no edge may face a track without a planned platform.
+   - Rail nodes at both ends of every face (when on).
+   - Roof coverage of the platform area: 100% with a canopy or hall, 0% without a roof.
+   - Headroom: at least 3 blocks over every walkable platform and ramp cell.
+   - Access: a walk from beside the station (u < 0 or past the last column; the tracks run on past both ends, so nobody walks around them) to every boarding edge cell. Ramps are climbed only along their facing. Each platform is graded by its worst boarding cell: step-free, a one-block step (fails if step-free access was asked for), only by walking across a track (a warning), only by stairs (a warning, since there are no lifts yet: platforms reached over the footbridge), or unreachable (fails). Without a footbridge, island platforms are reached across a track (a warning).
+   - Name signs on every platform when a name is given (a warning if one did not fit), none otherwise.
+   - No floating parts: every block is joined through faces or edges to a block standing on the support layer.
+   - Overall size.
+   - A failed check stops the build like a design rule. The summary prints one line with the counts and the measured faces and size, then each warning and failure.
+6. **Site check** (`SiteSurvey` over `WorldSiteProbe`):
    - Planned cells must be air.
    - Track envelopes and platform headroom must be free of anything solid or liquid. Grass and flowers there are left alone.
    - Platforms, ramps and tracks need sturdy ground below.
    - Grass, water, logs or stone in a planned cell, obstructions, and missing ground all need approval. With approval they are replaced, cleared, or filled with stone bricks down to sturdy ground (at most 4 deep).
    - These are refused even with approval: block entities (chests, signs), unbreakable blocks, unloaded chunks, the world height limit, gaps deeper than 4, and an existing MTR rail node anywhere other than a planned rail node cell or a track's clearance.
    - An existing MTR rail node is never replaced or removed. One already in a planned rail node cell is kept, and one in a track's clearance is left alone, so a station can be planned onto a line that is already connected.
-6. **Build** (`StationBuildJob`):
+7. **Build** (`StationBuildJob`):
    - At most 64 changes per job per tick, and 256 per tick across all jobs.
    - Order: clears top-down, fills bottom-up, then floors, edges, ramps, rail nodes, columns, roof, fixtures, and signs last.
    - Every cell is re-checked just before it is written. A cell that changed since the survey stops the job, and nothing more is placed.
    - A chunk that unloads pauses the job (chunks are never loaded on purpose); after 10 s the job stops.
    - Name sign text goes to each joined row's owner.
-7. **Undo** walks the log backwards. It only touches cells that still hold the block the build placed. Grass or mycelium that vanilla turned into dirt under the station is put back once the block above it is gone, unless that cell was changed to something other than dirt.
+8. **Undo** walks the log backwards. It only touches cells that still hold the block the build placed. Grass or mycelium that vanilla turned into dirt under the station is put back once the block above it is gone, unless that cell was changed to something other than dirt.
 
 ## Tracks and MTR
 
@@ -102,8 +120,9 @@ The generator never creates rail connections itself, because those live in MTR's
 
 ## Known limitations
 
-- Ground-level stations only: no underground, elevated, footbridge or underpass. Island platforms are reached at grade from their ramps; there is no step-free route across the tracks.
-- Straight stations only, along one axis. No curves, no catenary, no platform screen doors, no stairs or lifts.
+- Ground-level stations only: no underground or elevated. Straight stations along one axis. No curves, no catenary, no platform screen doors, no lifts.
+- Buildings and footbridges are reached by stairs only: no lifts, so platforms reached over a footbridge get a "not step-free" warning. A hall roof cannot be combined with a building or footbridge yet (the parser falls back to canopies). Terminus stations are not built yet (`terminus` gives a warning and a through station).
+- The building and footbridge roofs count as shelter in the checks, but the design rules do not check their spans; they rest on the building and footbridge walls.
 - Rail nodes for tracks along X (`facing=true`) match the live-tested release-check scene. Nodes for tracks along Z (`facing=false`) follow from MTR's code and are covered by game tests, but not yet by a live MTR connection.
 - The preview particles were not seen in a client in this version (headless tests only check that planning and preview change nothing).
 - Undo history is one build per player, in memory.

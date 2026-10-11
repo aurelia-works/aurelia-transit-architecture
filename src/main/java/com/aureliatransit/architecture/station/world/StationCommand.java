@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.station.LayoutValidator;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.SiteSurvey;
+import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
@@ -62,15 +63,16 @@ public final class StationCommand {
 		return prepare(world, description, layout -> LocalFrame.inFrontOf(feet.getX(), feet.getY(), feet.getZ(), facing, layout));
 	}
 
-	/** Parses, plans, validates and surveys (without approval) a station placed by {@code place}. */
+	/** Parses, plans, validates, audits and surveys (without approval) a station placed by {@code place}. */
 	public static StationSessions.Pending prepare(ServerWorld world, String description, Function<TrackLayout, LocalFrame> place) {
 		final ParseResult parse = StationDescriptionParser.parse(description);
 		final StationPlan plan = StationPlanner.plan(parse.spec());
 		final List<Violation> violations = LayoutValidator.validate(plan);
+		final StationAudit.Result audit = StationAudit.audit(plan);
 		final LocalFrame frame = place.apply(plan.layout());
 		final BlockStateResolver.Check check = BlockStateResolver.check(plan);
 		final SurveyReport report = SiteSurvey.survey(plan, frame, new WorldSiteProbe(world), false);
-		return new StationSessions.Pending(parse, parse.spec(), plan, frame, world.getRegistryKey(), violations, report, check.railSkipped());
+		return new StationSessions.Pending(parse, parse.spec(), plan, frame, world.getRegistryKey(), violations, audit, report, check.railSkipped());
 	}
 
 	/**
@@ -80,6 +82,11 @@ public final class StationCommand {
 		if (!pending.violations().isEmpty()) {
 			out.accept(Text.literal("This plan breaks " + pending.violations().size() + " design rule(s) and cannot be built; plan again with "
 					+ "different options.").formatted(Formatting.RED));
+			return null;
+		}
+		if (!pending.audit().buildable()) {
+			out.accept(Text.literal("This plan fails " + pending.audit().count(StationAudit.Status.FAIL) + " station check(s) and cannot be built; "
+					+ "plan again with different options.").formatted(Formatting.RED));
 			return null;
 		}
 		final BlockStateResolver.Check check = BlockStateResolver.check(pending.plan());

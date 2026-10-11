@@ -19,3 +19,5 @@ tools/__pycache__/
 .settings/
 *.ipr
 *.iws
+.playwright-mcp/
+HANDOFF.md

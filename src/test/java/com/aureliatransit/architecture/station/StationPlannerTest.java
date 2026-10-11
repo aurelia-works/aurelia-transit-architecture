@@ -661,4 +661,89 @@ class StationPlannerTest {
 			}
 		}
 	}
+
+	@Test
+	void buildingsHaveShellAndFurnishingForEveryStyle() {
+		for (final BuildingStyle style : BuildingStyle.values()) {
+			if (style == BuildingStyle.NONE) {
+				continue;
+			}
+			final StationSpec spec = StationSpec.builder().building(style).platformLength(48).name("Alpha").build();
+			final StationPlan plan = plan(spec);
+			assertEquals(List.of(), LayoutValidator.validate(plan), style.toString());
+			assertTrue(StationAudit.audit(plan).buildable(), style.toString());
+			// shell
+			assertFalse(blocks(plan, Role.FLOOR).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.WALL).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.WINDOW).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.LIGHT_PANEL).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.BUILDING_ROOF).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.STAIR).isEmpty(), style.toString());
+			// gates with kinds, barriers elsewhere
+			final List<PlannedBlock> gates = blocks(plan, Role.GATE);
+			assertTrue(gates.size() >= 5, style + " gates " + gates.size());
+			final Set<String> kinds = new java.util.HashSet<>();
+			for (final PlannedBlock gate : gates) {
+				kinds.add(gate.state());
+			}
+			assertTrue(kinds.contains("kind=end") && kinds.contains("kind=gate") && kinds.contains("kind=wide"), style + " " + kinds);
+			assertFalse(blocks(plan, Role.BARRIER).isEmpty(), style.toString());
+			// office window, ticket machines (2-tall with halves), kiosk, clock, boards
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("booth_window") && b.front() == LocalDir.PLUS_V), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals("mtr:ticket_machine") && b.state().equals("half=lower")), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals("mtr:ticket_machine") && b.state().equals("half=upper")), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("passenger_info_kiosk")), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("clock")), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("concourse_board")), style.toString());
+			assertFalse(blocks(plan, Role.BENCH).isEmpty(), style.toString());
+			// entrance ramps on the apron pointing streetwards
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAMP_LOWER && b.u() == 0 && b.front() == LocalDir.MINUS_U), style.toString());
+			// footbridge comes with the building (two side platforms: outer platforms stay step-free)
+			assertFalse(blocks(plan, Role.BRIDGE_DECK).isEmpty(), style.toString());
+			assertFalse(blocks(plan, Role.BRIDGE_PIER).isEmpty(), style.toString());
+			// supports cover the building footprint
+			boolean covered = false;
+			for (final Box box : plan.supportAreas()) {
+				if (box.uMin() == 0 && box.uMax() == plan.layout().buildingWidth() - 1) {
+					covered = true;
+				}
+			}
+			assertTrue(covered, style.toString());
+		}
+	}
+
+	@Test
+	void buildingStationsAreValidForEveryLayoutAndSize() {
+		for (int tracks = 1; tracks <= 4; tracks++) {
+			for (final PlatformLayout layout : PlatformLayout.values()) {
+				if (layout == PlatformLayout.ISLAND && tracks < 2) {
+					continue;
+				}
+				for (final int length : new int[]{StationSpec.MIN_LENGTH, 48, StationSpec.MAX_LENGTH}) {
+					for (final int width : new int[]{StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH}) {
+						for (final RoofType roof : new RoofType[]{RoofType.CANOPY, RoofType.NONE}) {
+							final StationSpec spec = StationSpec.builder().trackCount(tracks).platformLayout(layout).platformLength(length)
+									.platformWidth(width).roof(roof).building(BuildingStyle.MODERN).build();
+							final StationPlan plan = plan(spec);
+							assertEquals(List.of(), LayoutValidator.validate(plan), describe(spec));
+							assertTrue(StationAudit.audit(plan).buildable(), describe(spec));
+						}
+					}
+				}
+			}
+		}
+	}
+
+	@Test
+	void footbridgeWithoutBuildingUsesStairs() {
+		final StationSpec spec = StationSpec.builder().trackCount(3).platformLayout(PlatformLayout.ISLAND).footbridge(true).platformLength(48).build();
+		final StationPlan plan = plan(spec);
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		assertFalse(blocks(plan, Role.BRIDGE_DECK).isEmpty());
+		assertFalse(blocks(plan, Role.STAIR).isEmpty());
+		// stairs climb along their front
+		for (final PlannedBlock stair : blocks(plan, Role.STAIR)) {
+			assertTrue(stair.front() == LocalDir.PLUS_V || stair.front() == LocalDir.MINUS_V, stair.toString());
+		}
+	}
 }

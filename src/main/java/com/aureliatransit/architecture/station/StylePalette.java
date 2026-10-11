@@ -23,6 +23,61 @@ public final class StylePalette {
 	private final String lamp;
 	private final String bench;
 	private final String sign;
+	private Building building = Building.of(BuildingStyle.MODERN);
+
+	/**
+	 * Materials of a station building and its footbridge. Ids are ATA or vanilla blocks; {@code cornice} and {@code window}
+	 * are facing blocks whose front points outwards.
+	 */
+	public record Building(String wall, String trim, String plinth, String cornice, String window, String floor, String upperFloor,
+			String roof, String light, String stair, String deck, String bridgeWall, String bridgeRoof, String bridgeLight, String pier,
+			String bench, String interiorWall) {
+
+		public static Building of(BuildingStyle style) {
+			return switch (style) {
+				case NONE, MODERN -> new Building(ata("metro_pale_concrete"), ata("metro_steel_cladding"), ata("metro_steel_cladding"),
+						ata("metro_steel_cladding"), ata("curtain_wall_glass"), ata("utrecht_light_grey_floor_tile"), ata("utrecht_light_grey_floor_tile"),
+						ata("metro_pale_concrete"), ata("metro_recessed_light"), ata("station_stair"), ata("utrecht_light_grey_floor_tile"),
+						ata("curtain_wall_glass"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
+						ata("metro_pale_concrete"));
+				case AMSTERDAM -> new Building(ata("amsterdam_red_brick"), ata("amsterdam_brick_sandstone_band"), ata("amsterdam_brick_sandstone_band"),
+						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("utrecht_light_grey_floor_tile"),
+						ata("rotterdam_black_stone_floor"), ata("amsterdam_red_brick"), ata("metro_recessed_light"), ata("station_stair"),
+						ata("rotterdam_black_stone_floor"), ata("curtain_wall_glass"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"),
+						ata("wooden_bench"), ata("amsterdam_red_brick"));
+				case GOTHIC_BRICK -> new Building(ata("hamburg_clinker_brick"), ata("hamburg_stone_trim"), ata("frankfurt_sandstone_rusticated"),
+						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"), ata("antwerp_marble_floor_tile"),
+						ata("hamburg_clinker_brick"), ata("metro_recessed_light"), "minecraft:stone_brick_stairs", ata("antwerp_marble_floor_tile"),
+						ata("wired_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						ata("hamburg_stone_trim"));
+				case ANTWERP -> new Building(ata("antwerp_ornate_limestone"), ata("antwerp_gilded_ornament_trim"), ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"),
+						ata("antwerp_marble_floor_tile"), ata("antwerp_ornate_limestone"), ata("metro_recessed_light"), "minecraft:polished_diorite_stairs",
+						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
+						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
+				case SANDSTONE -> new Building(ata("frankfurt_sandstone_ashlar"), ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_rusticated"), ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"),
+						ata("munich_terrazzo_floor"), ata("munich_terrazzo_floor"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"),
+						"minecraft:sandstone_stairs", ata("munich_terrazzo_floor"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
+						ata("steel_column_round"), ata("steel_bench"), ata("frankfurt_sandstone_ashlar"));
+				case CLINKER -> new Building(ata("hamburg_clinker_brick"), ata("hamburg_clinker_stone_trim"), ata("hamburg_clinker_stone_trim"),
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("munich_terrazzo_floor"), ata("munich_terrazzo_floor"),
+						ata("hamburg_clinker_brick"), ata("metro_recessed_light"), ata("station_stair"), ata("munich_terrazzo_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("steel_bench"),
+						ata("hamburg_clinker_brick"));
+				case CONCRETE -> new Building(ata("munich_exposed_concrete"), ata("munich_board_formed_concrete"), ata("munich_board_formed_concrete"),
+						ata("metro_steel_cladding"), ata("curtain_wall_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						ata("munich_exposed_concrete"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
+						ata("curtain_wall_glass"), ata("canopy_flat"), ata("canopy_light"), ata("metro_column_steel"), ata("steel_bench"),
+						ata("munich_exposed_concrete"));
+				case BEAUX_ARTS -> new Building(ata("roma_travertine"), ata("antwerp_ornate_limestone"), ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"), ata("roma_polished_floor"),
+						ata("roma_travertine"), ata("metro_recessed_light"), "minecraft:polished_diorite_stairs", ata("roma_polished_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
+						ata("antwerp_polished_marble_wall"));
+			};
+		}
+	}
 
 	private StylePalette(String surface, String edge, String column, String cap, String roof, String roofEdge, String roofLight, String lamp,
 			String bench, String sign) {
@@ -58,8 +113,15 @@ public final class StylePalette {
 					ata("metro_column_tiled"), ata("metro_column_tiled"), ata("metro_acoustic_ceiling"), ata("metro_acoustic_ceiling"),
 					ata("metro_recessed_light"), ata("platform_lamp"), ata("steel_bench"), ata("station_name_sign"));
 		};
-		return new StylePalette(surfaceOverride(spec.surface(), base.surface), base.edge, base.column, base.cap,
+		final StylePalette palette = new StylePalette(surfaceOverride(spec.surface(), base.surface), base.edge, base.column, base.cap,
 				roofOverride(spec.roofMaterial(), hall, base.roof), base.roofEdge, base.roofLight, base.lamp, base.bench, base.sign);
+		palette.building = Building.of(spec.building());
+		return palette;
+	}
+
+	/** The station building's materials (the modern set when the spec has no building). */
+	public Building building() {
+		return building;
 	}
 
 	/** The block id for a role; never null. */
@@ -81,6 +143,18 @@ public final class StylePalette {
 			case BIN -> ata("waste_bin");
 			case NAME_SIGN -> sign;
 			case FOUNDATION -> FOUNDATION;
+			case FLOOR -> building.floor();
+			case LIGHT_PANEL -> building.light();
+			case WALL -> building.wall();
+			case WINDOW -> building.window();
+			case STAIR -> building.stair();
+			case BRIDGE_PIER -> building.pier();
+			case BRIDGE_DECK -> building.deck();
+			case BUILDING_ROOF -> building.roof();
+			case GATE -> ata("fare_gate");
+			case BARRIER -> ata("glass_barrier");
+			case RAILING -> ata("handrail");
+			case FIXTURE -> ata("help_point");
 		};
 	}
 

@@ -11,13 +11,20 @@ import java.util.Objects;
  * @param front   where the model's front points (ATA models are authored front-north, so this becomes FACING; axis blocks use
  *                its axis; non-rotating blocks ignore it)
  * @param text    sign text for {@link Role#NAME_SIGN}, empty otherwise
+ * @param state   extra block state properties as {@code name=value,name=value} (a fare gate's kind, a stair's half); empty for
+ *                none. Properties the block does not have are ignored.
  */
-public record PlannedBlock(int u, int y, int v, Role role, String blockId, LocalDir front, String text) {
+public record PlannedBlock(int u, int y, int v, Role role, String blockId, LocalDir front, String text, String state) {
 
 	public PlannedBlock {
 		Objects.requireNonNull(role, "role");
 		Objects.requireNonNull(blockId, "blockId");
 		Objects.requireNonNull(front, "front");
 		Objects.requireNonNull(text, "text");
+		Objects.requireNonNull(state, "state");
+	}
+
+	public PlannedBlock(int u, int y, int v, Role role, String blockId, LocalDir front, String text) {
+		this(u, y, v, role, blockId, front, text, "");
 	}
 }

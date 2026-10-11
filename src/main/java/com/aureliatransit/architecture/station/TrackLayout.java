@@ -11,12 +11,18 @@ import java.util.List;
  * @param rampLength     ramp cells beyond each platform end (0 without step-free access)
  * @param tracks         left to right
  * @param platforms      left to right
+ * @param buildingWidth  columns u = 0..buildingWidth-1 taken by the station building and its entrance apron (0 without a
+ *                       building); the railway starts at u = buildingWidth
  */
-public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms) {
+public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth) {
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
 		platforms = List.copyOf(platforms);
+	}
+
+	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms) {
+		this(width, platformLength, rampLength, tracks, platforms, 0);
 	}
 
 	/** First v of the footprint (start of the ramps, or 0). */

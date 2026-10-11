@@ -51,7 +51,25 @@ public final class StationDescriptionParser {
 			Map.entry("frankfurt", StationStyle.GERMAN_SBAHN), Map.entry("metro", StationStyle.METRO), Map.entry("subway", StationStyle.METRO),
 			Map.entry("underground", StationStyle.METRO), Map.entry("ubahn", StationStyle.METRO), Map.entry("tube", StationStyle.METRO));
 	private static final Set<String> UNDERGROUND_WORDS = Set.of("underground", "subway", "tunnel", "tube");
-	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct", "bridge");
+	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct");
+	/** City words that pick a station building's look when a building is asked for (some also pick the platform style). */
+	private static final Map<String, BuildingStyle> CITY_BUILDINGS = Map.ofEntries(Map.entry("utrecht", BuildingStyle.MODERN),
+			Map.entry("leidsche", BuildingStyle.MODERN), Map.entry("rotterdam", BuildingStyle.MODERN), Map.entry("berlin", BuildingStyle.MODERN),
+			Map.entry("amsterdam", BuildingStyle.AMSTERDAM), Map.entry("hamburg", BuildingStyle.CLINKER), Map.entry("munich", BuildingStyle.CONCRETE),
+			Map.entry("munchen", BuildingStyle.CONCRETE), Map.entry("frankfurt", BuildingStyle.SANDSTONE), Map.entry("london", BuildingStyle.GOTHIC_BRICK),
+			Map.entry("pancras", BuildingStyle.GOTHIC_BRICK), Map.entry("gothic", BuildingStyle.GOTHIC_BRICK), Map.entry("victorian", BuildingStyle.GOTHIC_BRICK),
+			Map.entry("antwerp", BuildingStyle.ANTWERP), Map.entry("antwerpen", BuildingStyle.ANTWERP), Map.entry("belgian", BuildingStyle.ANTWERP),
+			Map.entry("philadelphia", BuildingStyle.BEAUX_ARTS), Map.entry("washington", BuildingStyle.BEAUX_ARTS), Map.entry("chicago", BuildingStyle.BEAUX_ARTS),
+			Map.entry("american", BuildingStyle.BEAUX_ARTS), Map.entry("beaux", BuildingStyle.BEAUX_ARTS), Map.entry("classical", BuildingStyle.BEAUX_ARTS),
+			Map.entry("brick", BuildingStyle.AMSTERDAM), Map.entry("sandstone", BuildingStyle.SANDSTONE), Map.entry("limestone", BuildingStyle.ANTWERP),
+			Map.entry("marble", BuildingStyle.ANTWERP), Map.entry("clinker", BuildingStyle.CLINKER), Map.entry("brutalist", BuildingStyle.CONCRETE));
+	/** Famous stations: naming one asks for its building. */
+	private static final Set<String> LANDMARKS = Set.of("pancras", "antwerp", "antwerpen", "philadelphia", "washington", "chicago");
+	/** Words that ask for a station building with a furnished interior. */
+	private static final Set<String> BUILDING_WORDS = Set.of("building", "buildings", "concourse", "interior", "interiors", "interiorized",
+			"interiorised", "furnished", "ticket", "tickets", "entrance", "centraal", "central", "centrale", "hauptbahnhof", "hbf", "terminal",
+			"terminus", "depot");
+	private static final Set<String> FOOTBRIDGE_WORDS = Set.of("footbridge", "footbridges", "overbridge", "overpass", "bridge", "skywalk");
 	private static final Set<String> TERRAIN_WORDS = Set.of("clear", "flatten", "level", "demolish", "replace", "remove", "terraform", "dig");
 	private static final Set<String> HALL_WORDS = Set.of("hall", "trainshed", "shed");
 	private static final Set<String> CANOPY_WORDS = Set.of("canopy", "canopies", "covered", "roofed", "shelter", "shelters");
@@ -107,6 +125,13 @@ public final class StationDescriptionParser {
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
+		private Boolean building;
+		private int buildingAt = -1;
+		private BuildingStyle buildingStyle;
+		private int buildingStyleAt = -1;
+		private Boolean footbridge;
+		/** The first word that only sets a building's look (e.g. "brick"), to warn about when no building was asked for. */
+		private String lookOnlyWord;
 
 		ParseResult run(String description) {
 			String text = description;
@@ -223,6 +248,12 @@ public final class StationDescriptionParser {
 				} else if (word.equals("furniture") || word.equals("benches")) {
 					furniture = false;
 					note(i, "no furniture");
+				} else if (word.equals("building") || word.equals("buildings") || word.equals("interior")) {
+					building = false;
+					note(i, "no station building");
+				} else if (FOOTBRIDGE_WORDS.contains(word)) {
+					footbridge = false;
+					note(i, "no footbridge");
 				} else if (word.equals("rails") || word.equals("nodes") || word.equals("rail") && at(j + 1).equals("nodes")) {
 					railNodes = false;
 					note(i, "no rail nodes");
@@ -410,6 +441,9 @@ public final class StationDescriptionParser {
 		}
 
 		private void keyword(int i, String token) {
+			if (buildingWord(i, token)) {
+				return;
+			}
 			final StationStyle styleWord = STYLE_WORDS.get(token);
 			if (UNDERGROUND_WORDS.contains(token)) {
 				warn("underground stations are not built yet; building at ground level with metro finishes");
@@ -483,6 +517,78 @@ public final class StationDescriptionParser {
 				return;
 			}
 			use(i, i);
+		}
+
+		/** Landmarks, city looks, building and footbridge words; true if the token was used here. */
+		private boolean buildingWord(int i, String token) {
+			if (token.equals("grand") && at(i + 1).equals("central") || token.equals("union") && at(i + 1).equals("station")
+					|| token.equals("30th") && at(i + 1).equals("street")) {
+				setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
+				askBuilding(i);
+				use(i, i + 1);
+				return true;
+			}
+			if (token.equals("ticket") && (at(i + 1).equals("hall") || at(i + 1).equals("office") || at(i + 1).equals("halls"))) {
+				askBuilding(i);
+				use(i, i + 1);
+				return true;
+			}
+			if ((token.equals("st") || token.equals("saint")) && at(i + 1).equals("pancras")) {
+				use(i, i);
+				return true;
+			}
+			final BuildingStyle city = CITY_BUILDINGS.get(token);
+			if (city != null) {
+				setBuildingStyle(city, i);
+				if (LANDMARKS.contains(token)) {
+					askBuilding(i);
+				}
+				if (token.equals("antwerp") || token.equals("antwerpen") || token.equals("belgian")) {
+					setStyle(StationStyle.DUTCH, i);
+				}
+				if (!STYLE_WORDS.containsKey(token)) {
+					if (!LANDMARKS.contains(token) && lookOnlyWord == null) {
+						lookOnlyWord = token;
+					}
+					use(i, i);
+					return true;
+				}
+				return false; // the style branch still reads it
+			}
+			if (BUILDING_WORDS.contains(token)) {
+				askBuilding(i);
+				if (token.equals("terminus") || token.equals("terminal") || token.equals("depot")) {
+					warn("terminus stations (tracks ending at the building) are not built yet; building a through station");
+				}
+				if (token.equals("furnished") && furniture == null) {
+					furniture = true;
+				}
+				use(i, i);
+				return true;
+			}
+			if (FOOTBRIDGE_WORDS.contains(token)) {
+				if (footbridge == null) {
+					footbridge = true;
+					note(i, "footbridge");
+				}
+				use(i, i);
+				return true;
+			}
+			return false;
+		}
+
+		private void askBuilding(int i) {
+			if (building == null) {
+				building = true;
+				buildingAt = i;
+			}
+		}
+
+		private void setBuildingStyle(BuildingStyle value, int i) {
+			if (buildingStyle == null) {
+				buildingStyle = value;
+				buildingStyleAt = i;
+			}
 		}
 
 		private List<String> ignoredWords() {
@@ -745,6 +851,21 @@ public final class StationDescriptionParser {
 				builder.railNodes(railNodes);
 			} else {
 				defaulted.add("rail nodes at platform ends (default)");
+			}
+			final boolean wantsBuilding = Boolean.TRUE.equals(building);
+			if (wantsBuilding) {
+				final BuildingStyle look = buildingStyle != null ? buildingStyle : BuildingStyle.forStyle(style != null ? style : StationStyle.MODERN);
+				builder.building(look);
+				note(buildingAt, "station building: " + look.label() + ", furnished");
+			} else if (lookOnlyWord != null) {
+				warn("\"" + lookOnlyWord + "\" only sets a station building's look; add \"station building\" to get one");
+			}
+			if (Boolean.TRUE.equals(footbridge)) {
+				builder.footbridge(true);
+			}
+			if ((wantsBuilding || Boolean.TRUE.equals(footbridge)) && !roofNone && roof == RoofType.HALL) {
+				builder.roof(RoofType.CANOPY);
+				warn("a hall roof cannot be combined with a station building or footbridge yet; using canopies");
 			}
 			builder.name(name);
 			return builder.build();

@@ -397,4 +397,52 @@ class LayoutValidatorTest {
 			assertEquals(reference, LayoutValidator.validate(with(plan, shuffled)), "shuffle " + seed);
 		}
 	}
+
+	@Test
+	void fixturesStandOnFlatFloorsAndSkipWallMounted() {
+		final StationPlan plan = StationPlanner.plan(StationSpec.builder().building(BuildingStyle.MODERN).build());
+		assertEquals(Set.of(), kinds(plan));
+		// a bench on the building floor is fine
+		final List<PlannedBlock> benches = new ArrayList<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			if (block.role() == Role.BENCH && block.u() < plan.layout().buildingWidth()) {
+				benches.add(block);
+			}
+		}
+		assertFalse(benches.isEmpty());
+		// a bench floating one above the floor is reported
+		final List<PlannedBlock> floating = new ArrayList<>(plan.blocks());
+		final PlannedBlock bench = benches.get(0);
+		floating.add(new PlannedBlock(bench.u(), bench.y() + 1, bench.v(), Role.BENCH, bench.blockId(), bench.front(), ""));
+		assertTrue(kinds(with(plan, floating)).contains(Violation.Kind.FLOATING_FIXTURE));
+		// a wall-mounted fixture needs no floor (tested on its own, without the floating bench)
+		final List<PlannedBlock> mounted = new ArrayList<>(plan.blocks());
+		mounted.add(new PlannedBlock(bench.u(), bench.y() + 2, bench.v(), Role.FIXTURE, ATA + "test_fixture", LocalDir.PLUS_V, ""));
+		assertFalse(kinds(with(plan, mounted)).contains(Violation.Kind.FLOATING_FIXTURE));
+	}
+
+	@Test
+	void bridgePiersCarryCanopyRoofsAndDeckSpansNeedPiers() {
+		final StationPlan plan = StationPlanner.plan(StationSpec.builder().building(BuildingStyle.MODERN).platformLength(48).build());
+		assertEquals(Set.of(), kinds(plan));
+		// dropping a bridge pier leaves the deck span unsupported
+		PlannedBlock pier = null;
+		for (final PlannedBlock block : plan.blocks()) {
+			if (block.role() == Role.BRIDGE_PIER) {
+				pier = block;
+				break;
+			}
+		}
+		assertTrue(pier != null);
+		final int pierU = pier.u();
+		final int pierV = pier.v();
+		final List<PlannedBlock> without = new ArrayList<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			if (!(block.u() == pierU && block.v() == pierV)) {
+				without.add(block);
+			}
+		}
+		assertTrue(kinds(with(plan, without)).contains(Violation.Kind.ROOF_UNSUPPORTED)
+				|| kinds(with(plan, without)).contains(Violation.Kind.ROOF_SPAN));
+	}
 }

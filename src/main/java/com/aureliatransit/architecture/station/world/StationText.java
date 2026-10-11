@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.Role;
 import com.aureliatransit.architecture.station.SiteIssue;
+import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.SurveyReport;
@@ -87,10 +88,38 @@ final class StationText {
 				out.accept(Text.literal("  " + violations.get(i).message()).formatted(Formatting.RED));
 			}
 		}
+		if (violations.isEmpty()) {
+			checks(pending.audit(), out);
+		}
 		site(pending.report(), out);
-		if (violations.isEmpty() && check.ok() && !pending.report().hasHardIssue()) {
+		if (violations.isEmpty() && pending.audit().buildable() && check.ok() && !pending.report().hasHardIssue()) {
 			out.accept(Text.literal(pending.report().buildable() ? "/ata_station confirm to build, /ata_station cancel to discard"
 					: "/ata_station cancel to discard, or plan somewhere else").formatted(Formatting.GOLD));
+		}
+	}
+
+	/** One line of what was measured, then every warning and failure of the station checks. */
+	static void checks(StationAudit.Result audit, Consumer<Text> out) {
+		final long passed = audit.count(StationAudit.Status.PASS);
+		final long warned = audit.count(StationAudit.Status.WARN);
+		final long failed = audit.count(StationAudit.Status.FAIL);
+		final StringBuilder line = new StringBuilder("Station checks: " + passed + " passed");
+		if (warned > 0) {
+			line.append(", ").append(warned).append(warned == 1 ? " warning" : " warnings");
+		}
+		if (failed > 0) {
+			line.append(", ").append(failed).append(" failed, cannot build");
+		}
+		line.append(" (measured ").append(audit.faces().size()).append(audit.faces().size() == 1 ? " boarding face" : " boarding faces");
+		if (!audit.faces().isEmpty()) {
+			line.append(" of ").append(audit.faces().get(0).length()).append(" blocks");
+		}
+		line.append(", ").append(audit.width()).append(" x ").append(audit.length()).append(" x ").append(audit.height()).append(')');
+		out.accept(Text.literal(line.toString()).formatted(failed > 0 ? Formatting.RED : warned > 0 ? Formatting.YELLOW : Formatting.GREEN));
+		final List<StationAudit.Check> problems = audit.problems();
+		for (int i = 0; i < Math.min(LISTED, problems.size()); i++) {
+			final StationAudit.Check problem = problems.get(i);
+			out.accept(Text.literal("  " + problem.message()).formatted(problem.status() == StationAudit.Status.FAIL ? Formatting.RED : Formatting.YELLOW));
 		}
 	}
 

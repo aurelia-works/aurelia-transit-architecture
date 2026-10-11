@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.registry.ModItems;
 import com.aureliatransit.architecture.station.world.StationActions;
+import com.aureliatransit.architecture.station.world.StationGuide;
 import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import com.aureliatransit.architecture.station.CellKind;
 import com.aureliatransit.architecture.station.Heading;
@@ -14,9 +15,13 @@ import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.RoofMaterial;
 import com.aureliatransit.architecture.station.RoofType;
 import com.aureliatransit.architecture.station.Role;
+import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.SiteIssue;
 import com.aureliatransit.architecture.station.SiteSurvey;
+import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationGeometry;
+import com.aureliatransit.architecture.station.StationPlanner;
+import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.StationStyle;
 import com.aureliatransit.architecture.station.StylePalette;
@@ -50,6 +55,8 @@ import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.WrittenBookItem;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -138,8 +145,15 @@ public class StationGameTests implements FabricGameTest {
 		final StationSessions.Pending pending = StationCommand.prepare(world, SMALL, context.getAbsolutePos(FEET_Z), Heading.SOUTH);
 		check(pending.violations().isEmpty(), "design violations: " + pending.violations());
 		check(pending.report().counts().isEmpty(), "site issues on flat ground: " + pending.report().counts());
+		check(pending.audit().buildable() && pending.audit().problems().isEmpty(), "station checks: " + pending.audit().problems());
 		final List<Text> said = new ArrayList<>();
 		final UUID owner = new UUID(0, 1);
+		final StationAudit.Result failed = new StationAudit.Result(List.of(new StationAudit.Check(StationAudit.Topic.FACES, StationAudit.Status.FAIL, "test")),
+				List.of(), List.of(), 0, 0, 0);
+		final StationSessions.Pending failing = new StationSessions.Pending(pending.parse(), pending.spec(), pending.plan(), pending.frame(), pending.dimension(),
+				pending.violations(), failed, pending.report(), pending.railSkipped());
+		check(StationCommand.startBuild(world, owner, failing, false, said::add) == null, "a failed station check did not stop the build");
+		said.clear();
 		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, false, said::add);
 		check(job != null, "build refused: " + said);
 		check(job.total() > StationBuildJob.OPS_PER_TICK, "the test station must need more than one tick (" + job.total() + " ops)");
@@ -527,7 +541,70 @@ public class StationGameTests implements FabricGameTest {
 		context.complete();
 	}
 
+	// ---- guide book -------------------------------------------------------------------------------------------------
+
+	/** The guide is a valid written book with every page; an operator gets it once on joining, a non-operator never. */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void guideBookIsGivenOnceToOperators(TestContext context) {
+		final ItemStack book = StationGuide.book();
+		check(book.isOf(Items.WRITTEN_BOOK) && WrittenBookItem.isValid(book.getNbt()), "the guide is not a valid written book: " + book.getNbt());
+		check(WrittenBookItem.getPageCount(book) == StationGuide.PAGES.size(), "guide pages " + WrittenBookItem.getPageCount(book));
+
+		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+		check(!player.hasPermissionLevel(StationActions.PERMISSION_LEVEL), "the mock player is already an operator; this test needs one that is not");
+		check(!StationGuide.welcome(player) && books(player) == 0, "a non-operator got the guide");
+		context.getWorld().getServer().getPlayerManager().getOpList().add(new OperatorEntry(player.getGameProfile(), 4, false));
+		check(StationGuide.welcome(player) && books(player) == 1, "an operator's first join gave " + books(player) + " guides");
+		check(!StationGuide.welcome(player) && books(player) == 1, "a second join gave another guide");
+		context.complete();
+	}
+
+	private static int books(ServerPlayerEntity player) {
+		int count = 0;
+		for (int slot = 0; slot < player.getInventory().size(); slot++) {
+			if (player.getInventory().getStack(slot).isOf(Items.WRITTEN_BOOK)) {
+				count += player.getInventory().getStack(slot).getCount();
+			}
+		}
+		return count;
+	}
+
 	// ---- palettes --------------------------------------------------------------------------------------------------
+
+	/**
+	 * Extra block state properties ({@code kind=end}, {@code half=lower} ...) are applied leniently, so a typo would only show in
+	 * game. Every property a preset station plans must exist on its block and take the planned value.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void plannedStatePropertiesExistOnTheirBlocks(TestContext context) {
+		final List<String> problems = new ArrayList<>();
+		int checked = 0;
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			for (final PlannedBlock block : StationPlanner.plan(StationDescriptionParser.parse(preset.description()).spec()).blocks()) {
+				if (block.state().isEmpty() || BlockStateResolver.block(block.blockId()).isEmpty()) {
+					continue; // missing blocks (MTR absent) are reported by the palette tests
+				}
+				final BlockState state = BlockStateResolver.withState(BlockStateResolver.block(block.blockId()).get().getDefaultState(), block.state());
+				for (final String pair : block.state().split(",")) {
+					final String[] nameValue = pair.split("=", 2);
+					final Property<?> property = state.getBlock().getStateManager().getProperty(nameValue[0].trim());
+					checked++;
+					if (property == null) {
+						problems.add(preset.key() + " " + block.blockId() + " has no property " + nameValue[0]);
+					} else if (nameValue.length < 2 || !name(state, property).equals(nameValue[1].trim())) {
+						problems.add(preset.key() + " " + block.blockId() + " " + pair + " resolved to " + name(state, property));
+					}
+				}
+			}
+		}
+		check(checked > 0, "no preset planned a block with extra state; the check proves nothing");
+		Fixtures.failIfAny(problems, "planned state properties");
+		context.complete();
+	}
+
+	private static <T extends Comparable<T>> String name(BlockState state, Property<T> property) {
+		return property.name(state.get(property));
+	}
 
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
 	public void everyPaletteResolvesAndEdgesAndFloorsAreMtrPlatforms(TestContext context) {

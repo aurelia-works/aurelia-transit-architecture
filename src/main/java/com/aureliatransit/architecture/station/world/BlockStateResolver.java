@@ -81,7 +81,7 @@ public final class BlockStateResolver {
 		ids.add(plan.foundationId());
 		final List<String> missing = new ArrayList<>();
 		for (final String id : ids) {
-			if (id.equals(StylePalette.MTR_RAIL_NODE) && !railAvailable) {
+			if (id.startsWith("mtr:") && !railAvailable) {
 				railSkipped = true;
 			} else if (block(id).isEmpty()) {
 				missing.add(id);
@@ -100,7 +100,7 @@ public final class BlockStateResolver {
 		final Set<String> missing = new TreeSet<>();
 		boolean railSkipped = false;
 		for (final WorldOp op : ops) {
-			if (op.blockId().equals(StylePalette.MTR_RAIL_NODE) && !railAvailable) {
+			if (op.blockId().startsWith("mtr:") && !railAvailable) {
 				railSkipped = true;
 				continue;
 			}
@@ -108,7 +108,7 @@ public final class BlockStateResolver {
 			if (block.isEmpty()) {
 				missing.add(op.blockId());
 			} else {
-				prepared.add(new Prepared(op, state(block.get(), op.facing())));
+				prepared.add(new Prepared(op, withState(state(block.get(), op.facing()), op.state())));
 			}
 		}
 		return new Resolution(prepared, List.copyOf(missing), railSkipped);
@@ -134,6 +134,32 @@ public final class BlockStateResolver {
 			return state.with(Properties.HORIZONTAL_AXIS, direction(heading).getAxis());
 		}
 		return state;
+	}
+
+	/**
+	 * Applies extra properties written as {@code name=value,name=value}; a property the block does not have, or a value it does
+	 * not accept, is skipped, so a plan never fails on a block that changed shape.
+	 */
+	public static BlockState withState(BlockState state, String extras) {
+		if (extras == null || extras.isEmpty()) {
+			return state;
+		}
+		BlockState result = state;
+		for (final String pair : extras.split(",")) {
+			final int eq = pair.indexOf('=');
+			if (eq <= 0) {
+				continue;
+			}
+			final Property<?> property = result.getBlock().getStateManager().getProperty(pair.substring(0, eq).trim());
+			if (property != null) {
+				result = with(result, property, pair.substring(eq + 1).trim());
+			}
+		}
+		return result;
+	}
+
+	private static <T extends Comparable<T>> BlockState with(BlockState state, Property<T> property, String value) {
+		return property.parse(value).map(parsed -> state.with(property, parsed)).orElse(state);
 	}
 
 	private static BlockState withBoolean(BlockState state, String name, boolean value) {

@@ -223,7 +223,7 @@ public final class SiteSurvey {
 					continue;
 				}
 				ops.add(new WorldOp(WorldOp.Kind.PLACE, frame.x(block.u(), block.v()), frame.y(block.y()), frame.z(block.u(), block.v()),
-						block.role(), block.blockId(), frame.heading(block.front()), block.text()));
+						block.role(), block.blockId(), frame.heading(block.front()), block.text(), block.state()));
 			}
 			return new SurveyReport(issues, counts, ops, terrainChanges, replaceTerrain);
 		}
