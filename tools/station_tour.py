@@ -8,8 +8,10 @@ client (`./gradlew runClient`) joined as PLAYER. Pillow makes the contact sheets
 
 Commands:
     rcon CMD...                 run server commands
-    build KEY X Z               plan the export's KEY facing south at (X, -59, Z) and build it; prints the footprint
-    tour KEY X0 ZFOOT           shoot every view of KEY (built facing south, footprint from (X0, -59, ZFOOT)) and make a sheet
+    build KEY X Z [DIR]         plan the export's KEY at (X, -59, Z) with tracks running DIR (south, west, north, east; default
+                                south) and build it; prints the footprint
+    tour KEY X Z [DIR]          shoot every view of KEY, built with tracks running DIR and its footprint from (X, -59, Z) as
+                                the build printed it, and make a sheet
     shot NAME [OPTIONS]         one screenshot from the current view, e.g. "nohud fov=70", "open=wrench", "use"
     look X Y Z TX TY TZ         put the camera at X Y Z (feet) looking at TX TY TZ
 
@@ -127,9 +129,12 @@ def log_length():
         return len(f.read().splitlines())
 
 
-def build(key, x, z):
+DIRECTIONS = {"south": ((0, 1), 0), "west": ((-1, 0), 90), "north": ((0, -1), 180), "east": ((1, 0), -90)}
+
+
+def build(key, x, z, direction="south"):
     description = plan(key)["description"]
-    rcon(f"gamemode creative {PLAYER}", f"tp {PLAYER} {x} -59 {z} 0 0")
+    rcon(f"gamemode creative {PLAYER}", f"tp {PLAYER} {x} -59 {z} {DIRECTIONS[direction][1]} 0")
     time.sleep(5)  # let the chunks load before the site survey
     mark = log_length()
     rcon(f"execute as {PLAYER} at @s run ata_station plan {description}")
@@ -148,13 +153,16 @@ def build(key, x, z):
     print("no build result after 90 s")
 
 
-def views(key, x0, zfoot):
-    """Camera views (name, camera feet, target) at the plan's own features; local u runs to -x, v to +z."""
+def views(key, fx, fz, direction="south"):
+    """Camera views (name, camera feet, target) at the plan's own features. Local v runs along the tracks (DIR), u across
+    them (DIR turned a quarter clockwise seen from above), from the footprint corner (fx, fz) the build printed."""
     p = plan(key)
     roles = p["roles"]
     blocks = [(b[0], b[1], b[2], roles[b[3]]) for b in p["blocks"]]
-    z0 = zfoot - min(b[2] for b in blocks)
-    world = lambda u, y, v: (x0 - u + 0.5, -59 + y, z0 + v + 0.5)
+    vmin = min(b[2] for b in blocks)
+    (vx, vz), _ = DIRECTIONS[direction]
+    ux, uz = -vz, vx
+    world = lambda u, y, v: (fx + u * ux + (v - vmin) * vx + 0.5, -59 + y, fz + u * uz + (v - vmin) * vz + 0.5)
     umax = max(b[0] for b in blocks)
     vmax = max(b[2] for b in blocks)
     found = []
@@ -203,10 +211,10 @@ def views(key, x0, zfoot):
     return found
 
 
-def tour(key, x0, zfoot):
+def tour(key, x0, zfoot, direction="south"):
     rcon(f"gamemode spectator {PLAYER}", "weather clear 1000000", "time set noon")
     files = []
-    for name, cam, target in views(key, x0, zfoot):
+    for name, cam, target in views(key, x0, zfoot, direction):
         look(*cam, *target)
         time.sleep(2.5)  # chunk sections around a new camera position need a moment to mesh
         path = shot(f"{key}_{name}", "nohud fov=70")
@@ -228,9 +236,9 @@ def main(argv):
         for command_text, out in zip(args, rcon(*args)):
             print(f"> {command_text}\n{out}")
     elif command == "build":
-        build(args[0], int(args[1]), int(args[2]))
+        build(args[0], int(args[1]), int(args[2]), *args[3:4])
     elif command == "tour":
-        tour(args[0], int(args[1]), int(args[2]))
+        tour(args[0], int(args[1]), int(args[2]), *args[3:4])
     elif command == "shot":
         print(shot(args[0], " ".join(args[1:])) or "no screenshot")
     elif command == "look":

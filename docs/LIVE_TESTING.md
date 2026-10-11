@@ -157,6 +157,7 @@ dev client through the screenshot hook above.
 ./gradlew compileJava && java -cp build/classes/java/main tools/StationPlanExport.java build/station-plans.json
 python3 tools/station_tour.py build utrecht 1700 1300        # plan + build facing south, prints the footprint
 python3 tools/station_tour.py tour utrecht 1718 1302         # footprint corner from the build output; sheet in build/tour/
+python3 tools/station_tour.py build st_pancras 2100 1900 north  # any direction: south, west, north, east
 python3 tools/station_tour.py shot close_up "nohud fov=60"   # one shot from wherever the camera is
 ```
 
