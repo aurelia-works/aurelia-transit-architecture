@@ -60,7 +60,13 @@ Examples:
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 
-## How a plan is made
+## Station buildings and footbridge
+
+A building stands on the street side, 9 deep, over the middle of the platforms: an entrance ramp from the street, a ticket hall with a fare gate line (a wide gate in the middle), a ticket office window, MTR ticket machines, an information kiosk, benches, a clock over the entrance and departure boards on the end walls. A stair in the hall leads to the upper floor and the footbridge, whose stairs go down to every platform it serves.
+
+- **Upstairs waiting room** (buildings of three bays or more, with furniture): the end bay away from the hall stair is closed off by a framed glass partition with one doorway. Inside are benches along both long walls, bins in the far corners, a departure board on the end wall and a hanging clock. It is left out when that bay would touch the stair or the footbridge door.
+- **Departure screens** (every furnished station, with or without a building): one screen point on platforms shorter than 48, two (at a quarter and three quarters of the length) on longer ones. Islands four or more wide get two screens back to back, one facing each track; side platforms get one at the back facing the track. Screens keep 2 blocks clear of footbridge stairs and landings. The first point on each platform also gets a help point.
+
 
 1. **Parse** (`StationDescriptionParser`) → `StationSpec`. Every field is resolved, and the summary shows what was understood, what was defaulted and what was ignored.
 2. **Railway geometry** (`StationGeometry`) → `TrackLayout`, the cross-section of tracks and platforms. It knows nothing about styles.

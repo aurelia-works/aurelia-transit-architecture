@@ -125,7 +125,8 @@ class StationPlannerTest {
 				scan.fail("unique cells", spec, "two blocks at " + block);
 			}
 			byRole.computeIfAbsent(block.role(), key -> new ArrayList<>()).add(block);
-			if (!block.blockId().equals(palette.blockId(block.role()))) {
+			// fixtures name their own equipment (screens, help points), every other role takes the palette's block
+			if (block.role() != Role.FIXTURE && !block.blockId().equals(palette.blockId(block.role()))) {
 				scan.fail("palette ids", spec, "wrong id on " + block);
 			}
 			if (!(block.role() == Role.NAME_SIGN ? spec.name() : "").equals(block.text())) {
@@ -244,6 +245,14 @@ class StationPlannerTest {
 		}
 		if (spec.furniture() && list(byRole, Role.BENCH).isEmpty()) {
 			scan.fail("furniture", spec, "no benches");
+		}
+		// departure screens: at least one on every platform when furnished, none otherwise
+		for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+			final long screens = list(byRole, Role.FIXTURE).stream().filter(b -> b.blockId().endsWith(":platform_pids") && b.y() == StationGeometry.WALK_Y
+					&& b.u() >= band.uMin() && b.u() <= band.uMax()).count();
+			if (spec.furniture() != (screens > 0)) {
+				scan.fail("furniture", spec, "platform " + band.number() + " has " + screens + " departure screens");
+			}
 		}
 
 		// the envelopes: from the layout, independent of the plan's own boxes
@@ -421,8 +430,9 @@ class StationPlannerTest {
 		expected.put(Role.ROOF_LIGHT, 22);
 		expected.put(Role.BENCH, 6);
 		expected.put(Role.BIN, 6);
+		expected.put(Role.FIXTURE, 6); // per platform: two departure screens and a help point
 		assertEquals(expected, counts);
-		assertEquals(858, plan(spec).blocks().size());
+		assertEquals(864, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -745,5 +755,53 @@ class StationPlannerTest {
 		for (final PlannedBlock stair : blocks(plan, Role.STAIR)) {
 			assertTrue(stair.front() == LocalDir.PLUS_V || stair.front() == LocalDir.MINUS_V, stair.toString());
 		}
+	}
+
+	@Test
+	void largeBuildingsHaveAnUpstairsWaitingRoom() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(96)
+				.building(BuildingStyle.AMSTERDAM).build();
+		final StationPlan plan = plan(spec);
+		final StationLayout site = StationLayout.of(spec, plan.layout());
+		final int uS = StationLayout.streetWall();
+		final int uP = site.platformWall(plan.layout());
+		final int partition = site.vStart() + StationGeometry.BAY; // the stair runs towards vEnd, so the room is at vStart
+		assertTrue(site.innerStairSide() > 0);
+		final List<PlannedBlock> glass = plan.blocks().stream().filter(b -> b.blockId().endsWith(":glass_wall")).toList();
+		final int door = (uS + uP) / 2;
+		assertEquals((uP - uS - 1) * 3 - 2, glass.size(), "partition minus a two-high doorway");
+		assertTrue(glass.stream().allMatch(b -> b.v() == partition && b.y() >= StationGeometry.UPPER_WALK_Y));
+		assertTrue(glass.stream().noneMatch(b -> b.u() == door && b.y() < StationGeometry.UPPER_WALK_Y + 2), "the doorway is blocked");
+		final long seats = blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.UPPER_WALK_Y && b.v() > site.vStart() && b.v() < partition).count();
+		assertEquals(2 * (StationGeometry.BAY - 2), seats);
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":hanging_digital_clock") && b.v() < partition));
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":concourse_board") && b.y() > StationGeometry.UPPER_FLOOR_Y && b.v() < partition));
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		assertTrue(StationAudit.audit(plan).buildable());
+	}
+
+	@Test
+	void smallBuildingsHaveNoWaitingRoom() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.SIDE).platformLength(16)
+				.building(BuildingStyle.MODERN).build();
+		assertTrue(plan(spec).blocks().stream().noneMatch(b -> b.blockId().endsWith(":glass_wall")));
+	}
+
+	@Test
+	void wideIslandsGetBackToBackScreensClearOfTheStairs() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).footbridge(true).build();
+		final StationPlan plan = plan(spec);
+		final StationLayout site = StationLayout.of(spec, plan.layout());
+		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":platform_pids")).toList();
+		assertEquals(4, screens.size(), "two back-to-back pairs on a 64 long island");
+		for (final PlannedBlock screen : screens) {
+			final LocalDir back = screen.front() == LocalDir.MINUS_U ? LocalDir.PLUS_U : LocalDir.MINUS_U;
+			final int partnerU = screen.u() + (back == LocalDir.PLUS_U ? 1 : -1);
+			assertTrue(screens.stream().anyMatch(o -> o.u() == partnerU && o.v() == screen.v() && o.front() == back), "no partner for " + screen);
+			final int lo = Math.min(site.stairWallV(), site.landingV()) - 2;
+			final int hi = Math.max(site.stairWallV(), site.landingV()) + 2;
+			assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);
+		}
+		assertEquals(List.of(), LayoutValidator.validate(plan));
 	}
 }

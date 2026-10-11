@@ -17,6 +17,9 @@ import java.util.Set;
  */
 public final class StationPlanner {
 
+	private static final String PIDS = "aurelia_transit_architecture:platform_pids";
+	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
+
 	private static final Comparator<PlannedBlock> BUILD_ORDER = Comparator.comparingInt((PlannedBlock b) -> b.role().ordinal())
 			.thenComparingInt(PlannedBlock::y).thenComparingInt(PlannedBlock::v).thenComparingInt(PlannedBlock::u);
 
@@ -842,9 +845,13 @@ public final class StationPlanner {
 				if (vEntr - 6 >= vS + 1 && vEntr - 6 <= vE - 1) {
 					put(Role.BENCH, uP - 2, 1, vEntr - 6, LocalDir.MINUS_V, b.bench());
 				}
-				// upstairs waiting benches on the upper slab (walk level y=6)
+				final int[] room = waitingRoom(b);
+				// upstairs benches on the upper slab (walk level y=6) outside the waiting room
 				for (int bay = 0; bay < site.bays(); bay++) {
 					final int v = site.bayCentre(bay);
+					if (room != null && v >= room[0] && v <= room[1]) {
+						continue;
+					}
 					if (v >= site.innerStairMin() - 1 && v <= site.innerStairMax() + 1) {
 						continue;
 					}
@@ -863,32 +870,105 @@ public final class StationPlanner {
 					"aurelia_transit_architecture:concourse_board");
 		}
 
-		/** Platform equipment for building stations: departure screens and help points clear of the stairs. */
-		void platformEquipment() {
-			if (!site.building() && !site.bridge()) {
-				return;
+		/**
+		 * The upstairs waiting room: the end bay away from the inner stair, closed off by a glass partition with one doorway,
+		 * with benches along both long walls, bins in the far corners, a departure board on the end wall and a hanging clock.
+		 * Only when the bay is clear of the stair and the footbridge doorway (buildings of three bays or more).
+		 *
+		 * @return the room's lowest and highest v including the partition, or null when there is no room
+		 */
+		private int[] waitingRoom(StylePalette.Building b) {
+			final int uS = StationLayout.streetWall();
+			final int uP = site.platformWall(layout);
+			final boolean atStart = site.innerStairSide() > 0;
+			final int partition = atStart ? site.vStart() + StationGeometry.BAY : site.vEnd() - StationGeometry.BAY;
+			final int lo = atStart ? site.vStart() + 1 : partition + 1;
+			final int hi = atStart ? partition - 1 : site.vEnd() - 1;
+			final int endWall = atStart ? lo : hi;
+			final int from = Math.min(lo, partition);
+			final int to = Math.max(hi, partition);
+			if (to >= site.innerStairMin() - 1 && from <= site.innerStairMax() + 1
+					|| site.bridge() && to >= site.bridgeV() - 2 && from <= site.bridgeV() + 2) {
+				return null;
 			}
+			final int door = (uS + uP) / 2;
+			final int y = StationGeometry.UPPER_WALK_Y;
+			// the board and clock face from the end wall towards the doorway
+			final LocalDir towardDoor = atStart ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+			keepClear(door, y, partition);
+			keepClear(door, y + 1, partition);
+			for (int u = uS + 1; u <= uP - 1; u++) {
+				for (int h = y; h < StationGeometry.BUILDING_ROOF_Y; h++) {
+					put(Role.WINDOW, u, h, partition, towardDoor, WAITING_ROOM_GLASS);
+				}
+			}
+			for (int v = lo; v <= hi; v++) {
+				final boolean corner = v == endWall;
+				put(corner ? Role.BIN : Role.BENCH, uS + 1, y, v, LocalDir.PLUS_U, corner ? palette.blockId(Role.BIN) : b.bench());
+				put(corner ? Role.BIN : Role.BENCH, uP - 1, y, v, LocalDir.MINUS_U, corner ? palette.blockId(Role.BIN) : b.bench());
+			}
+			put(Role.FIXTURE, door, y + 1, endWall, towardDoor, "aurelia_transit_architecture:concourse_board");
+			put(Role.FIXTURE, door, StationGeometry.BUILDING_ROOF_Y - 1, (lo + hi) / 2, towardDoor,
+					"aurelia_transit_architecture:hanging_digital_clock");
+			return new int[]{from, to};
+		}
+
+		/**
+		 * Departure screens on every platform of a furnished station: one screen point on platforms shorter than 48, two (at a
+		 * quarter and three quarters of the length) on longer ones. Islands four or more wide get a back-to-back pair so both
+		 * tracks' passengers see one. Points keep clear of footbridge stairs and their landings; the first point of each
+		 * platform also gets a help point.
+		 */
+		void platformEquipment() {
 			if (!spec.furniture()) {
 				return;
 			}
+			final List<Integer> targets = length >= 48 ? List.of(length / 4, length * 3 / 4) : List.of(length / 2);
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				final int back = band.trackRight() && !band.trackLeft() ? band.uMin()
-						: band.trackLeft() && !band.trackRight() ? band.uMax() : (band.uMin() + band.uMax()) / 2;
-				final LocalDir front = band.island() ? LocalDir.MINUS_U : towardTrack(band);
-				int v = site.entranceV() + 4;
-				for (int tries = 0; tries < 8; tries++) {
-					if (v >= 0 && v < length && !taken(back, StationGeometry.WALK_Y, v) && !isEdge(band, back)) {
-						break;
+				final boolean pair = band.island() && band.width() >= 4;
+				final int u0 = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
+				final LocalDir front0 = band.island() ? LocalDir.MINUS_U : towardTrack(band);
+				boolean helped = false;
+				for (final int target : targets) {
+					final int v = pidsV(band, u0, pair, target);
+					if (v < 0) {
+						continue;
 					}
-					v += 2;
-				}
-				if (v >= 0 && v < length && !isEdge(band, back)) {
-					put(Role.FIXTURE, back, StationGeometry.WALK_Y, v, front, "aurelia_transit_architecture:platform_pids");
-					if (!taken(back, StationGeometry.WALK_Y, v + 1)) {
-						put(Role.FIXTURE, back, StationGeometry.WALK_Y, v + 1, front, "aurelia_transit_architecture:help_point");
+					put(Role.FIXTURE, u0, StationGeometry.WALK_Y, v, front0, PIDS);
+					if (pair) {
+						put(Role.FIXTURE, u0 + 1, StationGeometry.WALK_Y, v, LocalDir.PLUS_U, PIDS);
+					}
+					if (!helped && !taken(u0, StationGeometry.WALK_Y, v + 1) && !nearStairs(band, v + 1)) {
+						helped = put(Role.FIXTURE, u0, StationGeometry.WALK_Y, v + 1, front0, "aurelia_transit_architecture:help_point");
 					}
 				}
 			}
+		}
+
+		/** The free v nearest {@code target} for a screen point (searching 0, +2, -2, +4 ...); -1 if none within 12. */
+		private int pidsV(TrackLayout.PlatformBand band, int u0, boolean pair, int target) {
+			for (int d = 0; d <= 12; d += 2) {
+				for (final int v : new int[]{target + d, target - d}) {
+					if (v >= 1 && v <= length - 2 && !isEdge(band, u0) && !(pair && isEdge(band, u0 + 1)) && !nearStairs(band, v)
+							&& !taken(u0, StationGeometry.WALK_Y, v) && !(pair && taken(u0 + 1, StationGeometry.WALK_Y, v))) {
+						return v;
+					}
+					if (d == 0) {
+						break;
+					}
+				}
+			}
+			return -1;
+		}
+
+		/** True within 2 of a footbridge stair flight or its landing on this platform. */
+		private boolean nearStairs(TrackLayout.PlatformBand band, int v) {
+			if (!hasStairs(band)) {
+				return false;
+			}
+			final int a = Math.min(site.stairWallV(), site.landingV());
+			final int z = Math.max(site.stairWallV(), site.landingV());
+			return v >= a - 2 && v <= z + 2;
 		}
 
 		void nameSigns() {
