@@ -84,6 +84,11 @@ public class StationGameTests implements FabricGameTest {
 
 	private static final String SITE_Z = "aurelia_transit_architecture_gametest:station_site_z";
 	private static final String SITE_X = "aurelia_transit_architecture_gametest:station_site_x";
+	/** Like station_site_z, 24 wide, 14 high and 38 long: room for a station building beside the tracks or a terminus. */
+	private static final String SITE_LARGE = "aurelia_transit_architecture_gametest:station_site_large";
+	private static final BlockPos FEET_LARGE = new BlockPos(12, 3, 1);
+	private static final String TERMINUS = "two track terminus, island platform, length 16, width 3, train shed, named Test";
+	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
 	/**
 	 * Feet of the imaginary planning player in each site: rail level, on the template's two stone layers. Test-relative y is one
 	 * below template y (the structure sits one above the test origin), so template y = 2 is relative y = 3.
@@ -162,6 +167,59 @@ public class StationGameTests implements FabricGameTest {
 			check(job.terrainChanged() == 0, "terrain changed without approval");
 			checkBuilt(context, pending);
 			StationSessions.cancelJob(owner);
+			context.complete();
+		});
+	}
+
+	/** A terminus (head building, buffer stops, gate line, train shed) built in the world. */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void terminusBuildsThroughTheCommandPath(TestContext context) {
+		buildsEveryPlannedBlock(context, TERMINUS, new UUID(0, 11));
+	}
+
+	/** A station building beside the tracks (ticket hall, two-high ticket machines, stairs, upper floor) built in the world. */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void sideBuildingBuildsThroughTheCommandPath(TestContext context) {
+		buildsEveryPlannedBlock(context, SIDE_BUILDING, new UUID(0, 12));
+	}
+
+	/**
+	 * Plans a description through the command path without rule breaks, site issues, warnings or failed checks, builds it, and
+	 * checks every planned block is in the world with its planned id; then undo restores every cell.
+	 */
+	private static void buildsEveryPlannedBlock(TestContext context, String description, UUID owner) {
+		final ServerWorld world = context.getWorld();
+		final StationSessions.Pending pending = StationCommand.prepare(world, description, context.getAbsolutePos(FEET_LARGE), Heading.SOUTH);
+		check(pending.parse().warnings().isEmpty() && pending.parse().ignored().isEmpty(),
+				"not a clean description: " + pending.parse().warnings() + " " + pending.parse().ignored());
+		check(pending.violations().isEmpty(), "design violations: " + pending.violations());
+		check(pending.report().counts().isEmpty(), "site issues on flat ground: " + pending.report().counts());
+		check(pending.audit().buildable() && pending.audit().problems().isEmpty(), "station checks: " + pending.audit().problems());
+		final List<Text> said = new ArrayList<>();
+		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, false, said::add);
+		check(job != null, "build refused: " + said);
+		context.waitAndRun(60, () -> {
+			check(job.state() == StationBuildJob.State.DONE, "job state " + job.state() + " " + job.done() + "/" + job.total() + " " + said);
+			final List<String> problems = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				final String id = Registries.BLOCK.getId(world.getBlockState(cellPos(pending, block)).getBlock()).toString();
+				if (!id.equals(block.blockId())) {
+					problems.add(block + ": found " + id);
+				}
+			}
+			Fixtures.failIfAny(problems, "built blocks of \"" + description + "\"");
+			StationSessions.cancelJob(owner);
+			// undo puts every cell back, two-high blocks included, and skips none
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			check(undo.restored() == job.placed() && undo.skipped() == 0, "undo restored " + undo.restored() + " of " + job.placed() + ", skipped "
+					+ undo.skipped());
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				check(world.getBlockState(cellPos(pending, block)).isAir(), "not restored to air at " + block);
+			}
 			context.complete();
 		});
 	}

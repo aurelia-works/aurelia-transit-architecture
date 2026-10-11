@@ -422,9 +422,13 @@ public final class StationAudit {
 			return (u - uMin()) * (vMax() - vMin() + 1) + (v - vMin());
 		}
 
-		private boolean trackColumn(int u) {
+		/**
+		 * A track's ground: its envelope columns, which run on one cell past both footprint ends of a through station; at a
+		 * terminus the tracks stop at the buffers, so nothing past them is track.
+		 */
+		private boolean trackColumn(int u, int v) {
 			for (final Box envelope : plan.trackEnvelopes()) {
-				if (u >= envelope.uMin() && u <= envelope.uMax()) {
+				if (u >= envelope.uMin() && u <= envelope.uMax() && v >= envelope.vMin() - 1 && v <= envelope.vMax() + (layout.terminus() ? 0 : 1)) {
 					return true;
 				}
 			}
@@ -464,7 +468,7 @@ public final class StationAudit {
 			if (atWalk != null && !atWalk.role().passable()) {
 				return Ground.BLOCKED;
 			}
-			return trackColumn(u) ? Ground.TRACK : Ground.GROUND;
+			return trackColumn(u, v) ? Ground.TRACK : Ground.GROUND;
 		}
 
 		private static boolean flat(Ground ground) {
@@ -963,7 +967,7 @@ public final class StationAudit {
 				if (block.role() != Role.FLOOR || block.y() != StationGeometry.PLATFORM_Y) {
 					continue;
 				}
-				if (block.u() < 0 || block.u() >= layout.buildingWidth()) {
+				if (!layout.indoor(block.u(), block.v())) {
 					continue;
 				}
 				if (!standableAt(block.u(), block.y() + 1, block.v())) {
@@ -1013,7 +1017,7 @@ public final class StationAudit {
 				if (block.blockId().contains("clock")) {
 					clock = true;
 				}
-				if (block.role() == Role.BENCH && block.u() < layout.buildingWidth()) {
+				if (block.role() == Role.BENCH && layout.indoor(block.u(), block.v())) {
 					bench = true;
 				}
 			}

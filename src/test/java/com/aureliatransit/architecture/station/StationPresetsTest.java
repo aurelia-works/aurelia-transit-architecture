@@ -24,7 +24,7 @@ class StationPresetsTest {
 			assertTrue(preset.description().length() <= StationDescriptionParser.MAX_INPUT, preset.key() + " is too long for the wrench");
 			final ParseResult parse = StationDescriptionParser.parse(preset.description());
 			assertEquals(preset.building(), parse.spec().building(), preset.key());
-			assertTrue(parse.spec().footbridge(), preset.key() + " has no footbridge");
+			assertTrue(parse.spec().footbridge() || parse.spec().terminus(), preset.key() + " has neither a footbridge nor a concourse");
 			assertTrue(parse.warnings().isEmpty(), preset.key() + " warnings: " + parse.warnings());
 			assertTrue(parse.ignored().isEmpty(), preset.key() + " ignored: " + parse.ignored());
 			final StationPlan plan = StationPlanner.plan(parse.spec());

@@ -37,7 +37,7 @@ final class StationText {
 					case NONE -> "no roof";
 					case CANOPY -> "canopy";
 					case HALL -> "hall roof";
-				}) + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+				}) + (spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
 	}
 
 	static void summary(StationSessions.Pending pending, BlockStateResolver.Check check, Consumer<Text> out) {

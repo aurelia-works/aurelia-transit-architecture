@@ -12,9 +12,12 @@ import java.util.List;
  * @param tracks         left to right
  * @param platforms      left to right
  * @param buildingWidth  columns u = 0..buildingWidth-1 taken by the station building and its entrance apron (0 without a
- *                       building); the railway starts at u = buildingWidth
+ *                       building beside the tracks); the railway starts at u = buildingWidth
+ * @param headDepth      a terminus: rows v = platformLength.. taken by the head building across the track ends and its
+ *                       entrance apron (0 for a through station, whose tracks run on past both platform ends)
  */
-public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth) {
+public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
+		int headDepth) {
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -22,7 +25,27 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	}
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms) {
-		this(width, platformLength, rampLength, tracks, platforms, 0);
+		this(width, platformLength, rampLength, tracks, platforms, 0, 0);
+	}
+
+	/** The tracks end at buffer stops in front of a head building at v = platformLength. */
+	public boolean terminus() {
+		return headDepth > 0;
+	}
+
+	/** Last v of a terminus head building (its street wall). */
+	public int headEnd() {
+		return platformLength + StationGeometry.HEAD_DEPTH - 1;
+	}
+
+	/** Last v a track (and its clearance) runs to: the platform end at a terminus, the footprint end otherwise. */
+	public int trackEnd() {
+		return terminus() ? platformLength - 1 : vMax();
+	}
+
+	/** Inside a station building: the side building's columns, or a terminus head building's rows. */
+	public boolean indoor(int u, int v) {
+		return u >= 0 && u < width && (u < buildingWidth || terminus() && v >= platformLength && v <= headEnd());
 	}
 
 	/** First v of the footprint (start of the ramps, or 0). */
@@ -30,9 +53,9 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return -rampLength;
 	}
 
-	/** Last v of the footprint. */
+	/** Last v of the footprint (the end of the ramps, or of a terminus head building's apron). */
 	public int vMax() {
-		return platformLength - 1 + rampLength;
+		return platformLength - 1 + (terminus() ? headDepth : rampLength);
 	}
 
 	/**

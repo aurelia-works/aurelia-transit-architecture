@@ -17,6 +17,7 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -803,5 +804,90 @@ class StationPlannerTest {
 			assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);
 		}
 		assertEquals(List.of(), LayoutValidator.validate(plan));
+	}
+
+	@Test
+	void terminusStationsAreValidForEveryLayoutAndSize() {
+		final List<String> problems = new ArrayList<>();
+		for (int tracks = 1; tracks <= 4; tracks++) {
+			for (final PlatformLayout layout : PlatformLayout.values()) {
+				if (layout == PlatformLayout.ISLAND && tracks < 2) {
+					continue;
+				}
+				for (final int length : new int[]{StationSpec.MIN_LENGTH, 48, StationSpec.MAX_LENGTH}) {
+					for (final int width : new int[]{StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH}) {
+						for (final RoofType roof : RoofType.values()) {
+							for (final boolean stepFree : new boolean[]{true, false}) {
+								final StationSpec spec = StationSpec.builder().trackCount(tracks).platformLayout(layout).platformLength(length)
+										.platformWidth(width).roof(roof).stepFree(stepFree).building(BuildingStyle.GOTHIC_BRICK).terminus(true).build();
+								final StationPlan plan = plan(spec);
+								final List<Violation> violations = LayoutValidator.validate(plan);
+								// side platforms with 3-4 tracks cannot carry a hall roof, as at a through station
+								final boolean longSpan = roof == RoofType.HALL && layout == PlatformLayout.SIDE && tracks >= 3;
+								if (longSpan ? violations.stream().anyMatch(v -> v.kind() != Violation.Kind.ROOF_SPAN) : !violations.isEmpty()) {
+									problems.add(describe(spec) + " violations " + violations.subList(0, Math.min(3, violations.size())));
+								}
+								final StationAudit.Result audit = StationAudit.audit(plan);
+								if (!audit.problems().isEmpty()) {
+									problems.add(describe(spec) + " checks " + audit.problems());
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		assertEquals(List.of(), problems.subList(0, Math.min(8, problems.size())), problems.size() + " problems");
+	}
+
+	@Test
+	void terminusTracksEndAtBuffersInFrontOfTheHeadBuilding() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(48).roof(RoofType.HALL)
+				.building(BuildingStyle.GOTHIC_BRICK).terminus(true).build();
+		final StationPlan plan = plan(spec);
+		final TrackLayout layout = plan.layout();
+		final int length = layout.platformLength();
+		assertEquals(0, layout.buildingWidth(), "a terminus has no building beside the tracks");
+		assertEquals(layout.headEnd() + StationGeometry.HEAD_APRON, layout.vMax());
+		for (final TrackLayout.Track track : layout.tracks()) {
+			for (int u = track.u() - 1; u <= track.u() + 1; u++) {
+				final int cu = u;
+				assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.BUFFER_STOP && b.u() == cu && b.v() == length), "no buffer at u=" + u);
+			}
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAIL_NODE && b.u() == track.u() && b.v() == length - 1));
+		}
+		for (final Box envelope : plan.trackEnvelopes()) {
+			assertEquals(length - 1, envelope.vMax(), "clearance must stop at the buffers");
+		}
+		// ramps only at the open end; the platforms run level into the concourse
+		assertTrue(plan.blocks().stream().filter(b -> b.role() == Role.RAMP_LOWER || b.role() == Role.RAMP_UPPER)
+				.allMatch(b -> b.v() < 0 || b.v() > layout.headEnd()));
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.GATE && b.v() == length + 2));
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":booth_window")));
+		assertFalse(blocks(plan, Role.BEAM).isEmpty(), "the train shed (hall roof) is kept at a terminus");
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+	}
+
+	@Test
+	void terminusIslandsAreReachedStepFreeThroughTheGateLine() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(48)
+				.building(BuildingStyle.ANTWERP).terminus(true).build();
+		final StationPlan plan = plan(spec);
+		assertEquals(List.of(StationAudit.Access.STEP_FREE), StationAudit.audit(plan).access());
+		// close the gate line: the island is then only reached across a track from its open end
+		final List<PlannedBlock> closed = new ArrayList<>();
+		for (final PlannedBlock b : plan.blocks()) {
+			closed.add(b.role() == Role.GATE ? new PlannedBlock(b.u(), b.y(), b.v(), Role.BARRIER, b.blockId(), b.front(), b.text(), "") : b);
+		}
+		final StationPlan blocked = new StationPlan(plan.spec(), plan.layout(), closed, plan.trackEnvelopes(), plan.headroom(), plan.supportAreas(),
+				plan.foundationId());
+		assertEquals(List.of(StationAudit.Access.AT_GRADE), StationAudit.audit(blocked).access());
+	}
+
+	@Test
+	void terminusNeedsAHeadBuildingAndNoFootbridge() {
+		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().terminus(true).build());
+		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().building(BuildingStyle.MODERN).terminus(true).footbridge(true).build());
+		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().building(BuildingStyle.MODERN).roof(RoofType.HALL).build());
 	}
 }

@@ -3,7 +3,8 @@ package com.aureliatransit.architecture.station;
 import java.util.List;
 
 /**
- * Ready-made descriptions behind the wrench screen's preset buttons and the guide book, one per building look. They are plain
+ * Ready-made descriptions behind the wrench screen's preset buttons, one per building look: through stations with a building
+ * and footbridge, and the termini (St Pancras, Antwerp, Frankfurt, Grand Central) as they are. They are plain
  * descriptions, so the parser, the design rules and the station checks treat them like typed text; the tests keep every preset
  * free of warnings, ignored words, rule breaks and failed checks.
  */
@@ -23,17 +24,17 @@ public final class StationPresets {
 			new Preset("amsterdam", BuildingStyle.AMSTERDAM,
 					"two track amsterdam station, side platforms, 64 long, station building with footbridge, named Amsterdam Centraal"),
 			new Preset("st_pancras", BuildingStyle.GOTHIC_BRICK,
-					"four track st pancras station, two island platforms, 96 long, station building with footbridge, named St Pancras"),
+					"four track st pancras terminus, two island platforms, 96 long, train shed, named St Pancras"),
 			new Preset("antwerp", BuildingStyle.ANTWERP,
-					"four track antwerp station, two island platforms, 96 long, station building with footbridge, named Antwerpen"),
+					"four track antwerp terminus, two island platforms, 96 long, train shed, named Antwerpen Centraal"),
 			new Preset("frankfurt", BuildingStyle.SANDSTONE,
-					"three track frankfurt station, island and side platforms, 80 long, station building with footbridge, named Frankfurt Hbf"),
+					"four track frankfurt terminus, two island platforms, 112 long, train shed, named Frankfurt Hbf"),
 			new Preset("hamburg", BuildingStyle.CLINKER,
 					"two track hamburg station, side platforms, 64 long, station building with footbridge, named Hamburg Dammtor"),
 			new Preset("munich", BuildingStyle.CONCRETE,
 					"two track munich station, island platform, 64 long, station building with footbridge, named Munchen Ost"),
 			new Preset("grand_central", BuildingStyle.BEAUX_ARTS,
-					"four track grand central station building, two island platforms, 96 long, with footbridge, named Grand Central"));
+					"four track grand central terminus, two island platforms, 96 long, named Grand Central"));
 
 	private StationPresets() {
 	}

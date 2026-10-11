@@ -55,6 +55,10 @@ public final class StationGeometry {
 	public static final int BAY = 6;
 	/** Footbridge corridor: clear width inside its walls. */
 	public static final int BRIDGE_WIDTH = 3;
+	/** Terminus head building along v past the platform ends: buffer row, paid row, gate line, concourse, street wall. */
+	public static final int HEAD_DEPTH = 12;
+	/** Entrance ramps outside a terminus head building's street wall. */
+	public static final int HEAD_APRON = RAMP_LENGTH;
 	/** Stairs from a walking level to the footbridge or upper floor: one step per block of rise. */
 	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
 
@@ -96,9 +100,10 @@ public final class StationGeometry {
 			previousTrack = track;
 		}
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
-		final int shift = spec.hasBuilding() ? APRON + BUILDING_DEPTH : 0;
+		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : 0;
 		if (shift == 0) {
-			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms);
+			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
+					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0);
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {
@@ -108,7 +113,7 @@ public final class StationGeometry {
 		for (final TrackLayout.PlatformBand band : platforms) {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight()));
 		}
-		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift);
+		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
 	}
 
 	/** Bands left to right: 'T' for a track, 'P' for a platform. */

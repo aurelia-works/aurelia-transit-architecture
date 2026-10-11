@@ -45,6 +45,8 @@ public enum Role {
 	BARRIER,
 	/** Handrail or guard rail. */
 	RAILING,
+	/** Buffer stop across the end of a terminus track, behind its last rail node; front along the beam. */
+	BUFFER_STOP,
 	/** Free-standing platform lamp (open platforms); front points at the track it lights. */
 	LAMP,
 	/** Front (seat side) points at the track or into the room. */
@@ -63,7 +65,7 @@ public enum Role {
 	/** Things standing in the walking space, which must keep off platform edge cells. */
 	public boolean obstructsWalkway() {
 		return switch (this) {
-			case COLUMN, COLUMN_CAP, LAMP, BENCH, BIN, NAME_SIGN, STAIR, BRIDGE_PIER, WALL, WINDOW, GATE, BARRIER, RAILING, FIXTURE -> true;
+			case COLUMN, COLUMN_CAP, LAMP, BENCH, BIN, NAME_SIGN, STAIR, BRIDGE_PIER, WALL, WINDOW, GATE, BARRIER, RAILING, BUFFER_STOP, FIXTURE -> true;
 			default -> false;
 		};
 	}

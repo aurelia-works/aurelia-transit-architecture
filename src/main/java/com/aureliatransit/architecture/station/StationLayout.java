@@ -45,7 +45,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	public static StationLayout of(StationSpec spec, TrackLayout layout) {
 		final int length = layout.platformLength();
-		final boolean building = spec.hasBuilding();
+		final boolean building = spec.sideBuilding();
 		int bays = 0;
 		int vStart = 0;
 		int vEnd = 0;

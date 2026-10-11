@@ -32,6 +32,7 @@ public final class StationPlanner {
 		planning.ramps();
 		planning.railNodes();
 		planning.building();
+		planning.head();
 		planning.footbridge();
 		planning.columns();
 		planning.canopyRoofs();
@@ -39,6 +40,7 @@ public final class StationPlanner {
 		planning.lamps();
 		planning.benchesAndBins();
 		planning.interior();
+		planning.headInterior();
 		planning.platformEquipment();
 		planning.nameSigns();
 		return planning.finish();
@@ -132,6 +134,16 @@ public final class StationPlanner {
 			return true;
 		}
 
+		/** A two-high fixture (MTR's ticket machine, the kiosk): both halves or neither, the lower one at {@code y}. */
+		private boolean tallFixture(int u, int y, int v, LocalDir front, String blockId) {
+			if (taken(u, y, v) || taken(u, y + 1, v)) {
+				return false;
+			}
+			put(Role.FIXTURE, u, y, v, front, blockId, "half=lower");
+			put(Role.FIXTURE, u, y + 1, v, front, blockId, "half=upper");
+			return true;
+		}
+
 		private boolean taken(int u, int y, int v) {
 			final Cell cell = new Cell(u, y, v);
 			return cells.containsKey(cell) || air.contains(cell);
@@ -178,8 +190,10 @@ public final class StationPlanner {
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
 					put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, -2, LocalDir.MINUS_V);
 					put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, -1, LocalDir.MINUS_V);
-					put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, length, LocalDir.PLUS_V);
-					put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, length + 1, LocalDir.PLUS_V);
+					if (!layout.terminus()) { // a terminus's platforms run level into its concourse
+						put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, length, LocalDir.PLUS_V);
+						put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, length + 1, LocalDir.PLUS_V);
+					}
 				}
 			}
 		}
@@ -369,6 +383,159 @@ public final class StationPlanner {
 				final int v = site.innerStairV(y);
 				for (int u = uA; u <= uB; u++) {
 					put(Role.STAIR, u, y, v, site.innerStairFront(), b.stair());
+				}
+			}
+		}
+
+		/** The u of a terminus head building's street entrance (the middle of the 3-wide doorway). */
+		private int headDoor() {
+			return layout.width() / 2;
+		}
+
+		/**
+		 * A terminus head building across the track ends (v = L .. L+11, the full width): the floor runs level from the
+		 * platform ends; buffer stops close every track at v = L; the platform side is open under a lintel with clerestory
+		 * windows; side and street walls carry windows and a trim band; a 3-wide street entrance with ramps outside; a flat roof
+		 * with light panels and a cornice. The gate line and fittings are in {@link #headInterior()}.
+		 */
+		void head() {
+			if (!layout.terminus()) {
+				return;
+			}
+			final StylePalette.Building b = palette.building();
+			final int w = layout.width();
+			final int vL = length;
+			final int vE = layout.headEnd();
+			final int door = headDoor();
+			for (int u = door - 1; u <= door + 1; u++) {
+				for (int y = 1; y <= 3; y++) {
+					keepClear(u, y, vE);
+					keepClear(u, y, vE + 1);
+					keepClear(u, y, vE + 2);
+				}
+			}
+			for (int u = 0; u < w; u++) {
+				for (int v = vL; v <= vE; v++) {
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, b.floor());
+				}
+			}
+			// buffer stops across each track's clearance, just past its last rail node
+			for (final TrackLayout.Track track : layout.tracks()) {
+				for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+					put(Role.BUFFER_STOP, u, StationGeometry.WALK_Y, vL, LocalDir.PLUS_U);
+				}
+			}
+			final int top = StationGeometry.BUILDING_ROOF_Y - 1;
+			// side walls
+			for (int v = vL; v <= vE; v++) {
+				final boolean pilaster = (v - vL) % 3 == 0;
+				for (int y = 1; y <= top; y++) {
+					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
+					final boolean window = !pilaster && (y == 2 || y == 3 || y == 6 || y == 7);
+					put(window ? Role.WINDOW : Role.WALL, 0, y, v, LocalDir.MINUS_U, window ? b.window() : id);
+					put(window ? Role.WINDOW : Role.WALL, w - 1, y, v, LocalDir.PLUS_U, window ? b.window() : id);
+				}
+			}
+			// street wall with the entrance, and the platform-side lintel and clerestory over the open arcade
+			for (int u = 1; u < w - 1; u++) {
+				final boolean pilaster = u % 3 == 0;
+				for (int y = 1; y <= top; y++) {
+					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
+					final boolean window = !pilaster && (y == 6 || y == 7);
+					put(window ? Role.WINDOW : Role.WALL, u, y, vE, LocalDir.PLUS_V, window ? b.window() : id);
+					if (y >= StationGeometry.UPPER_FLOOR_Y) {
+						put(window ? Role.WINDOW : Role.WALL, u, y, vL, LocalDir.MINUS_V, window ? b.window() : id);
+					}
+				}
+			}
+			// entrance ramps outside the street wall
+			for (int u = door - 1; u <= door + 1; u++) {
+				put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, vE + 1, LocalDir.PLUS_V);
+				put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, vE + 2, LocalDir.PLUS_V);
+			}
+			// flat roof with light panels, and a cornice
+			for (int u = 0; u < w; u++) {
+				for (int v = vL; v <= vE; v++) {
+					final boolean inner = u > 0 && u < w - 1 && v > vL && v < vE;
+					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, inner && (u + v) % 4 == 0 ? b.light() : b.roof());
+					if (!inner) {
+						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, b.cornice());
+					}
+				}
+			}
+		}
+
+		/**
+		 * The terminus concourse: a gate line two rows in from the buffers (fare gates across each platform with a wide gate in
+		 * the middle, glass barriers behind the tracks), departure boards and a clock over the gate line facing the concourse,
+		 * the ticket office with its window on one side, MTR ticket machines and the kiosk on the other, and benches facing the
+		 * boards.
+		 */
+		void headInterior() {
+			if (!layout.terminus()) {
+				return;
+			}
+			final StylePalette.Building b = palette.building();
+			final int w = layout.width();
+			final int vL = length;
+			final int vE = layout.headEnd();
+			final int gateV = vL + 2;
+			final int door = headDoor();
+			for (int u = 1; u < w - 1; u++) {
+				TrackLayout.PlatformBand band = null;
+				for (final TrackLayout.PlatformBand candidate : layout.platforms()) {
+					if (u >= candidate.uMin() && u <= candidate.uMax()) {
+						band = candidate;
+					}
+				}
+				if (band == null) {
+					put(Role.BARRIER, u, StationGeometry.WALK_Y, gateV, LocalDir.MINUS_V);
+				} else {
+					final int i = u - band.uMin();
+					final String kind = i == 0 || i == band.width() - 1 ? "kind=end" : i == band.width() / 2 ? "kind=wide" : "kind=gate";
+					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.MINUS_V, palette.blockId(Role.GATE), kind);
+				}
+			}
+			// boards over the gate line, hung from the lintel, and the clock above them
+			for (int u = door - 1; u <= door + 1; u++) {
+				put(Role.FIXTURE, u, StationGeometry.UPPER_FLOOR_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+			}
+			put(Role.FIXTURE, door, StationGeometry.UPPER_WALK_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:wall_digital_clock");
+			// ticket office against the u=0 wall: interior u=1..2, v=vE-5..vE-4, window facing the concourse
+			final int o0 = vE - 5;
+			final int o1 = vE - 4;
+			if (door - 1 > 4) {
+				for (int u = 1; u <= 3; u++) {
+					for (int y = 1; y <= 2; y++) {
+						put(Role.WALL, u, y, o0 - 1, LocalDir.MINUS_V, b.interiorWall());
+						put(Role.WALL, u, y, o1 + 1, LocalDir.PLUS_V, b.interiorWall());
+					}
+				}
+				put(Role.FIXTURE, 3, 1, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+				put(Role.WALL, 3, 2, o0, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.WALL, 3, 1, o1, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.WALL, 3, 2, o1, LocalDir.PLUS_U, b.interiorWall());
+			} else { // too narrow for an office: a ticket window in the side wall's corner by the entrance
+				put(Role.FIXTURE, 1, 1, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+			}
+			// ticket machines and the kiosk against the far wall
+			for (int i = 0; i < 2; i++) {
+				tallFixture(w - 2, 1, o0 + i, LocalDir.MINUS_U, "mtr:ticket_machine");
+			}
+			tallFixture(w - 2, 1, o1 + 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
+			// benches facing the boards, either side of the walk from the entrance
+			if (spec.furniture()) {
+				int seats = 0;
+				for (final int u : new int[]{door - 3, door - 2, door + 2, door + 3}) {
+					if (u > 0 && u < w - 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
+						seats++;
+					}
+				}
+				// a narrow concourse: any free cell in the row that keeps the walk from the entrance clear
+				for (int u = 1; u < w - 1 && seats == 0; u++) {
+					if (Math.abs(u - door) > 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
+						seats++;
+					}
 				}
 			}
 		}
@@ -830,12 +997,11 @@ public final class StationPlanner {
 				if (v <= vS) {
 					continue;
 				}
-				put(Role.FIXTURE, uS + 1, 1, v, LocalDir.PLUS_U, "mtr:ticket_machine", "half=lower");
-				put(Role.FIXTURE, uS + 1, 2, v, LocalDir.PLUS_U, "mtr:ticket_machine", "half=upper");
+				tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "mtr:ticket_machine");
 			}
 			// information kiosk on the unpaid side
 			if (vEntr - 4 >= vS + 1 && vEntr - 4 <= vE - 1) {
-				put(Role.FIXTURE, uS + 2, 1, vEntr - 4, LocalDir.PLUS_V, "aurelia_transit_architecture:passenger_info_kiosk");
+				tallFixture(uS + 2, 1, vEntr - 4, LocalDir.PLUS_V, "aurelia_transit_architecture:passenger_info_kiosk");
 			}
 			// benches in the paid hall and on the unpaid side (only with furniture, only inside the building)
 			if (spec.furniture()) {
@@ -1025,16 +1191,20 @@ public final class StationPlanner {
 			final List<Box> supports = new ArrayList<>();
 			for (final TrackLayout.Track track : layout.tracks()) {
 				envelopes.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.PLATFORM_Y, layout.vMin(),
-						track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.ENVELOPE_HEIGHT - 1, layout.vMax()));
+						track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.ENVELOPE_HEIGHT - 1, layout.trackEnd()));
 			}
 			final List<Box> headroom = new ArrayList<>();
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				headroom.add(new Box(band.uMin(), StationGeometry.WALK_Y, 0, band.uMax(), StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1,
 						length - 1));
-				supports.add(new Box(band.uMin(), -1, layout.vMin(), band.uMax(), -1, layout.vMax()));
+				supports.add(new Box(band.uMin(), -1, layout.vMin(), band.uMax(), -1, layout.trackEnd()));
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
-				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.vMax()));
+				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd()));
+			}
+			if (layout.terminus()) {
+				supports.add(new Box(0, -1, length, layout.width() - 1, -1, layout.headEnd()));
+				supports.add(new Box(headDoor() - 1, -1, layout.headEnd() + 1, headDoor() + 1, -1, layout.vMax()));
 			}
 			if (site.building()) {
 				supports.add(new Box(0, -1, site.vStart(), layout.buildingWidth() - 1, -1, site.vEnd()));

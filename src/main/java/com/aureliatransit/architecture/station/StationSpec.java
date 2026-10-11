@@ -17,7 +17,7 @@ import java.util.Objects;
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
-		boolean railNodes, String name, BuildingStyle building, boolean footbridge) {
+		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 4;
@@ -46,8 +46,14 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		if (platformLayout == PlatformLayout.ISLAND && trackCount < 2) {
 			throw new IllegalArgumentException("an island platform needs at least two tracks");
 		}
-		if (roof == RoofType.HALL && (building != BuildingStyle.NONE || footbridge)) {
-			throw new IllegalArgumentException("a hall roof cannot be combined with a station building or footbridge yet");
+		if (terminus && building == BuildingStyle.NONE) {
+			throw new IllegalArgumentException("a terminus needs a head building");
+		}
+		if (terminus && footbridge) {
+			throw new IllegalArgumentException("a terminus is reached from its concourse, not a footbridge");
+		}
+		if (roof == RoofType.HALL && (footbridge || building != BuildingStyle.NONE && !terminus)) {
+			throw new IllegalArgumentException("a hall roof cannot be combined with a footbridge or a building beside the tracks yet");
 		}
 		if (name.length() > MAX_NAME) {
 			throw new IllegalArgumentException("name longer than " + MAX_NAME + " characters");
@@ -72,11 +78,16 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public Builder toBuilder() {
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
-				.railNodes(railNodes).name(name).building(building).footbridge(footbridge);
+				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus);
 	}
 
 	public boolean hasBuilding() {
 		return building != BuildingStyle.NONE;
+	}
+
+	/** A station building beside the tracks (a through station's); a terminus has its head building across the track ends. */
+	public boolean sideBuilding() {
+		return hasBuilding() && !terminus;
 	}
 
 	/** Mutable builder; starts at {@link #defaults()}. {@link #build()} applies the constructor's checks. */
@@ -97,6 +108,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private String name = "";
 		private BuildingStyle building = BuildingStyle.NONE;
 		private boolean footbridge;
+		private boolean terminus;
 
 		private Builder() {
 		}
@@ -176,9 +188,14 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder terminus(boolean value) {
+			terminus = value;
+			return this;
+		}
+
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name, building, footbridge);
+					tactile, furniture, railNodes, name, building, footbridge, terminus);
 		}
 	}
 }

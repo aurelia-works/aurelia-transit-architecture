@@ -18,10 +18,13 @@ import net.minecraft.state.property.Property;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -66,6 +69,8 @@ public final class StationBuildJob {
 	private final boolean approved;
 	private final UndoLog log;
 	private final int total;
+	/** What each cell will hold, so a block is checked against the neighbours it is planned to have (a lower half its upper). */
+	private final Map<BlockPos, BlockState> planned = new HashMap<>();
 	private final List<BlockPos> signCells = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
 
@@ -90,6 +95,11 @@ public final class StationBuildJob {
 		this.log = log;
 		this.total = total;
 		this.out = out;
+		for (final Prepared prepared : ops) {
+			if (prepared.op().kind() != WorldOp.Kind.CLEAR) {
+				planned.put(new BlockPos(prepared.op().x(), prepared.op().y(), prepared.op().z()), prepared.state());
+			}
+		}
 	}
 
 	/** @throws IllegalArgumentException when an op names a block that does not exist */
@@ -247,7 +257,7 @@ public final class StationBuildJob {
 		}
 		final BlockPos pos = new BlockPos(op.x(), op.y(), op.z());
 		final BlockState before = world.getBlockState(pos);
-		final BlockState wanted = Block.postProcessState(prepared.state(), world, pos);
+		final BlockState wanted = postProcessAsPlanned(prepared.state(), pos);
 		if (wanted.getBlock() != prepared.state().getBlock()) {
 			stop("Stopped at " + op.x() + " " + op.y() + " " + op.z() + ": " + op.blockId() + " would not stay there next to its neighbours; nothing more was placed. ", true);
 			return Step.STOP;
@@ -275,6 +285,25 @@ public final class StationBuildJob {
 			signTexts.add(op.text());
 		}
 		return Step.DONE;
+	}
+
+	/**
+	 * {@link Block#postProcessState} against the finished station: a neighbour cell that is still air but planned counts as its
+	 * planned block. Without this the lower half of a two-high block (MTR's ticket machine) turns to air before its upper half
+	 * is placed.
+	 */
+	private BlockState postProcessAsPlanned(BlockState state, BlockPos pos) {
+		BlockState result = state;
+		for (final Direction direction : Direction.values()) {
+			final BlockPos neighbour = pos.offset(direction);
+			BlockState there = world.getBlockState(neighbour);
+			final BlockState future = planned.get(neighbour);
+			if (future != null && there.isAir()) {
+				there = future;
+			}
+			result = result.getStateForNeighborUpdate(direction, there, world, pos, neighbour);
+		}
+		return result;
 	}
 
 	private boolean allowed(WorldOp.Kind kind, CellKind cell) {
@@ -344,6 +373,8 @@ public final class StationBuildJob {
 			world.setBlockState(pos, processed.getBlock() == entry.previous().getBlock() ? processed : entry.previous(), Block.NOTIFY_ALL);
 			restored++;
 			restoreSoil(pos.down());
+		} else if (current.getBlock() == entry.previous().getBlock()) {
+			restored++; // a neighbour put it back already (the lower half of a two-high block goes with its upper half)
 		} else {
 			skipped++;
 		}

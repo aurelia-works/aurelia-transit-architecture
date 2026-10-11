@@ -406,4 +406,20 @@ class StationDescriptionParserTest {
 		assertTrue(spec("station building with footbridge").footbridge());
 		assertTrue(StationDescriptionParser.parse("station building with hall roof").warnings().stream().anyMatch(w -> w.contains("hall roof")));
 	}
+
+	@Test
+	void terminusStations() {
+		final ParseResult shed = StationDescriptionParser.parse("four track st pancras terminus, two island platforms, train shed");
+		assertTrue(shed.spec().terminus());
+		assertEquals(BuildingStyle.GOTHIC_BRICK, shed.spec().building());
+		assertEquals(RoofType.HALL, shed.spec().roof(), "a terminus keeps its train shed");
+		assertTrue(shed.warnings().isEmpty(), shed.warnings().toString());
+		assertTrue(spec("kopfbahnhof").terminus());
+		assertTrue(spec("terminal station").hasBuilding());
+		final ParseResult bridge = StationDescriptionParser.parse("terminus with footbridge");
+		assertFalse(bridge.spec().footbridge());
+		assertTrue(bridge.warnings().stream().anyMatch(w -> w.contains("no footbridge")), bridge.warnings().toString());
+		assertTrue(StationDescriptionParser.parse("station building, hall roof").warnings().stream().anyMatch(w -> w.contains("hall roof")));
+		assertFalse(spec("station building").terminus());
+	}
 }

@@ -154,6 +154,7 @@ public final class StylePalette {
 			case GATE -> ata("fare_gate");
 			case BARRIER -> ata("glass_barrier");
 			case RAILING -> ata("handrail");
+			case BUFFER_STOP -> ata("structural_beam");
 			case FIXTURE -> ata("help_point");
 		};
 	}

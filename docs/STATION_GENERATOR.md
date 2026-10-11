@@ -57,6 +57,7 @@ Examples:
 | Building | `station building`, `ticket hall`, `concourse`, `furnished`, `centraal`, `hauptbahnhof`, `no station building` | none |
 | Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts). Landmarks (`st pancras`, `antwerp`, `grand central`...) also ask for a building. | the style's own look |
 | Footbridge | `footbridge`, `bridge`, `overbridge`, `skywalk`, `no footbridge` | none |
+| Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning) | through station |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 
@@ -65,6 +66,7 @@ Out-of-range values are clamped with a warning. A contradiction gives a warning 
 A building stands on the street side, 9 deep, over the middle of the platforms: an entrance ramp from the street, a ticket hall with a fare gate line (a wide gate in the middle), a ticket office window, MTR ticket machines, an information kiosk, benches, a clock over the entrance and departure boards on the end walls. A stair in the hall leads to the upper floor and the footbridge, whose stairs go down to every platform it serves.
 
 - **Upstairs waiting room** (buildings of three bays or more, with furniture): the end bay away from the hall stair is closed off by a framed glass partition with one doorway. Inside are benches along both long walls, bins in the far corners, a departure board on the end wall and a hanging clock. It is left out when that bay would touch the stair or the footbridge door.
+- **Terminus** (`terminus`): the tracks end at buffer stops (steel beams across each track's clearance, just past the last rail node) in front of a head building 12 deep across the whole width. Its floor runs level from the platform ends; the platform side is an open arcade under a lintel with clerestory windows. Two rows in from the buffers a gate line crosses every platform (a wide gate in the middle of each, glass barriers behind the tracks); departure boards and a clock hang over it facing the concourse. The concourse has the ticket office, MTR ticket machines, the kiosk and benches, a 3-wide street entrance with ramps, and roof lights. Every platform, islands included, is reached step-free through the gates, so a terminus needs no footbridge, and it may have a hall roof (a train shed) over the platforms. Ramps are only built at the open end.
 - **Departure screens** (every furnished station, with or without a building): one screen point on platforms shorter than 48, two (at a quarter and three quarters of the length) on longer ones. Islands four or more wide get two screens back to back, one facing each track; side platforms get one at the back facing the track. Screens keep 2 blocks clear of footbridge stairs and landings. The first point on each platform also gets a help point.
 
 
@@ -127,7 +129,7 @@ The generator never creates rail connections itself, because those live in MTR's
 ## Known limitations
 
 - Ground-level stations only: no underground or elevated. Straight stations along one axis. No curves, no catenary, no platform screen doors, no lifts.
-- Buildings and footbridges are reached by stairs only: no lifts, so platforms reached over a footbridge get a "not step-free" warning. A hall roof cannot be combined with a building or footbridge yet (the parser falls back to canopies). Terminus stations are not built yet (`terminus` gives a warning and a through station).
+- Buildings and footbridges are reached by stairs only: no lifts, so platforms reached over a footbridge get a "not step-free" warning. A hall roof cannot be combined with a footbridge or a building beside the tracks yet (the parser falls back to canopies); a terminus can have one.
 - The building and footbridge roofs count as shelter in the checks, but the design rules do not check their spans; they rest on the building and footbridge walls.
 - Rail nodes for tracks along X (`facing=true`) match the live-tested release-check scene. Nodes for tracks along Z (`facing=false`) follow from MTR's code and are covered by game tests, but not yet by a live MTR connection.
 - The preview particles were not seen in a client in this version (headless tests only check that planning and preview change nothing).

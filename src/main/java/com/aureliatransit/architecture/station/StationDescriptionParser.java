@@ -68,7 +68,9 @@ public final class StationDescriptionParser {
 	/** Words that ask for a station building with a furnished interior. */
 	private static final Set<String> BUILDING_WORDS = Set.of("building", "buildings", "concourse", "interior", "interiors", "interiorized",
 			"interiorised", "furnished", "ticket", "tickets", "entrance", "centraal", "central", "centrale", "hauptbahnhof", "hbf", "terminal",
-			"terminus", "depot");
+			"terminus", "termini", "kopfbahnhof", "depot");
+	/** Words that make the tracks end at buffer stops in front of a head building. */
+	private static final Set<String> TERMINUS_WORDS = Set.of("terminus", "termini", "terminal", "kopfbahnhof");
 	private static final Set<String> FOOTBRIDGE_WORDS = Set.of("footbridge", "footbridges", "overbridge", "overpass", "bridge", "skywalk");
 	private static final Set<String> TERRAIN_WORDS = Set.of("clear", "flatten", "level", "demolish", "replace", "remove", "terraform", "dig");
 	private static final Set<String> HALL_WORDS = Set.of("hall", "trainshed", "shed");
@@ -130,6 +132,8 @@ public final class StationDescriptionParser {
 		private BuildingStyle buildingStyle;
 		private int buildingStyleAt = -1;
 		private Boolean footbridge;
+		private boolean terminus;
+		private int terminusAt = -1;
 		/** The first word that only sets a building's look (e.g. "brick"), to warn about when no building was asked for. */
 		private String lookOnlyWord;
 
@@ -557,8 +561,9 @@ public final class StationDescriptionParser {
 			}
 			if (BUILDING_WORDS.contains(token)) {
 				askBuilding(i);
-				if (token.equals("terminus") || token.equals("terminal") || token.equals("depot")) {
-					warn("terminus stations (tracks ending at the building) are not built yet; building a through station");
+				if (TERMINUS_WORDS.contains(token) && !terminus) {
+					terminus = true;
+					terminusAt = i;
 				}
 				if (token.equals("furnished") && furniture == null) {
 					furniture = true;
@@ -860,12 +865,20 @@ public final class StationDescriptionParser {
 			} else if (lookOnlyWord != null) {
 				warn("\"" + lookOnlyWord + "\" only sets a station building's look; add \"station building\" to get one");
 			}
-			if (Boolean.TRUE.equals(footbridge)) {
+			if (terminus) {
+				builder.terminus(true);
+				note(terminusAt, "terminus: the tracks end at buffer stops in front of the head building");
+			}
+			final boolean bridge = Boolean.TRUE.equals(footbridge);
+			if (bridge && terminus) {
+				warn("a terminus is reached from its concourse, so it gets no footbridge");
+			} else if (bridge) {
 				builder.footbridge(true);
 			}
-			if ((wantsBuilding || Boolean.TRUE.equals(footbridge)) && !roofNone && roof == RoofType.HALL) {
+			if ((wantsBuilding && !terminus || bridge && !terminus) && !roofNone && roof == RoofType.HALL) {
 				builder.roof(RoofType.CANOPY);
-				warn("a hall roof cannot be combined with a station building or footbridge yet; using canopies");
+				warn("a hall roof cannot be combined with a footbridge or a building beside the tracks yet (a terminus can have one); "
+						+ "using canopies");
 			}
 			builder.name(name);
 			return builder.build();

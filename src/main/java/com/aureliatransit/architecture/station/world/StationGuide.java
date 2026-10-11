@@ -47,7 +47,9 @@ public final class StationGuide {
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
 					+ "Add \"footbridge\" for stairs up to every platform."),
 			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich and grand central each pick a "
-					+ "building look.\n\nA hall roof cannot go with a building yet."),
+					+ "building look.\n\nA hall roof only goes with a building at a terminus."),
+			new Page("Terminus", "Add \"terminus\" and the tracks end at buffer stops in front of a concourse building.\n\n"
+					+ "Every platform is reached step-free through the gates, and a train shed (hall roof) is allowed."),
 			new Page("Examples", "two track dutch station, island platform, 64 long, named Leidsche Rijn\n\n"
 					+ "small single track s-bahn halt, no roof"),
 			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"
