@@ -583,7 +583,8 @@ public final class StationPlanner {
 			for (int u = from; u <= to; u++) {
 				for (int v = wallLo; v <= wallHi; v++) {
 					if ((u + v) % 5 == 0) {
-						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.bridgeLight());
+						// the building's recessed light: a full block with the light underneath, so the walkway has no pit
+						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
 					} else {
 						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.deck());
 					}
