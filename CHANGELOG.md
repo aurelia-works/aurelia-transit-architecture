@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Smart Station Generator (first version):** `/ata_station plan <description>` plans a straight ground-level station from a short English description (1-4 tracks, side or island platforms, length, width, Modern, Dutch, German S-Bahn or Metro style, canopy or hall roof, materials, ramps, name signs), checks it against railway clearances and the ground, and shows a particle outline. `/ata_station confirm` builds it in batches with cancel and undo. Terrain is only changed after `/ata_station confirm replace_terrain`. Fully offline and deterministic. MTR rail nodes are placed at the platform ends for you to connect. Existing MTR rail nodes are never replaced or removed: one already where a node goes is kept. Operators only. See docs/STATION_GENERATOR.md.
+
 ## 1.5.0
 
 - **Wording pass:** tooltips are short and plain (50 characters or fewer, no full stops), and block names name their city. No lang keys of existing blocks changed.
