@@ -27,6 +27,8 @@ loom {
 			// Dev only: Loom runs Apple Silicon on LWJGL 3.3.2-snapshot natives; Sodium 0.5's startup check wants 3.3.1
 			// and refuses to start. This switch (Sodium issue #2561) skips only that check. Not part of the mod.
 			vmArg "-Dsodium.checks.issue2561=false"
+			// Dev only: lets scripts take the game's own screenshots through run/client/screenshot-requests (DevScreenshots).
+			vmArg "-Data.devScreenshots=true"
 		}
 	}
 }

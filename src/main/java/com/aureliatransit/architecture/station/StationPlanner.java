@@ -460,14 +460,13 @@ public final class StationPlanner {
 				put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, vE + 1, LocalDir.PLUS_V);
 				put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, vE + 2, LocalDir.PLUS_V);
 			}
-			// flat roof with light panels, and a cornice
+			// a ceiling with light panels, covered by a flat roof flush with the cornice (the panels' tops would otherwise show
+			// from above as a checkerboard)
 			for (int u = 0; u < w; u++) {
 				for (int v = vL; v <= vE; v++) {
 					final boolean inner = u > 0 && u < w - 1 && v > vL && v < vE;
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, inner && (u + v) % 4 == 0 ? b.light() : b.roof());
-					if (!inner) {
-						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, b.cornice());
-					}
+					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, inner ? b.roof() : b.cornice());
 				}
 			}
 		}
@@ -624,6 +623,9 @@ public final class StationPlanner {
 				if (!hasStairs(band)) {
 					continue;
 				}
+				if (spec.roof() == RoofType.CANOPY && stairShaft(band, b)) {
+					continue;
+				}
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
 					for (int v = loStair; v <= hiStair; v++) {
 						if ((u + v) % 4 == 1) {
@@ -641,7 +643,9 @@ public final class StationPlanner {
 					put(Role.BRIDGE_PIER, uMid, y, vB, LocalDir.PLUS_V, b.pier());
 				}
 			}
-			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried
+			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
+			// they stop below it, so the canopy runs over them
+			final int flankTop = spec.roof() == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (!site.served().contains(band.number())) {
 					continue;
@@ -653,14 +657,14 @@ public final class StationPlanner {
 							continue;
 						}
 						boolean free = true;
-						for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+						for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
 							if (taken(u, y, landing)) {
 								free = false;
 								break;
 							}
 						}
 						if (free) {
-							for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+							for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
 								put(Role.BRIDGE_PIER, u, y, landing, LocalDir.PLUS_V, b.pier());
 							}
 							break;
@@ -1186,6 +1190,42 @@ public final class StationPlanner {
 				}
 			}
 			return false;
+		}
+
+		/**
+		 * Under a canopy, the part of a platform stair that rises through the canopy is enclosed: glass walls in the footbridge's
+		 * glazing on both flanks of the flight and across its far end, from just above the canopy up to the bridge roof, with a
+		 * roof over just that shaft. So the steps are not left standing in the open above the canopy. False if the flight has no
+		 * steps (nothing to enclose).
+		 */
+		private boolean stairShaft(TrackLayout.PlatformBand band, StylePalette.Building b) {
+			final List<Integer> flight = StationLayout.stairColumns(band);
+			if (flight.isEmpty()) {
+				return false;
+			}
+			final int left = flight.get(0) - 1;
+			final int right = flight.get(flight.size() - 1) + 1;
+			// steps whose headroom reaches the canopy level pass through it; the step below them ends the shaft
+			final int lowest = Math.max(1, StationGeometry.CANOPY_Y - 2);
+			final int top = site.stairV(StationGeometry.STAIR_STEPS);
+			final int end = lowest > 1 ? site.stairV(lowest - 1) : site.landingV();
+			final int side = Integer.signum(end - top);
+			final LocalDir out = side > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+			for (int y = StationGeometry.CANOPY_Y + 1; y < StationGeometry.BUILDING_ROOF_Y; y++) {
+				for (int v = top; v != end + side; v += side) {
+					put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
+					put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+				}
+				for (int u = left + 1; u < right; u++) {
+					put(Role.WINDOW, u, y, end, out, b.bridgeWall());
+				}
+			}
+			for (int u = left; u <= right; u++) {
+				for (int v = top; v != end + side; v += side) {
+					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
+				}
+			}
+			return true;
 		}
 
 		/** True within 2 of a footbridge stair flight or its landing on this platform. */
