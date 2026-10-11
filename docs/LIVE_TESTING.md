@@ -145,3 +145,19 @@ Place the camera with RCON or the console (`gamemode spectator`, `tp <player> x 
 `item replace entity <player> weapon.mainhand ...`; `give` fills the first free hotbar slot, which is often not the selected one.
 For example, `printf 'nohud fov=70' > run/client/screenshot-requests/shed` writes `run/client/screenshots/shed.png` a few ticks later.
 The hook is off in a normal game.
+
+## Station tour (dev server)
+
+`tools/station_tour.py` builds station plans on the dev server and photographs them from views placed at each plan's own features
+(overview, concourse, upstairs, footbridge, stairs, platform, gate line, and for termini the gates, street front and shed junction).
+It talks to the server over RCON (port and password from `run/server/server.properties`; set `enable-rcon=true` first) and to the
+dev client through the screenshot hook above.
+
+```
+./gradlew compileJava && java -cp build/classes/java/main tools/StationPlanExport.java build/station-plans.json
+python3 tools/station_tour.py build utrecht 1700 1300        # plan + build facing south, prints the footprint
+python3 tools/station_tour.py tour utrecht 1718 1302         # footprint corner from the build output; sheet in build/tour/
+python3 tools/station_tour.py shot close_up "nohud fov=60"   # one shot from wherever the camera is
+```
+
+`ATA_PLAYER` names the player (default `ATATester`). A site with villages or paths fails the site check; build somewhere flat.
