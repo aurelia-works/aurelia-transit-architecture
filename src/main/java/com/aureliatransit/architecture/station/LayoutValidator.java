@@ -461,12 +461,16 @@ public final class LayoutValidator {
 			final int v = first.v();
 			final List<Integer> piers = new ArrayList<>();
 			for (int u = uStart; u <= uEnd; u++) {
-				if (has(u, y - 1, v, Role.BRIDGE_PIER) || has(u, y - 1, v - 1, Role.BRIDGE_PIER) || has(u, y - 1, v + 1, Role.BRIDGE_PIER)) {
-					piers.add(u);
+				// a pier carries the whole corridor slab across it: its own row and up to two rows either side
+				for (int dv = -2; dv <= 2; dv++) {
+					if (has(u, y - 1, v + dv, Role.BRIDGE_PIER)) {
+						piers.add(u);
+						break;
+					}
 				}
 			}
 			// the building wall and slab carry the deck where they meet (same row or next to it)
-			for (int dv = -1; dv <= 1; dv++) {
+			for (int dv = -2; dv <= 2; dv++) {
 				if (has(uStart - 1, y, v + dv, Role.FLOOR) || has(uStart - 1, y, v + dv, Role.LIGHT_PANEL) || has(uStart - 1, y, v + dv, Role.WALL)
 						|| has(uStart - 1, y, v + dv, Role.BRIDGE_PIER) || has(uStart - 1, y - 1, v + dv, Role.BRIDGE_PIER)) {
 					piers.add(0, uStart - 1);

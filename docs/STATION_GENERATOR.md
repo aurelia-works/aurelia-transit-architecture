@@ -67,7 +67,7 @@ A building stands on the street side, 9 deep, over the middle of the platforms: 
 
 - **Upstairs waiting room** (buildings of three bays or more, with furniture): the end bay away from the hall stair is closed off by a framed glass partition with one doorway. Inside are benches along both long walls, bins in the far corners, a departure board on the end wall and a hanging clock. It is left out when that bay would touch the stair or the footbridge door.
 - **Terminus** (`terminus`): the tracks end at buffer stops (steel beams across each track's clearance, just past the last rail node) in front of a head building 12 deep across the whole width. Its floor runs level from the platform ends; the platform side is an open arcade under a lintel with clerestory windows. Two rows in from the buffers a gate line crosses every platform (a wide gate in the middle of each, glass barriers behind the tracks); departure boards and a clock hang over it facing the concourse. The concourse has the ticket office, MTR ticket machines, the kiosk and benches, a 3-wide street entrance with ramps, and roof lights. Every platform, islands included, is reached step-free through the gates, so a terminus needs no footbridge, and it may have a hall roof (a train shed) over the platforms. Ramps are only built at the open end.
-- **Departure screens** (every furnished station, with or without a building): one screen point on platforms shorter than 48, two (at a quarter and three quarters of the length) on longer ones. Islands four or more wide get two screens back to back, one facing each track; side platforms get one at the back facing the track. Screens keep 2 blocks clear of footbridge stairs and landings. The first point on each platform also gets a help point.
+- **Departure screens** (every furnished station, with or without a building): one screen point on platforms shorter than 48, two (at a quarter and three quarters of the length) on longer ones. Under a canopy, hall roof or footbridge the screen hangs right below the ceiling, double-sided and facing along the platform, two blocks wide where the platform is four or more wide (never over an edge cell). On an open platform a standing screen is fixed to the back of a lamp post. Screens keep 2 blocks clear of footbridge stairs and landings. Each platform gets one help point, a wall unit fixed to the column or lamp post nearest its first screen.
 
 
 1. **Parse** (`StationDescriptionParser`) → `StationSpec`. Every field is resolved, and the summary shows what was understood, what was defaulted and what was ignored.
@@ -134,3 +134,16 @@ The generator never creates rail connections itself, because those live in MTR's
 - Rail nodes for tracks along X (`facing=true`) match the live-tested release-check scene. Nodes for tracks along Z (`facing=false`) follow from MTR's code and are covered by game tests, but not yet by a live MTR connection.
 - The preview particles were not seen in a client in this version (headless tests only check that planning and preview change nothing).
 - Undo history is one build per player, in memory.
+
+## Plan viewer
+
+`tools/StationPlanExport.java` writes plans as JSON, with every block (role, block id, front, state), the rule breaks, the station checks and a "suspect" flag. A block is flagged when it touches no other block, or when it should stand on something and has nothing under it: no span between neighbours, no wall behind it, nothing above it to hang from. `tools/station-plan-viewer.html` shows such an export in 3D: orbit, cut by height, filter by role, hover a block for its cell and id, and click a problem to fly to it.
+
+```
+./gradlew compileJava
+java -cp build/classes/java/main tools/StationPlanExport.java build/station-plans.json            # every preset and the guide's examples
+java -cp build/classes/java/main tools/StationPlanExport.java out.json "two track metro station"  # your own descriptions
+```
+
+Open the viewer in a browser and use **Open an export** to load the JSON.
+

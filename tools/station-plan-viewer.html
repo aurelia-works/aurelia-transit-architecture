@@ -1,0 +1,515 @@
+<title>Station Plan Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: drafting-table split. A control rail on the left, the model fills the rest; on phones the model sits on top and the rail follows. */
+:root {
+	--bg: #eceeea;
+	--panel: #f7f8f5;
+	--fg: #1c2321;
+	--muted: #5a6561;
+	--line: #d3d9d4;
+	--canvas: #e2e6e1;
+	--accent: #e0b10f;
+	--accent-ink: #1c2321;
+	--bad: #cf3b27;
+	--warn: #b97a00;
+	--suspect: #b931b9;
+	--sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+	--mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #121715; --panel: #19201d; --fg: #e3e9e5; --muted: #95a39d; --line: #2a3330; --canvas: #0e1210;
+		--accent: #f2c935; --accent-ink: #121715; --bad: #ff6b55; --warn: #f0a83a; --suspect: #e470e4; color-scheme: dark;
+	}
+}
+:root[data-theme="dark"] {
+	--bg: #121715; --panel: #19201d; --fg: #e3e9e5; --muted: #95a39d; --line: #2a3330; --canvas: #0e1210;
+	--accent: #f2c935; --accent-ink: #121715; --bad: #ff6b55; --warn: #f0a83a; --suspect: #e470e4; color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 14px; padding-inline: 16px; padding-block: 16px; box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
+.app { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 16px; height: 100%; }
+.rail { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.stage { position: relative; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--canvas); min-width: 0; min-height: 0; }
+canvas#view { display: block; width: 100%; height: 100%; touch-action: none; }
+h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 2px 0 0; font-size: 13px; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+select, input[type="range"] { width: 100%; }
+select { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); color: var(--fg); }
+.desc { font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--muted); margin: 8px 0 0; overflow-wrap: anywhere; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.pill { font-family: var(--mono); font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pill.bad { border-color: var(--bad); color: var(--bad); }
+.pill.warn { border-color: var(--warn); color: var(--warn); }
+.pill.suspect { border-color: var(--suspect); color: var(--suspect); }
+.pill.ok { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; padding: 5px 12px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.check { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
+.range-head { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.problems { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.problem { all: unset; display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 8px; align-items: start; padding: 5px 6px; border-radius: 4px; cursor: pointer; font-size: 12.5px; line-height: 1.4; }
+.problem:hover, .problem:focus-visible { background: var(--bg); }
+.problem:focus-visible { outline: 2px solid var(--accent); }
+.problem .dot { width: 8px; height: 8px; border-radius: 2px; margin-top: 5px; }
+.problem .where { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: block; }
+.problem.static { cursor: default; }
+.empty { color: var(--muted); font-size: 13px; margin: 0; }
+.roles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; }
+.role { display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; min-width: 0; }
+.role span.name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.role .n { font-family: var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; border: 1px solid rgba(0,0,0,0.15); }
+.linkish { all: unset; cursor: pointer; font-size: 12px; color: var(--muted); text-decoration: underline; }
+.linkish:focus-visible { outline: 2px solid var(--accent); }
+.file { font-size: 12px; color: var(--muted); }
+.file code { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+.tip { position: absolute; pointer-events: none; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 7px 9px; font-size: 12px; line-height: 1.45; max-width: 300px; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+.tip b { font-weight: 600; }
+.tip .m { font-family: var(--mono); font-size: 11.5px; color: var(--muted); overflow-wrap: anywhere; }
+.tip .s { color: var(--suspect); font-weight: 500; }
+.hud { position: absolute; left: 10px; bottom: 8px; font-family: var(--mono); font-size: 11px; color: var(--muted); pointer-events: none; }
+.status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; text-align: center; padding: 16px; }
+@media (max-width: 760px) {
+	html, body { height: auto; }
+	.app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 58vh auto; height: auto; }
+	.stage { order: -1; }
+	.rail { overflow: visible; }
+}
+</style>
+
+<div class="app">
+	<aside class="rail" aria-label="Plan controls">
+		<div>
+			<h1>Station Plan Viewer</h1>
+			<p class="sub">The station generator's output, block by block</p>
+		</div>
+		<div>
+			<p class="label"><label for="station">Station</label></p>
+			<select id="station"></select>
+			<p class="desc" id="desc"></p>
+		</div>
+		<div class="stats" id="stats"></div>
+		<div>
+			<p class="label">Colour by</p>
+			<div class="seg" role="group" aria-label="Colour by">
+				<button type="button" id="mode-role" aria-pressed="true">Role</button>
+				<button type="button" id="mode-block" aria-pressed="false">Block</button>
+			</div>
+		</div>
+		<div>
+			<p class="label"><label for="cut">Height</label></p>
+			<div class="range-head"><span>y 0</span><span id="cut-value"></span></div>
+			<input type="range" id="cut" min="0" max="10" value="10">
+			<div class="row" style="margin-top:6px">
+				<label class="check"><input type="checkbox" id="layer"> Only this layer</label>
+			</div>
+		</div>
+		<div class="row">
+			<label class="check"><input type="checkbox" id="outlines" checked> Outline problems</label>
+			<label class="check"><input type="checkbox" id="ghost"> Fade the rest</label>
+		</div>
+		<div>
+			<p class="label">Problems</p>
+			<div class="problems" id="problems"></div>
+		</div>
+		<div>
+			<div class="row" style="justify-content:space-between"><p class="label" style="margin:0">Roles</p>
+				<span class="row"><button class="linkish" type="button" id="roles-all">all</button><button class="linkish" type="button" id="roles-none">none</button></span></div>
+			<div class="roles" id="roles" style="margin-top:6px"></div>
+		</div>
+		<div class="file">
+			<p class="label"><label for="open">Open an export</label></p>
+			<input type="file" id="open" accept=".json,application/json">
+			<p style="margin:6px 0 0">Make one with <code>java -cp build/classes/java/main tools/StationPlanExport.java build/station-plans.json</code></p>
+		</div>
+	</aside>
+	<main class="stage" id="stage">
+		<canvas id="view" aria-label="3D view of the planned station"></canvas>
+		<div class="tip" id="tip" hidden></div>
+		<div class="hud">drag to orbit · right-drag to pan · scroll to zoom · click a block to centre it<br>x = u across the tracks · z = v along the tracks · y up from rail level</div>
+		<div class="status" id="status" hidden></div>
+	</main>
+</div>
+
+<script type="application/json" id="plans">[]</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+	const ROLE_COLORS = {
+		PLATFORM_SURFACE: "#c8c3b6", PLATFORM_EDGE: "#e3b51c", RAMP_LOWER: "#9fae9a", RAMP_UPPER: "#b4c2ae", RAIL_NODE: "#7a4b25",
+		FLOOR: "#b7a58a", LIGHT_PANEL: "#fff1a6", WALL: "#b0603f", WINDOW: "#79b6d9", STAIR: "#868d99", BRIDGE_PIER: "#555d6a",
+		BRIDGE_DECK: "#98a2ad", COLUMN: "#4a5361", COLUMN_CAP: "#6b7586", BEAM: "#3a424e", ROOF: "#8d98a5", ROOF_EDGE: "#626d7b",
+		ROOF_LIGHT: "#ffe98f", BUILDING_ROOF: "#7b6e64", GATE: "#2a9a69", BARRIER: "#8fd3cb", RAILING: "#cfd4db", BUFFER_STOP: "#d6432a",
+		LAMP: "#ffcc4d", BENCH: "#a06c39", BIN: "#2c7a4b", FIXTURE: "#2f74e8", NAME_SIGN: "#1c46c9", FOUNDATION: "#6a5c4d"
+	};
+	const GLASS = new Set(["WINDOW", "BARRIER"]);
+	const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+	const $ = (id) => document.getElementById(id);
+	const canvas = $("view"), stage = $("stage"), tip = $("tip");
+	let plans = [];
+	try { plans = JSON.parse($("plans").textContent); } catch (e) { plans = []; }
+
+	const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+	renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+	const scene = new THREE.Scene();
+	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
+	const controls = new THREE.OrbitControls(camera, canvas);
+	controls.enableDamping = !reduceMotion;
+	controls.dampingFactor = 0.12;
+	scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f86, 0.85));
+	const sun = new THREE.DirectionalLight(0xffffff, 0.65);
+	sun.position.set(0.6, 1, 0.35);
+	scene.add(sun);
+
+	const box = new THREE.BoxGeometry(1, 1, 1);
+	const world = new THREE.Group();
+	scene.add(world);
+	let meshes = [];         // one InstancedMesh per role: { mesh, role, indices }
+	let outlines = [];       // LineSegments
+	let grid = null;
+	let plan = null;
+	let roleOn = {};
+	let mode = "role";
+
+	function token(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+	function applyTheme() {
+		renderer.setClearColor(new THREE.Color(token("--canvas") || "#e2e6e1"));
+		if (grid) { buildGrid(); }
+		if (plan) { buildOutlines(); updateInstances(); }
+	}
+
+	function hashColor(text) {
+		let h = 2166136261;
+		for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 16777619); }
+		const c = new THREE.Color();
+		c.setHSL(((h >>> 0) % 360) / 360, 0.45 + ((h >>> 9) % 30) / 100, 0.42 + ((h >>> 17) % 25) / 100);
+		return c;
+	}
+
+	// Plan block: [u, y, v, roleIndex, idIndex, frontIndex, state, suspect]
+	function blockScale(role, front) {
+		const along = front === "PLUS_U" || front === "MINUS_U" ? "u" : "v";
+		switch (role) {
+			case "RAILING": return along === "u" ? [0.18, 0.9, 1] : [1, 0.9, 0.18];
+			case "WINDOW": case "BARRIER": return along === "u" ? [0.3, 1, 1] : [1, 1, 0.3];
+			case "FIXTURE": return [0.62, 0.8, 0.62];
+			case "BENCH": return [0.8, 0.45, 0.8];
+			case "BIN": return [0.45, 0.6, 0.45];
+			case "LAMP": return [0.25, 1, 0.25];
+			case "NAME_SIGN": return along === "u" ? [0.25, 0.55, 1] : [1, 0.55, 0.25];
+			case "RAIL_NODE": return [0.9, 0.2, 0.9];
+			case "STAIR": return [1, 0.55, 1];
+			default: return [1, 1, 1];
+		}
+	}
+
+	function clearWorld() {
+		for (const m of meshes) { world.remove(m.mesh); m.mesh.material.dispose(); m.mesh.dispose && m.mesh.dispose(); }
+		for (const o of outlines) { world.remove(o); o.geometry.dispose(); o.material.dispose(); }
+		meshes = []; outlines = [];
+	}
+
+	function maxY() { return plan.blocks.reduce((m, b) => Math.max(m, b[1]), 0); }
+
+	function load(index) {
+		plan = plans[index];
+		clearWorld();
+		if (!plan) { return; }
+		const byRole = new Map();
+		plan.blocks.forEach((b, i) => {
+			const role = plan.roles[b[3]];
+			if (!byRole.has(role)) { byRole.set(role, []); }
+			byRole.get(role).push(i);
+		});
+		roleOn = {};
+		for (const [role, indices] of byRole) {
+			roleOn[role] = true;
+			const glass = GLASS.has(role);
+			const material = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: glass, opacity: glass ? 0.5 : 1 });
+			const mesh = new THREE.InstancedMesh(box, material, indices.length);
+			mesh.userData = { role, indices, glass };
+			world.add(mesh);
+			meshes.push({ mesh, role, indices });
+		}
+		const top = maxY();
+		$("cut").max = String(top);
+		$("cut").value = String(top);
+		$("desc").textContent = plan.description;
+		renderStats(); renderProblems(); renderRoles();
+		buildGrid(); buildOutlines(); updateInstances(); frame();
+	}
+
+	function bounds() {
+		let a = [Infinity, Infinity, Infinity], z = [-Infinity, -Infinity, -Infinity];
+		for (const b of plan.blocks) { for (let k = 0; k < 3; k++) { a[k] = Math.min(a[k], b[k]); z[k] = Math.max(z[k], b[k]); } }
+		return { min: a, max: z };
+	}
+
+	function buildGrid() {
+		if (grid) { world.remove(grid); grid.geometry.dispose(); grid.material.dispose(); grid = null; }
+		if (!plan || !plan.blocks.length) { return; }
+		const { min, max } = bounds();
+		const size = Math.ceil(Math.max(max[0] - min[0], max[2] - min[2]) + 16);
+		grid = new THREE.GridHelper(size, size, new THREE.Color(token("--muted")), new THREE.Color(token("--line")));
+		grid.position.set((min[0] + max[0]) / 2, -0.5, (min[2] + max[2]) / 2);
+		world.add(grid);
+	}
+
+	function frame() {
+		if (!plan.blocks.length) { return; }
+		const { min, max } = bounds();
+		const c = new THREE.Vector3((min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2);
+		const span = Math.max(max[0] - min[0], max[2] - min[2], 12);
+		controls.target.copy(c);
+		camera.position.set(c.x + span * 0.75, c.y + span * 0.6, c.z - span * 0.35);
+		camera.near = 0.1; camera.far = span * 20; camera.updateProjectionMatrix();
+		controls.update();
+	}
+
+	function visible(b) {
+		const cut = Number($("cut").value);
+		if (!roleOn[plan.roles[b[3]]]) { return false; }
+		return $("layer").checked ? b[1] === cut : b[1] <= cut;
+	}
+
+	const tmp = new THREE.Object3D();
+	function updateInstances() {
+		if (!plan) { return; }
+		$("cut-value").textContent = ($("layer").checked ? "layer y " : "up to y ") + $("cut").value;
+		const ghost = $("ghost").checked;
+		for (const { mesh, role, indices } of meshes) {
+			const base = new THREE.Color(ROLE_COLORS[role] || "#888888");
+			indices.forEach((i, n) => {
+				const b = plan.blocks[i];
+				const front = plan.fronts[b[5]];
+				const s = visible(b) ? blockScale(role, front) : [0, 0, 0];
+				tmp.position.set(b[0], b[1] - (1 - s[1]) / 2, b[2]);
+				tmp.scale.set(s[0], s[1], s[2]);
+				tmp.updateMatrix();
+				mesh.setMatrixAt(n, tmp.matrix);
+				mesh.setColorAt(n, mode === "role" ? base : hashColor(plan.ids[b[4]]));
+			});
+			mesh.instanceMatrix.needsUpdate = true;
+			if (mesh.instanceColor) { mesh.instanceColor.needsUpdate = true; }
+			mesh.material.transparent = ghost || mesh.userData.glass;
+			mesh.material.opacity = ghost ? 0.1 : (mesh.userData.glass ? 0.5 : 1);
+			mesh.material.depthWrite = !ghost;
+			mesh.material.needsUpdate = true;
+		}
+		for (const o of outlines) { o.visible = $("outlines").checked; }
+		buildOutlines();
+	}
+
+	function problemCells() {
+		const cells = [];
+		plan.blocks.forEach((b) => { if (b[7]) { cells.push({ u: b[0], y: b[1], v: b[2], kind: "suspect" }); } });
+		for (const v of plan.violations) { cells.push({ u: v.u, y: v.y, v: v.v, kind: "bad" }); }
+		return cells;
+	}
+
+	function buildOutlines() {
+		for (const o of outlines) { world.remove(o); o.geometry.dispose(); o.material.dispose(); }
+		outlines = [];
+		if (!plan || !$("outlines").checked) { return; }
+		const cut = Number($("cut").value), layer = $("layer").checked;
+		const groups = { suspect: [], bad: [] };
+		for (const c of problemCells()) {
+			if (layer ? c.y !== cut : c.y > cut) { continue; }
+			const h = 0.53, x0 = c.u - h, x1 = c.u + h, y0 = c.y - h, y1 = c.y + h, z0 = c.v - h, z1 = c.v + h;
+			const p = groups[c.kind];
+			const e = [[x0,y0,z0,x1,y0,z0],[x1,y0,z0,x1,y0,z1],[x1,y0,z1,x0,y0,z1],[x0,y0,z1,x0,y0,z0],
+				[x0,y1,z0,x1,y1,z0],[x1,y1,z0,x1,y1,z1],[x1,y1,z1,x0,y1,z1],[x0,y1,z1,x0,y1,z0],
+				[x0,y0,z0,x0,y1,z0],[x1,y0,z0,x1,y1,z0],[x1,y0,z1,x1,y1,z1],[x0,y0,z1,x0,y1,z1]];
+			for (const s of e) { p.push(...s); }
+		}
+		for (const [kind, positions] of Object.entries(groups)) {
+			if (!positions.length) { continue; }
+			const g = new THREE.BufferGeometry();
+			g.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+			const m = new THREE.LineBasicMaterial({ color: new THREE.Color(token(kind === "bad" ? "--bad" : "--suspect")), depthTest: false, transparent: true });
+			const lines = new THREE.LineSegments(g, m);
+			lines.renderOrder = 10;
+			world.add(lines);
+			outlines.push(lines);
+		}
+	}
+
+	function renderStats() {
+		const { min, max } = bounds();
+		const suspects = plan.suspects, viol = plan.violations.length;
+		const fails = plan.checks.filter((c) => c.status === "FAIL").length, warns = plan.checks.length - fails;
+		const pills = [
+			`<span class="pill">${plan.blocks.length.toLocaleString()} blocks</span>`,
+			`<span class="pill">${max[0] - min[0] + 1} × ${max[2] - min[2] + 1} × ${max[1] - min[1] + 1}</span>`,
+			viol ? `<span class="pill bad">${viol} rule ${viol === 1 ? "break" : "breaks"}</span>` : `<span class="pill ok">rules OK</span>`,
+			suspects ? `<span class="pill suspect">${suspects} suspect</span>` : "",
+			fails ? `<span class="pill bad">${fails} failed ${fails === 1 ? "check" : "checks"}</span>` : "",
+			warns ? `<span class="pill warn">${warns} ${warns === 1 ? "warning" : "warnings"}</span>` : ""
+		];
+		$("stats").innerHTML = pills.join("");
+	}
+
+	function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+	function shortId(id) { return id.replace("aurelia_transit_architecture:", "ata:"); }
+
+	function renderProblems() {
+		const items = [];
+		for (const v of plan.violations) {
+			items.push({ color: "--bad", text: `${v.kind}: ${v.message}`, where: `u ${v.u} · y ${v.y} · v ${v.v}`, at: v });
+		}
+		plan.blocks.forEach((b) => {
+			if (b[7]) {
+				items.push({ color: "--suspect", text: `${plan.roles[b[3]]} ${shortId(plan.ids[b[4]])}: ${b[7]}`, where: `u ${b[0]} · y ${b[1]} · v ${b[2]}`, at: { u: b[0], y: b[1], v: b[2] } });
+			}
+		});
+		for (const c of plan.checks) {
+			items.push({ color: c.status === "FAIL" ? "--bad" : "--warn", text: `${c.topic}: ${c.message}`, where: c.status.toLowerCase(), at: null });
+		}
+		for (const w of plan.warnings) { items.push({ color: "--warn", text: `Parser: ${w}`, where: "warning", at: null }); }
+		const box = $("problems");
+		if (!items.length) { box.innerHTML = `<p class="empty">No rule breaks, suspect blocks or failed checks.</p>`; return; }
+		box.innerHTML = items.map((it, i) => `<button type="button" class="problem${it.at ? "" : " static"}" data-i="${i}">
+			<span class="dot" style="background:var(${it.color})"></span><span>${esc(it.text)}<span class="where">${esc(it.where)}</span></span></button>`).join("");
+		box.querySelectorAll(".problem").forEach((el) => {
+			const it = items[Number(el.dataset.i)];
+			if (it.at) { el.addEventListener("click", () => focusOn(it.at.u, it.at.y, it.at.v, true)); }
+		});
+	}
+
+	function renderRoles() {
+		const counts = {};
+		for (const b of plan.blocks) { const r = plan.roles[b[3]]; counts[r] = (counts[r] || 0) + 1; }
+		const roles = plan.roles.filter((r) => counts[r]);
+		$("roles").innerHTML = roles.map((r) => `<label class="role" title="${r}"><input type="checkbox" data-role="${r}" checked>
+			<span class="swatch" style="background:${ROLE_COLORS[r] || "#888"}"></span><span class="name">${r.toLowerCase().replace(/_/g, " ")}</span><span class="n">${counts[r]}</span></label>`).join("");
+		$("roles").querySelectorAll("input").forEach((el) => el.addEventListener("change", () => { roleOn[el.dataset.role] = el.checked; updateInstances(); }));
+	}
+
+	function setAllRoles(on) {
+		$("roles").querySelectorAll("input").forEach((el) => { el.checked = on; roleOn[el.dataset.role] = on; });
+		updateInstances();
+	}
+
+	function focusOn(u, y, v, showLayer) {
+		const delta = new THREE.Vector3(u, y, v).sub(controls.target);
+		controls.target.add(delta);
+		camera.position.add(delta);
+		const dist = camera.position.distanceTo(controls.target);
+		if (dist > 30) { camera.position.lerp(controls.target, 1 - 30 / dist); }
+		if (showLayer && Number($("cut").value) < y) { $("cut").value = String(y); updateInstances(); }
+		controls.update();
+	}
+
+	// hover and click
+	const ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
+	function pick(event) {
+		const r = canvas.getBoundingClientRect();
+		pointer.set(((event.clientX - r.left) / r.width) * 2 - 1, -((event.clientY - r.top) / r.height) * 2 + 1);
+		ray.setFromCamera(pointer, camera);
+		const hits = ray.intersectObjects(meshes.map((m) => m.mesh), false);
+		for (const h of hits) {
+			const b = plan.blocks[h.object.userData.indices[h.instanceId]];
+			if (b && visible(b)) { return b; }
+		}
+		return null;
+	}
+	canvas.addEventListener("pointermove", (event) => {
+		if (!plan || event.buttons) { tip.hidden = true; return; }
+		const b = pick(event);
+		if (!b) { tip.hidden = true; return; }
+		tip.innerHTML = `<b>${esc(plan.roles[b[3]].toLowerCase().replace(/_/g, " "))}</b> <span class="m">u ${b[0]} · y ${b[1]} · v ${b[2]}</span><br>
+			<span class="m">${esc(shortId(plan.ids[b[4]]))}</span><br><span class="m">front ${esc(plan.fronts[b[5]])}${b[6] ? " · " + esc(b[6]) : ""}</span>
+			${b[7] ? `<br><span class="s">${esc(b[7])}</span>` : ""}`;
+		const r = stage.getBoundingClientRect();
+		tip.hidden = false;
+		const x = Math.min(event.clientX - r.left + 14, r.width - tip.offsetWidth - 8);
+		const y = Math.min(event.clientY - r.top + 14, r.height - tip.offsetHeight - 8);
+		tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+	});
+	canvas.addEventListener("pointerleave", () => { tip.hidden = true; });
+	let down = null;
+	canvas.addEventListener("pointerdown", (e) => { down = [e.clientX, e.clientY]; });
+	canvas.addEventListener("pointerup", (e) => {
+		if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4 || e.button !== 0) { return; }
+		const b = pick(e);
+		if (b) { focusOn(b[0], b[1], b[2], false); }
+	});
+
+	// controls
+	function fillStations() {
+		$("station").innerHTML = plans.map((p, i) => `<option value="${i}">${esc(p.key.replace(/_/g, " "))}${p.violations.length || p.suspects ? " ●" : ""}</option>`).join("");
+		const status = $("status");
+		if (!plans.length) { status.hidden = false; status.textContent = "No plans loaded. Open an export from the panel."; return; }
+		status.hidden = true;
+		let saved = 0;
+		try { saved = Number(localStorage.getItem("spv-station")) || 0; } catch (e) { saved = 0; }
+		if (saved >= plans.length) { saved = 0; }
+		$("station").value = String(saved);
+		load(saved);
+	}
+	$("station").addEventListener("change", () => {
+		try { localStorage.setItem("spv-station", $("station").value); } catch (e) { /* per-viewer convenience only */ }
+		load(Number($("station").value));
+	});
+	$("cut").addEventListener("input", updateInstances);
+	$("layer").addEventListener("change", updateInstances);
+	$("ghost").addEventListener("change", updateInstances);
+	$("outlines").addEventListener("change", updateInstances);
+	$("roles-all").addEventListener("click", () => setAllRoles(true));
+	$("roles-none").addEventListener("click", () => setAllRoles(false));
+	for (const [id, m] of [["mode-role", "role"], ["mode-block", "block"]]) {
+		$(id).addEventListener("click", () => {
+			mode = m;
+			$("mode-role").setAttribute("aria-pressed", String(m === "role"));
+			$("mode-block").setAttribute("aria-pressed", String(m === "block"));
+			updateInstances();
+		});
+	}
+	$("open").addEventListener("change", () => {
+		const file = $("open").files[0];
+		if (!file) { return; }
+		const reader = new FileReader();
+		reader.onload = () => {
+			try {
+				const data = JSON.parse(reader.result);
+				plans = Array.isArray(data) ? data : [data];
+				fillStations();
+			} catch (e) {
+				$("status").hidden = false;
+				$("status").textContent = "That file is not a plan export. Make one with tools/StationPlanExport.java.";
+			}
+		};
+		reader.readAsText(file);
+	});
+
+	function resize() {
+		const r = stage.getBoundingClientRect();
+		renderer.setSize(r.width, r.height, false);
+		camera.aspect = r.width / Math.max(1, r.height);
+		camera.updateProjectionMatrix();
+	}
+	new ResizeObserver(resize).observe(stage);
+	window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+	new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+	function loop() {
+		controls.update();
+		renderer.render(scene, camera);
+		requestAnimationFrame(loop);
+	}
+	resize();
+	applyTheme();
+	fillStations();
+	loop();
+})();
+</script>

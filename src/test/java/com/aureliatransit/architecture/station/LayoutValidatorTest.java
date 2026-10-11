@@ -129,7 +129,8 @@ class LayoutValidatorTest {
 		final StationPlan plan = canopy();
 		final List<PlannedBlock> blocks = new ArrayList<>();
 		for (final PlannedBlock block : plan.blocks()) {
-			if (block.role() == Role.COLUMN && block.y() == 2) {
+			// the screens hanging from the canopy come down with it; here they would only overlap the lowered roof
+			if (block.role() == Role.COLUMN && block.y() == 2 || block.blockId().endsWith(":hanging_platform_pids")) {
 				continue;
 			}
 			if (block.role() == Role.COLUMN_CAP) {

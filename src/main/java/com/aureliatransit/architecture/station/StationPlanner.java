@@ -18,6 +18,8 @@ import java.util.Set;
 public final class StationPlanner {
 
 	private static final String PIDS = "aurelia_transit_architecture:platform_pids";
+	private static final String HANGING_PIDS = "aurelia_transit_architecture:hanging_platform_pids";
+	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 
 	private static final Comparator<PlannedBlock> BUILD_ORDER = Comparator.comparingInt((PlannedBlock b) -> b.role().ordinal())
@@ -277,7 +279,9 @@ public final class StationPlanner {
 			// ground floor and entrance ramps on the apron
 			for (int u = uS; u <= uP; u++) {
 				for (int v = vS; v <= vE; v++) {
-					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, b.floor());
+					// the plinth under the walls, so the patterned floor does not show as a band along the base
+					final boolean edge = u == uS || u == uP || v == vS || v == vE;
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
 				}
 			}
 			for (int v = vEntr - 1; v <= vEntr + 1; v++) {
@@ -416,7 +420,8 @@ public final class StationPlanner {
 			}
 			for (int u = 0; u < w; u++) {
 				for (int v = vL; v <= vE; v++) {
-					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, b.floor());
+					final boolean edge = u == 0 || u == w - 1 || v == vE;
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
 				}
 			}
 			// buffer stops across each track's clearance, just past its last rail node
@@ -442,7 +447,9 @@ public final class StationPlanner {
 				for (int y = 1; y <= top; y++) {
 					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
 					final boolean window = !pilaster && (y == 6 || y == 7);
-					put(window ? Role.WINDOW : Role.WALL, u, y, vE, LocalDir.PLUS_V, window ? b.window() : id);
+					// ground-floor windows either side of the entrance
+					final boolean street = window || !pilaster && (y == 2 || y == 3) && Math.abs(u - door) > 2;
+					put(street ? Role.WINDOW : Role.WALL, u, y, vE, LocalDir.PLUS_V, street ? b.window() : id);
 					if (y >= StationGeometry.UPPER_FLOOR_Y) {
 						put(window ? Role.WINDOW : Role.WALL, u, y, vL, LocalDir.MINUS_V, window ? b.window() : id);
 					}
@@ -573,9 +580,9 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// deck
+			// deck, out to and under both corridor walls, so the stair exits have a floor and the walls do not float
 			for (int u = from; u <= to; u++) {
-				for (int v = vB - 1; v <= vB + 1; v++) {
+				for (int v = wallLo; v <= wallHi; v++) {
 					if ((u + v) % 5 == 0) {
 						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.bridgeLight());
 					} else {
@@ -666,21 +673,30 @@ public final class StationPlanner {
 				if (!site.served().contains(band.number())) {
 					continue;
 				}
-				for (final int u : StationLayout.stairColumns(band)) {
+				final List<Integer> flight = StationLayout.stairColumns(band);
+				for (final int u : flight) {
 					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 						put(Role.STAIR, u, y, site.stairV(y), site.stairFront(), b.stair());
 					}
-					// handrails flanking the flight (never at the canopy roof level, never on boarding edges)
-					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
-						if (y == StationGeometry.CANOPY_Y) {
+				}
+				if (flight.isEmpty()) {
+					continue;
+				}
+				// balustrades on the outer flanks of the whole flight, from the floor up to each step, so no rail hangs at head
+				// height over the platform (never at the canopy roof level, which the canopy fills, never on boarding edges)
+				final int left = flight.get(0) - 1;
+				final int right = flight.get(flight.size() - 1) + 1;
+				for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+					final int v = site.stairV(y);
+					for (int rail = StationGeometry.WALK_Y; rail <= y; rail++) {
+						if (rail == StationGeometry.CANOPY_Y && spec.roof() == RoofType.CANOPY) {
 							continue;
 						}
-						final int v = site.stairV(y);
-						if (!isEdge(band, u - 1)) {
-							put(Role.RAILING, u - 1, y, v, LocalDir.MINUS_U);
+						if (!isEdge(band, left)) {
+							put(Role.RAILING, left, rail, v, LocalDir.MINUS_U);
 						}
-						if (!isEdge(band, u + 1)) {
-							put(Role.RAILING, u + 1, y, v, LocalDir.PLUS_U);
+						if (!isEdge(band, right)) {
+							put(Role.RAILING, right, rail, v, LocalDir.PLUS_U);
 						}
 					}
 				}
@@ -1081,9 +1097,10 @@ public final class StationPlanner {
 
 		/**
 		 * Departure screens on every platform of a furnished station: one screen point on platforms shorter than 48, two (at a
-		 * quarter and three quarters of the length) on longer ones. Islands four or more wide get a back-to-back pair so both
-		 * tracks' passengers see one. Points keep clear of footbridge stairs and their landings; the first point of each
-		 * platform also gets a help point.
+		 * quarter and three quarters of the length) on longer ones. Under a roof the screen hangs from the ceiling, double-sided
+		 * and facing along the platform, two blocks wide where the platform has room (never over an edge cell); on an open
+		 * platform a standing screen is fixed to the back of a lamp post. Points keep clear of footbridge stairs and their
+		 * landings. Each platform also gets one help point, a wall unit, fixed to the post nearest its first screen.
 		 */
 		void platformEquipment() {
 			if (!spec.furniture()) {
@@ -1091,40 +1108,84 @@ public final class StationPlanner {
 			}
 			final List<Integer> targets = length >= 48 ? List.of(length / 4, length * 3 / 4) : List.of(length / 2);
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				final boolean pair = band.island() && band.width() >= 4;
-				final int u0 = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
-				final LocalDir front0 = band.island() ? LocalDir.MINUS_U : towardTrack(band);
-				boolean helped = false;
 				for (final int target : targets) {
-					final int v = pidsV(band, u0, pair, target);
-					if (v < 0) {
-						continue;
-					}
-					put(Role.FIXTURE, u0, StationGeometry.WALK_Y, v, front0, PIDS);
-					if (pair) {
-						put(Role.FIXTURE, u0 + 1, StationGeometry.WALK_Y, v, LocalDir.PLUS_U, PIDS);
-					}
-					if (!helped && !taken(u0, StationGeometry.WALK_Y, v + 1) && !nearStairs(band, v + 1)) {
-						helped = put(Role.FIXTURE, u0, StationGeometry.WALK_Y, v + 1, front0, "aurelia_transit_architecture:help_point");
+					if (!hangScreen(band, target)) {
+						onPost(band, target, PIDS);
 					}
 				}
+				onPost(band, targets.get(0), HELP_POINT);
 			}
 		}
 
-		/** The free v nearest {@code target} for a screen point (searching 0, +2, -2, +4 ...); -1 if none within 12. */
-		private int pidsV(TrackLayout.PlatformBand band, int u0, boolean pair, int target) {
+		/** The columns a hanging screen spans: the middle (and the next one) of an island, the back two of a side platform. */
+		private static List<Integer> screenColumns(TrackLayout.PlatformBand band) {
+			final List<Integer> columns = new ArrayList<>();
+			final int first = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
+			final int step = band.island() || band.trackRight() ? 1 : -1;
+			columns.add(first);
+			if (band.width() >= 4 && !isEdge(band, first + step)) {
+				columns.add(first + step);
+			}
+			return columns;
+		}
+
+		/** Hangs a screen under the ceiling at the free v nearest {@code target} (searching 0, +2, -2 ... up to 12); true if hung. */
+		private boolean hangScreen(TrackLayout.PlatformBand band, int target) {
+			final List<Integer> columns = screenColumns(band);
 			for (int d = 0; d <= 12; d += 2) {
-				for (final int v : new int[]{target + d, target - d}) {
-					if (v >= 1 && v <= length - 2 && !isEdge(band, u0) && !(pair && isEdge(band, u0 + 1)) && !nearStairs(band, v)
-							&& !taken(u0, StationGeometry.WALK_Y, v) && !(pair && taken(u0 + 1, StationGeometry.WALK_Y, v))) {
-						return v;
+				for (final int v : d == 0 ? new int[]{target} : new int[]{target + d, target - d}) {
+					if (v < 1 || v > length - 2 || nearStairs(band, v)) {
+						continue;
 					}
-					if (d == 0) {
-						break;
+					final int ceiling = ceiling(columns.get(0), v);
+					final int y = ceiling - 1;
+					if (ceiling < 0 || y < StationGeometry.WALK_Y + 2
+							|| columns.stream().anyMatch(u -> ceiling(u, v) != ceiling || taken(u, y, v) || isEdge(band, u))) {
+						continue;
 					}
+					for (final int u : columns) {
+						put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, HANGING_PIDS);
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/** The lowest roof, deck or slab above the walking level at (u, v), or -1 if open to the sky. */
+		private int ceiling(int u, int v) {
+			for (int y = StationGeometry.WALK_Y + 1; y <= StationGeometry.BUILDING_ROOF_Y + 2; y++) {
+				final PlannedBlock block = cells.get(new Cell(u, y, v));
+				if (block != null && block.role().covers()) {
+					return y;
 				}
 			}
 			return -1;
+		}
+
+		/**
+		 * Fixes a wall unit to the back of a column or lamp post on this platform, in the free cell along the platform next to
+		 * the post nearest {@code target}, facing away from it. True if placed.
+		 */
+		private boolean onPost(TrackLayout.PlatformBand band, int target, String blockId) {
+			final List<Cell> posts = new ArrayList<>();
+			for (final PlannedBlock block : cells.values()) {
+				if ((block.role() == Role.COLUMN || block.role() == Role.LAMP) && block.y() == StationGeometry.WALK_Y
+						&& block.u() >= band.uMin() && block.u() <= band.uMax()) {
+					posts.add(new Cell(block.u(), block.y(), block.v()));
+				}
+			}
+			posts.sort(Comparator.comparingInt((Cell post) -> Math.abs(post.v() - target)).thenComparingInt(Cell::v).thenComparingInt(Cell::u));
+			for (final Cell post : posts) {
+				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
+					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
+					if (v >= 0 && v < length && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
+							&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, blockId)) {
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 
 		/** True within 2 of a footbridge stair flight or its landing on this platform. */

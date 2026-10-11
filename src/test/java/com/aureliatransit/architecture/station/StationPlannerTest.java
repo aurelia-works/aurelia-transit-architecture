@@ -249,7 +249,7 @@ class StationPlannerTest {
 		}
 		// departure screens: at least one on every platform when furnished, none otherwise
 		for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
-			final long screens = list(byRole, Role.FIXTURE).stream().filter(b -> b.blockId().endsWith(":platform_pids") && b.y() == StationGeometry.WALK_Y
+			final long screens = list(byRole, Role.FIXTURE).stream().filter(b -> b.blockId().endsWith("platform_pids")
 					&& b.u() >= band.uMin() && b.u() <= band.uMax()).count();
 			if (spec.furniture() != (screens > 0)) {
 				scan.fail("furniture", spec, "platform " + band.number() + " has " + screens + " departure screens");
@@ -431,9 +431,9 @@ class StationPlannerTest {
 		expected.put(Role.ROOF_LIGHT, 22);
 		expected.put(Role.BENCH, 6);
 		expected.put(Role.BIN, 6);
-		expected.put(Role.FIXTURE, 6); // per platform: two departure screens and a help point
+		expected.put(Role.FIXTURE, 10); // per platform: two 2-wide hanging departure screens and a help point
 		assertEquals(expected, counts);
-		assertEquals(864, plan(spec).blocks().size());
+		assertEquals(868, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -789,21 +789,45 @@ class StationPlannerTest {
 	}
 
 	@Test
-	void wideIslandsGetBackToBackScreensClearOfTheStairs() {
-		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).footbridge(true).build();
+	void screensHangFromTheCanopyTwoWideClearOfTheStairs() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).roof(RoofType.CANOPY)
+				.footbridge(true).build();
 		final StationPlan plan = plan(spec);
 		final StationLayout site = StationLayout.of(spec, plan.layout());
-		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":platform_pids")).toList();
-		assertEquals(4, screens.size(), "two back-to-back pairs on a 64 long island");
+		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":hanging_platform_pids")).toList();
+		assertEquals(4, screens.size(), "two 2-wide screens on a 64 long island");
+		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":platform_pids")), "no standing screens under a roof");
 		for (final PlannedBlock screen : screens) {
-			final LocalDir back = screen.front() == LocalDir.MINUS_U ? LocalDir.PLUS_U : LocalDir.MINUS_U;
-			final int partnerU = screen.u() + (back == LocalDir.PLUS_U ? 1 : -1);
-			assertTrue(screens.stream().anyMatch(o -> o.u() == partnerU && o.v() == screen.v() && o.front() == back), "no partner for " + screen);
+			assertEquals(StationGeometry.CANOPY_Y - 1, screen.y(), "hangs right under the canopy: " + screen);
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == screen.u() && b.v() == screen.v() && b.y() == StationGeometry.CANOPY_Y && b.role().covers()),
+					"nothing to hang from: " + screen);
+			assertTrue(screen.front().alongTrack(), "faces along the platform: " + screen);
+			assertTrue(screens.stream().anyMatch(o -> Math.abs(o.u() - screen.u()) == 1 && o.v() == screen.v() && o.front() == screen.front()),
+					"not two wide: " + screen);
 			final int lo = Math.min(site.stairWallV(), site.landingV()) - 2;
 			final int hi = Math.max(site.stairWallV(), site.landingV()) + 2;
 			assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);
 		}
 		assertEquals(List.of(), LayoutValidator.validate(plan));
+	}
+
+	@Test
+	void wallUnitsOnPlatformsBackOntoAPost() {
+		for (final RoofType roof : RoofType.values()) {
+			for (final PlatformLayout layout : PlatformLayout.values()) {
+				final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(layout).platformLength(48).roof(roof).build();
+				final StationPlan plan = plan(spec);
+				final List<PlannedBlock> units = plan.blocks().stream().filter(b -> b.y() == StationGeometry.WALK_Y
+						&& (b.blockId().endsWith(":help_point") || b.blockId().endsWith(":platform_pids"))).toList();
+				assertEquals(plan.layout().platforms().size(), units.stream().filter(b -> b.blockId().endsWith(":help_point")).count(),
+						"one help point per platform: " + describe(spec));
+				for (final PlannedBlock unit : units) {
+					final int behind = unit.v() + (unit.front() == LocalDir.PLUS_V ? -1 : 1);
+					assertTrue(unit.front().alongTrack() && plan.blocks().stream().anyMatch(b -> b.u() == unit.u() && b.v() == behind
+							&& b.y() == StationGeometry.WALK_Y && (b.role() == Role.COLUMN || b.role() == Role.LAMP)), "nothing behind " + unit + " in " + describe(spec));
+				}
+			}
+		}
 	}
 
 	@Test

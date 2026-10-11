@@ -55,7 +55,7 @@ public final class StationGuide {
 			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"
 					+ "Join them with MTR's Platform Rail Connector, then extend the line."),
 			new Page("Commands", "/ata_station plan <text>\n/ata_station confirm\n/ata_station cancel\n/ata_station undo\n"
-					+ "/ata_station status\n\nUndo reverts your last build.\n/ata_guide gives this book again."));
+					+ "/ata_station status\n\nUndo reverts your last build, until the server restarts.\n/ata_guide gives this book again."));
 
 	private StationGuide() {
 	}
