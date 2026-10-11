@@ -25,7 +25,7 @@ import net.minecraft.util.Hand;
  */
 public class StationWrenchScreen extends Screen {
 
-	private static final int WIDTH = 300;
+	private static final int WIDTH = 320;
 	private static final int PRESET_COLUMNS = 4;
 	/** From the top of the description field to the first action row, before the preset rows. */
 	private static final int TEXT_HEIGHT = 46;

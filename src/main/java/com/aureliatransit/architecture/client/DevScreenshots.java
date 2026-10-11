@@ -2,7 +2,11 @@ package com.aureliatransit.architecture.client;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.screen.ingame.BookScreen;
 import net.minecraft.client.util.ScreenshotRecorder;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.util.Hand;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,17 +20,23 @@ import java.util.regex.Pattern;
  * screenshot for every file dropped into {@code <run dir>/screenshot-requests/}, so a script can capture the view while the
  * window stays in the background. The request's file name names the screenshot ({@code screenshots/<name>.png}); a request
  * containing {@code nohud} hides the HUD and chat for that shot, and {@code fov=<degrees>} sets the field of view for it.
- * Both are restored afterwards. Inert in a normal game.
+ * Both are restored afterwards. {@code open=wrench} opens the station wrench screen for the wrench in the main hand, and
+ * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. Inert in a
+ * normal game.
  */
 final class DevScreenshots {
 
 	/** Ticks before a shot that changes the HUD or field of view, so at least one frame renders with the change. */
 	private static final int HUD_SETTLE_TICKS = 3;
+	/** Ticks before a shot of a screen opened for it, so its widgets and textures are laid out and drawn. */
+	private static final int SCREEN_SETTLE_TICKS = 10;
 	private static final Pattern FOV = Pattern.compile("fov=(\\d+)");
+	private static final Pattern PAGE = Pattern.compile("page=(\\d+)");
 
 	private static String pending;
 	private static boolean restoreHud;
 	private static Integer restoreFov;
+	private static boolean closeScreen;
 	private static int wait;
 
 	private DevScreenshots() {
@@ -52,6 +62,10 @@ final class DevScreenshots {
 			if (restoreFov != null) {
 				client.options.getFov().setValue(restoreFov);
 				restoreFov = null;
+			}
+			if (closeScreen) {
+				client.setScreen(null);
+				closeScreen = false;
 			}
 			pending = null;
 			return;
@@ -81,6 +95,28 @@ final class DevScreenshots {
 			restoreFov = client.options.getFov().getValue();
 			client.options.getFov().setValue(Math.max(30, Math.min(110, Integer.parseInt(fov.group(1)))));
 		}
-		wait = restoreHud || restoreFov != null ? HUD_SETTLE_TICKS : 1;
+		closeScreen = openScreen(client, content);
+		wait = closeScreen ? SCREEN_SETTLE_TICKS : restoreHud || restoreFov != null ? HUD_SETTLE_TICKS : 1;
+	}
+
+	/** Opens the screen a request names; returns whether one was opened. */
+	private static boolean openScreen(MinecraftClient client, String content) {
+		if (content.contains("open=wrench")) {
+			StationWrenchScreen.open(Hand.MAIN_HAND);
+		} else if (content.contains("open=book")) {
+			final ItemStack stack = client.player.getMainHandStack();
+			if (!stack.isOf(Items.WRITTEN_BOOK)) {
+				return false;
+			}
+			final BookScreen screen = new BookScreen(BookScreen.Contents.create(stack));
+			client.setScreen(screen);
+			final Matcher page = PAGE.matcher(content);
+			if (page.find()) {
+				screen.setPage(Integer.parseInt(page.group(1)) - 1);
+			}
+		} else {
+			return false;
+		}
+		return client.currentScreen != null;
 	}
 }

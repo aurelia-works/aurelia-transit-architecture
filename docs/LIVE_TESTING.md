@@ -127,3 +127,19 @@ tick tag with a per-run tag, one function per view, 100 ticks apart, first 200 t
 each view's `ATA_TOUR_VIEW n name` log line before capturing, so shots line up with views. Output: `build/tour/<view>.png`,
 `build/tour/sheet.png`. The tour ends in `tour_end`; the script quits the client and removes the tags and functions
 (`tour.py --clean`). Coordinates come from the layout constants in `gen_v15.py`.
+
+## Screenshots on request (dev client)
+
+`./gradlew runClient` sets `-Data.devScreenshots=true`, which makes the client take its own F2 screenshot for every file dropped into
+`run/client/screenshot-requests/`. The window can stay hidden in the background; nothing is clicked or typed. The file name names the shot
+(`run/client/screenshots/<name>.png`), and its content holds options:
+
+- `nohud` hides the HUD and chat for the shot.
+- `fov=<degrees>` sets the field of view for the shot (the dev options use 110, which bends straight columns at the edges).
+- `open=wrench` opens the Station Wrench screen for the wrench in the main hand, and `open=book page=<n>` opens the written book in the
+  main hand at that page. The screen closes after the shot.
+
+Place the camera with RCON or the console (`gamemode spectator`, `tp <player> x y z yaw pitch`) and put items in the main hand with
+`item replace entity <player> weapon.mainhand ...`; `give` fills the first free hotbar slot, which is often not the selected one.
+For example, `printf 'nohud fov=70' > run/client/screenshot-requests/shed` writes `run/client/screenshots/shed.png` a few ticks later.
+The hook is off in a normal game.
