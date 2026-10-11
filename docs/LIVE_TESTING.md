@@ -138,6 +138,8 @@ each view's `ATA_TOUR_VIEW n name` log line before capturing, so shots line up w
 - `fov=<degrees>` sets the field of view for the shot (the dev options use 110, which bends straight columns at the edges).
 - `open=wrench` opens the Station Wrench screen for the wrench in the main hand, and `open=book page=<n>` opens the written book in the
   main hand at that page. The screen closes after the shot.
+- `use` right-clicks the block under the crosshair with the main-hand item before the shot, the way a player would (for example
+  an MTR Lift Refresher on a lift track). A screen that opens is in the shot and then closed.
 
 Place the camera with RCON or the console (`gamemode spectator`, `tp <player> x y z yaw pitch`) and put items in the main hand with
 `item replace entity <player> weapon.mainhand ...`; `give` fills the first free hotbar slot, which is often not the selected one.

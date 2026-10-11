@@ -14,7 +14,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -24,7 +26,7 @@ import java.util.Set;
 /**
  * Writes station plans as JSON for the 3D plan viewer: every planned block with its role, block id, front and state, plus the
  * design-rule violations, the station checks and a "suspect" flag on blocks that look out of place (nothing under something
- * that should stand, or touching nothing at all). Pure planner output, no game needed.
+ * that should stand, touching nothing at all, or not joined to the ground through other blocks). Pure planner output, no game needed.
  *
  * <pre>
  * ./gradlew compileJava
@@ -77,6 +79,7 @@ public final class StationPlanExport {
 		for (final PlannedBlock block : plan.blocks()) {
 			occupied.add(cell(block.u(), block.y(), block.v()));
 		}
+		final Set<Long> grounded = grounded(plan, occupied);
 		final List<String> ids = new ArrayList<>();
 		final Map<String, Integer> idIndex = new LinkedHashMap<>();
 		int suspects = 0;
@@ -86,7 +89,7 @@ public final class StationPlanExport {
 				ids.add(k);
 				return ids.size() - 1;
 			});
-			final String suspect = suspect(block, occupied);
+			final String suspect = grounded.contains(cell(block.u(), block.y(), block.v())) ? suspect(block, occupied) : "not connected to the ground";
 			if (!suspect.isEmpty()) {
 				suspects++;
 			}
@@ -116,6 +119,28 @@ public final class StationPlanExport {
 					.append(quote(c.status().name())).append(",\"message\":").append(quote(c.message())).append('}');
 		}
 		out.append("],\"blocks\":[").append(blocks).append("]}");
+	}
+
+	/** The cells joined to the ground (y <= 0) through face-touching blocks. */
+	private static Set<Long> grounded(StationPlan plan, Set<Long> occupied) {
+		final Set<Long> reached = new HashSet<>();
+		final Deque<int[]> queue = new ArrayDeque<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			if (block.y() <= 0 && reached.add(cell(block.u(), block.y(), block.v()))) {
+				queue.add(new int[] {block.u(), block.y(), block.v()});
+			}
+		}
+		final int[][] steps = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+		while (!queue.isEmpty()) {
+			final int[] at = queue.poll();
+			for (final int[] step : steps) {
+				final long next = cell(at[0] + step[0], at[1] + step[1], at[2] + step[2]);
+				if (occupied.contains(next) && reached.add(next)) {
+					queue.add(new int[] {at[0] + step[0], at[1] + step[1], at[2] + step[2]});
+				}
+			}
+		}
+		return reached;
 	}
 
 	/** Why a block looks out of place, or "" if it does not. */

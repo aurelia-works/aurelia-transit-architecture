@@ -291,12 +291,50 @@ class StationPlannerTest {
 			scan.fail("headroom", spec, "headroom box count");
 		}
 
+		final List<PlannedBlock> floating = unconnected(plan);
+		if (!floating.isEmpty()) {
+			scan.fail("connected", spec, floating.size() + " blocks not connected to the ground, first " + floating.get(0));
+		}
 		if (checkDeterminism && !plan.equals(StationPlanner.plan(spec))) {
 			scan.fail("determinism", spec, "second plan differs");
 		}
 	}
 
 	private record Cell(int u, int y, int v) {
+	}
+
+	/**
+	 * Blocks not joined to the ground (y <= 0) through a chain of face-touching blocks: a roof, wall or fixture left
+	 * floating in the air after the cells that held it were skipped.
+	 */
+	private static List<PlannedBlock> unconnected(StationPlan plan) {
+		final Map<Cell, PlannedBlock> byCell = new HashMap<>();
+		final List<Cell> queue = new ArrayList<>();
+		final Set<Cell> reached = new HashSet<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			final Cell cell = new Cell(block.u(), block.y(), block.v());
+			byCell.put(cell, block);
+			if (block.y() <= 0 && reached.add(cell)) {
+				queue.add(cell);
+			}
+		}
+		for (int i = 0; i < queue.size(); i++) {
+			final Cell cell = queue.get(i);
+			for (final Cell next : List.of(new Cell(cell.u() + 1, cell.y(), cell.v()), new Cell(cell.u() - 1, cell.y(), cell.v()),
+					new Cell(cell.u(), cell.y() + 1, cell.v()), new Cell(cell.u(), cell.y() - 1, cell.v()), new Cell(cell.u(), cell.y(), cell.v() + 1),
+					new Cell(cell.u(), cell.y(), cell.v() - 1))) {
+				if (byCell.containsKey(next) && reached.add(next)) {
+					queue.add(next);
+				}
+			}
+		}
+		final List<PlannedBlock> floating = new ArrayList<>();
+		for (final Map.Entry<Cell, PlannedBlock> entry : byCell.entrySet()) {
+			if (!reached.contains(entry.getKey())) {
+				floating.add(entry.getValue());
+			}
+		}
+		return floating;
 	}
 
 	private static List<PlannedBlock> list(Map<Role, List<PlannedBlock>> byRole, Role role) {
@@ -381,6 +419,19 @@ class StationPlannerTest {
 	void matrixSupportBoxesCoverEveryPlatformAndRampCell() {
 		scan().assertNone("support boxes");
 		scan().assertNone("headroom");
+	}
+
+	@Test
+	void matrixBlocksAreAllConnectedToTheGround() {
+		scan().assertNone("connected");
+	}
+
+	@Test
+	void presetBlocksAreAllConnectedToTheGround() {
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			final List<PlannedBlock> floating = unconnected(plan(StationDescriptionParser.parse(preset.description()).spec()));
+			assertTrue(floating.isEmpty(), preset.key() + ": " + floating.size() + " floating blocks, e.g. " + floating.stream().limit(3).toList());
+		}
 	}
 
 	@Test

@@ -7,6 +7,8 @@ import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.util.Hand;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,8 +23,9 @@ import java.util.regex.Pattern;
  * window stays in the background. The request's file name names the screenshot ({@code screenshots/<name>.png}); a request
  * containing {@code nohud} hides the HUD and chat for that shot, and {@code fov=<degrees>} sets the field of view for it.
  * Both are restored afterwards. {@code open=wrench} opens the station wrench screen for the wrench in the main hand, and
- * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. Inert in a
- * normal game.
+ * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. {@code use}
+ * right-clicks the block under the crosshair with the main-hand item first, like a player would, and any screen that opens is
+ * in the shot, then closed. Inert in a normal game.
  */
 final class DevScreenshots {
 
@@ -94,6 +97,12 @@ final class DevScreenshots {
 		if (fov.find()) {
 			restoreFov = client.options.getFov().getValue();
 			client.options.getFov().setValue(Math.max(30, Math.min(110, Integer.parseInt(fov.group(1)))));
+		}
+		if (content.contains("use") && client.crosshairTarget instanceof BlockHitResult hit && hit.getType() == HitResult.Type.BLOCK) {
+			client.interactionManager.interactBlock(client.player, Hand.MAIN_HAND, hit);
+			closeScreen = true;
+			wait = SCREEN_SETTLE_TICKS;
+			return;
 		}
 		closeScreen = openScreen(client, content);
 		wait = closeScreen ? SCREEN_SETTLE_TICKS : restoreHud || restoreFov != null ? HUD_SETTLE_TICKS : 1;

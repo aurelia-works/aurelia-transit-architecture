@@ -137,7 +137,7 @@ The generator never creates rail connections itself, because those live in MTR's
 
 ## Plan viewer
 
-`tools/StationPlanExport.java` writes plans as JSON, with every block (role, block id, front, state), the rule breaks, the station checks and a "suspect" flag. A block is flagged when it touches no other block, or when it should stand on something and has nothing under it: no span between neighbours, no wall behind it, nothing above it to hang from. `tools/station-plan-viewer.html` shows such an export in 3D: orbit, cut by height, filter by role, hover a block for its cell and id, and click a problem to fly to it.
+`tools/StationPlanExport.java` writes plans as JSON, with every block (role, block id, front, state), the rule breaks, the station checks and a "suspect" flag. A block is flagged when it touches no other block, when no chain of touching blocks joins it to the ground, or when it should stand on something and has nothing under it: no span between neighbours, no wall behind it, nothing above it to hang from. `tools/station-plan-viewer.html` shows such an export in 3D: orbit, cut by height, filter by role, hover a block for its cell and id, and click a problem to fly to it.
 
 ```
 ./gradlew compileJava
@@ -146,4 +146,6 @@ java -cp build/classes/java/main tools/StationPlanExport.java out.json "two trac
 ```
 
 Open the viewer in a browser and use **Open an export** to load the JSON.
+
+The planner tests hold every plan in the spec matrix and every preset to the same ground rule, so a floating block fails the build.
 
