@@ -80,6 +80,12 @@ public final class StationGeometry {
 		int previousU = 0;
 		boolean previousTrack = false;
 		for (int i = 0; i < bands.length(); i++) {
+			if (bands.charAt(i) == 'W') {
+				// a gap behind a side platform, so its back never faces the next track
+				previousU++;
+				previousTrack = false;
+				continue;
+			}
 			final boolean track = bands.charAt(i) == 'T';
 			final boolean leftIsTrack = i > 0 && bands.charAt(i - 1) == 'T';
 			final boolean leftIsPlatform = i > 0 && bands.charAt(i - 1) == 'P';
@@ -97,9 +103,11 @@ public final class StationGeometry {
 				tracks.add(new TrackLayout.Track(tracks.size() + 1, u, leftIsPlatform, rightIsPlatform));
 				previousU = u;
 			} else {
-				final int uMin = i == 0 ? 0 : previousU + EDGE_OFFSET;
+				// a side platform back to back with the one before touches it
+				final int uMin = i == 0 ? 0 : leftIsPlatform ? previousU + 1 : previousU + EDGE_OFFSET;
 				final int uMax = uMin + platformWidth(spec, platforms.size()) - 1;
-				platforms.add(new TrackLayout.PlatformBand(platforms.size() + 1, uMin, uMax, leftIsTrack, rightIsTrack));
+				final int[] run = platformRun(spec, platforms.size());
+				platforms.add(new TrackLayout.PlatformBand(platforms.size() + 1, uMin, uMax, leftIsTrack, rightIsTrack, run[0], run[1]));
 				previousU = uMax;
 			}
 			previousTrack = track;
@@ -116,7 +124,8 @@ public final class StationGeometry {
 		}
 		final List<TrackLayout.PlatformBand> shiftedPlatforms = new ArrayList<>();
 		for (final TrackLayout.PlatformBand band : platforms) {
-			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight()));
+			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight(),
+					band.vFrom(), band.vTo()));
 		}
 		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
 	}
@@ -132,6 +141,37 @@ public final class StationGeometry {
 		}
 		final int outer = Math.min(platformWidth(spec, 0), platformWidth(spec, platformCount(spec) - 1));
 		return spec.trackCount() >= 8 && outer >= MIN_LIFT_ISLAND_WIDTH ? 2 : 1;
+	}
+
+	/** Rows a footbridge's stairs, landings and lifts take on either side of its line, which every platform must reach. */
+	static final int BRIDGE_REACH = 12;
+
+	/**
+	 * First and last v of the platform at {@code index} (0-based): the whole length, or a listed platform's own length. A
+	 * terminus's shorter platform ends at the head building; a through station's is centred on the footbridge line. Any
+	 * platform a footbridge may serve (a through station's, a hub's) still reaches {@link #BRIDGE_REACH} rows past that line.
+	 */
+	public static int[] platformRun(StationSpec spec, int index) {
+		final int length = spec.platformLength();
+		final int own = spec.listed() ? spec.platforms().get(index).lengthIn(length) : length;
+		if (own >= length) {
+			return new int[]{0, length - 1};
+		}
+		int from;
+		int to;
+		if (spec.terminus()) {
+			from = length - own;
+			to = length - 1;
+		} else {
+			from = StationLayout.entranceV(spec.sideBuilding(), length) - own / 2;
+			to = from + own - 1;
+		}
+		if (!spec.terminus() || spec.hub()) {
+			final int line = StationLayout.entranceV(spec.sideBuilding(), length);
+			from = Math.min(from, line - BRIDGE_REACH);
+			to = Math.max(to, line + BRIDGE_REACH);
+		}
+		return new int[]{Math.max(0, from), Math.min(length - 1, to)};
 	}
 
 	/** Width of the platform at {@code index} (0-based, left to right): its own when the platforms are listed. */
@@ -166,19 +206,29 @@ public final class StationGeometry {
 
 	/** How many platforms the station has. */
 	public static int platformCount(StationSpec spec) {
-		return (int) bandPattern(spec).chars().filter(c -> c == 'P').count();
+		return spec.listed() ? spec.platforms().size() : (int) bandPattern(spec).chars().filter(c -> c == 'P').count();
 	}
 
-	/** Bands left to right: 'T' for a track, 'P' for a platform. */
+	/** Bands left to right: 'T' for a track, 'P' for a platform, 'W' for a one-column gap. */
 	private static String bandPattern(StationSpec spec) {
 		final int tracks = spec.trackCount();
 		final StringBuilder bands = new StringBuilder();
 		if (spec.listed()) {
-			// each platform brings its tracks: an island one on each side, a side platform one on its inner side (the first
-			// platform's right, any other's left)
+			// each platform brings its tracks: an island one on each side, a side platform one. A side platform's back is the
+			// station's edge, or the back of the side platform after it; a side platform with an island after it gets a gap
+			// ('W') behind it, so no track is shared and every side platform keeps one boarding edge
+			boolean openBack = false;
 			for (int i = 0; i < spec.platforms().size(); i++) {
-				final PlatformSpec platform = spec.platforms().get(i);
-				bands.append(platform.kind() == PlatformSpec.Kind.ISLAND ? "TPT" : i == 0 ? "PT" : "TP");
+				if (spec.platforms().get(i).kind() == PlatformSpec.Kind.ISLAND) {
+					bands.append(openBack ? "WTPT" : "TPT");
+					openBack = false;
+				} else if (i == 0 || openBack) {
+					bands.append("PT");
+					openBack = false;
+				} else {
+					bands.append("TP");
+					openBack = true;
+				}
 			}
 		} else if (spec.platformLayout() == PlatformLayout.SIDE) {
 			bands.append('P');

@@ -211,7 +211,7 @@ public final class LayoutValidator {
 
 		/** One violation at the first v where the platform edge next to a track is missing or faces the wrong way. */
 		private void edgeAlongTrack(List<Violation> found, TrackLayout.Track track, int edgeU, LocalDir toward) {
-			for (int v = 0; v < layout.platformLength(); v++) {
+			for (int v = layout.platformFrom(track); v <= layout.platformTo(track); v++) {
 				if (!hasEdgeFacing(edgeU, v, toward)) {
 					found.add(new Violation(Violation.Kind.PLATFORM_OFFSET, edgeU, StationGeometry.PLATFORM_Y, v,
 							"track " + track.number() + " needs a platform edge facing it at u=" + edgeU + " (v=" + v + " has none)"));

@@ -1140,4 +1140,18 @@ class StationPlannerTest {
 		}
 		return runs;
 	}
+
+	@Test
+	void hallRowsKeptOffStairsAndDoorsLeaveNoOverlongGirder() {
+		// the footbridge stair on a wide side platform's column line and the building's doorways once left a 21-cell gap
+		final StationPlan plan = plan(StationDescriptionParser.parse("with a station building train shed 75 long 2 tracks side platforms 8 wide").spec());
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+	}
+
+	@Test
+	void theBuildingStairLandingIsLit() {
+		// the stair well once swallowed the ceiling panel over its landing
+		final StationPlan plan = plan(StationDescriptionParser.parse("with a station building canopies 42 long 2 tracks island platforms").spec());
+		assertTrue(StationAudit.audit(plan).buildable(), () -> StationAudit.audit(plan).problems().toString());
+	}
 }

@@ -144,10 +144,11 @@ final class StationText {
 				what = "rail nodes off";
 			} else if (pending.railSkipped()) {
 				what = BlockStateResolver.RAIL_SKIPPED;
-			} else if (keptNode(pending, track.u(), 0) && keptNode(pending, track.u(), layout.platformLength() - 1)) {
-				what = "uses the rail nodes already at " + corner(frame, track.u(), 0) + " and " + corner(frame, track.u(), layout.platformLength() - 1);
+			} else if (keptNode(pending, track.u(), layout.platformFrom(track)) && keptNode(pending, track.u(), layout.platformTo(track))) {
+				what = "uses the rail nodes already at " + corner(frame, track.u(), layout.platformFrom(track)) + " and "
+						+ corner(frame, track.u(), layout.platformTo(track));
 			} else {
-				what = "rail nodes at " + corner(frame, track.u(), 0) + " and " + corner(frame, track.u(), layout.platformLength() - 1)
+				what = "rail nodes at " + corner(frame, track.u(), layout.platformFrom(track)) + " and " + corner(frame, track.u(), layout.platformTo(track))
 						+ ": connect them with an MTR Platform Rail Connector";
 			}
 			out.accept(Text.literal("Track " + track.number() + ": " + what).formatted(Formatting.AQUA));

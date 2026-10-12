@@ -200,7 +200,7 @@ public final class StationAudit {
 			}
 			final StringBuilder message = new StringBuilder()
 					.append(faces.size()).append(faces.size() == 1 ? " boarding face" : " boarding faces")
-					.append(", each measured at ").append(spec.platformLength()).append(" blocks, as requested");
+					.append(", each measured at ").append(spec.listed() ? "its platform's length" : spec.platformLength() + " blocks").append(", as requested");
 			if (!through.isEmpty()) {
 				message.append("; ").append(through.size() == 1 ? "track " : "tracks ").append(join(through))
 						.append(through.size() == 1 ? " runs" : " run").append(" through without a platform");
@@ -242,8 +242,9 @@ public final class StationAudit {
 			final int[] run = runs.get(0);
 			final TrackLayout.PlatformBand band = bandAt(edgeU);
 			faces.add(new Face(track.number(), band == null ? 0 : band.number(), left, run[0], run[1]));
-			if (run[1] != spec.platformLength()) {
-				fail(Topic.FACES, side + " measures " + run[1] + " blocks of boarding edge; " + spec.platformLength() + " requested");
+			final int requested = band == null ? spec.platformLength() : band.length();
+			if (run[1] != requested) {
+				fail(Topic.FACES, side + " measures " + run[1] + " blocks of boarding edge; " + requested + " requested");
 			}
 		}
 
@@ -833,7 +834,7 @@ public final class StationAudit {
 				int atWorst = 0;
 				String firstWorst = "";
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
-					for (int v = 0; v < layout.platformLength(); v++) {
+					for (int v = band.vFrom(); v <= band.vTo(); v++) {
 						if (grid[index(u, v)] != Ground.PLATFORM || !has(u, StationGeometry.PLATFORM_Y, v, Role.PLATFORM_EDGE)) {
 							continue;
 						}

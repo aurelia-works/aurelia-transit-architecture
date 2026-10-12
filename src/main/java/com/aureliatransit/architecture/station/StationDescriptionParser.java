@@ -1131,6 +1131,15 @@ public final class StationDescriptionParser {
 			} else {
 				defaulted.add("length " + StationSpec.DEFAULT_LENGTH + " (default)");
 			}
+			// the station is as long as its longest listed platform
+			final int longest = list.stream().mapToInt(PlatformSpec::length).max().orElse(0);
+			if (longest > 0) {
+				final int stationLength = builder.build().platformLength();
+				if (longest > stationLength) {
+					builder.platformLength(longest);
+					note(-1, "length " + longest + " (the longest listed platform)");
+				}
+			}
 
 			// width
 			// a footbridge's side platforms need room for a two-column stair, or they get no lift and are not step-free

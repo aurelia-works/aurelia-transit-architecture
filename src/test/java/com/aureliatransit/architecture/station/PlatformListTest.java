@@ -71,12 +71,33 @@ class PlatformListTest {
 	}
 
 	@Test
+	void eachPlatformRunsItsOwnLength() {
+		final StationSpec through = parse("120 long; platform 1: side 40 long; platform 2: island; platform 3: side 200 long").spec();
+		assertEquals(200, through.platformLength(), "the station grows to its longest platform");
+		final TrackLayout layout = StationGeometry.layout(through);
+		final TrackLayout.PlatformBand first = layout.platforms().get(0);
+		assertEquals(40, first.length());
+		assertEquals(200, layout.platforms().get(1).length());
+		final int line = StationLayout.entranceV(false, 200);
+		assertTrue(first.runs(line - StationGeometry.BRIDGE_REACH) && first.runs(line + StationGeometry.BRIDGE_REACH), "reaches the footbridge");
+		final StationPlan plan = StationPlanner.plan(through);
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		assertTrue(StationAudit.audit(plan).buildable(), () -> StationAudit.audit(plan).problems().toString());
+		assertTrue(plan.blocks().stream().noneMatch(b -> b.role() == Role.PLATFORM_EDGE && b.u() >= first.uMin() && b.u() <= first.uMax()
+				&& !first.runs(b.v())), "no edge past the short platform");
+
+		final TrackLayout terminus = StationGeometry.layout(parse("terminus 100 long; platform 1: island 30 long; platform 2: island").spec());
+		assertEquals(99, terminus.platforms().get(0).vTo(), "a terminus platform ends at the head");
+		assertEquals(70, terminus.platforms().get(0).vFrom());
+	}
+
+	@Test
 	void mixedListsPlanCleanlyInEveryStationType() {
 		final Random random = new Random(1600);
 		final String[] kinds = {"", "with a station building", "with a footbridge", "terminus", "hub"};
 		final String[] roofs = {"canopies", "train shed", "no roof"};
 		final List<String> problems = new ArrayList<>();
-		for (int round = 0; round < 60; round++) {
+		for (int round = 0; round < 400; round++) {
 			final String kind = kinds[round % kinds.length];
 			final String roof = roofs[(round / kinds.length) % roofs.length];
 			final int count = 1 + random.nextInt(kind.equals("hub") ? 5 : 6);
@@ -86,6 +107,9 @@ class PlatformListTest {
 				text.append("; platform ").append(i).append(": ").append(island ? "island" : "side");
 				if (random.nextBoolean()) {
 					text.append(' ').append(StationSpec.MIN_WIDTH + random.nextInt(StationSpec.MAX_WIDTH - StationSpec.MIN_WIDTH + 1)).append(" wide");
+				}
+				if (random.nextInt(3) == 0) {
+					text.append(' ').append(StationSpec.MIN_LENGTH + random.nextInt(100)).append(" long");
 				}
 				text.append(new String[]{"", "", " canopy", " open"}[random.nextInt(4)]);
 			}

@@ -226,7 +226,7 @@ class StationGeometryTest {
 	}
 
 	private static void assertBand(TrackLayout.PlatformBand band, int number, int uMin, int uMax, boolean trackLeft, boolean trackRight) {
-		assertEquals(new TrackLayout.PlatformBand(number, uMin, uMax, trackLeft, trackRight), band);
+		assertEquals(new TrackLayout.PlatformBand(number, uMin, uMax, trackLeft, trackRight, band.vFrom(), band.vTo()), band);
 	}
 
 	private static void assertTrack(TrackLayout.Track track, int number, int u, boolean platformLeft, boolean platformRight) {

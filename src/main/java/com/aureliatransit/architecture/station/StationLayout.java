@@ -49,14 +49,12 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		int bays = 0;
 		int vStart = 0;
 		int vEnd = 0;
-		int entranceV = length / 2;
+		final int entranceV = entranceV(building, length);
 		int innerSide = 1;
 		if (building) {
-			bays = length >= 64 ? 5 : length >= 19 ? 3 : 2;
-			final int buildingLength = bays * StationGeometry.BAY + 1;
-			vStart = (length - buildingLength) / 2;
-			vEnd = vStart + buildingLength - 1;
-			entranceV = vStart + StationGeometry.BAY * (bays / 2) + 3;
+			bays = bays(length);
+			vStart = (length - (bays * StationGeometry.BAY + 1)) / 2;
+			vEnd = vStart + bays * StationGeometry.BAY;
 			innerSide = entranceV + 8 <= vEnd - 1 ? 1 : -1;
 		}
 		final List<Integer> served = new ArrayList<>();
@@ -85,6 +83,20 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		}
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
 				bridge ? served : List.of());
+	}
+
+	/** Facade bays of a station building beside platforms this long. */
+	private static int bays(int length) {
+		return length >= 64 ? 5 : length >= 19 ? 3 : 2;
+	}
+
+	/** v of the street entrance and the footbridge line: the middle bay of a side building, else the middle of the platforms. */
+	public static int entranceV(boolean building, int length) {
+		if (!building) {
+			return length / 2;
+		}
+		final int bays = bays(length);
+		return (length - (bays * StationGeometry.BAY + 1)) / 2 + StationGeometry.BAY * (bays / 2) + 3;
 	}
 
 	/** A hub with platforms beside no bay track: islands cut off from the head building by tracks running through. */
@@ -204,7 +216,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		}
 		final int out = -stairSide;
 		final Lift lift = new Lift(c0, bridgeV + 2 * out, out);
-		return lift.vMin() >= 0 && lift.vMax() <= layout.platformLength() - 1 ? lift : null;
+		return band.runs(lift.vMin()) && band.runs(lift.vMax()) ? lift : null;
 	}
 
 	/**

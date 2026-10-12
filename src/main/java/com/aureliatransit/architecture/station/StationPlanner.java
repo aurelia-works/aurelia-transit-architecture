@@ -256,7 +256,7 @@ public final class StationPlanner {
 
 		void floors() {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				for (int v = 0; v < length; v++) {
+				for (int v = band.vFrom(); v <= band.vTo(); v++) {
 					for (int u = band.uMin(); u <= band.uMax(); u++) {
 						if (u == band.uMin() && band.trackLeft()) {
 							put(Role.PLATFORM_EDGE, u, StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
@@ -276,11 +276,11 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
-					put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, -2, LocalDir.MINUS_V);
-					put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, -1, LocalDir.MINUS_V);
+					put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 2, LocalDir.MINUS_V);
+					put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 1, LocalDir.MINUS_V);
 					if (!layout.terminus()) { // a terminus's platforms run level into its concourse
-						put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, length, LocalDir.PLUS_V);
-						put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, length + 1, LocalDir.PLUS_V);
+						put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, band.vTo() + 1, LocalDir.PLUS_V);
+						put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, band.vTo() + 2, LocalDir.PLUS_V);
 					}
 				}
 			}
@@ -291,8 +291,8 @@ public final class StationPlanner {
 				return;
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
-				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, 0, LocalDir.PLUS_V);
-				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, length - 1, LocalDir.PLUS_V);
+				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformFrom(track), LocalDir.PLUS_V);
+				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformTo(track), LocalDir.PLUS_V);
 			}
 		}
 
@@ -444,13 +444,29 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// upper slab with light panels, leaving the stair well open
+			// upper slab with light panels, leaving the stair well open; a panel that falls in the well moves to the slab beside
+			// it, so the stair's landing is not left dark
+			final Set<Cell> moved = new HashSet<>();
+			for (int u = uA; u <= uB; u++) {
+				for (int v = site.innerStairMin(); v <= site.innerStairMax(); v++) {
+					if ((u + v) % 4 != 0) {
+						continue;
+					}
+					for (final int[] c : new int[][]{{uA - 1, v}, {uB + 1, v}, {u, site.innerStairMin() - 1}, {u, site.innerStairMax() + 1}}) {
+						if (c[0] > uS && c[0] < uP && c[1] > vS && c[1] < vE && !(c[0] >= uA && c[0] <= uB && c[1] >= site.innerStairMin()
+								&& c[1] <= site.innerStairMax())) {
+							moved.add(new Cell(c[0], StationGeometry.UPPER_FLOOR_Y, c[1]));
+							break;
+						}
+					}
+				}
+			}
 			for (int u = uS + 1; u <= uP - 1; u++) {
 				for (int v = vS + 1; v <= vE - 1; v++) {
 					if (u >= uA && u <= uB && v >= site.innerStairMin() && v <= site.innerStairMax()) {
 						continue;
 					}
-					if ((u + v) % 4 == 0) {
+					if ((u + v) % 4 == 0 || moved.contains(new Cell(u, StationGeometry.UPPER_FLOOR_Y, v))) {
 						put(Role.LIGHT_PANEL, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
 					} else {
 						put(Role.FLOOR, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.upperFloor());
@@ -1666,7 +1682,7 @@ public final class StationPlanner {
 				}
 				final int top = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
 				for (final int u : columnLines(band, roof(band))) {
-					for (final int v : spec.roof() == RoofType.HALL ? hallRows() : columnVForLine(u)) {
+					for (final int v : spec.roof() == RoofType.HALL ? hallRows() : columnVForLine(band, u)) {
 						final int base = spec.roof() == RoofType.HALL ? standsOn(u, v, top) : StationGeometry.WALK_Y - 1;
 						if (base >= StationGeometry.WALK_Y) {
 							// the row crosses a lift shaft or another roof: a pier on that roof carries the frame
@@ -1674,6 +1690,13 @@ public final class StationPlanner {
 								put(Role.BRIDGE_PIER, u, y, v, LocalDir.PLUS_V, palette.building().pier());
 							}
 							continue;
+						}
+						if (!band.runs(v)) {
+							// past a shorter platform's end a hall column stands on a footing of platform floor, never on its ramp
+							if (taken(u, StationGeometry.PLATFORM_Y, v)) {
+								continue;
+							}
+							put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
 						}
 						for (int y = StationGeometry.WALK_Y; y < top - 1; y++) {
 							put(Role.COLUMN, u, y, v, LocalDir.PLUS_V);
@@ -1684,16 +1707,28 @@ public final class StationPlanner {
 			}
 		}
 
-		/** Column v for one column line: the global spacing minus cells where stairs, railings or piers stand, with gaps of at most 9. */
-		private List<Integer> columnVForLine(int line) {
-			if (!site.bridge()) {
+		/** Column v along one platform: the station's spacing, or the same spacing along a shorter platform's own run. */
+		private List<Integer> columnV(TrackLayout.PlatformBand band) {
+			if (band.vFrom() == 0 && band.vTo() == length - 1) {
 				return columnV;
+			}
+			final List<Integer> positions = new ArrayList<>();
+			for (final int v : columnPositions(band.length())) {
+				positions.add(band.vFrom() + v);
+			}
+			return positions;
+		}
+
+		/** Column v for one column line: the platform's spacing minus cells where stairs, railings or piers stand, with gaps of at most 9. */
+		private List<Integer> columnVForLine(TrackLayout.PlatformBand band, int line) {
+			if (!site.bridge()) {
+				return columnV(band);
 			}
 			// up to the roof cell over the cap: a sign or a stair there leaves the column carrying nothing
 			final int top = StationGeometry.CANOPY_Y;
 			final List<Integer> lines = List.of(line);
 			final List<Integer> kept = new ArrayList<>();
-			for (final int v : columnV) {
+			for (final int v : columnV(band)) {
 				boolean clash = false;
 				for (final int u : lines) {
 					for (int y = StationGeometry.WALK_Y; y <= top; y++) {
@@ -1721,7 +1756,7 @@ public final class StationPlanner {
 				int b = supports.get(i + 1);
 				while (b - a > 9) {
 					int mid = (a + b) / 2;
-					if (mid <= a || mid >= b || mid < 0 || mid >= length) {
+					if (mid <= a || mid >= b || !band.runs(mid)) {
 						break;
 					}
 					boolean clash = false;
@@ -1780,6 +1815,24 @@ public final class StationPlanner {
 				}
 			}
 			rows.sort(Comparator.naturalOrder());
+			// a row kept off a doorway or a stair can leave two rows further apart than a girder spans: add one between them,
+			// nearest the middle, clear of doorways if possible
+			boolean filled = true;
+			while (filled) {
+				filled = false;
+				for (int i = 0; i + 1 < rows.size() && !filled; i++) {
+					final int a = rows.get(i);
+					final int b = rows.get(i + 1);
+					if (b - a <= StationGeometry.MAX_BEAM_SPAN) {
+						continue;
+					}
+					final int found = gapRow(a, b, top);
+					if (found >= 0) {
+						rows.add(i + 1, found);
+						filled = true;
+					}
+				}
+			}
 			// shifting rows off doorways can leave an end out of the girders' reach (short platforms): add a row near that end
 			final int reach = StationGeometry.MAX_CANTILEVER;
 			if (!rows.isEmpty() && rows.get(rows.size() - 1) < length - 1 - reach) {
@@ -1791,6 +1844,21 @@ public final class StationPlanner {
 			rows.sort(Comparator.naturalOrder());
 			hallRows = rows;
 			return rows;
+		}
+
+		/** A free row strictly between rows a and b, nearest their middle (clear of doorways first); -1 if there is none. */
+		private int gapRow(int a, int b, int top) {
+			final int mid = (a + b) / 2;
+			for (final boolean doors : new boolean[]{true, false}) {
+				for (int d = 0; d <= (b - a) / 2; d++) {
+					for (final int v : new int[]{mid + d, mid - d}) {
+						if (v > a && v < b && rowFree(v, top, doors)) {
+							return v;
+						}
+					}
+				}
+			}
+			return -1;
 		}
 
 		/**
@@ -1858,6 +1926,10 @@ public final class StationPlanner {
 							return false;
 						}
 					}
+					// past a shorter platform's end the column needs its footing cell free (not the platform's ramp)
+					if (!band.runs(v) && taken(u, StationGeometry.PLATFORM_Y, v)) {
+						return false;
+					}
 				}
 			}
 			return true;
@@ -1884,13 +1956,17 @@ public final class StationPlanner {
 					continue;
 				}
 				final List<Integer> lines = columnLines(band, RoofType.CANOPY);
-				for (int v = 0; v < length; v++) {
+				final List<Integer> posts = columnV(band);
+				for (int v = band.vFrom(); v <= band.vTo(); v++) {
+					// lit every 4th cell along the platform, except where a column stands
+					final int along = v - band.vFrom();
+					final boolean light = along >= 4 && along % 4 == 0 && !posts.contains(v);
 					for (int u = band.uMin(); u <= band.uMax(); u++) {
 						if (u == band.uMin()) {
 							put(Role.ROOF_EDGE, u, y, v, LocalDir.MINUS_U);
 						} else if (u == band.uMax()) {
 							put(Role.ROOF_EDGE, u, y, v, LocalDir.PLUS_U);
-						} else if (lines.contains(u) && isLightV(v)) {
+						} else if (lines.contains(u) && light) {
 							put(Role.ROOF_LIGHT, u, y, v, LocalDir.PLUS_V);
 						} else {
 							put(Role.ROOF, u, y, v, LocalDir.PLUS_V);
@@ -2199,7 +2275,7 @@ public final class StationPlanner {
 				}
 				final int u = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
 				final LocalDir front = band.island() ? LocalDir.MINUS_U : towardTrack(band);
-				for (int v = 4; v <= length - 1; v += 8) {
+				for (int v = band.vFrom() + 4; v <= band.vTo(); v += 8) {
 					put(Role.LAMP, u, StationGeometry.WALK_Y, v, front);
 				}
 			}
@@ -2211,7 +2287,7 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				int index = 0;
-				for (int v = 8; v <= length - 2; v += 16, index++) {
+				for (int v = band.vFrom() + 8; v <= band.vTo() - 1; v += 16, index++) {
 					final int u;
 					final LocalDir front;
 					if (band.island()) {
@@ -2229,7 +2305,7 @@ public final class StationPlanner {
 					put(Role.BENCH, u, StationGeometry.WALK_Y, v, front);
 					put(Role.BENCH, u, StationGeometry.WALK_Y, v + 1, front);
 					// the bin after the pair, when that cell is still platform (else the bench stands without one)
-					if (v + 2 < length) {
+					if (v + 2 <= band.vTo()) {
 						put(Role.BIN, u, StationGeometry.WALK_Y, v + 2, front);
 					}
 				}
@@ -2408,8 +2484,10 @@ public final class StationPlanner {
 			if (!spec.furniture()) {
 				return;
 			}
-			final List<Integer> targets = length >= 48 ? List.of(length / 4, length * 3 / 4) : List.of(length / 2);
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final int run = band.length();
+				final int from = band.vFrom();
+				final List<Integer> targets = run >= 48 ? List.of(from + run / 4, from + run * 3 / 4) : List.of(from + run / 2);
 				for (final int target : targets) {
 					if (!hangScreen(band, target)) {
 						onPost(band, target, PIDS);
@@ -2436,7 +2514,7 @@ public final class StationPlanner {
 			final List<Integer> columns = screenColumns(band);
 			for (int d = 0; d <= 12; d += 2) {
 				for (final int v : d == 0 ? new int[]{target} : new int[]{target + d, target - d}) {
-					if (v < 1 || v > length - 2 || nearStairs(band, v)) {
+					if (v < band.vFrom() + 1 || v > band.vTo() - 1 || nearStairs(band, v)) {
 						continue;
 					}
 					final int ceiling = ceiling(columns.get(0), v);
@@ -2473,7 +2551,7 @@ public final class StationPlanner {
 			final List<Cell> posts = new ArrayList<>();
 			for (final PlannedBlock block : cells.values()) {
 				if ((block.role() == Role.COLUMN || block.role() == Role.LAMP) && block.y() == StationGeometry.WALK_Y
-						&& block.u() >= band.uMin() && block.u() <= band.uMax()) {
+						&& band.contains(block.u(), block.v())) {
 					posts.add(new Cell(block.u(), block.y(), block.v()));
 				}
 			}
@@ -2481,7 +2559,7 @@ public final class StationPlanner {
 			for (final Cell post : posts) {
 				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
 					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
-					if (v >= 0 && v < length && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
+					if (band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
 							&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, blockId)) {
 						return true;
 					}
@@ -2584,9 +2662,9 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (band.island()) {
 					// one row down the middle: the signs are double-sided, so it reads from both tracks
-					signRow((band.uMin() + band.uMax()) / 2, LocalDir.MINUS_U);
+					signRow(band, (band.uMin() + band.uMax()) / 2, LocalDir.MINUS_U);
 				} else {
-					signRow(backColumn(band), towardTrack(band));
+					signRow(band, backColumn(band), towardTrack(band));
 				}
 			}
 		}
@@ -2595,14 +2673,14 @@ public final class StationPlanner {
 		 * Three signs side by side along v, centred on the platform's middle; shifted by 2 along v until the cells are free.
 		 * Shifts run towards the platform end first and, if the end is reached, back towards its start.
 		 */
-		private void signRow(int u, LocalDir front) {
-			final int start = length / 2 - 1;
-			for (int v = start; v + 2 <= length - 1; v += 2) {
+		private void signRow(TrackLayout.PlatformBand band, int u, LocalDir front) {
+			final int start = band.vFrom() + band.length() / 2 - 1;
+			for (int v = start; v + 2 <= band.vTo(); v += 2) {
 				if (placeRow(u, v, front)) {
 					return;
 				}
 			}
-			for (int v = start - 2; v >= 0; v -= 2) {
+			for (int v = start - 2; v >= band.vFrom(); v -= 2) {
 				if (placeRow(u, v, front)) {
 					return;
 				}
@@ -2632,8 +2710,8 @@ public final class StationPlanner {
 			}
 			final List<Box> headroom = new ArrayList<>();
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				headroom.add(new Box(band.uMin(), StationGeometry.WALK_Y, 0, band.uMax(), StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1,
-						length - 1));
+				headroom.add(new Box(band.uMin(), StationGeometry.WALK_Y, band.vFrom(), band.uMax(), StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1,
+						band.vTo()));
 				supports.add(new Box(band.uMin(), -1, layout.vMin(), band.uMax(), -1, layout.trackEnd()));
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {

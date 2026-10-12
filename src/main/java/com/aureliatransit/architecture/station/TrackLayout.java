@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -23,7 +24,13 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
-		platforms = List.copyOf(platforms);
+		// a band made without its own run along the station runs the whole platform length
+		final List<PlatformBand> bands = new ArrayList<>();
+		for (final PlatformBand band : platforms) {
+			bands.add(band.vTo() < 0 ? new PlatformBand(band.number(), band.uMin(), band.uMax(), band.trackLeft(), band.trackRight(), 0,
+					platformLength - 1) : band);
+		}
+		platforms = List.copyOf(bands);
 	}
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
@@ -63,6 +70,31 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	/** Last v this track (and its clearance) runs to: its buffer stop, or the footprint end for a track running through. */
 	public int trackEnd(Track track) {
 		return bay(track) ? platformLength - 1 : vMax();
+	}
+
+	/** The platform along this track (the longer, for a track between two), or null for a track between no platforms. */
+	public PlatformBand platformOf(Track track) {
+		PlatformBand best = null;
+		for (final PlatformBand band : platforms) {
+			final boolean beside = band.trackRight() && band.uMax() + StationGeometry.EDGE_OFFSET == track.u()
+					|| band.trackLeft() && band.uMin() - StationGeometry.EDGE_OFFSET == track.u();
+			if (beside && (best == null || band.length() > best.length())) {
+				best = band;
+			}
+		}
+		return best;
+	}
+
+	/** First v of the platform along this track (0 for a track between no platforms). */
+	public int platformFrom(Track track) {
+		final PlatformBand band = platformOf(track);
+		return band == null ? 0 : band.vFrom();
+	}
+
+	/** Last v of the platform along this track ({@code platformLength - 1} for a track between no platforms). */
+	public int platformTo(Track track) {
+		final PlatformBand band = platformOf(track);
+		return band == null ? platformLength - 1 : band.vTo();
 	}
 
 	/** A platform beside at least one bay track: it runs level into the head building's concourse. */
@@ -159,16 +191,37 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	}
 
 	/**
-	 * A platform occupying columns uMin..uMax.
+	 * A platform occupying columns uMin..uMax and rows vFrom..vTo: the whole platform length, or less for a shorter platform
+	 * of a station whose platforms are listed one by one.
 	 *
 	 * @param number     1-based, left to right
 	 * @param trackLeft  a track runs along its uMin edge
 	 * @param trackRight a track runs along its uMax edge
 	 */
-	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight) {
+	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo) {
+
+		/** A platform the whole length of the station. */
+		public PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight) {
+			this(number, uMin, uMax, trackLeft, trackRight, 0, -1);
+		}
 
 		public int width() {
 			return uMax - uMin + 1;
+		}
+
+		/** Rows along the station. */
+		public int length() {
+			return vTo - vFrom + 1;
+		}
+
+		/** Row v is on this platform. */
+		public boolean runs(int v) {
+			return v >= vFrom && v <= vTo;
+		}
+
+		/** The cell (u, v) is on this platform. */
+		public boolean contains(int u, int v) {
+			return u >= uMin && u <= uMax && runs(v);
 		}
 
 		public boolean island() {
