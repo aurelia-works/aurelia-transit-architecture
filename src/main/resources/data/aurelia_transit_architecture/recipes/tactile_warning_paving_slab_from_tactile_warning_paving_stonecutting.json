@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:tactile_warning_paving"
+  },
+  "result": "aurelia_transit_architecture:tactile_warning_paving_slab",
+  "count": 2
+}

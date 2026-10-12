@@ -23,6 +23,15 @@ public final class StationDescriptionParser {
 	public static final int MAX_INPUT = 1200;
 	/** Tracks for "large" or "big" without a number. */
 	static final int LARGE_TRACKS = 4;
+	/**
+	 * A terminus is a city's main station: without a number it gets this many tracks and this length. A "city" terminus gets
+	 * {@link #LARGE_TRACKS} and 96; "small", "compact", "halt", "village" and "rural" keep the ordinary defaults.
+	 */
+	static final int TERMINUS_TRACKS = 8;
+	static final int TERMINUS_LENGTH = 160;
+	/** A "large" or "big" terminus without a number. */
+	static final int LARGE_TERMINUS_TRACKS = 10;
+	static final int LARGE_TERMINUS_LENGTH = 200;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");
@@ -752,6 +761,11 @@ public final class StationDescriptionParser {
 		}
 
 		/** The first size word wins; a later one is ignored. */
+		/** A terminus not asked to be small: it defaults to a main station's size. */
+		private boolean bigTerminus() {
+			return terminus && !small && scale != StationScale.COMPACT;
+		}
+
 		private void setScale(StationScale value, int i) {
 			if (scale == null) {
 				scale = value;
@@ -920,7 +934,10 @@ public final class StationDescriptionParser {
 				trackCount = clampTracks(islandPlatforms * 2);
 				note(islandAt, trackCount + " tracks");
 			} else if (large) {
-				trackCount = LARGE_TRACKS;
+				trackCount = terminus ? LARGE_TERMINUS_TRACKS : LARGE_TRACKS;
+			} else if (bigTerminus()) {
+				trackCount = scale == StationScale.CITY ? LARGE_TRACKS : TERMINUS_TRACKS;
+				defaulted.add(trackCount + " tracks (default for a " + (scale == StationScale.CITY ? "city " : "") + "terminus)");
 			} else if (island || sidePlatforms) {
 				trackCount = StationSpec.DEFAULT_TRACKS;
 				note(Math.max(islandAt, sideAt), trackCount + " tracks");
@@ -970,7 +987,11 @@ public final class StationDescriptionParser {
 			} else if (small) {
 				builder.platformLength(32);
 			} else if (large) {
-				builder.platformLength(96);
+				builder.platformLength(terminus ? LARGE_TERMINUS_LENGTH : 96);
+			} else if (bigTerminus()) {
+				final int terminusLength = scale == StationScale.CITY ? 96 : TERMINUS_LENGTH;
+				builder.platformLength(terminusLength);
+				defaulted.add("length " + terminusLength + " (default for a " + (scale == StationScale.CITY ? "city " : "") + "terminus)");
 			} else {
 				defaulted.add("length " + StationSpec.DEFAULT_LENGTH + " (default)");
 			}

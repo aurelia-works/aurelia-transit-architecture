@@ -41,6 +41,8 @@ public final class MetroBlocks {
 			new Block(ModBlocks.paving(MapColor.IRON_GRAY)));
 	public static final Block METRO_GRANITE_FLOOR = ModBlocks.register("metro_granite_floor", BlockFamily.METRO, RenderKind.SOLID,
 			MtrPlatformContract.surface(ModBlocks.paving(MapColor.STONE_GRAY)));
+	public static final Block METRO_GRANITE_FLOOR_SLAB = ModBlocks.register("metro_granite_floor_slab", BlockFamily.METRO, RenderKind.SOLID,
+			MtrPlatformContract.slab(ModBlocks.paving(MapColor.STONE_GRAY)));
 
 	// ---- Frankfurt -------------------------------------------------------------------------------------------------
 
@@ -57,6 +59,8 @@ public final class MetroBlocks {
 			new Block(ModBlocks.paving(MapColor.WHITE_GRAY)));
 	public static final Block METRO_TERRAZZO_FLOOR = ModBlocks.register("metro_terrazzo_floor", BlockFamily.METRO, RenderKind.SOLID,
 			MtrPlatformContract.surface(ModBlocks.paving(MapColor.DEEPSLATE_GRAY)));
+	public static final Block METRO_TERRAZZO_FLOOR_SLAB = ModBlocks.register("metro_terrazzo_floor_slab", BlockFamily.METRO, RenderKind.SOLID,
+			MtrPlatformContract.slab(ModBlocks.paving(MapColor.DEEPSLATE_GRAY)));
 
 	// ---- Rotterdam -------------------------------------------------------------------------------------------------
 
@@ -82,6 +86,8 @@ public final class MetroBlocks {
 			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).nonOpaque(), Placement.TOWARD_PLAYER, SPRINGER), TIP + "wall_mounted");
 	public static final Block METRO_QUARRY_FLOOR = ModBlocks.register("metro_quarry_floor", BlockFamily.METRO, RenderKind.SOLID,
 			MtrPlatformContract.surface(ModBlocks.paving(MapColor.BROWN)));
+	public static final Block METRO_QUARRY_FLOOR_SLAB = ModBlocks.register("metro_quarry_floor_slab", BlockFamily.METRO, RenderKind.SOLID,
+			MtrPlatformContract.slab(ModBlocks.paving(MapColor.BROWN)));
 	public static final Block METRO_COVE_LIGHT = ModBlocks.register("metro_cove_light", BlockFamily.METRO, RenderKind.SOLID,
 			new FacingShapedBlock(ModBlocks.metal().luminance(state -> 12), Placement.TOWARD_PLAYER, COVE), TIP + "wall_mounted");
 	public static final Block METRO_FLASHING_EDGE = ModBlocks.register("metro_flashing_edge", BlockFamily.METRO, RenderKind.SOLID,

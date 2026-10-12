@@ -82,6 +82,13 @@ public final class ModBlocks {
 			MtrPlatformContract.surface(paving(MapColor.DEEPSLATE_GRAY)));
 	public static final Block TACTILE_WARNING_PAVING = register("tactile_warning_paving", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			MtrPlatformContract.surface(paving(MapColor.YELLOW)));
+	// 1.6 platform slabs: half-height surfaces with the same MTR door marker, for platforms level with a train floor
+	public static final Block PLATFORM_PAVING_LIGHT_SLAB = register("platform_paving_light_slab", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			MtrPlatformContract.slab(paving(MapColor.STONE_GRAY)));
+	public static final Block PLATFORM_PAVING_DARK_SLAB = register("platform_paving_dark_slab", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			MtrPlatformContract.slab(paving(MapColor.DEEPSLATE_GRAY)));
+	public static final Block TACTILE_WARNING_PAVING_SLAB = register("tactile_warning_paving_slab", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			MtrPlatformContract.slab(paving(MapColor.YELLOW)));
 	public static final Block PLATFORM_EDGE = register("platform_edge", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			MtrPlatformContract.edge(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER, EDGE), TIP_POINTS_AWAY);
 	public static final Block PLATFORM_EDGE_WARNING = register("platform_edge_warning", BlockFamily.PLATFORMS, RenderKind.SOLID,

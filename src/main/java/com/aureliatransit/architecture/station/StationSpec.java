@@ -24,7 +24,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
 	public static final int MIN_LENGTH = 16;
-	public static final int MAX_LENGTH = 250;
+	public static final int MAX_LENGTH = 300;
 	public static final int MIN_WIDTH = 3;
 	public static final int MAX_WIDTH = 8;
 	public static final int MAX_NAME = 32;

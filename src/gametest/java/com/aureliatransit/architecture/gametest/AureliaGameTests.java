@@ -20,8 +20,10 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.PaneBlock;
 import net.minecraft.block.ShapeContext;
+import net.minecraft.block.SlabBlock;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.enums.DoubleBlockHalf;
+import net.minecraft.block.enums.SlabType;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -495,6 +497,55 @@ public class AureliaGameTests implements FabricGameTest {
 	}
 
 	/** Each glass pane joins a pane of the same kind, every other pane of the mod, and every full glass block of the mod. */
+	/** 1.6 platform slabs: half a block high, a second slab clicked on top makes a full block, and train doors open beside them. */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 100)
+	public void platformSlabsStackAndOpenTrainDoors(TestContext context) {
+		Class<?> platformHelper = null;
+		try {
+			platformHelper = Class.forName("org.mtr.mod.block.PlatformHelper");
+		} catch (ClassNotFoundException e) {
+			AureliaTransitArchitecture.LOGGER.warn("[gametest] MTR PlatformHelper not found; skipping the slab platform marker check");
+		}
+		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);
+		final List<String> problems = new ArrayList<>();
+		final BlockPos floor = new BlockPos(3, 1, 3);
+		final BlockPos pos = floor.up();
+		int slabs = 0;
+		for (final Entry entry : Fixtures.blocks()) {
+			if (!(entry.block() instanceof SlabBlock)) {
+				continue;
+			}
+			slabs++;
+			final Block block = entry.block();
+			if (platformHelper != null && !platformHelper.isInstance(block)) {
+				problems.add(entry.id() + ": not an MTR platform block, so train doors stay shut beside it");
+			}
+			Fixtures.clear(context, 0, 7);
+			context.setBlockState(floor, Blocks.STONE);
+			Fixtures.place(context, player, block, floor, Direction.UP);
+			final BlockState bottom = context.getBlockState(pos);
+			if (!bottom.isOf(block) || bottom.get(SlabBlock.TYPE) != SlabType.BOTTOM) {
+				problems.add(entry.id() + ": placed on the floor it should be a bottom slab, found " + describe(bottom));
+				continue;
+			}
+			final double low = bottom.getCollisionShape(context.getWorld(), context.getAbsolutePos(pos)).getMax(Direction.Axis.Y);
+			if (low != 0.5) {
+				problems.add(entry.id() + ": a bottom slab should be 0.5 high, is " + low);
+			}
+			Fixtures.place(context, player, block, pos, Direction.UP);
+			final BlockState full = context.getBlockState(pos);
+			if (!full.isOf(block) || full.get(SlabBlock.TYPE) != SlabType.DOUBLE) {
+				problems.add(entry.id() + ": a second slab clicked on top should make a double slab, found " + describe(full));
+			}
+		}
+		if (slabs < 8) {
+			problems.add("expected the 8 platform slabs, found " + slabs);
+		}
+		Fixtures.removePlayer(context, player);
+		failIfAny(problems, "platform slabs");
+		context.complete();
+	}
+
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 200)
 	public void glassPanesConnectToPanesAndGlassBlocks(TestContext context) {
 		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);

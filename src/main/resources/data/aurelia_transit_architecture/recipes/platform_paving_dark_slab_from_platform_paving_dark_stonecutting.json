@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:platform_paving_dark"
+  },
+  "result": "aurelia_transit_architecture:platform_paving_dark_slab",
+  "count": 2
+}

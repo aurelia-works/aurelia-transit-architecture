@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "aurelia_transit_architecture:tactile_warning_paving"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:tactile_warning_paving_slab",
+    "count": 6
+  }
+}

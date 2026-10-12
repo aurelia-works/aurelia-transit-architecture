@@ -426,6 +426,31 @@ class StationDescriptionParserTest {
 		assertFalse(spec("station building").terminus());
 	}
 
+	@Test
+	void aTerminusIsAMainStationUnlessToldOtherwise() {
+		assertSize(spec("terminus"), 8, 160);
+		assertSize(spec("grand terminus"), 8, 160);
+		assertSize(spec("hamburg terminus with a train shed"), 8, 160);
+		assertSize(spec("large terminus"), 10, 200);
+		assertSize(spec("big terminus"), 10, 200);
+		assertSize(spec("city terminus"), 4, 96);
+		assertSize(spec("small terminus"), 2, 32);
+		assertSize(spec("halt terminus"), 2, 48);
+		// what the player says always wins
+		assertSize(spec("terminus, 3 tracks"), 3, 160);
+		assertSize(spec("terminus, 300 long"), 8, 300);
+		assertSize(spec("two track terminus, 64 long"), 2, 64);
+		assertSize(spec("large terminus, 6 tracks, 120 long"), 6, 120);
+		assertTrue(StationDescriptionParser.parse("terminus").defaulted().contains("8 tracks (default for a terminus)"));
+		assertEquals(PlatformLayout.ISLAND, spec("terminus").platformLayout());
+		assertEquals(StationScale.GRAND, spec("terminus").scale(), "a main-station terminus gets a grand head building");
+	}
+
+	private static void assertSize(StationSpec spec, int tracks, int length) {
+		assertEquals(tracks, spec.trackCount(), spec.toString());
+		assertEquals(length, spec.platformLength(), spec.toString());
+	}
+
 	// ---- mixed looks and train sheds -------------------------------------------------------------------------------
 
 	@Test

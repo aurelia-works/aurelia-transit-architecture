@@ -72,6 +72,8 @@ EXPECTED_PROPERTIES = {
     "ArchGlassPaneBlock": {"north", "east", "south", "west"},
     "GlassFinBlock": {"axis"},
     "GlassFloorBlock": set(),
+    # 1.6 platform slabs: vanilla slab models keyed on type only (waterlogged needs no model)
+    "SlabBlock": {"type"},
 }
 
 ELEMENT_BUDGET = 6  # cuboids per block model; keeps chunk meshing cheap
@@ -101,7 +103,7 @@ def registered_blocks():
     # MtrPlatformContract factories build the same block classes, optionally carrying MTR's platform marker.
     pattern = re.compile(r'register\("([a-z0-9_]+)",\s*BlockFamily\.(\w+),\s*RenderKind\.(\w+),\s*(?:new (\w+)|MtrPlatformContract\.(\w+))\(')
     contract = {"surface": "Block", "edge": "FacingShapedBlock", "curve": "PlatformEdgeCurveBlock",
-                "screenDoorway": "CurvedScreenDoorBlock", "trainEdge": "TrainEdgeBlock"}
+                "screenDoorway": "CurvedScreenDoorBlock", "trainEdge": "TrainEdgeBlock", "slab": "SlabBlock"}
     return [(m.group(1), m.group(2), m.group(3), m.group(4) or contract[m.group(5)]) for m in pattern.finditer(source)]
 
 

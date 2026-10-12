@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "aurelia_transit_architecture:platform_paving_light"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:platform_paving_light_slab",
+    "count": 6
+  }
+}

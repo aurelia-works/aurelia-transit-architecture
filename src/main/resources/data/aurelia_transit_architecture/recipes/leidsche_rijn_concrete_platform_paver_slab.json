@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver_slab",
+    "count": 6
+  }
+}

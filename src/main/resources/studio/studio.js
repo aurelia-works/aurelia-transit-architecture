@@ -101,6 +101,13 @@
 			: "Running outside the game: design and check here.";
 		$("game").hidden = !IN_GAME;
 		$("offline").hidden = IN_GAME;
+		// A terminus is a city's main station: one still at the default size becomes 8 tracks, 160 long (as on the wrench).
+		$("mode").addEventListener("input", () => {
+			if ($("mode").value === "terminus" && $("tracks").value === "2" && $("length").value === String(options.length[2])) {
+				$("tracks").value = 8;
+				$("length").value = 160;
+			}
+		});
 		for (const f of fields) {
 			$(f).addEventListener("input", changed);
 		}

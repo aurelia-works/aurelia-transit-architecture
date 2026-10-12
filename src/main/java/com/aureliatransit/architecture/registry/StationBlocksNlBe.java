@@ -62,6 +62,8 @@ public final class StationBlocksNlBe {
 			new Block(solid(MapColor.GRAY, BlockSoundGroup.METAL)));
 	public static final Block LEIDSCHE_RIJN_CONCRETE_PLATFORM_PAVER = ModBlocks.register("leidsche_rijn_concrete_platform_paver", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
 			MtrPlatformContract.surface(ModBlocks.paving(MapColor.STONE_GRAY)));
+	public static final Block LEIDSCHE_RIJN_CONCRETE_PLATFORM_PAVER_SLAB = ModBlocks.register("leidsche_rijn_concrete_platform_paver_slab", BlockFamily.STATIONS_NL_BE,
+			RenderKind.SOLID, MtrPlatformContract.slab(ModBlocks.paving(MapColor.STONE_GRAY)));
 
 	// ---- Amsterdam Centraal (1889) ---------------------------------------------------------------------------------
 

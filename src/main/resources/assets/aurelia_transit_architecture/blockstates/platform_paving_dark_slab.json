@@ -1,0 +1,13 @@
+{
+  "variants": {
+    "type=bottom": {
+      "model": "aurelia_transit_architecture:block/platform_paving_dark_slab"
+    },
+    "type=top": {
+      "model": "aurelia_transit_architecture:block/platform_paving_dark_slab_top"
+    },
+    "type=double": {
+      "model": "aurelia_transit_architecture:block/platform_paving_dark"
+    }
+  }
+}

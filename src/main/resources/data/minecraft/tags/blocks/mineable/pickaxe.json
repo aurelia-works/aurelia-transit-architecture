@@ -204,6 +204,14 @@
     "aurelia_transit_architecture:uk_car_stop_marker",
     "aurelia_transit_architecture:german_stop_board",
     "aurelia_transit_architecture:dutch_stop_board",
-    "aurelia_transit_architecture:station_girder"
+    "aurelia_transit_architecture:station_girder",
+    "aurelia_transit_architecture:platform_paving_light_slab",
+    "aurelia_transit_architecture:platform_paving_dark_slab",
+    "aurelia_transit_architecture:tactile_warning_paving_slab",
+    "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver_slab",
+    "aurelia_transit_architecture:sbahn_platform_half_slab",
+    "aurelia_transit_architecture:metro_granite_floor_slab",
+    "aurelia_transit_architecture:metro_terrazzo_floor_slab",
+    "aurelia_transit_architecture:metro_quarry_floor_slab"
   ]
 }

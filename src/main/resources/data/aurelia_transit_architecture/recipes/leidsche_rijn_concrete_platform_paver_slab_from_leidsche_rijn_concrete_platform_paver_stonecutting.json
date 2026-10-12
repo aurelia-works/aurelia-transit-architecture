@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver"
+  },
+  "result": "aurelia_transit_architecture:leidsche_rijn_concrete_platform_paver_slab",
+  "count": 2
+}

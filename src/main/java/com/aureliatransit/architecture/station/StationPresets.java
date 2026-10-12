@@ -24,17 +24,17 @@ public final class StationPresets {
 			new Preset("amsterdam", BuildingStyle.AMSTERDAM,
 					"two track amsterdam station, side platforms, 64 long, station building with footbridge, named Amsterdam Centraal"),
 			new Preset("st_pancras", BuildingStyle.GOTHIC_BRICK,
-					"four track st pancras terminus, two island platforms, 96 long, train shed, named St Pancras"),
+					"eight track st pancras terminus, four island platforms, 200 long, train shed, named St Pancras"),
 			new Preset("antwerp", BuildingStyle.ANTWERP,
-					"four track antwerp terminus, two island platforms, 96 long, train shed, named Antwerpen Centraal"),
+					"eight track antwerp terminus, four island platforms, 180 long, train shed, named Antwerpen Centraal"),
 			new Preset("frankfurt", BuildingStyle.SANDSTONE,
-					"four track frankfurt terminus, two island platforms, 112 long, train shed, named Frankfurt Hbf"),
+					"ten track frankfurt terminus, five island platforms, 240 long, train shed, named Frankfurt Hbf"),
 			new Preset("hamburg", BuildingStyle.CLINKER,
 					"two track hamburg station, side platforms, 64 long, station building with footbridge, named Hamburg Dammtor"),
 			new Preset("munich", BuildingStyle.CONCRETE,
 					"two track munich station, island platform, 64 long, station building with footbridge, named Munchen Ost"),
 			new Preset("grand_central", BuildingStyle.BEAUX_ARTS,
-					"four track grand central terminus, two island platforms, 96 long, named Grand Central"));
+					"eight track grand central terminus, four island platforms, 200 long, named Grand Central"));
 
 	private StationPresets() {
 	}

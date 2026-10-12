@@ -39,6 +39,11 @@ public class StationWrenchScreen extends Screen {
 	private static final int SUMMARY = 24;
 	private static final String KEY = EditorWidgets.KEY + "station_wrench.";
 	private static final int GAP = 10;
+	/** A third of the page, for the three buttons of the bottom row. */
+	private static final int THIRD = (WIDTH - 8) / 3;
+	/** The size a fresh station gets when it becomes a terminus (as the parser gives a bare "terminus"). */
+	private static final int TERMINUS_TRACKS = 8;
+	private static final int TERMINUS_LENGTH = 160;
 	/** The narrowest preview worth showing; below it the controls stay centred on their own. */
 	private static final int MIN_PREVIEW = 150;
 	private static final int MAX_PREVIEW = 480;
@@ -199,8 +204,10 @@ public class StationWrenchScreen extends Screen {
 				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(nextMix(recipe.mix())));
 		mix.setTooltip(Tooltip.of(Text.translatable(KEY + "mix.tip")));
 		addDrawableChild(mix);
-		addDrawableChild(cycle(left + HALF + 4, y, HALF, "type", Text.translatable(KEY + (recipe.terminus() ? "terminus" : "through")),
-				() -> recipe.withTerminus(!recipe.terminus())));
+		final ButtonWidget type = cycle(left + HALF + 4, y, HALF, "type", Text.translatable(KEY + (recipe.terminus() ? "terminus" : "through")),
+				this::nextType);
+		type.setTooltip(Tooltip.of(Text.translatable(KEY + "type.tip")));
+		addDrawableChild(type);
 		y += ROW;
 		addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> change(recipe.withTracks(recipe.tracks() - 1))).dimensions(left, y, 20, 20).build());
 		addDrawableChild(ButtonWidget.builder(Text.translatable(KEY + "tracks", recipe.tracks()), b -> change(recipe.withTracks(
@@ -250,10 +257,23 @@ public class StationWrenchScreen extends Screen {
 				typed = recipe.description();
 			}
 			clearAndInit();
-		}).dimensions(left, y, HALF, 20).build();
+		}).dimensions(left, y, THIRD, 20).build();
 		more.setTooltip(Tooltip.of(Text.translatable(KEY + "advanced.tip")));
 		addDrawableChild(more);
-		addDrawableChild(studioButton(left + HALF + 4, y, HALF));
+		addDrawableChild(clearButton(left + THIRD + 4, y, THIRD));
+		addDrawableChild(studioButton(left + 2 * (THIRD + 4), y, THIRD));
+	}
+
+	/** Forgets everything the wrench remembers (choices, typed description, Studio design) and starts again from the defaults. */
+	private ButtonWidget clearButton(int x, int y, int w) {
+		return ButtonWidget.builder(Text.translatable(KEY + "clear"), b -> {
+			recipe = StationRecipe.defaults();
+			typed = "";
+			custom = false;
+			advanced = false;
+			editedAt = System.currentTimeMillis();
+			clearAndInit();
+		}).dimensions(x, y, w, 20).tooltip(Tooltip.of(Text.translatable(KEY + "clear.tip"))).build();
 	}
 
 	/** A look's button text within {@code room} pixels: "> label <" when chosen, without the arrows when that is too wide. */
@@ -288,7 +308,7 @@ public class StationWrenchScreen extends Screen {
 	}
 
 	/** Platform lengths the length button steps through, then back to the first. */
-	private static final int[] LENGTHS = {32, 48, 64, 96, 128, 160, 200, 250};
+	private static final int[] LENGTHS = {32, 48, 64, 96, 128, 160, 200, 250, 300};
 
 	private static int nextLength(int length) {
 		for (final int option : LENGTHS) {
@@ -297,6 +317,19 @@ public class StationWrenchScreen extends Screen {
 			}
 		}
 		return LENGTHS[0];
+	}
+
+	/**
+	 * Through station or terminus. A terminus is a city's main station, so switching a station still at the default size makes it
+	 * {@link #TERMINUS_TRACKS} tracks and {@link #TERMINUS_LENGTH} long; any size the player already chose is kept.
+	 */
+	private StationRecipe nextType() {
+		final StationRecipe value = recipe.withTerminus(!recipe.terminus());
+		final StationRecipe fresh = StationRecipe.defaults();
+		if (value.terminus() && recipe.tracks() == fresh.tracks() && recipe.length() == fresh.length()) {
+			return value.withTracks(TERMINUS_TRACKS).withLength(TERMINUS_LENGTH);
+		}
+		return value;
 	}
 
 	/** No building, then a building sized by the station, then compact, city and grand, then no building again. */
@@ -363,8 +396,9 @@ public class StationWrenchScreen extends Screen {
 		addDrawableChild(ButtonWidget.builder(Text.translatable(KEY + "simple"), b -> {
 			advanced = false;
 			clearAndInit();
-		}).dimensions(left, y, HALF, 20).tooltip(Tooltip.of(Text.translatable(KEY + "simple.tip"))).build());
-		addDrawableChild(studioButton(left + HALF + 4, y, HALF));
+		}).dimensions(left, y, THIRD, 20).tooltip(Tooltip.of(Text.translatable(KEY + "simple.tip"))).build());
+		addDrawableChild(clearButton(left + THIRD + 4, y, THIRD));
+		addDrawableChild(studioButton(left + 2 * (THIRD + 4), y, THIRD));
 		setInitialFocus(field);
 	}
 

@@ -5,6 +5,7 @@ import com.aureliatransit.architecture.block.FacingShapedBlock;
 import com.aureliatransit.architecture.block.Placement;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.SlabBlock;
 import net.minecraft.util.shape.VoxelShape;
 
 import java.lang.reflect.Method;
@@ -40,6 +41,13 @@ public final class MtrPlatformContract {
 	 */
 	public static Block surface(AbstractBlock.Settings settings) {
 		return AVAILABLE ? MtrPlatformBlocks.surface(settings) : new Block(settings);
+	}
+
+	/**
+	 * A half-height platform surface (bottom, top or double slab), with the door marker so train doors open beside it.
+	 */
+	public static Block slab(AbstractBlock.Settings settings) {
+		return AVAILABLE ? MtrPlatformBlocks.slab(settings) : new SlabBlock(settings);
 	}
 
 	/**

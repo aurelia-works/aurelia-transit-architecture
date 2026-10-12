@@ -27,15 +27,15 @@ Forge, NeoForge and other Minecraft versions are not supported.
 
 Install the mod on both the server and the clients.
 
-## Feature families (200 blocks)
+## Feature families (212 blocks)
 
 | Family | Pieces |
 |---|---|
-| **Platforms** (12) | Platform screen panel and doorway, drop-barrier and boarding-step edges (move while a train stands), light and dark paving, tactile warning paving, platform edge (plain, warning line, angled / curved), platform ramp |
+| **Platforms** (15) | Platform screen panel and doorway, drop-barrier and boarding-step edges (move while a train stands), light and dark paving, tactile warning paving (each also as a slab), platform edge (plain, warning line, angled / curved), platform ramp |
 | **Passenger information** (12) | CIS and PIDS boards (also hanging), concourse board (all live from MTR), speakers, clocks, information terminal and kiosk |
-| **Signage** (9) | PSD text panel, stand-back sign, train composition board (typed by hand), station name signs, platform number sign, directional sign, information case, sign pole |
+| **Signage** (12) | PSD text panel, stand-back sign, train composition board (typed by hand), station name signs, platform number sign, directional sign, information case, sign pole, UK, German and Dutch car stop boards |
 | **Furniture** (6) | Perforated steel bench, timber slat bench, waste bin, bollard, platform lamp, information pillar |
-| **Architecture** (17) | Steel columns, beam, roof support, framed glass wall, glass panel, glass barrier, canopies (flat, edge, sloped, wave, corner cap), skylight, canopy light |
+| **Architecture** (18) | Steel columns, beam, roof support, station girder, framed glass wall, glass panel, glass barrier, canopies (flat, edge, sloped, wave, corner cap), skylight, canopy light |
 | **Catenary** (4) | Catenary mast, cantilever, gantry beam, insulator (decorative) |
 | **Elevated** (11) | Noise barrier, viaduct column and beam, brace, station stair, stair enclosure, wind screen, platform fascia, station fence, utility run, under-deck light |
 | **Wayfinding** (6) | Entrance pylon, wall and hanging wayfinding signs, exit sign, street / landmark blade, station information board |
@@ -43,15 +43,16 @@ Install the mod on both the server and the clients.
 | **Station equipment** (4) | Fare gate (charges MTR fares), card reader, booth window, CCTV camera |
 | **Bus** (8) | Bus stop sign, timetable case, shelter glass and roof, shelter seat, bus curb (full and low), e-paper arrival board |
 | **Glass** (22) | Clear float, low-iron, grey / bronze / blue tinted, reflective, frosted, fritted and wired glass (each a block and a pane), glass brick, curtain wall glass, structural glass fin, glass floor panel |
-| **European stations** (55) | Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp, Frankfurt, Munich, Hamburg, S-Bahn and Roma: roofs, trusses, brick and stone, floors, glazing, Dutch and German signs |
-| **Metro** (27) | Tiles, ceilings, floors, columns and tunnel finishes |
+| **European stations** (57) | Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp, Frankfurt, Munich, Hamburg, S-Bahn and Roma: roofs, trusses, brick and stone, floors and platform slabs, glazing, Dutch and German signs |
+| **Metro** (30) | Tiles, ceilings, floors (each also as a slab), columns and tunnel finishes |
 
 ### What 1.6 adds
 
 - **Station generator and Station Wrench:** right-click the air with the wrench, pick a city look (or mix two), tracks, platforms, length, roof and building, then *Place in front of me* and *Build it!*. Undo takes it all away again. Operators only.
-- **Big stations:** up to 10 tracks and 250 blocks long, with compact, city or grand buildings (storeys, wings, a clock tower and hipped roofs), termini with head buildings, train sheds, footbridges and working MTR lifts.
+- **Big stations:** up to 10 tracks and 300 blocks long (a terminus starts at 8 tracks, 160 long), with compact, city or grand buildings (storeys, wings, a clock tower and hipped roofs), termini with head buildings, train sheds, footbridges and working MTR lifts.
 - **3D preview** beside the wrench buttons, and **Station Studio**, a local web page with a larger description box, views, cuts and every station check.
 - **More realistic blocks:** about 80 textures repainted at the same 16x16 size; no block ids changed.
+- **Platform slabs (8):** half-height light, dark and tactile paving, Leidsche Rijn paver, S-Bahn platform and the three metro floors. Train doors open beside them like the full blocks.
 - See [docs/STATION_GENERATOR.md](docs/STATION_GENERATOR.md).
 
 ### What 1.5 adds

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "###"
+  ],
+  "key": {
+    "#": {
+      "item": "aurelia_transit_architecture:metro_granite_floor"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:metro_granite_floor_slab",
+    "count": 6
+  }
+}

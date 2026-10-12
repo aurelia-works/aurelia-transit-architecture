@@ -85,6 +85,8 @@ public final class StationBlocksDeIt {
 			new Block(ModBlocks.paving(MapColor.RED)));
 	public static final Block SBAHN_PLATFORM_SLAB = ModBlocks.register("sbahn_platform_slab", BlockFamily.STATIONS_DE_IT, RenderKind.SOLID,
 			MtrPlatformContract.surface(ModBlocks.paving(MapColor.STONE_GRAY)));
+	public static final Block SBAHN_PLATFORM_HALF_SLAB = ModBlocks.register("sbahn_platform_half_slab", BlockFamily.STATIONS_DE_IT, RenderKind.SOLID,
+			MtrPlatformContract.slab(ModBlocks.paving(MapColor.STONE_GRAY)));
 	public static final Block SBAHN_PLATFORM_EDGE = ModBlocks.register("sbahn_platform_edge", BlockFamily.STATIONS_DE_IT, RenderKind.SOLID,
 			MtrPlatformContract.edge(ModBlocks.paving(MapColor.STONE_GRAY), Placement.AWAY_FROM_PLAYER, FULL), TIP + "points_away");
 	public static final Block SBAHN_PLATFORM_EDGE_TACTILE = ModBlocks.register("sbahn_platform_edge_tactile", BlockFamily.STATIONS_DE_IT, RenderKind.SOLID,

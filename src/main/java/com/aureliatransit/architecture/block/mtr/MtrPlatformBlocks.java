@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.block.FacingShapedBlock;
 import com.aureliatransit.architecture.block.Placement;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.Block;
+import net.minecraft.block.SlabBlock;
 import net.minecraft.util.shape.VoxelShape;
 import org.mtr.mod.block.PlatformHelper;
 
@@ -18,6 +19,10 @@ final class MtrPlatformBlocks {
 
 	static Block surface(AbstractBlock.Settings settings) {
 		return new Surface(settings);
+	}
+
+	static Block slab(AbstractBlock.Settings settings) {
+		return new Slab(settings);
 	}
 
 	static Block edge(AbstractBlock.Settings settings, Placement placement, VoxelShape northShape) {
@@ -56,6 +61,12 @@ final class MtrPlatformBlocks {
 
 	private static final class Surface extends Block implements PlatformHelper {
 		Surface(Settings settings) {
+			super(settings);
+		}
+	}
+
+	private static final class Slab extends SlabBlock implements PlatformHelper {
+		Slab(Settings settings) {
 			super(settings);
 		}
 	}

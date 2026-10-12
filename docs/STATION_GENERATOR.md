@@ -20,7 +20,7 @@ Operators only (permission level 2), like `/ata_message`.
 
 The **Station Wrench** (Passenger Equipment tab, operators only) does the same without typing commands. Right-click the air to open its screen.
 
-**Simple page (buttons).** Pick a city look (Utrecht, Amsterdam, Hamburg, Munich, Frankfurt, St Pancras, Antwerp, New York), optionally a second city to *mix with* (its train shed, or its platforms when the first city has no shed), through station or terminus, 1-10 tracks, platforms (auto, side, island), length (32 to 250), roof (the city's own, canopies, flat, arched, pointed-arch or multi-arch train shed, or none), a station building and its size (Yes sizes it by the station; or Compact, City, Grand) and a name. Then **Place in front of me** shows the outline and chat offers **Build it** / **Cancel** / **Details**; **Build it!** builds the placed plan and **Undo last build** reverts it. The buttons only write a plain description (`StationRecipe`), so they go through exactly the same parser, design rules and checks as typed text; a unit test builds every look x mix x type x roof combination.
+**Simple page (buttons).** Pick a city look (Utrecht, Amsterdam, Hamburg, Munich, Frankfurt, St Pancras, Antwerp, New York), optionally a second city to *mix with* (its train shed, or its platforms when the first city has no shed), through station or terminus (switching a station still at the default size to a terminus makes it 8 tracks, 160 long), 1-10 tracks, platforms (auto, side, island), length (32 to 300), roof (the city's own, canopies, flat, arched, pointed-arch or multi-arch train shed, or none), a station building and its size (Yes sizes it by the station; or Compact, City, Grand) and a name. Then **Place in front of me** shows the outline and chat offers **Build it** / **Cancel** / **Details**; **Build it!** builds the placed plan and **Undo last build** reverts it. **Clear** forgets what the wrench remembers (choices, typed text, a Studio design) and starts again from the defaults. The buttons only write a plain description (`StationRecipe`), so they go through exactly the same parser, design rules and checks as typed text; a unit test builds every look x mix x type x roof combination.
 
 **3D preview.** When the window has room, both pages show the station beside the buttons in 3D, drawn from the game's own block models and textures, and update it as you change a choice or stop typing: drag to turn it, scroll to zoom, right-drag to move it, R to reset the view. Under it, the block count, the size and whether it is ready to build. The preview plans on your own computer with the same parser, planner and checks as the server, so what it shows is what *Place in front of me* plans. On a small window or a large GUI scale it is left out; Station Studio has the bigger view.
 
@@ -54,7 +54,7 @@ Examples:
 |---|---|---|
 | Tracks (1-10) | `3 tracks`, `two-track`, `single/double track`, `two island platforms` (4 tracks) | 2 |
 | Platforms | `island`, `side`, both (an odd last track then gets a side platform) | side for 1-2 tracks, island for 3-4 |
-| Length (16-250) | `64 blocks long`, `100 m`, `length 80`, `short/medium/long/very long`, `small` (32), `large` (96, 4 tracks) | 48 |
+| Length (16-300) | `64 blocks long`, `100 m`, `length 80`, `short/medium/long/very long`, `small` (32), `large` (96, 4 tracks) | 48; a terminus 160 |
 | Width (3-8) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side, 6 island |
 | Style | modern; dutch/utrecht/leidsche rijn; german/s-bahn/hamburg; metro/u-bahn | modern |
 | Roof | `no roof`/`open`; `canopy`/`covered`; `hall`/`train shed` | canopy |
@@ -67,7 +67,7 @@ Examples:
 | Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts). Also `american`/`usa`/`new york`/`boston` (Beaux-Arts), `british`/`london`, `leipzig`/`cologne` (sandstone), `brussels`. Landmarks (`st pancras`, `antwerp`, `grand central`...) also ask for a building. | the style's own look |
 | Mix | two or more looks with `and`, `combined`, `mix`, `x`, `hybrid`: the first gives the building, the first with a platform style gives the platforms, the last with an arched shed gives the train shed (e.g. `american station, utrecht and hamburg combined`) | one look |
 | Footbridge | `footbridge`, `bridge`, `overbridge`, `skywalk`, `no footbridge` | none |
-| Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning) | through station |
+| Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning). Without a number a terminus is a main station: 8 tracks, 160 long; `large`/`big` 10 tracks, 200 long; `city` 4 tracks, 96 long; `small`, `compact`, `halt`, `village` or `rural` the ordinary 2 tracks. Any track count or length you give wins. | through station |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 

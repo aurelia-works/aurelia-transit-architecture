@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "aurelia_transit_architecture:metro_granite_floor"
+  },
+  "result": "aurelia_transit_architecture:metro_granite_floor_slab",
+  "count": 2
+}
