@@ -119,6 +119,33 @@ public class StationWrenchItem extends Item {
 		}
 	}
 
+	/**
+	 * Server side of Station Studio: runs {@code action} for the player with the studio's description, and remembers the design
+	 * on a wrench in either hand (so its next click on the ground places it). Ignored unless the player is an operator.
+	 */
+	public static void performFromStudio(ServerPlayerEntity player, Action action, String description, String recipe) {
+		if (!StationActions.allowed(player)) {
+			return;
+		}
+		final String text = bounded(description).strip();
+		for (final Hand hand : Hand.values()) {
+			final ItemStack stack = player.getStackInHand(hand);
+			if (stack.getItem() instanceof StationWrenchItem) {
+				setDescription(stack, text);
+				setRecipe(stack, recipe);
+			}
+		}
+		switch (action) {
+			case SAVE -> player.sendMessage(Text.literal("Station Studio design saved on the wrench.").formatted(Formatting.GRAY), true);
+			case PLAN -> StationActions.plan(player, text, null);
+			case PREVIEW -> StationActions.preview(player);
+			case CONFIRM -> StationActions.confirm(player, false);
+			case CONFIRM_REPLACE_TERRAIN -> StationActions.confirm(player, true);
+			case CANCEL -> StationActions.cancel(player);
+			case UNDO -> StationActions.undo(player);
+		}
+	}
+
 	@Override
 	public ActionResult useOnBlock(ItemUsageContext context) {
 		final PlayerEntity player = context.getPlayer();

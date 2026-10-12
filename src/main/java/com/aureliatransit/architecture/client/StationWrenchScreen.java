@@ -113,8 +113,8 @@ public class StationWrenchScreen extends Screen {
 		addDrawableChild(cycle(left + HALF + 4, y, HALF, "platforms", Text.literal(recipe.platforms().label()),
 				() -> recipe.withPlatforms(next(recipe.platforms()))));
 		y += ROW;
-		addDrawableChild(cycle(left, y, HALF, "length", Text.literal(recipe.length().label() + " (" + recipe.length().blocks() + ")"),
-				() -> recipe.withLength(next(recipe.length()))));
+		addDrawableChild(cycle(left, y, HALF, "length", Text.literal(Integer.toString(recipe.length())),
+				() -> recipe.withLength(recipe.length() >= 128 ? 32 : (recipe.length() / 32 + 1) * 32)));
 		final ButtonWidget roof = cycle(left + HALF + 4, y, HALF, "roof", Text.literal(recipe.roof().label()), () -> recipe.withRoof(next(recipe.roof())));
 		roof.setTooltip(Tooltip.of(Text.translatable(KEY + "roof.tip")));
 		addDrawableChild(roof);
@@ -152,7 +152,7 @@ public class StationWrenchScreen extends Screen {
 		}).dimensions(left, y, HALF, 20).build();
 		more.setTooltip(Tooltip.of(Text.translatable(KEY + "advanced.tip")));
 		addDrawableChild(more);
-		addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close()).dimensions(left + HALF + 4, y, HALF, 20).build());
+		addDrawableChild(studioButton(left + HALF + 4, y, HALF));
 	}
 
 	/** A "Label: value" button that replaces the choices with {@code next} when pressed. */
@@ -225,12 +225,20 @@ public class StationWrenchScreen extends Screen {
 			advanced = false;
 			clearAndInit();
 		}).dimensions(left, y, HALF, 20).tooltip(Tooltip.of(Text.translatable(KEY + "simple.tip"))).build());
-		addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close()).dimensions(left + HALF + 4, y, HALF, 20).build());
+		addDrawableChild(studioButton(left + HALF + 4, y, HALF));
 		setInitialFocus(field);
 	}
 
 	private static int presetRows() {
 		return (StationPresets.ALL.size() + COLUMNS - 1) / COLUMNS;
+	}
+
+	/** Opens Station Studio in the browser (bigger description, 3D preview, checks); Escape closes this screen. */
+	private ButtonWidget studioButton(int x, int y, int w) {
+		return ButtonWidget.builder(Text.translatable(KEY + "studio"), b -> {
+			close();
+			StationStudioClient.open();
+		}).dimensions(x, y, w, 20).tooltip(Tooltip.of(Text.translatable(KEY + "studio.tip"))).build();
 	}
 
 	// ---- shared ---------------------------------------------------------------------------------------------------

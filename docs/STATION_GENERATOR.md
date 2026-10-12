@@ -153,6 +153,30 @@ The generator never creates rail connections itself, because those live in MTR's
 - The preview particles were not seen in a client in this version (headless tests only check that planning and preview change nothing).
 - Undo history is one build per player, in memory.
 
+## Station Studio
+
+A browser page for designing stations, opened from the Station Wrench screen (*Station Studio*) or with `/ata_studio`. The game
+client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) and opens your browser.
+
+- **Settings:** a description of up to 1000 characters, station mode, platform layout, tracks and platform length sliders, look,
+  mix, roof, station building and name. The settings are written first in what the planner reads, so they win over the same
+  setting in your words; a clash shows under *Conflicts and limits*.
+- **Preview:** the plan drawn from the game's own blockstates, models and textures (resource packs included). Views: Overview,
+  Reverse side, Street, Passenger (standing on platform 1) and Plan. *Cut* slices the station by height, across or along the
+  tracks. Left-drag rotates, Shift + left-drag or right-drag pans, scroll zooms, *Invert X/Y* flips the drag, a click names a block.
+- **Report:** requested and built side by side, what the parser recognised, filled in or did not understand, and every station
+  check and design rule, with *Show raw blueprint JSON* for the plan itself.
+- **In the game:** *Plan in front of me* plans the design in front of you facing the way you look (with the usual particle
+  outline and chat summary), then *Build it*, *Cancel plan* and *Undo last build*. The design is also saved on a Station Wrench
+  you hold, so right-clicking the ground with it places the same station.
+
+Safety: the studio only listens on this computer, refuses requests that name another host, and only the page the game served
+(which carries a per-session token) can act in the game. The game still checks operator rights for every action.
+
+Outside the game, `tools/station-studio.sh` starts the same studio from this repo (textures from the repo, the Minecraft client
+jar and the MTR jar in the Gradle cache) for designing and checking without Minecraft running; the in-game buttons are hidden
+there. The page uses three.js r149 (MIT), bundled in the mod.
+
 ## Plan viewer
 
 `tools/StationPlanExport.java` writes plans as JSON, with every block (role, block id, front, state), the rule breaks, the station checks and a "suspect" flag. A block is flagged when it touches no other block, when no chain of touching blocks joins it to the ground, or when it should stand on something and has nothing under it: no span between neighbours, no wall behind it, nothing above it to hang from. `tools/station-plan-viewer.html` shows such an export in 3D: orbit, cut by height, filter by role, hover a block for its cell and id, and click a problem to fly to it.

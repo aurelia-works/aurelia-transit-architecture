@@ -416,6 +416,8 @@
   "screen.aurelia_transit_architecture.station_wrench.simple.tip": "The buttons make their own description; your typed text stays here",
   "screen.aurelia_transit_architecture.station_wrench.step_look": "1. Pick a city look, then the size and roof",
   "screen.aurelia_transit_architecture.station_wrench.step_place": "2. Place it, check the outline, then Build it!",
+  "screen.aurelia_transit_architecture.station_wrench.studio": "Station Studio",
+  "screen.aurelia_transit_architecture.station_wrench.studio.tip": "Open Station Studio in your browser: long descriptions, a 3D preview and every check, then plan or build here",
   "screen.aurelia_transit_architecture.station_wrench.terminus": "Terminus",
   "screen.aurelia_transit_architecture.station_wrench.through": "Through",
   "screen.aurelia_transit_architecture.station_wrench.title": "Station Wrench",

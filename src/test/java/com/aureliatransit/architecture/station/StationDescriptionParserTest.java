@@ -327,9 +327,9 @@ class StationDescriptionParserTest {
 
 	@Test
 	void overlongInputIsCut() {
-		final ParseResult result = StationDescriptionParser.parse("3 tracks " + "station ".repeat(60));
+		final ParseResult result = StationDescriptionParser.parse("3 tracks " + "station ".repeat(200));
 		assertEquals(3, result.spec().trackCount());
-		assertTrue(warned(result, "longer than 256"));
+		assertTrue(warned(result, "longer than " + StationDescriptionParser.MAX_INPUT));
 	}
 
 	@Test

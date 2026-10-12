@@ -1,6 +1,5 @@
 package com.aureliatransit.architecture.station;
 
-import java.util.Locale;
 
 /**
  * The station wrench's choices (a look, an optional second look to mix in, through station or terminus, tracks, platforms,
@@ -10,11 +9,12 @@ import java.util.Locale;
  *
  * @param mix the look mixed in (its train shed, or its platforms when the first look has none), or null
  */
-public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, Platforms platforms, Length length, Roof roof, boolean building,
+public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, Platforms platforms, int length, Roof roof, boolean building,
 		String name) {
 
-	/** A city look: its button label and the words the parser reads. */
+	/** A city look: its button label and the words the parser reads; {@link #AUTO} leaves the look to the typed description. */
 	public enum Look {
+		AUTO("From description", ""),
 		UTRECHT("Utrecht", "utrecht"),
 		AMSTERDAM("Amsterdam", "amsterdam"),
 		HAMBURG("Hamburg", "hamburg"),
@@ -51,26 +51,6 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		}
 	}
 
-	public enum Length {
-		SHORT("Short", 32), MEDIUM("Medium", 64), LONG("Long", 96), HUGE("Huge", 128);
-
-		private final String label;
-		private final int blocks;
-
-		Length(String label, int blocks) {
-			this.label = label;
-			this.blocks = blocks;
-		}
-
-		public String label() {
-			return label;
-		}
-
-		public int blocks() {
-			return blocks;
-		}
-	}
-
 	public enum Roof {
 		AUTO("Auto (city's own)", ""),
 		CANOPIES("Canopies", "canopies"),
@@ -95,13 +75,17 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 
 	public static final int MIN_TRACKS = StationSpec.MIN_TRACKS;
 	public static final int MAX_TRACKS = StationSpec.MAX_TRACKS;
-	private static final String[] NUMBERS = {"zero", "one", "two", "three", "four"};
+	public static final int MIN_LENGTH = StationSpec.MIN_LENGTH;
+	public static final int MAX_LENGTH = StationSpec.MAX_LENGTH;
+	public static final int DEFAULT_LENGTH = 64;
+	/** The lengths the old Short / Medium / Long / Huge buttons stood for, read back from wrenches saved before lengths were numbers. */
+	private static final java.util.Map<String, Integer> OLD_LENGTHS = java.util.Map.of("SHORT", 32, "MEDIUM", 64, "LONG", 96, "HUGE", 128);
 
 	public StationRecipe {
 		if (look == null) {
 			look = Look.UTRECHT;
 		}
-		if (mix == look) {
+		if (mix == look || mix == Look.AUTO) {
 			mix = null;
 		}
 		tracks = Math.max(MIN_TRACKS, Math.min(MAX_TRACKS, tracks));
@@ -109,9 +93,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		if (platforms == null || platforms == Platforms.ISLAND && tracks < 2 || platforms == Platforms.SIDE && tracks >= 3) {
 			platforms = Platforms.AUTO;
 		}
-		if (length == null) {
-			length = Length.MEDIUM;
-		}
+		length = Math.max(MIN_LENGTH, Math.min(MAX_LENGTH, length));
 		if (roof == null) {
 			roof = Roof.AUTO;
 		}
@@ -122,7 +104,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	}
 
 	public static StationRecipe defaults() {
-		return new StationRecipe(Look.UTRECHT, null, false, 2, Platforms.AUTO, Length.MEDIUM, Roof.AUTO, true, "");
+		return new StationRecipe(Look.UTRECHT, null, false, 2, Platforms.AUTO, DEFAULT_LENGTH, Roof.AUTO, true, "");
 	}
 
 	/** Names keep letters, digits, spaces and a few marks the parser accepts inside a name. */
@@ -139,15 +121,21 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 
 	/** The description the parser reads, e.g. "two track hamburg and utrecht combined station, island platforms, 64 long". */
 	public String description() {
-		final StringBuilder text = new StringBuilder(NUMBERS[tracks]).append(" track ").append(look.words);
-		if (mix != null) {
-			text.append(" and ").append(mix.words).append(" combined");
+		final StringBuilder text = new StringBuilder().append(tracks).append(" track");
+		if (look != Look.AUTO) {
+			text.append(' ').append(look.words);
+			if (mix != null) {
+				text.append(" and ").append(mix.words).append(" combined");
+			}
 		}
 		text.append(terminus ? " terminus" : " station");
+		if (look == Look.AUTO && building && !terminus) {
+			text.append(" with station building");
+		}
 		if (platforms != Platforms.AUTO) {
 			text.append(", ").append(platforms == Platforms.ISLAND ? (tracks >= 4 ? "two island platforms" : "island platform") : "side platforms");
 		}
-		text.append(", ").append(length.blocks).append(" long");
+		text.append(", ").append(length).append(" long");
 		if (!roof.words.isEmpty()) {
 			text.append(", ").append(roof.words);
 		}
@@ -160,10 +148,19 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		return text.toString();
 	}
 
+	/**
+	 * What the parser reads for these choices plus the player's own words: the choices come first, and the parser keeps the first
+	 * value it reads for each setting, so the choices win and a clash shows up as a "given twice" warning.
+	 */
+	public String text(String typed) {
+		final String words = typed == null ? "" : typed.strip();
+		return words.isEmpty() ? description() : description() + ", " + words;
+	}
+
 	/** One short line for buttons and chat: "Hamburg + Utrecht terminus, 4 tracks, long". */
 	public String title() {
-		return look.label + (mix == null ? "" : " + " + mix.label) + (terminus ? " terminus" : " station") + ", " + tracks
-				+ (tracks == 1 ? " track, " : " tracks, ") + length.label.toLowerCase(Locale.ROOT);
+		final String looks = look == Look.AUTO ? "Custom" : look.label + (mix == null ? "" : " + " + mix.label);
+		return looks + (terminus ? " terminus" : " station") + ", " + tracks + (tracks == 1 ? " track, " : " tracks, ") + length + " long";
 	}
 
 	public StationRecipe withLook(Look value) {
@@ -186,7 +183,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		return new StationRecipe(look, mix, terminus, tracks, value, length, roof, building, name);
 	}
 
-	public StationRecipe withLength(Length value) {
+	public StationRecipe withLength(int value) {
 		return new StationRecipe(look, mix, terminus, tracks, platforms, value, roof, building, name);
 	}
 
@@ -205,7 +202,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	/** "look;mix;terminus;tracks;platforms;length;roof;building;name" with enum names; read back by {@link #decode}. */
 	public String encode() {
 		return String.join(";", look.name(), mix == null ? "" : mix.name(), terminus ? "1" : "0", Integer.toString(tracks), platforms.name(),
-				length.name(), roof.name(), building ? "1" : "0", name);
+				Integer.toString(length), roof.name(), building ? "1" : "0", name);
 	}
 
 	/** Reads {@link #encode}'s form; anything unreadable falls back to the defaults, field by field. */
@@ -218,7 +215,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		return new StationRecipe(
 				value(Look.class, f, 0, d.look), f.length > 1 && !f[1].isEmpty() ? value(Look.class, f, 1, null) : null,
 				f.length > 2 ? f[2].equals("1") : d.terminus, f.length > 3 ? number(f[3], d.tracks) : d.tracks,
-				value(Platforms.class, f, 4, d.platforms), value(Length.class, f, 5, d.length), value(Roof.class, f, 6, d.roof),
+				value(Platforms.class, f, 4, d.platforms), f.length > 5 ? OLD_LENGTHS.getOrDefault(f[5], number(f[5], d.length)) : d.length, value(Roof.class, f, 6, d.roof),
 				f.length > 7 ? !f[7].equals("0") : d.building, f.length > 8 ? f[8] : "");
 	}
 

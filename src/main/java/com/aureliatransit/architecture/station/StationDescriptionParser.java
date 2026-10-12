@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public final class StationDescriptionParser {
 
 	/** Longer descriptions are cut to this many characters (with a warning). */
-	public static final int MAX_INPUT = 256;
+	public static final int MAX_INPUT = 1200;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Station Studio</title>
+<link rel="stylesheet" href="studio.css">
+</head>
+<body data-token="{{TOKEN}}" data-ingame="{{INGAME}}">
+<header class="top">
+	<div>
+		<p class="eyebrow">Aurelia Transit Architecture</p>
+		<h1>Station Studio</h1>
+	</div>
+	<p class="where" id="where"></p>
+</header>
+
+<main class="app">
+	<aside class="rail" aria-label="Station settings">
+		<section>
+			<label class="label" for="text">Description</label>
+			<textarea id="text" rows="5" placeholder="Describe the style, materials and features. E.g. 'sandstone terminus with an arched glass train shed and a clock tower' or 'brick station, hamburg and utrecht combined'"></textarea>
+			<div class="field-foot"><span>Your words. The settings below win over them.</span><span id="count">0</span></div>
+			<select id="preset" aria-label="Start from a preset"><option value="">Start from a preset…</option></select>
+		</section>
+
+		<section class="grid2">
+			<div>
+				<label class="label" for="mode">Station mode</label>
+				<select id="mode"><option value="through">Through station</option><option value="terminus">End station (terminus)</option></select>
+			</div>
+			<div>
+				<label class="label" for="layout">Platform layout</label>
+				<select id="layout"></select>
+			</div>
+		</section>
+
+		<section>
+			<div class="range-head"><label class="label" for="tracks">Tracks</label><output id="tracksOut"></output></div>
+			<input type="range" id="tracks" step="1">
+			<div class="range-head"><label class="label" for="length">Platform length</label><output id="lengthOut"></output></div>
+			<input type="range" id="length" step="1">
+		</section>
+
+		<section class="grid2">
+			<div>
+				<label class="label" for="look">Look</label>
+				<select id="look"></select>
+			</div>
+			<div>
+				<label class="label" for="mix">Mixed with</label>
+				<select id="mix"></select>
+			</div>
+			<div>
+				<label class="label" for="roof">Roof</label>
+				<select id="roof"></select>
+			</div>
+			<div>
+				<label class="label" for="building">Station building</label>
+				<select id="building"><option value="1">Yes</option><option value="0">No</option></select>
+			</div>
+		</section>
+
+		<section>
+			<label class="label" for="name">Name</label>
+			<input type="text" id="name" maxlength="32" placeholder="On the name signs, e.g. Leidsche Rijn">
+		</section>
+
+		<section class="actions">
+			<button id="generate" class="primary">Generate</button>
+			<div id="game" class="game" hidden>
+				<p class="label">In the game</p>
+				<div class="grid2">
+					<button data-send="plan" title="Plan this station in front of you, facing the way you look; particles outline it">Plan in front of me</button>
+					<button data-send="build" title="Build the planned station">Build it</button>
+					<button data-send="cancel">Cancel plan</button>
+					<button data-send="undo">Undo last build</button>
+				</div>
+				<p id="sent" class="note" role="status"></p>
+			</div>
+			<p id="offline" class="note" hidden>Opened outside the game: you can design and check stations here. To build one, open the studio from the station wrench in game.</p>
+		</section>
+	</aside>
+
+	<section class="stage-wrap">
+		<div class="card stage-card">
+			<div class="toolbar">
+				<div class="seg" role="group" aria-label="View">
+					<button data-view="overview" aria-pressed="true">Overview</button>
+					<button data-view="reverse">Reverse side</button>
+					<button data-view="street">Street</button>
+					<button data-view="passenger">Passenger</button>
+					<button data-view="plan">Plan</button>
+				</div>
+				<label class="inline">Cut
+					<select id="cut"><option value="none">None</option><option value="height">Height</option><option value="across">Across</option><option value="along">Along</option></select>
+				</label>
+				<input type="range" id="cutAt" min="0" max="100" value="100" aria-label="Cut position" disabled>
+				<label class="check"><input type="checkbox" id="faces" checked> Face numbers</label>
+				<label class="check"><input type="checkbox" id="textures" checked> Textures</label>
+				<span class="spacer"></span>
+				<button id="reset">Reset view</button>
+				<button id="invertX" aria-pressed="false">Invert X</button>
+				<button id="invertY" aria-pressed="false">Invert Y</button>
+			</div>
+			<div class="stage" id="stage">
+				<canvas id="view" aria-label="3D view of the planned station"></canvas>
+				<div id="labels" class="labels"></div>
+				<div id="pick" class="pick" hidden></div>
+				<div id="busy" class="busy" hidden>Planning…</div>
+				<p id="banner" class="banner"></p>
+			</div>
+			<p class="hint">Left-drag: rotate · Shift + left-drag or right-drag: pan · Scroll: zoom · Click a block to see what it is</p>
+		</div>
+
+		<div class="panels">
+			<div class="card">
+				<h2>Requested and built</h2>
+				<table id="reqTable"></table>
+			</div>
+			<div class="card">
+				<h2>From the description</h2>
+				<div id="fromText"></div>
+			</div>
+			<div class="card">
+				<h2>Checks</h2>
+				<div id="checks"></div>
+			</div>
+		</div>
+		<details class="card raw">
+			<summary>Show raw blueprint JSON</summary>
+			<pre id="raw"></pre>
+		</details>
+	</section>
+</main>
+<script src="three.min.js"></script>
+<script src="studio.js"></script>
+</body>
+</html>

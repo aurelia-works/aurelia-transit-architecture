@@ -25,7 +25,8 @@ import java.util.regex.Pattern;
  * Both are restored afterwards. {@code open=wrench} opens the station wrench screen for the wrench in the main hand, and
  * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. {@code use}
  * right-clicks the block under the crosshair with the main-hand item first, like a player would, and any screen that opens is
- * in the shot, then closed. Inert in a normal game.
+ * in the shot, then closed. {@code studio} starts Station Studio without opening a browser (its address is in the log), so a
+ * script can drive it. Inert in a normal game.
  */
 final class DevScreenshots {
 
@@ -103,6 +104,9 @@ final class DevScreenshots {
 			closeScreen = true;
 			wait = SCREEN_SETTLE_TICKS;
 			return;
+		}
+		if (content.contains("studio")) {
+			StationStudioClient.startQuietly();
 		}
 		closeScreen = openScreen(client, content);
 		wait = closeScreen ? SCREEN_SETTLE_TICKS : restoreHud || restoreFov != null ? HUD_SETTLE_TICKS : 1;

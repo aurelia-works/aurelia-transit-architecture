@@ -22,6 +22,7 @@ public final class AureliaTransitArchitectureClient implements ClientModInitiali
 		InteractiveClient.init();
 		WayfindingLogicClient.init();
 		WayfindingClient.init();
+		StationStudioClient.init();
 		for (final ModBlocks.Entry entry : ModBlocks.entries()) {
 			switch (entry.renderKind()) {
 				case CUTOUT -> BlockRenderLayerMap.INSTANCE.putBlock(entry.block(), RenderLayer.getCutout());

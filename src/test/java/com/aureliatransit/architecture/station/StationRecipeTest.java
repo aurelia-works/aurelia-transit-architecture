@@ -21,6 +21,8 @@ class StationRecipeTest {
 	 * Every look with every mix, both station types and every roof (tracks, platforms, length and building cycle along): the
 	 * description parses cleanly into what was chosen and the plan passes the design rules and the station checks.
 	 */
+	private static final int[] LENGTHS = {32, 64, 96, 128};
+
 	@Test
 	void everyChoiceGivesACleanBuildableStation() {
 		final List<String> failures = new ArrayList<>();
@@ -35,7 +37,7 @@ class StationRecipeTest {
 						index++;
 						final int tracks = 1 + index % 4;
 						final StationRecipe recipe = new StationRecipe(look, mix, terminus, tracks, StationRecipe.Platforms.values()[index % 3],
-								StationRecipe.Length.values()[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "");
+								LENGTHS[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "");
 						final ParseResult result = StationDescriptionParser.parse(recipe.description());
 						final String label = recipe.encode() + " -> " + recipe.description();
 						if (!result.warnings().isEmpty() || !result.ignored().isEmpty()) {
@@ -44,8 +46,8 @@ class StationRecipeTest {
 						}
 						final StationSpec spec = result.spec();
 						if (spec.trackCount() != recipe.tracks() || spec.terminus() != recipe.terminus()
-								|| spec.platformLength() != recipe.length().blocks() || !spec.name().equals(recipe.name())
-								|| spec.hasBuilding() != recipe.building() || recipe.building() && spec.building() != BUILDINGS.get(look)) {
+								|| spec.platformLength() != recipe.length() || !spec.name().equals(recipe.name())
+								|| spec.hasBuilding() != recipe.building() || recipe.building() && look != StationRecipe.Look.AUTO && spec.building() != BUILDINGS.get(look)) {
 							failures.add(label + ": got " + spec);
 							continue;
 						}
@@ -77,7 +79,7 @@ class StationRecipeTest {
 	@Test
 	void encodeRoundTripsAndBadInputFallsBack() {
 		final StationRecipe recipe = new StationRecipe(StationRecipe.Look.HAMBURG, StationRecipe.Look.UTRECHT, true, 4, StationRecipe.Platforms.ISLAND,
-				StationRecipe.Length.LONG, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf");
+				96, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf");
 		assertEquals(recipe, StationRecipe.decode(recipe.encode()));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode(""));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode("nonsense"));
@@ -85,6 +87,17 @@ class StationRecipeTest {
 		assertEquals(StationRecipe.Look.MUNICH, partial.look());
 		assertNull(partial.mix());
 		assertEquals(StationRecipe.MAX_TRACKS, partial.tracks());
+		assertEquals(96, StationRecipe.decode("MUNICH;;0;2;AUTO;LONG").length(), "wrenches saved with the old length buttons");
+	}
+
+	@Test
+	void choicesWinOverTypedWords() {
+		final StationRecipe recipe = StationRecipe.defaults().withLook(StationRecipe.Look.AUTO).withTracks(3).withLength(120);
+		final ParseResult result = StationDescriptionParser.parse(recipe.text("sandstone station with a clock tower, 2 tracks, 50 long"));
+		assertEquals(3, result.spec().trackCount());
+		assertEquals(120, result.spec().platformLength());
+		assertTrue(result.warnings().stream().anyMatch(w -> w.contains("given twice")), result.warnings().toString());
+		assertEquals(recipe.description(), recipe.text("  "));
 	}
 
 	@Test
@@ -96,7 +109,7 @@ class StationRecipeTest {
 		assertNull(StationRecipe.defaults().withMix(StationRecipe.Look.UTRECHT).mix(), "mixing a look with itself is no mix");
 		assertTrue(StationRecipe.defaults().withBuilding(false).withTerminus(true).building(), "a terminus has its head building");
 		assertEquals("Bad name", StationRecipe.defaults().withName("Bad; name\"").name());
-		assertEquals("Hamburg + Utrecht terminus, 4 tracks, long", StationRecipe.defaults().withLook(StationRecipe.Look.HAMBURG)
-				.withMix(StationRecipe.Look.UTRECHT).withTerminus(true).withTracks(4).withLength(StationRecipe.Length.LONG).title());
+		assertEquals("Hamburg + Utrecht terminus, 4 tracks, 96 long", StationRecipe.defaults().withLook(StationRecipe.Look.HAMBURG)
+				.withMix(StationRecipe.Look.UTRECHT).withTerminus(true).withTracks(4).withLength(96).title());
 	}
 }

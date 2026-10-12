@@ -64,6 +64,8 @@ def lang():
         SCREEN + "advanced.tip": "Type your own description, e.g. american station, utrecht and hamburg combined",
         SCREEN + "simple": "Back to buttons",
         SCREEN + "simple.tip": "The buttons make their own description; your typed text stays here",
+        SCREEN + "studio": "Station Studio",
+        SCREEN + "studio.tip": "Open Station Studio in your browser: long descriptions, a 3D preview and every check, then plan or build here",
     } | {SCREEN + f"preset.{k}": n for k, n in PRESETS.items()}
 
 

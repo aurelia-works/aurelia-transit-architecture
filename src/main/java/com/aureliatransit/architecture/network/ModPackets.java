@@ -38,6 +38,8 @@ public final class ModPackets {
 	public static final Identifier UPDATE_LIFT_STATUS = AureliaTransitArchitecture.id("update_lift_status");
 	/** Station wrench screen: hand + action + description; the server saves the description on the wrench and runs the action. */
 	public static final Identifier STATION_WRENCH = AureliaTransitArchitecture.id("station_wrench");
+	/** Station Studio (the browser page the client hosts): action + description + controls, run for the player without a wrench. */
+	public static final Identifier STATION_STUDIO = AureliaTransitArchitecture.id("station_studio");
 
 	private ModPackets() {
 	}
@@ -79,7 +81,32 @@ public final class ModPackets {
 		return buf;
 	}
 
+	public static PacketByteBuf writeStationStudio(StationWrenchItem.Action action, String description, String recipe) {
+		final PacketByteBuf buf = PacketByteBufs.create();
+		buf.writeVarInt(action.ordinal());
+		buf.writeString(description, StationDescriptionParser.MAX_INPUT);
+		buf.writeString(recipe, StationWrenchItem.MAX_RECIPE);
+		return buf;
+	}
+
 	public static void registerServerReceivers() {
+		ServerPlayNetworking.registerGlobalReceiver(STATION_STUDIO, (server, player, handler, buf, responseSender) -> {
+			final StationWrenchItem.Action action;
+			final String description;
+			final String recipe;
+			try {
+				final int actionIndex = buf.readVarInt();
+				if (actionIndex < 0 || actionIndex >= StationWrenchItem.Action.values().length) {
+					return;
+				}
+				action = StationWrenchItem.Action.values()[actionIndex];
+				description = buf.readString(StationDescriptionParser.MAX_INPUT);
+				recipe = buf.readString(StationWrenchItem.MAX_RECIPE);
+			} catch (RuntimeException e) {
+				return;
+			}
+			server.execute(() -> StationWrenchItem.performFromStudio(player, action, description, recipe));
+		});
 		ServerPlayNetworking.registerGlobalReceiver(STATION_WRENCH, (server, player, handler, buf, responseSender) -> {
 			final Hand hand;
 			final StationWrenchItem.Action action;
