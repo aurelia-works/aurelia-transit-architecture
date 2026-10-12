@@ -876,6 +876,95 @@ def rotterdam_stainless():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Batches F and H: steel stair tread, utility cables, bench slats
+# ---------------------------------------------------------------------------------------------------------------------
+
+@paint("station_stair", "stair_tread")
+def stair_tread():
+    """Steel chequer plate (the stair uses uvlock, so the pattern has no direction): raised lozenges on a 4 px grid, turned
+    90 degrees from one to the next, each lit on its upper left and shaded on its lower right."""
+    plate = (78, 83, 88)
+    img = base(plate, 2, "rl_tread")
+    clouds(img, "rl_tread", count=4, strength=3, radius=3)
+    for cy in range(0, 16, 4):
+        for cx in range(0, 16, 4):
+            if (cx // 4 + cy // 4) % 2 == 0:  # "/" lozenge
+                put(img, cx + 2, cy, g.shade(plate, 30))
+                put(img, cx + 1, cy + 1, g.shade(plate, 22))
+                put(img, cx, cy + 2, g.shade(plate, 10))
+                put(img, cx + 1, cy + 2, g.shade(plate, -18))
+            else:  # "\" lozenge
+                put(img, cx, cy, g.shade(plate, 30))
+                put(img, cx + 1, cy + 1, g.shade(plate, 22))
+                put(img, cx + 2, cy + 2, g.shade(plate, 10))
+                put(img, cx + 3, cy + 2, g.shade(plate, -18))
+    specks(img, "rl_tread", 6, (12, -10))
+    return img
+
+
+@paint("utility_run", "utility_cables")
+def utility_cables():
+    """Cable run: mostly black and grey sheathed cables, one red (fire alarm) and one yellow-green earth, each 2 px wide
+    with a round highlight, a dark gap between them and a cable tie every 8 px."""
+    img = base((30, 32, 36), 2, "rl_cables")
+    cables = [(2, (46, 48, 52)), (4, (70, 72, 76)), (6, (176, 52, 44)), (8, (40, 42, 46)), (10, (96, 98, 100)),
+              (12, (150, 170, 60)), (14, (52, 54, 58))]
+    for x0, colour in cables:
+        for y in range(16):
+            put(img, x0 - 1, y, g.shade(colour, 18))
+            put(img, x0, y, g.shade(colour, -6))
+    for y in (3, 11):  # cable ties
+        for x in range(16):
+            put(img, x, y, (24, 26, 28) if x % 2 else (58, 60, 64))
+    return img
+
+
+@paint("wooden_bench", "wood_slats")
+def wood_slats():
+    """Hardwood bench slats: 3 px boards with a 1 px gap, each its own tone, grain running along the board, a lit top edge
+    and a shaded lower edge, and the odd darker knot."""
+    wood = (146, 108, 72)
+    img = base(wood, 3, "rl_slats")
+    r = g.rng("rl_slats-boards")
+    for y0 in range(0, 16, 4):
+        tone = r.randint(-10, 10)
+        for y in range(y0, y0 + 3):
+            for x in range(16):
+                c = g.shade(get(img, x, y), tone + (8 if y == y0 else -6 if y == y0 + 2 else 0))
+                put(img, x, y, c)
+        for _ in range(4):  # grain streaks
+            gx, gy, gl = r.randint(0, 15), y0 + r.randint(0, 2), r.randint(4, 9)
+            d = r.choice((-12, -8, 6))
+            for i in range(gl):
+                tint(img, gx + i, gy, d)
+        if r.random() < 0.5:
+            put(img, r.randint(0, 15), y0 + 1, g.shade(wood, -40))
+        for x in range(16):
+            put(img, x, y0 + 3, g.shade(wood, -64 + r.randint(-4, 4)))
+    return img
+
+
+@paint("tactile_guidance_paving", "wf_guidance_paving")
+def guidance_paving():
+    """Guidance (corduroy) paving: four raised bars along the walking line (north-south), lit left, shaded right, with
+    rounded ends at the joint of each 8 px flag so a run of blocks reads as laid flags."""
+    img = base(TACTILE, 4, "rl_guidance")
+    for x0 in (1, 5, 9, 13):
+        for y in range(16):
+            k = y % 8
+            if k == 0:
+                continue  # flag joint
+            end = k in (1, 7)
+            put(img, x0, y, g.shade(TACTILE, 30 if not end else 18))
+            put(img, x0 + 1, y, g.shade(TACTILE, 12 if not end else 4))
+            put(img, x0 + 2, y, g.shade(TACTILE, -28))
+    for x in range(16):
+        put(img, x, 0, g.shade(TACTILE, -32))
+        put(img, x, 8, g.shade(TACTILE, -32))
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 def render_all():
     out = {}
