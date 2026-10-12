@@ -687,10 +687,11 @@ public final class StationDescriptionParser {
 					}
 				}
 			}
+			// the shed: from the last other look that has one, else from the first look
 			Look shedLook = null;
 			for (int k = looks.size() - 1; k >= 0 && shedLook == null; k--) {
 				final Look look = looks.get(k);
-				if ((k > 0 || looks.size() == 1) && ShedShape.forLook(look.building(), look.style() == null ? StationStyle.MODERN : look.style()).arched()) {
+				if (ShedShape.forLook(look.building(), look.style() == null ? StationStyle.MODERN : look.style()).arched()) {
 					shedLook = look;
 				}
 			}

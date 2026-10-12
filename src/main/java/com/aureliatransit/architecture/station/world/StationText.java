@@ -10,6 +10,9 @@ import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.SurveyReport;
 import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.Violation;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
@@ -19,8 +22,8 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Chat lines of the station generator: the plan summary (what was understood, the footprint, rail nodes, block counts and
- * both checks) and the site report.
+ * Chat lines of the station generator: the short plan summary with clickable buttons (what most players read), the full
+ * details (what was understood, the footprint, rail nodes, block counts and both checks) and the site report.
  */
 final class StationText {
 
@@ -38,6 +41,86 @@ final class StationText {
 					case CANOPY -> "canopy";
 					case HALL -> "hall roof";
 				}) + (spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+	}
+
+	/** A clickable chat button that runs {@code command} (an operator's own /ata_station command). */
+	static MutableText button(String label, String command, Formatting colour, String hover) {
+		return Text.literal("[" + label + "]").styled(style -> style.withColor(colour).withBold(true)
+				.withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, command))
+				.withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal(hover))));
+	}
+
+	/** "2 tracks, side platforms, 64 long, arched train shed, clinker brick hall (after Hamburg), terminus, "Alpha"". */
+	static String headline(StationSpec spec) {
+		final String roof = switch (spec.roof()) {
+			case NONE -> "no roof";
+			case CANOPY -> "canopies";
+			case HALL -> switch (spec.shed()) {
+				case FLAT -> "flat train shed";
+				case ARCH -> "arched train shed";
+				case POINTED -> "pointed-arch train shed";
+				case MULTI_ARCH -> "train shed of several arches";
+			};
+		};
+		return spec.trackCount() + (spec.trackCount() == 1 ? " track, " : " tracks, ") + lower(spec.platformLayout().name()) + " platforms, "
+				+ spec.platformLength() + " long, " + roof + (spec.hasBuilding() ? ", " + spec.building().label() : "")
+				+ (spec.terminus() ? ", terminus" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+	}
+
+	/**
+	 * The plan in a few lines: what it is, whether it can be built here and why not, and buttons to build, clear the ground
+	 * and build, cancel, or show the details.
+	 */
+	static void shortSummary(StationSessions.Pending pending, BlockStateResolver.Check check, Consumer<Text> out) {
+		final ParseResult parse = pending.parse();
+		out.accept(Text.literal("[ATA Station] ").formatted(Formatting.GOLD).append(Text.literal(headline(pending.spec())).formatted(Formatting.WHITE)));
+		for (final String line : parse.understood()) {
+			if (line.startsWith("mix: ")) {
+				out.accept(Text.literal("  " + line.substring(5)).formatted(Formatting.GRAY));
+			}
+		}
+		for (final String warning : parse.warnings()) {
+			out.accept(Text.literal("  " + warning).formatted(Formatting.YELLOW));
+		}
+		final MutableText details = button("Details", "/ata_station details", Formatting.GRAY, "Everything about this plan and its checks");
+		final MutableText cancel = button("Cancel", "/ata_station cancel", Formatting.RED, "Throw this plan away");
+		final String problem = problem(pending, check);
+		if (problem != null) {
+			out.accept(Text.literal("Can't build this here: " + problem).formatted(Formatting.RED));
+			out.accept(cancel.append(Text.literal(" ")).append(details));
+			return;
+		}
+		final int blocks = pending.plan().blocks().size();
+		if (!pending.report().buildable()) {
+			out.accept(Text.literal("Ground, plants or blocks are in the way (" + pending.report().terrainChanges()
+					+ " cells). Undo puts them back.").formatted(Formatting.YELLOW));
+			out.accept(button("Clear and build", "/ata_station confirm " + StationCommand.REPLACE_TERRAIN, Formatting.GOLD,
+					"Replaces what is in the way, then builds " + blocks + " blocks").append(Text.literal(" ")).append(cancel)
+					.append(Text.literal(" ")).append(details));
+			return;
+		}
+		out.accept(Text.literal("Ready: " + blocks + " blocks. The outline shows where it goes.").formatted(Formatting.GREEN));
+		out.accept(button("Build it", "/ata_station confirm", Formatting.GREEN, "Build " + blocks + " blocks (undo takes it away again)")
+				.append(Text.literal(" ")).append(cancel).append(Text.literal(" ")).append(details));
+	}
+
+	/** Why the plan cannot be built at all, in one line, or null. */
+	private static String problem(StationSessions.Pending pending, BlockStateResolver.Check check) {
+		if (!check.ok()) {
+			return "these blocks are missing: " + String.join(", ", check.missing());
+		}
+		if (!pending.violations().isEmpty()) {
+			return pending.violations().get(0).message();
+		}
+		for (final StationAudit.Check audit : pending.audit().problems()) {
+			if (audit.status() == StationAudit.Status.FAIL) {
+				return audit.message();
+			}
+		}
+		if (pending.report().hasHardIssue()) {
+			return "protected blocks, unloaded chunks, the world limit or a deep gap are in the way. Try another spot.";
+		}
+		return null;
 	}
 
 	static void summary(StationSessions.Pending pending, BlockStateResolver.Check check, Consumer<Text> out) {

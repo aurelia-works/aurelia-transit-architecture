@@ -49,6 +49,7 @@ public final class StationCommand {
 				.then(CommandManager.literal("plan").then(CommandManager.argument("description", StringArgumentType.greedyString())
 						.executes(StationCommand::plan)))
 				.then(CommandManager.literal("preview").executes(context -> run(context, StationActions::preview)))
+				.then(CommandManager.literal("details").executes(context -> run(context, StationActions::details)))
 				.then(CommandManager.literal("confirm").executes(context -> run(context, player -> StationActions.confirm(player, false)))
 						.then(CommandManager.literal(REPLACE_TERRAIN).executes(context -> run(context, player -> StationActions.confirm(player, true)))))
 				.then(CommandManager.literal("cancel").executes(context -> run(context, StationActions::cancel)))

@@ -55,9 +55,19 @@ public final class StationActions {
 		}
 		StationSessions.discard(player.getUuid());
 		StationSessions.setPending(player.getUuid(), pending);
-		StationText.summary(pending, BlockStateResolver.check(pending.plan()), out);
-		out.accept(Text.literal(clicked == null ? "Planned in front of you." : "Planned from the block you clicked.").formatted(Formatting.DARK_GRAY));
+		StationText.shortSummary(pending, BlockStateResolver.check(pending.plan()), out);
 		StationSessions.startPreview(new StationPreview(player.getUuid(), pending.dimension(), pending.plan(), pending.frame(), pending.report()));
+		return true;
+	}
+
+	/** The full plan summary: what was understood, the footprint, rail nodes, block counts, both checks and the site. */
+	public static boolean details(ServerPlayerEntity player) {
+		final StationSessions.Pending pending = StationSessions.pending(player.getUuid());
+		if (pending == null) {
+			error(player, "No pending plan. Plan one with the station wrench or /ata_station plan.");
+			return false;
+		}
+		StationText.summary(pending, BlockStateResolver.check(pending.plan()), message(player));
 		return true;
 	}
 
@@ -77,7 +87,7 @@ public final class StationActions {
 		final UUID id = player.getUuid();
 		final StationSessions.Pending pending = StationSessions.pending(id);
 		if (pending == null) {
-			error(player, "No pending plan. Plan one with /ata_station plan or the station wrench.");
+			error(player, "Place the station first: press \"Place in front of me\" in the wrench screen, or right-click the ground with the wrench.");
 			return false;
 		}
 		final ServerWorld world = player.getServer().getWorld(pending.dimension());

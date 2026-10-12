@@ -328,7 +328,8 @@ public final class StationBuildJob {
 		paused = false;
 		if (mode == Mode.BUILD) {
 			nameSigns();
-			say(Formatting.GREEN, "Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. /ata_station undo reverts it.");
+			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
+					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
 		} else {
 			say(Formatting.GREEN, "Undo finished: " + restored + " cells restored"
 					+ (keptNodes > 0 ? ", " + keptNodes + " rail nodes kept (connected in MTR since the build)" : "")

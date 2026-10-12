@@ -18,15 +18,21 @@ Operators only (permission level 2), like `/ata_message`.
 
 ## Station Wrench
 
-The **Station Wrench** (Passenger Equipment tab, operators only) does the same without typing commands. It remembers one description.
+The **Station Wrench** (Passenger Equipment tab, operators only) does the same without typing commands. Right-click the air to open its screen.
+
+**Simple page (buttons).** Pick a city look (Utrecht, Amsterdam, Hamburg, Munich, Frankfurt, St Pancras, Antwerp, New York), optionally a second city to *mix with* (its train shed, or its platforms when the first city has no shed), through station or terminus, 1-4 tracks, platforms (auto, side, island), length (32/64/96/128), roof (the city's own, canopies, flat, arched, pointed-arch or multi-arch train shed, or none), a station building and a name. Then **Place in front of me** shows the outline and chat offers **Build it** / **Cancel** / **Details**; **Build it!** builds the placed plan and **Undo last build** reverts it. The buttons only write a plain description (`StationRecipe`), so they go through exactly the same parser, design rules and checks as typed text; a unit test builds every look x mix x type x roof combination.
+
+**Advanced page.** The typed description with the eight preset buttons, and every action: Plan in front of me, Show preview, Build, **Build, replace terrain**, Cancel and Undo last build. A typed description reopens on this page. Closing the screen saves the choices and the description on the wrench.
 
 | With the wrench | What it does |
 |---|---|
-| Right-click a block | Plans the wrench's description on top of that block, facing the way you look: rail level is the top of the block, and the footprint starts at the block, centred on it. The summary and preview appear as with `plan`. |
+| Right-click the air | Opens the wrench screen. |
+| Right-click a block | Plans the wrench's description on top of that block, facing the way you look: rail level is the top of the block, and the footprint starts at the block, centred on it. The short summary with buttons and the preview appear as with `plan`. |
 | Sneak + right-click a block | Builds the pending plan (`confirm`). Never approves terrain changes. |
 | Left-click a block | Cancels the running build or discards the plan. The wrench never breaks blocks. Left-click in the air does nothing. |
-| Right-click the air | Shows the preview again. |
-| Sneak + right-click the air | Opens the wrench screen: edit the description or pick a preset, then Plan in front of me, Show preview, Build, **Build, replace terrain** (the wrench's only way to approve terrain changes), Cancel or Undo last build. Closing the screen saves the description. |
+| Sneak + right-click the air | Shows the preview again. |
+
+**Chat buttons.** A plan's chat summary is short: the headline, the mix, warnings, then **Build it** (or **Clear and build** when terrain is in the way, or the reason it cannot be built), **Cancel** and **Details** (`/ata_station details`, the full summary). A finished build offers **Undo**.
 
 Every wrench action checks on the server that the player is an operator (level 2). A non-operator's clicks and screen packets do nothing.
 
@@ -50,16 +56,27 @@ Examples:
 | Width (3-8) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side, 6 island |
 | Style | modern; dutch/utrecht/leidsche rijn; german/s-bahn/hamburg; metro/u-bahn | modern |
 | Roof | `no roof`/`open`; `canopy`/`covered`; `hall`/`train shed` | canopy |
+| Train shed shape | `flat roof`; `arched`/`barrel`/`vault`/`curved`; `pointed`; `arches`/`vaults`/`multi span`/`several arches` (asks for a train shed) | the building look's own |
 | Roof material | `glass`, `timber`/`wooden roof`, `steel` | style's own |
 | Floor | `light/dark paving`, `concrete`, `terrazzo`, `granite` | style's own |
 | Access | `step-free` (ramps at both platform ends), `no ramps`; `no tactile` | ramps and tactile edges on |
 | Other | `no benches`, `no rail nodes`, `named "X"` / `called X` | benches, rail nodes, no name signs |
 | Building | `station building`, `ticket hall`, `concourse`, `furnished`, `centraal`, `hauptbahnhof`, `no station building` | none |
-| Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts). Landmarks (`st pancras`, `antwerp`, `grand central`...) also ask for a building. | the style's own look |
+| Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts). Also `american`/`usa`/`new york`/`boston` (Beaux-Arts), `british`/`london`, `leipzig`/`cologne` (sandstone), `brussels`. Landmarks (`st pancras`, `antwerp`, `grand central`...) also ask for a building. | the style's own look |
+| Mix | two or more looks with `and`, `combined`, `mix`, `x`, `hybrid`: the first gives the building, the first with a platform style gives the platforms, the last with an arched shed gives the train shed (e.g. `american station, utrecht and hamburg combined`) | one look |
 | Footbridge | `footbridge`, `bridge`, `overbridge`, `skywalk`, `no footbridge` | none |
 | Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning) | through station |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
+
+## Train sheds
+
+A hall roof is a train shed over every track and platform, framed in **station girders**: a connecting I-section block that joins girders on all six sides and any full wall face, so a frame reads as one piece instead of loose beams. Its colour follows the building look (steel, white, Gothic blue, Antwerp/Amsterdam/Grand Central green) and cycles with an empty-hand right-click.
+
+- **Frame:** columns on the platforms carry cross girders at regular rows (shifted a block or two where stairs, screens or doors are in the way), and longitudinal girders run along every column line, the eaves, the valleys and purlins so no roof span is longer than 8. Cross girders over a footbridge stand on short piers on its roof.
+- **Shapes:** flat; arched (a parabolic barrel vault); pointed (a two-centred Gothic arch, St Pancras); several arches (one vault per track pair, valleys over the platforms, Frankfurt). Vaults are glass above a clad lower band, with stepped girder ribs at every frame row and both ends, and a terminus gets a glass end screen over the head building.
+- **Heights:** the beams rise to 8 for an arched shed 16 or more wide, and to 11 over a footbridge or a building beside the tracks, so a shed now combines with both.
+- Every shape x building look x layout (1020 plans) passes the design rules and the station checks in a unit test.
 
 ## Station buildings and footbridge
 
@@ -122,14 +139,14 @@ The generator never creates rail connections itself, because those live in MTR's
 ## Performance and safety
 
 - One server tick listener for the whole feature, which returns at once when no build or preview is running.
-- No new blocks, block entities or mixins. The wrench adds one item, one client-to-server packet (hand, action and a description of at most 256 characters, all bounded on read and handled on the server thread) and one client screen.
+- One new block (the station girder, no block entity), no mixins. The wrench adds one item, one client-to-server packet (hand, action, a description of at most 256 characters and the screen's choices of at most 160, all bounded on read and handled on the server thread) and one client screen.
 - The preview is server-side particles sent only to the planning player (at most about 600 per refresh, every 10 ticks, for 30 s), and it changes nothing.
 - Pending plans, jobs and undo logs live in memory: a server restart forgets them, and a player who leaves loses their pending plan (a running build continues).
 
 ## Known limitations
 
 - Ground-level stations only: no underground or elevated. Straight stations along one axis. No curves, no catenary, no platform screen doors, no lifts.
-- Buildings and footbridges are reached by stairs only: no lifts, so platforms reached over a footbridge get a "not step-free" warning. A hall roof cannot be combined with a footbridge or a building beside the tracks yet (the parser falls back to canopies); a terminus can have one.
+- Buildings and footbridges are reached by stairs only: no lifts, so platforms reached over a footbridge get a "not step-free" warning.
 - The building and footbridge roofs count as shelter in the checks, but the design rules do not check their spans; they rest on the building and footbridge walls.
 - Rail nodes for tracks along X (`facing=true`) match the live-tested release-check scene. Nodes for tracks along Z (`facing=false`) follow from MTR's code and are covered by game tests, but not yet by a live MTR connection.
 - The preview particles were not seen in a client in this version (headless tests only check that planning and preview change nothing).

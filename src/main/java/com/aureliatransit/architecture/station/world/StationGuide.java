@@ -32,30 +32,33 @@ public final class StationGuide {
 			new Page("Station Generator", "Describe a railway station in plain words and ATA builds it from its own blocks.\n\n"
 					+ "Operators only. This book covers the Station Wrench, the words it knows and the commands."),
 			new Page("The Station Wrench", "Find it in the Passenger Equipment tab.\n\n"
-					+ "Sneak + right-click the air to open it: type a description or pick a preset, then press Plan in front of me."),
-			new Page("Wrench clicks", "Right-click a block: plan there, facing the way you look.\n"
+					+ "Right-click the air to open it. Pick a city, the tracks, length and roof, then press Place in front of me and Build it!"),
+			new Page("Wrench clicks", "Right-click the air: open the menu.\n"
+					+ "Right-click a block: place there, facing the way you look.\n"
 					+ "Sneak + right-click a block: build.\n"
-					+ "Left-click a block: cancel.\n"
-					+ "Right-click the air: preview again."),
-			new Page("Plan, check, build", "Planning places nothing. Chat lists what was understood, the size and the checks, and "
-					+ "particles outline the station for 30 seconds.\n\nA plan that fails a check cannot be built."),
+					+ "Left-click: cancel.\n"
+					+ "Sneak + right-click the air: outline again."),
+			new Page("Plan, check, build", "Placing builds nothing yet. Chat shows the station with Build it, Cancel and Details buttons, and "
+					+ "particles outline it for 30 seconds.\n\nA plan that fails a check cannot be built."),
 			new Page("Terrain", "A normal build never changes terrain. Grass, water or gaps on the site are listed in the plan.\n\n"
-					+ "Build, replace terrain (on the screen) approves those changes."),
+					+ "Clear and build (in chat) approves those changes."),
 			new Page("Tracks", "1 to 4 tracks, island or side platforms, 16 to 160 long, 3 to 8 wide.\n\n"
 					+ "Styles: modern, dutch, s-bahn, metro.\n"
-					+ "Roof: canopy, hall or no roof."),
+					+ "Roof: canopy, no roof, or a train shed: flat, arched, pointed arch or several arches."),
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
 					+ "Add \"footbridge\" for stairs up to every platform."),
 			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich and grand central each pick a "
-					+ "building look.\n\nA hall roof only goes with a building at a terminus."),
+					+ "look and its own roof."),
+			new Page("Mixing looks", "Join cities with \"and\" or \"combined\":\n\namerican station, utrecht and hamburg combined\n\n"
+					+ "The first gives the building, then the platforms, then the train shed."),
 			new Page("Terminus", "Add \"terminus\" and the tracks end at buffer stops in front of a concourse building.\n\n"
-					+ "Every platform is reached step-free through the gates, and a train shed (hall roof) is allowed."),
+					+ "Every platform is reached step-free through the gates."),
 			new Page("Examples", "two track dutch station, island platform, 64 long, named Leidsche Rijn\n\n"
 					+ "small single track s-bahn halt, no roof"),
 			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"
 					+ "Join them with MTR's Platform Rail Connector, then extend the line."),
 			new Page("Commands", "/ata_station plan <text>\n/ata_station confirm\n/ata_station cancel\n/ata_station undo\n"
-					+ "/ata_station status\n\nUndo reverts your last build, until the server restarts.\n/ata_guide gives this book again."));
+					+ "/ata_station status\n/ata_station details\n\nUndo reverts your last build until a restart. /ata_guide gives this book again."));
 
 	private StationGuide() {
 	}

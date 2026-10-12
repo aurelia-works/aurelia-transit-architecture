@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.station.world;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationRecipe;
 import net.minecraft.block.BlockState;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
@@ -23,13 +24,15 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * The station wrench: the station generator without typing commands. It remembers one description (set in its screen).
+ * The station wrench: the station generator without typing commands. It remembers the station chosen in its screen (the
+ * choices, and the description they make or one typed in its advanced mode).
  * <ul>
- *     <li>right-click a block: plan that description on top of it, facing the way you look (preview shows)</li>
+ *     <li>right-click the air: open the screen (pick a look, size and roof; place, build, undo)</li>
+ *     <li>right-click a block: plan the station on top of it, facing the way you look (the outline shows, and chat offers
+ *     Build it / Cancel buttons)</li>
  *     <li>sneak + right-click a block: build the pending plan (never approves terrain changes)</li>
+ *     <li>sneak + right-click the air: show the outline again</li>
  *     <li>left-click a block: cancel the running build or discard the plan</li>
- *     <li>right-click the air: show the preview again; sneak + right-click the air: open the screen (description and buttons,
- *     including the only wrench route to approving terrain changes)</li>
  * </ul>
  * Every entry point checks the operator level on the server ({@link StationActions#allowed}) before running a
  * {@link StationActions} action. The wrench never breaks blocks.
@@ -38,6 +41,9 @@ public class StationWrenchItem extends Item {
 
 	/** Stack NBT key of the remembered description. Client-writable in creative, so it is bounded again on every read. */
 	public static final String DESCRIPTION = "Description";
+	/** Stack NBT key of the screen's choices ({@link StationRecipe#encode}); bounded like the description. */
+	public static final String RECIPE = "Recipe";
+	public static final int MAX_RECIPE = 160;
 	/** Server ticks between two left-click cancels, so holding the button down does not repeat it. */
 	static final int CANCEL_COOLDOWN_TICKS = 20;
 	private static final String TIP = "tooltip." + AureliaTransitArchitecture.MOD_ID + ".station_wrench";
@@ -69,6 +75,24 @@ public class StationWrenchItem extends Item {
 		}
 	}
 
+	public static StationRecipe recipe(ItemStack stack) {
+		final NbtCompound nbt = stack.getNbt();
+		return StationRecipe.decode(nbt == null ? "" : bounded(nbt.getString(RECIPE), MAX_RECIPE));
+	}
+
+	public static void setRecipe(ItemStack stack, String recipe) {
+		final String text = bounded(recipe, MAX_RECIPE);
+		if (text.isEmpty()) {
+			stack.removeSubNbt(RECIPE);
+		} else {
+			stack.getOrCreateNbt().putString(RECIPE, StationRecipe.decode(text).encode());
+		}
+	}
+
+	private static String bounded(String text, int max) {
+		return text.length() > max ? text.substring(0, max) : text;
+	}
+
 	private static String bounded(String text) {
 		return text.length() > StationDescriptionParser.MAX_INPUT ? text.substring(0, StationDescriptionParser.MAX_INPUT) : text;
 	}
@@ -77,12 +101,13 @@ public class StationWrenchItem extends Item {
 	 * Server side of the screen: saves the description to the wrench in {@code hand}, then runs {@code action}. Ignored unless
 	 * that hand holds a wrench or the player is not an operator.
 	 */
-	public static void perform(ServerPlayerEntity player, Hand hand, Action action, String description) {
+	public static void perform(ServerPlayerEntity player, Hand hand, Action action, String description, String recipe) {
 		final ItemStack stack = player.getStackInHand(hand);
 		if (!(stack.getItem() instanceof StationWrenchItem) || !StationActions.allowed(player)) {
 			return;
 		}
 		setDescription(stack, description);
+		setRecipe(stack, recipe);
 		switch (action) {
 			case SAVE -> player.sendMessage(Text.literal("Station description saved on the wrench.").formatted(Formatting.GRAY), true);
 			case PLAN -> StationActions.plan(player, description(stack), null);
@@ -114,7 +139,7 @@ public class StationWrenchItem extends Item {
 	@Override
 	public TypedActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
 		final ItemStack stack = player.getStackInHand(hand);
-		if (player.isSneaking()) {
+		if (!player.isSneaking()) {
 			if (world.isClient) {
 				if (player.hasPermissionLevel(StationActions.PERMISSION_LEVEL)) {
 					openScreen.accept(hand);
@@ -152,12 +177,13 @@ public class StationWrenchItem extends Item {
 	public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
 		final String description = description(stack);
 		if (!description.isEmpty()) {
-			tooltip.add(Text.literal("\"" + description + "\"").formatted(Formatting.AQUA));
+			final StationRecipe recipe = recipe(stack);
+			tooltip.add(Text.literal(description.equals(recipe.description()) ? recipe.title() : "\"" + description + "\"").formatted(Formatting.AQUA));
 		}
+		tooltip.add(Text.translatable(TIP + ".edit").formatted(Formatting.GRAY));
 		tooltip.add(Text.translatable(TIP + ".plan").formatted(Formatting.GRAY));
 		tooltip.add(Text.translatable(TIP + ".build").formatted(Formatting.GRAY));
 		tooltip.add(Text.translatable(TIP + ".cancel").formatted(Formatting.GRAY));
-		tooltip.add(Text.translatable(TIP + ".edit").formatted(Formatting.GRAY));
 		tooltip.add(Text.translatable(TIP + ".ops").formatted(Formatting.DARK_GRAY));
 	}
 }

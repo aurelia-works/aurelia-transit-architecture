@@ -70,11 +70,12 @@ public final class ModPackets {
 		return buf;
 	}
 
-	public static PacketByteBuf writeStationWrench(Hand hand, StationWrenchItem.Action action, String description) {
+	public static PacketByteBuf writeStationWrench(Hand hand, StationWrenchItem.Action action, String description, String recipe) {
 		final PacketByteBuf buf = PacketByteBufs.create();
 		buf.writeVarInt(hand.ordinal());
 		buf.writeVarInt(action.ordinal());
 		buf.writeString(description, StationDescriptionParser.MAX_INPUT);
+		buf.writeString(recipe, StationWrenchItem.MAX_RECIPE);
 		return buf;
 	}
 
@@ -83,6 +84,7 @@ public final class ModPackets {
 			final Hand hand;
 			final StationWrenchItem.Action action;
 			final String description;
+			final String recipe;
 			try {
 				final int handIndex = buf.readVarInt();
 				final int actionIndex = buf.readVarInt();
@@ -92,10 +94,11 @@ public final class ModPackets {
 				hand = Hand.values()[handIndex];
 				action = StationWrenchItem.Action.values()[actionIndex];
 				description = buf.readString(StationDescriptionParser.MAX_INPUT);
+				recipe = buf.readString(StationWrenchItem.MAX_RECIPE);
 			} catch (RuntimeException e) {
 				return;
 			}
-			server.execute(() -> StationWrenchItem.perform(player, hand, action, description));
+			server.execute(() -> StationWrenchItem.perform(player, hand, action, description, recipe));
 		});
 		ServerPlayNetworking.registerGlobalReceiver(UPDATE_WAYFINDING, (server, player, handler, buf, responseSender) -> {
 			final BlockPos pos;
