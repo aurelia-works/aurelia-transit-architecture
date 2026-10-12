@@ -66,6 +66,136 @@
 		$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
 		$("lengthOut").textContent = $("length").value + " blocks";
 		$("count").textContent = $("text").value.length + " / " + options.maxTyped;
+		syncButtons();
+	}
+
+	// ---- buttons over the hidden selects: the selects stay the single source of what is sent --------------------------
+
+	// one real block texture per city, so a tile shows what the station is built from
+	const LOOK_TEXTURES = {
+		UTRECHT: "nlbe_wave_top_x", AMSTERDAM: "nlbe_brick", HAMBURG: "hamburg_clinker_brick", MUNICH: "munich_exposed_concrete",
+		FRANKFURT: "frankfurt_sandstone_ashlar", ST_PANCRAS: "nlbe_brick_band_side", ANTWERP: "nlbe_limestone", NEW_YORK: "roma_travertine"
+	};
+	const MODE_HELP = {
+		through: "Trains stop and carry on through the station.",
+		terminus: "The tracks end at buffer stops in front of a big station hall."
+	};
+	const synced = [];
+
+	function set(id, value) {
+		$(id).value = value;
+		$(id).dispatchEvent(new Event("input"));
+	}
+
+	function press(button, on) {
+		button.setAttribute("aria-pressed", String(on));
+	}
+
+	/** Segmented buttons for every option of a hidden select. */
+	function segmented(selectId, hostId, label) {
+		const host = $(hostId);
+		host.innerHTML = "";
+		for (const option of $(selectId).options) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.textContent = label ? label(option) : option.text;
+			b.addEventListener("click", () => set(selectId, option.value));
+			host.append(b);
+			synced.push(() => press(b, $(selectId).value === option.value));
+		}
+	}
+
+	function buildButtons() {
+		const looks = $("looks");
+		looks.innerHTML = "";
+		for (const [value, label] of options.looks) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "look";
+			const sw = document.createElement("i");
+			sw.className = "sw";
+			if (LOOK_TEXTURES[value]) {
+				sw.style.backgroundImage = "url('tex/aurelia_transit_architecture/block/" + LOOK_TEXTURES[value] + ".png')";
+			} else {
+				sw.classList.add("custom");
+				sw.textContent = "✎";
+			}
+			const name = document.createElement("span");
+			name.textContent = label;
+			b.append(sw, name);
+			b.title = value === "AUTO" ? "No city: the plain look, or whatever your words describe" : label + " look";
+			b.addEventListener("click", () => set("look", value));
+			looks.append(b);
+			synced.push(() => press(b, $("look").value === value));
+		}
+		segmented("mode", "modeSeg");
+		synced.push(() => { $("modeHelp").textContent = MODE_HELP[$("mode").value] || ""; });
+		segmented("layout", "layoutSeg");
+
+		// the building and its size are one choice here: No, Auto, Compact, City, Grand
+		const building = $("buildingSeg");
+		building.innerHTML = "";
+		const choices = [["0", "", "No"]].concat(options.sizes.map(([v, l]) => ["1", v, v === "AUTO" ? "Auto" : l]));
+		for (const [has, size, label] of choices) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.textContent = label;
+			b.addEventListener("click", () => {
+				if (size) {
+					$("size").value = size;
+				}
+				set("building", has);
+			});
+			building.append(b);
+			synced.push(() => press(b, $("building").value === has && (has === "0" || $("size").value === size)));
+		}
+
+		const step = (delta) => {
+			const t = $("tracks");
+			const next = Math.max(+t.min, Math.min(+t.max, +t.value + delta));
+			if (String(next) !== t.value) {
+				set("tracks", next);
+			}
+		};
+		$("tracksDown").addEventListener("click", () => step(-1));
+		$("tracksUp").addEventListener("click", () => step(1));
+		synced.push(() => {
+			$("tracksDown").disabled = $("tracks").value === $("tracks").min;
+			$("tracksUp").disabled = $("tracks").value === $("tracks").max;
+		});
+
+		const presets = $("presets");
+		presets.innerHTML = "";
+		for (const p of options.presets) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "chip";
+			b.textContent = p.key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+			b.title = p.description;
+			// the preset sets the buttons (they are always sent, so they would otherwise win over its numbers); the rest of its
+			// words, such as the roof and the footbridge, go in the description
+			b.addEventListener("click", () => {
+				$("text").value = p.text;
+				$("look").value = p.look;
+				$("mix").value = "";
+				$("mode").value = p.mode;
+				$("tracks").value = p.tracks;
+				$("length").value = p.length;
+				$("layout").value = p.layout;
+				$("roof").value = "AUTO";
+				$("building").value = "1";
+				$("size").value = "AUTO";
+				$("name").value = p.name;
+				changed();
+			});
+			presets.append(b);
+		}
+	}
+
+	function syncButtons() {
+		for (const sync of synced) {
+			sync();
+		}
 	}
 
 	let timer = 0;
@@ -79,6 +209,8 @@
 	async function init() {
 		options = await (await fetch("api/options")).json();
 		fillSelect($("layout"), options.layouts);
+		// "Custom", as on the wrench: no city look, the plain station or whatever the words describe
+		options.looks = options.looks.map(([v, l]) => [v, v === "AUTO" ? "Custom" : l]);
 		fillSelect($("look"), options.looks);
 		fillSelect($("mix"), options.looks.filter(([v]) => v !== "AUTO"), ["", "Nothing"]);
 		fillSelect($("roof"), options.roofs);
@@ -91,14 +223,11 @@
 		$("length").value = options.length[2];
 		$("text").maxLength = options.maxTyped;
 		$("name").maxLength = options.maxName;
-		for (const p of options.presets) {
-			$("preset").append(new Option(p.key.replace(/_/g, " "), p.description));
-		}
+		buildButtons();
 		restore();
 		updateOutputs();
-		$("where").innerHTML = IN_GAME
-			? "Connected to your game. <b>Plan in front of me</b> sends this design to the station wrench."
-			: "Running outside the game: design and check here.";
+		$("where").innerHTML = IN_GAME ? "Connected to <b>your game</b>" : "Design mode · not connected to a game";
+		$("where").classList.toggle("live", IN_GAME);
 		$("game").hidden = !IN_GAME;
 		$("offline").hidden = IN_GAME;
 		// A terminus is a city's main station: one still at the default size becomes 8 tracks, 160 long (as on the wrench).
@@ -111,19 +240,9 @@
 		for (const f of fields) {
 			$(f).addEventListener("input", changed);
 		}
-		$("preset").addEventListener("change", () => {
-			if ($("preset").value) {
-				$("text").value = $("preset").value;
-				$("look").value = "AUTO";
-				$("mix").value = "";
-				$("roof").value = "AUTO";
-				$("size").value = "AUTO";
-				$("layout").value = "AUTO";
-				$("preset").value = "";
-				changed();
-			}
-		});
-		$("generate").addEventListener("click", generate);
+		if ($("text").value) {
+			$("words").open = true;
+		}
 		for (const b of document.querySelectorAll("[data-send]")) {
 			b.addEventListener("click", () => send(b.dataset.send));
 		}
@@ -170,9 +289,20 @@
 	// ---- 3D view --------------------------------------------------------------------------------------------------------
 
 	const canvas = $("view");
-	const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-	renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-	renderer.outputEncoding = THREE.sRGBEncoding;
+	// Without WebGL (graphics acceleration off, or the browser gave up on the GPU) the page still plans and checks stations;
+	// only the 3D view is replaced by a note, through a renderer that draws nothing.
+	const renderer = (() => {
+		try {
+			const r = new THREE.WebGLRenderer({ canvas, antialias: true });
+			r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+			r.outputEncoding = THREE.sRGBEncoding;
+			return r;
+		} catch (e) {
+			$("no3d").hidden = false;
+			$("stage").classList.add("no-gl");
+			return { render() {}, setSize() {}, getPixelRatio: () => 1, clippingPlanes: [] };
+		}
+	})();
 	const scene = new THREE.Scene();
 	scene.background = new THREE.Color(0x101317);
 	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 4000);
@@ -363,12 +493,14 @@
 		const size = bounds.getSize(new THREE.Vector3());
 		ground.scale.set(size.x + 40, size.z + 40, 1);
 		ground.position.set((bounds.min.x + bounds.max.x) / 2, bounds.min.y - 0.02, (bounds.min.z + bounds.max.z) / 2);
-		$("banner").textContent = plan.title + " · " + plan.size.blocks.toLocaleString() + " blocks · " + plan.size.width + " × "
-			+ plan.size.length + " × " + plan.size.height + " · planned in " + plan.ms + " ms";
+		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + plan.size.blocks.toLocaleString() + " blocks · " + plan.size.width + " wide, "
+			+ plan.size.length + " long, " + plan.size.height + " high";
 		$("raw").textContent = JSON.stringify(Object.assign({}, plan, { cells: "[" + plan.cells.length / 5 + " blocks]", models: "[" + plan.models.length + " models]" }), null, 2);
-		if (!showPlan.framed) {
+		// frame the first station, and again when a station grows or shrinks a lot (a preset, many more tracks), so it fits
+		const reach = Math.max(size.x, size.z);
+		if (!showPlan.framed || reach > showPlan.framed * 1.5 || reach < showPlan.framed / 1.5) {
 			setView(currentView);
-			showPlan.framed = true;
+			showPlan.framed = reach;
 		}
 		updateCut();
 		draw();
@@ -597,8 +729,9 @@
 			["Name", "", b.name || "(no name signs)", null],
 			["Overall", "", plan.size.width + " wide × " + plan.size.length + " long × " + plan.size.height + " high, " + plan.size.blocks.toLocaleString() + " blocks", null]
 		];
-		$("reqTable").innerHTML = "<tr><th>Setting</th><th>Requested</th><th>Built</th></tr>" + rows.map(([k, want, got, met]) =>
-			"<tr><th>" + esc(k) + "</th><td>" + esc(want) + "</td><td class='" + (met === true ? "ok" : met === false ? "diff" : "") + "'>" + esc(got) + "</td></tr>"
+		$("reqTable").innerHTML = rows.map(([k, want, got, met]) =>
+			"<tr><th>" + esc(k) + "</th><td class='" + (met === true ? "ok" : met === false ? "diff" : "") + "'>" + esc(got)
+			+ (met === false && want !== "" ? " <span class='chip muted'>asked: " + esc(want) + "</span>" : "") + "</td></tr>"
 		).join("");
 
 		const chips = (list, cls) => list.length ? "<div class='chips'>" + list.map((t) => "<span class='chip " + (cls || "") + "'>" + esc(t) + "</span>").join("") + "</div>" : "<p class='note'>None</p>";
@@ -609,14 +742,21 @@
 			"<div class='group'><h3>Filled in</h3>" + chips(plan.defaulted, "muted") + "</div>" +
 			"<p class='note'>The planner read: “" + esc(plan.text) + "”</p>";
 
-		const fails = plan.checks.filter((c) => c.status === "FAIL").length + plan.violations.length;
-		const warns = plan.checks.filter((c) => c.status === "WARN").length;
-		const verdict = plan.buildable
-			? "<p class='verdict good'>Buildable" + (warns ? " · " + warns + " warning" + (warns > 1 ? "s" : "") : "") + "</p>"
-			: "<p class='verdict bad'>Cannot be built · " + fails + " problem" + (fails > 1 ? "s" : "") + "</p>";
-		const items = plan.violations.map((v) => "<li><span class='st FAIL'>Rule</span><span>" + esc(v.message) + " (x " + v.x + ", y " + v.y + ", z " + v.z + ")</span></li>")
-			.concat(plan.checks.map((c) => "<li><span class='st " + c.status + "'>" + c.status.toLowerCase() + "</span><span>" + esc(c.message) + "</span></li>"));
-		$("checks").innerHTML = verdict + "<ul class='list'>" + items.join("") + "</ul>";
+		const problems = plan.violations.map((v) => ({ status: "FAIL", message: v.message + " (x " + v.x + ", y " + v.y + ", z " + v.z + ")" }))
+			.concat(plan.checks.filter((c) => c.status !== "PASS"));
+		const passed = plan.checks.filter((c) => c.status === "PASS");
+		const fails = problems.filter((c) => c.status === "FAIL").length;
+		const warns = problems.length - fails;
+		const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+		const verdict = !plan.buildable
+			? ["bad", "!", "Can't build this yet", plural(fails, "problem") + " to fix first"]
+			: warns ? ["warned", "!", "Ready to build", plural(warns, "thing") + " worth a look"]
+				: ["good", "✓", "Ready to build", "All " + plural(passed.length, "check") + " passed"];
+		$("checks").innerHTML = "<div class='verdict " + verdict[0] + "'><span class='icon' aria-hidden='true'>" + verdict[1] + "</span><div><h2>"
+			+ verdict[2] + "</h2><p>" + verdict[3] + "</p></div></div>"
+			+ (problems.length ? "<ul class='issues'>" + problems.map((c) => "<li class='" + c.status + "'>" + esc(c.message) + "</li>").join("") + "</ul>" : "")
+			+ (passed.length ? "<details class='fold'><summary>Passed checks (" + passed.length + ")</summary><ul class='list'>"
+				+ passed.map((c) => "<li>" + esc(c.message) + "</li>").join("") + "</ul></details>" : "");
 	}
 
 	init().catch((e) => {

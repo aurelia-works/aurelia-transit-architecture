@@ -23,6 +23,28 @@ class StationRecipeTest {
 	 */
 	private static final int[] LENGTHS = {32, 64, 96, 128};
 
+	/** The Mix button steps through every other city and back to none, whatever look is chosen; it never sticks on none. */
+	@Test
+	void mixButtonCyclesThroughEveryOtherCity() {
+		for (final StationRecipe.Look look : StationRecipe.Look.values()) {
+			StationRecipe recipe = StationRecipe.defaults().withLook(look);
+			final List<StationRecipe.Look> seen = new ArrayList<>();
+			do {
+				recipe = recipe.withMix(recipe.nextMix());
+				if (recipe.mix() != null) {
+					seen.add(recipe.mix());
+				}
+			} while (recipe.mix() != null && seen.size() <= StationRecipe.Look.values().length);
+			final List<StationRecipe.Look> expected = new ArrayList<>();
+			for (final StationRecipe.Look other : StationRecipe.Look.values()) {
+				if (other != StationRecipe.Look.AUTO && other != look) {
+					expected.add(other);
+				}
+			}
+			assertEquals(expected, seen, "mix cycle with " + look);
+		}
+	}
+
 	@Test
 	void everyChoiceGivesACleanBuildableStation() {
 		final List<String> failures = new ArrayList<>();

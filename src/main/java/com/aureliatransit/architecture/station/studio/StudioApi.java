@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station.studio;
 
+import com.aureliatransit.architecture.station.BuildingStyle;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LayoutValidator;
 import com.aureliatransit.architecture.station.LocalFrame;
@@ -76,10 +77,38 @@ public final class StudioApi {
 		out.append(",\"presets\":[");
 		for (int i = 0; i < StationPresets.ALL.size(); i++) {
 			final StationPresets.Preset preset = StationPresets.ALL.get(i);
-			out.append(i == 0 ? "" : ",").append("{\"key\":").append(Json.quote(preset.key())).append(",\"description\":")
-					.append(Json.quote(preset.description())).append('}');
+			out.append(i == 0 ? "" : ",").append(preset(preset));
 		}
 		return out.append("]}").toString();
+	}
+
+	/**
+	 * A preset as the page's controls: its tracks, length, type, platforms, city and name set the buttons, and the rest of its
+	 * words (the roof, the footbridge) go in the description. The controls are always sent, so without this they would win
+	 * over the preset's own numbers.
+	 */
+	static String preset(StationPresets.Preset preset) {
+		final StationSpec spec = StationDescriptionParser.parse(preset.description()).spec();
+		final String words = preset.description().replaceFirst(",?\\s*named .*$", "");
+		return "{\"key\":" + Json.quote(preset.key()) + ",\"description\":" + Json.quote(preset.description()) + ",\"text\":" + Json.quote(words)
+				+ ",\"tracks\":" + spec.trackCount() + ",\"length\":" + spec.platformLength() + ",\"mode\":" + Json.quote(spec.terminus() ? "terminus" : "through")
+				+ ",\"layout\":" + Json.quote(spec.platformLayout().name()) + ",\"look\":" + Json.quote(look(preset.building()).name())
+				+ ",\"name\":" + Json.quote(spec.name()) + "}";
+	}
+
+	/** The wrench's city button for a building look. */
+	static StationRecipe.Look look(BuildingStyle building) {
+		return switch (building) {
+			case AMSTERDAM -> StationRecipe.Look.AMSTERDAM;
+			case GOTHIC_BRICK -> StationRecipe.Look.ST_PANCRAS;
+			case ANTWERP -> StationRecipe.Look.ANTWERP;
+			case SANDSTONE -> StationRecipe.Look.FRANKFURT;
+			case CLINKER -> StationRecipe.Look.HAMBURG;
+			case CONCRETE -> StationRecipe.Look.MUNICH;
+			case BEAUX_ARTS -> StationRecipe.Look.NEW_YORK;
+			case MODERN -> StationRecipe.Look.UTRECHT;
+			case NONE -> StationRecipe.Look.AUTO;
+		};
 	}
 
 	/** Plans the request's station and describes it for the page. */

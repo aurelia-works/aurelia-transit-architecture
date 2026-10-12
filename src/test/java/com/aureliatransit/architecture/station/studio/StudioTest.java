@@ -3,6 +3,8 @@ package com.aureliatransit.architecture.station.studio;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationPlanner;
+import com.aureliatransit.architecture.station.StationPresets;
+import com.aureliatransit.architecture.station.StationSpec;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -37,6 +39,34 @@ class StudioTest {
 		assertEquals(Boolean.TRUE, model.get("x"));
 		assertEquals("a\"bA", model.get("s"));
 		assertFalse(Json.quote("</script>").contains("<"), "quoted text never closes a script tag");
+	}
+
+	/**
+	 * Picking a preset sets the page's controls, which are always sent with the description: the station planned from them is
+	 * the preset's own (its tracks, length, type, platforms and name), with no clashing or ignored words.
+	 */
+	@Test
+	void presetsPlanAsThemselvesThroughTheControls() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			final Map<String, Object> p = Json.object(Json.parse(StudioApi.preset(preset)));
+			final Map<String, String> q = new java.util.HashMap<>();
+			for (final String field : List.of("text", "mode", "tracks", "length", "layout", "look", "name")) {
+				final Object value = p.get(field);
+				q.put(field, value instanceof Double d ? Integer.toString(d.intValue()) : (String) value);
+			}
+			q.put("building", "1");
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			final StationSpec want = StationDescriptionParser.parse(preset.description()).spec();
+			final Map<String, Object> built = Json.object(plan.get("built"));
+			assertEquals((double) want.trackCount(), built.get("tracks"), preset.key());
+			assertEquals((double) want.platformLength(), built.get("length"), preset.key());
+			assertEquals(want.terminus() ? "Terminus" : "Through station", built.get("mode"), preset.key());
+			assertEquals(want.name(), built.get("name"), preset.key());
+			assertTrue(Json.list(plan.get("warnings")).isEmpty(), preset.key() + " warnings: " + plan.get("warnings"));
+			assertTrue(Json.list(plan.get("ignored")).isEmpty(), preset.key() + " ignored: " + plan.get("ignored"));
+			assertEquals(Boolean.TRUE, plan.get("buildable"), preset.key());
+		}
 	}
 
 	@Test

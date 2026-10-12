@@ -9,134 +9,147 @@
 <body data-token="{{TOKEN}}" data-ingame="{{INGAME}}">
 <canvas id="silk" aria-hidden="true"></canvas>
 <header class="top">
-	<div>
-		<p class="eyebrow">Aurelia Transit Architecture</p>
-		<h1>Station Studio</h1>
+	<div class="brand">
+		<svg class="mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#3d63ff"/><rect x="6" y="9" width="20" height="4" rx="1" fill="#fff"/><rect x="6" y="19" width="20" height="4" rx="1" fill="#fff"/><rect x="10" y="13" width="2" height="6" fill="#fff"/><rect x="20" y="13" width="2" height="6" fill="#fff"/></svg>
+		<div>
+			<h1>Station <em>Studio</em></h1>
+			<p class="sub">Aurelia Transit Architecture</p>
+		</div>
 	</div>
-	<p class="where" id="where"></p>
+	<p class="where" id="where" role="status"></p>
 </header>
 
 <main class="app">
 	<aside class="rail" aria-label="Station settings">
-		<section>
-			<label class="label" for="text">Description</label>
-			<textarea id="text" rows="5" placeholder="Describe the style, materials and features. E.g. 'sandstone terminus with an arched glass train shed and a clock tower' or 'brick station, hamburg and utrecht combined'"></textarea>
-			<div class="field-foot"><span>Your words. The settings below win over them.</span><span id="count">0</span></div>
-			<select id="preset" aria-label="Start from a preset"><option value="">Start from a preset…</option></select>
-		</section>
+		<div class="rail-scroll">
+			<section class="step">
+				<h2><span class="n">1</span>Pick a city</h2>
+				<div class="looks" id="looks" role="group" aria-label="City look"></div>
+				<select id="look" hidden></select>
+				<label class="field-row" for="mix"><span>Mix in</span>
+					<select id="mix" title="Takes the train shed (or the platforms) from a second city"></select>
+				</label>
+			</section>
 
-		<section class="grid2">
-			<div>
-				<label class="label" for="mode">Station mode</label>
-				<select id="mode"><option value="through">Through station</option><option value="terminus">End station (terminus)</option></select>
-			</div>
-			<div>
-				<label class="label" for="layout">Platform layout</label>
-				<select id="layout"></select>
-			</div>
-		</section>
+			<section class="step">
+				<h2><span class="n">2</span>Station type</h2>
+				<div class="seg big" id="modeSeg" role="group" aria-label="Station type"></div>
+				<p class="help" id="modeHelp"></p>
+				<select id="mode" hidden><option value="through">Through</option><option value="terminus">Terminus</option></select>
+			</section>
 
-		<section>
-			<div class="range-head"><label class="label" for="tracks">Tracks</label><output id="tracksOut"></output></div>
-			<input type="range" id="tracks" step="1">
-			<div class="range-head"><label class="label" for="length">Platform length</label><output id="lengthOut"></output></div>
-			<input type="range" id="length" step="1">
-		</section>
+			<section class="step">
+				<h2><span class="n">3</span>How big?</h2>
+				<div class="stepper">
+					<span class="stepper-label">Tracks</span>
+					<button type="button" class="round" id="tracksDown" aria-label="Fewer tracks">−</button>
+					<output id="tracksOut"></output>
+					<button type="button" class="round" id="tracksUp" aria-label="More tracks">+</button>
+				</div>
+				<input type="range" id="tracks" step="1" hidden>
+				<div class="range-head"><label for="length">Platform length</label><output id="lengthOut"></output></div>
+				<input type="range" id="length" step="1">
+				<div class="field-row"><span>Platforms</span><div class="seg" id="layoutSeg" role="group" aria-label="Platforms"></div></div>
+				<select id="layout" hidden></select>
+			</section>
 
-		<section class="grid2">
-			<div>
-				<label class="label" for="look">Look</label>
-				<select id="look"></select>
-			</div>
-			<div>
-				<label class="label" for="mix">Mixed with</label>
-				<select id="mix"></select>
-			</div>
-			<div>
-				<label class="label" for="roof">Roof</label>
-				<select id="roof"></select>
-			</div>
-			<div>
-				<label class="label" for="building">Station building</label>
-				<select id="building"><option value="1">Yes</option><option value="0">No</option></select>
-			</div>
-			<div>
-				<label class="label" for="size">Building size</label>
-				<select id="size" title="Auto: grand for 3+ tracks or 100+ long, city for 2 tracks and 48+, else compact"></select>
-			</div>
-		</section>
+			<section class="step">
+				<h2><span class="n">4</span>Roof and building</h2>
+				<label class="field-row" for="roof"><span>Roof</span><select id="roof"></select></label>
+				<div class="field-col"><span>Station building</span><div class="seg" id="buildingSeg" role="group" aria-label="Station building"></div></div>
+				<select id="building" hidden><option value="1">Yes</option><option value="0">No</option></select>
+				<select id="size" hidden></select>
+			</section>
 
-		<section>
-			<label class="label" for="name">Name</label>
-			<input type="text" id="name" maxlength="32" placeholder="On the name signs, e.g. Leidsche Rijn">
-		</section>
+			<section class="step">
+				<h2><span class="n">5</span>Name your station</h2>
+				<input type="text" id="name" maxlength="32" placeholder="e.g. Leidsche Rijn" aria-label="Station name">
+			</section>
 
-		<section class="actions">
-			<button id="generate" class="primary">Generate</button>
+			<details class="step words" id="words">
+				<summary>Describe it in words <span class="tag">Advanced</span></summary>
+				<p class="help">Type what you want, or start from a preset. The buttons above win where they disagree.</p>
+				<div class="chips presets" id="presets" role="group" aria-label="Presets"></div>
+				<textarea id="text" rows="5" aria-label="Station description" placeholder="e.g. sandstone terminus with an arched glass train shed and a clock tower"></textarea>
+				<div class="field-foot"><span id="count"></span></div>
+			</details>
+		</div>
+
+		<div class="dock">
 			<div id="game" class="game" hidden>
-				<p class="label">In the game</p>
-				<div class="grid2">
-					<button data-send="plan" title="Plan this station in front of you, facing the way you look; particles outline it">Plan in front of me</button>
-					<button data-send="build" title="Build the planned station">Build it</button>
-					<button data-send="cancel">Cancel plan</button>
-					<button data-send="undo">Undo last build</button>
+				<div class="dock-row">
+					<button type="button" class="primary" data-send="plan" title="Plan this station in front of you, facing the way you look">Plan in front of me</button>
+					<button type="button" class="go" data-send="build" title="Build the planned station">Build it!</button>
+				</div>
+				<div class="dock-row quiet">
+					<button type="button" data-send="cancel">Cancel plan</button>
+					<button type="button" data-send="undo">Undo last build</button>
 				</div>
 				<p id="sent" class="note" role="status"></p>
 			</div>
-			<p id="offline" class="note" hidden>Opened outside the game: you can design and check stations here. To build one, open the studio from the station wrench in game.</p>
-		</section>
+			<p id="offline" class="note offline" hidden>Design mode. To build, open Station Studio from the Station Wrench in your game.</p>
+		</div>
 	</aside>
 
-	<section class="stage-wrap">
-		<div class="card stage-card">
-			<div class="toolbar">
-				<div class="seg" role="group" aria-label="View">
-					<button data-view="overview" aria-pressed="true">Overview</button>
-					<button data-view="reverse">Reverse side</button>
-					<button data-view="street">Street</button>
-					<button data-view="passenger">Passenger</button>
-					<button data-view="plan">Plan</button>
-				</div>
-				<label class="inline">Cut
-					<select id="cut"><option value="none">None</option><option value="height">Height</option><option value="across">Across</option><option value="along">Along</option></select>
-				</label>
-				<input type="range" id="cutAt" min="0" max="100" value="100" aria-label="Cut position" disabled>
-				<label class="check"><input type="checkbox" id="faces" checked> Face numbers</label>
-				<label class="check"><input type="checkbox" id="textures" checked> Textures</label>
-				<span class="spacer"></span>
-				<button id="reset">Reset view</button>
-				<button id="invertX" aria-pressed="false">Invert X</button>
-				<button id="invertY" aria-pressed="false">Invert Y</button>
+	<section class="stage" id="stage" aria-label="3D preview">
+		<canvas id="view" aria-label="3D view of the planned station"></canvas>
+		<div id="labels" class="labels"></div>
+
+		<div class="overlay top-left">
+			<div class="pills" role="group" aria-label="Camera">
+				<button type="button" data-view="overview" aria-pressed="true">Overview</button>
+				<button type="button" data-view="reverse">Back</button>
+				<button type="button" data-view="street">Street</button>
+				<button type="button" data-view="passenger">Passenger</button>
+				<button type="button" data-view="plan">From above</button>
 			</div>
-			<div class="stage" id="stage">
-				<canvas id="view" aria-label="3D view of the planned station"></canvas>
-				<div id="labels" class="labels"></div>
-				<div id="pick" class="pick" hidden></div>
-				<div id="busy" class="busy" hidden><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>Planning…</div>
-				<p id="banner" class="banner"></p>
-			</div>
-			<p class="hint">Left-drag: rotate · Shift + left-drag or right-drag: pan · Scroll: zoom · Click a block to see what it is</p>
 		</div>
 
-		<div class="panels">
-			<div class="card">
-				<h2>Requested and built</h2>
-				<table id="reqTable"></table>
-			</div>
-			<div class="card">
-				<h2>From the description</h2>
-				<div id="fromText"></div>
-			</div>
-			<div class="card">
-				<h2>Checks</h2>
-				<div id="checks"></div>
-			</div>
+		<div class="overlay top-right">
+			<label class="cut">Cut
+				<select id="cut"><option value="none">Off</option><option value="height">Height</option><option value="across">Across</option><option value="along">Along</option></select>
+				<input type="range" id="cutAt" min="0" max="100" value="100" aria-label="Cut position" disabled>
+			</label>
+			<details class="menu">
+				<summary aria-label="View options">View</summary>
+				<div class="menu-body">
+					<label class="check"><input type="checkbox" id="faces" checked> Platform numbers</label>
+					<label class="check"><input type="checkbox" id="textures" checked> Textures</label>
+					<button type="button" id="invertX" aria-pressed="false">Invert X</button>
+					<button type="button" id="invertY" aria-pressed="false">Invert Y</button>
+				</div>
+			</details>
+			<button type="button" id="reset">Reset</button>
 		</div>
-		<details class="card raw">
-			<summary>Show raw blueprint JSON</summary>
+
+		<div id="no3d" class="no3d" hidden>
+			<h2>3D preview is off</h2>
+			<p>Your browser has graphics (WebGL) turned off, so the station can't be drawn. Everything else still works.</p>
+			<p>In Chrome, turn on <b>Settings › System › Use graphics acceleration when available</b>, then restart Chrome. Check <b>chrome://gpu</b> if it stays off.</p>
+		</div>
+		<div id="busy" class="busy" hidden><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>Planning…</div>
+		<div id="pick" class="pick" hidden></div>
+		<div class="overlay bottom-left caption">
+			<p id="banner" class="banner"></p>
+		</div>
+		<p class="overlay bottom-right hint">Drag to turn · Right-drag to move · Scroll to zoom · Click a block to name it</p>
+	</section>
+
+	<aside class="report" aria-label="Station checks">
+		<div id="checks"></div>
+		<details class="fold" open>
+			<summary>What you asked for</summary>
+			<table id="reqTable"></table>
+		</details>
+		<details class="fold">
+			<summary>What the planner read</summary>
+			<div id="fromText"></div>
+		</details>
+		<details class="fold">
+			<summary>Blueprint data</summary>
 			<pre id="raw"></pre>
 		</details>
-	</section>
+	</aside>
 </main>
 <script src="silk.js"></script>
 <script src="three.min.js"></script>

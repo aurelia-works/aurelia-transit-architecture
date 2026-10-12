@@ -193,6 +193,20 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		return new StationRecipe(value, mix, terminus, tracks, platforms, length, roof, building, name, size);
 	}
 
+	/**
+	 * The Mix button's next choice: none, then every city look in order except the chosen one, then none again. Custom
+	 * ({@link Look#AUTO}) is never a mix, since the recipe turns it back into none.
+	 */
+	public Look nextMix() {
+		final Look[] all = Look.values();
+		for (int i = mix == null ? 0 : mix.ordinal() + 1; i < all.length; i++) {
+			if (all[i] != Look.AUTO && all[i] != look) {
+				return all[i];
+			}
+		}
+		return null;
+	}
+
 	public StationRecipe withMix(Look value) {
 		return new StationRecipe(look, value, terminus, tracks, platforms, length, roof, building, name, size);
 	}

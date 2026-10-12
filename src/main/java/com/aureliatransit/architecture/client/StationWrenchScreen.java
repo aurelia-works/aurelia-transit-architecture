@@ -201,7 +201,7 @@ public class StationWrenchScreen extends Screen {
 		}
 		y += lookRows() * ROW;
 		final ButtonWidget mix = cycle(left, y, HALF, "mix",
-				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(nextMix(recipe.mix())));
+				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(recipe.nextMix()));
 		mix.setTooltip(Tooltip.of(Text.translatable(KEY + "mix.tip")));
 		addDrawableChild(mix);
 		final ButtonWidget type = cycle(left + HALF + 4, y, HALF, "type", Text.translatable(KEY + (recipe.terminus() ? "terminus" : "through")),
@@ -295,16 +295,6 @@ public class StationWrenchScreen extends Screen {
 	private void change(StationRecipe value) {
 		recipe = value;
 		clearAndInit();
-	}
-
-	/** None, then every look in order (the chosen look itself is skipped by the recipe), then none again. */
-	private StationRecipe.Look nextMix(StationRecipe.Look mix) {
-		final StationRecipe.Look[] all = StationRecipe.Look.values();
-		int index = mix == null ? 0 : mix.ordinal() + 1;
-		if (index < all.length && all[index] == recipe.look()) {
-			index++;
-		}
-		return index < all.length ? all[index] : null;
 	}
 
 	/** Platform lengths the length button steps through, then back to the first. */
