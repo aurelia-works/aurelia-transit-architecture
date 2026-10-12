@@ -74,7 +74,6 @@ public final class StationGeometry {
 	/** The cross-section and length for a spec. */
 	public static TrackLayout layout(StationSpec spec) {
 		final String bands = bandPattern(spec);
-		final int platformWidth = spec.platformWidth();
 		final List<TrackLayout.Track> tracks = new ArrayList<>();
 		final List<TrackLayout.PlatformBand> platforms = new ArrayList<>();
 		// u of the previous band's last occupied column (track centre or platform uMax), and whether it was a track
@@ -99,7 +98,7 @@ public final class StationGeometry {
 				previousU = u;
 			} else {
 				final int uMin = i == 0 ? 0 : previousU + EDGE_OFFSET;
-				final int uMax = uMin + platformWidth - 1;
+				final int uMax = uMin + platformWidth(spec, platforms.size()) - 1;
 				platforms.add(new TrackLayout.PlatformBand(platforms.size() + 1, uMin, uMax, leftIsTrack, rightIsTrack));
 				previousU = uMax;
 			}
@@ -131,14 +130,32 @@ public final class StationGeometry {
 		if (!spec.hub()) {
 			return 0;
 		}
-		return spec.trackCount() >= 8 && spec.platformWidth() >= MIN_LIFT_ISLAND_WIDTH ? 2 : 1;
+		final int outer = Math.min(platformWidth(spec, 0), platformWidth(spec, platformCount(spec) - 1));
+		return spec.trackCount() >= 8 && outer >= MIN_LIFT_ISLAND_WIDTH ? 2 : 1;
+	}
+
+	/** Width of the platform at {@code index} (0-based, left to right): its own when the platforms are listed. */
+	public static int platformWidth(StationSpec spec, int index) {
+		return spec.listed() ? spec.platforms().get(index).widthIn(spec.platformWidth()) : spec.platformWidth();
+	}
+
+	/** How many platforms the station has. */
+	public static int platformCount(StationSpec spec) {
+		return (int) bandPattern(spec).chars().filter(c -> c == 'P').count();
 	}
 
 	/** Bands left to right: 'T' for a track, 'P' for a platform. */
 	private static String bandPattern(StationSpec spec) {
 		final int tracks = spec.trackCount();
 		final StringBuilder bands = new StringBuilder();
-		if (spec.platformLayout() == PlatformLayout.SIDE) {
+		if (spec.listed()) {
+			// each platform brings its tracks: an island one on each side, a side platform one on its inner side (the first
+			// platform's right, any other's left)
+			for (int i = 0; i < spec.platforms().size(); i++) {
+				final PlatformSpec platform = spec.platforms().get(i);
+				bands.append(platform.kind() == PlatformSpec.Kind.ISLAND ? "TPT" : i == 0 ? "PT" : "TP");
+			}
+		} else if (spec.platformLayout() == PlatformLayout.SIDE) {
 			bands.append('P');
 			for (int i = 0; i < tracks; i++) {
 				bands.append('T');

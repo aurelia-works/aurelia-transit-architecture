@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +38,8 @@ public final class StationDescriptionParser {
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");
 	private static final Pattern BARE_NAME = Pattern.compile("(?i)\\b(?:named|called)\\s+([^,.;\"]+)");
 	private static final Pattern NAME_STOP = Pattern.compile("(?i)\\s+\\b(?:with|and|having|style|styled|in|using)\\b.*$");
+	/** One platform of a platform list: "platform 2: island 12 wide 120 long open;" (Station Studio writes these). */
+	private static final Pattern PLATFORM_CLAUSE = Pattern.compile("(?i)\\bplatform\\s+(\\d{1,2})\\s*:\\s*([^;]*);?");
 	private static final Pattern SEPARATORS = Pattern.compile("[-_/,.;:!?()\"]+");
 	private static final Pattern DIGITS_THEN_LETTERS = Pattern.compile("(\\d+)([a-z]+)");
 
@@ -190,6 +193,8 @@ public final class StationDescriptionParser {
 		private boolean terminus;
 		private int terminusAt = -1;
 		private boolean hub;
+		/** The platform list, by platform number; empty when the platforms are not listed one by one. */
+		private final TreeMap<Integer, PlatformSpec> listed = new TreeMap<>();
 		private int hubAt = -1;
 		/** The first word that only sets a building's look (e.g. "brick"), to warn about when no building was asked for. */
 		private String lookOnlyWord;
@@ -206,6 +211,7 @@ public final class StationDescriptionParser {
 				text = text.substring(0, MAX_INPUT);
 				warn("the description is longer than " + MAX_INPUT + " characters; the rest was ignored");
 			}
+			text = extractPlatforms(text);
 			text = extractName(text);
 			tokens = tokenize(text);
 			used = new boolean[tokens.length];
@@ -222,6 +228,66 @@ public final class StationDescriptionParser {
 				understoodLines.add(note.text());
 			}
 			return new ParseResult(spec, understoodLines, defaulted, warnings, ignored);
+		}
+
+		// ---- platform list ----------------------------------------------------------------------------------------------
+
+		/** Takes "platform N: ..." clauses out of the text and reads each into the platform list. */
+		private String extractPlatforms(String text) {
+			final Matcher matcher = PLATFORM_CLAUSE.matcher(text);
+			final StringBuilder rest = new StringBuilder();
+			int last = 0;
+			while (matcher.find()) {
+				rest.append(text, last, matcher.start()).append(' ');
+				last = matcher.end();
+				final int number = Integer.parseInt(matcher.group(1));
+				if (number < 1 || number > PlatformSpec.MAX_PLATFORMS) {
+					warn("platform " + number + " is outside 1.." + PlatformSpec.MAX_PLATFORMS + "; ignored");
+					continue;
+				}
+				if (listed.containsKey(number)) {
+					warn("platform " + number + " given twice; using the first");
+					continue;
+				}
+				listed.put(number, platformClause(number, matcher.group(2)));
+			}
+			rest.append(text.substring(last));
+			if (!listed.isEmpty() && listed.lastKey() != listed.size()) {
+				warn("the platform list skips a number; the platforms are taken in order");
+			}
+			return rest.toString();
+		}
+
+		/** One platform's words: side or island, "N wide", "N long", canopy or open. */
+		private PlatformSpec platformClause(int number, String words) {
+			final String[] t = tokenize(words);
+			PlatformSpec.Kind kind = PlatformSpec.Kind.SIDE;
+			int platformWidth = 0;
+			int platformLength = 0;
+			PlatformSpec.Roof platformRoof = PlatformSpec.Roof.STATION;
+			for (int i = 0; i < t.length; i++) {
+				final String w = t[i];
+				final String next = i + 1 < t.length ? t[i + 1] : "";
+				final Integer n = w.matches("\\d{1,4}") ? Integer.valueOf(w) : null;
+				if (w.equals("island")) {
+					kind = PlatformSpec.Kind.ISLAND;
+				} else if (w.equals("side")) {
+					kind = PlatformSpec.Kind.SIDE;
+				} else if (n != null && (next.equals("wide") || next.equals("width"))) {
+					platformWidth = clamp(n, StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH, "platform " + number + " width");
+					i++;
+				} else if (n != null && (next.equals("long") || next.equals("length"))) {
+					platformLength = clamp(n, StationSpec.MIN_LENGTH, StationSpec.MAX_LENGTH, "platform " + number + " length");
+					i++;
+				} else if (w.equals("canopy") || w.equals("canopies") || w.equals("covered")) {
+					platformRoof = PlatformSpec.Roof.CANOPY;
+				} else if (w.equals("open") || w.equals("uncovered")) {
+					platformRoof = PlatformSpec.Roof.OPEN;
+				} else if (!w.equals("platform") && !w.equals("wide") && !w.equals("long") && !w.equals("roof") && !w.equals("blocks")) {
+					warn("platform " + number + ": \"" + w + "\" not understood");
+				}
+			}
+			return new PlatformSpec(kind, platformWidth, platformLength, platformRoof);
 		}
 
 		// ---- name -------------------------------------------------------------------------------------------------------
@@ -965,9 +1031,26 @@ public final class StationDescriptionParser {
 			}
 			final boolean island = islandAt >= 0;
 
+			// a platform list fixes the tracks and the layout; a hub needs islands all along, an even number of tracks
+			final List<PlatformSpec> list = List.copyOf(listed.values());
+			if (!list.isEmpty()) {
+				note(-1, list.size() + (list.size() == 1 ? " platform" : " platforms") + " listed one by one");
+				if (tracks != null || islandPlatforms != null || sidePlatforms) {
+					warn("the platform list sets the tracks and platforms; the other track and platform words are ignored");
+				}
+				final int listedTracks = StationSpec.listedTracks(list);
+				if (hub && (listedTracks < 4 || listedTracks % 2 != 0 || list.stream().anyMatch(p -> p.kind() != PlatformSpec.Kind.ISLAND))) {
+					warn("a hub needs island platforms only, with at least 4 tracks; building a terminus");
+					hub = false;
+				}
+			}
+
 			// tracks
 			int trackCount;
-			if (tracks != null) {
+			if (!list.isEmpty()) {
+				trackCount = StationSpec.listedTracks(list);
+				builder.platforms(list);
+			} else if (tracks != null) {
 				trackCount = clampTracks(tracks);
 				note(tracksAt, trackCount + (trackCount == 1 ? " track" : " tracks"));
 			} else if (islandPlatforms != null) {
@@ -995,7 +1078,9 @@ public final class StationDescriptionParser {
 
 			// layout
 			final PlatformLayout layout;
-			if (hub) {
+			if (!list.isEmpty()) {
+				layout = list.stream().allMatch(p -> p.kind() == PlatformSpec.Kind.ISLAND) ? PlatformLayout.ISLAND : PlatformLayout.SIDE;
+			} else if (hub) {
 				layout = PlatformLayout.ISLAND;
 				if (sidePlatforms) {
 					warn("a hub has island platforms, each shared by a track that ends and one that runs through");

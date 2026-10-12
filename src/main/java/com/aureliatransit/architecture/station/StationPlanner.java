@@ -1619,7 +1619,17 @@ public final class StationPlanner {
 			}
 		}
 
-		/** A free column near u0 at the bridge line that is not inside any track envelope; -1 if none nearby. */
+		/** A platform's boarding edge column. */
+		private boolean onEdge(int u) {
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (isEdge(band, u)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/** A free column near u0 at the bridge line that is not inside any track envelope or on a boarding edge; -1 if none nearby. */
 		private int nearestFreeColumn(int u0) {
 			for (int d = 0; d <= 6; d++) {
 				for (final int u : new int[]{u0 - d, u0 + d}) {
@@ -1633,7 +1643,7 @@ public final class StationPlanner {
 							break;
 						}
 					}
-					if (!envelope && !taken(u, 1, site.bridgeV())) {
+					if (!envelope && !onEdge(u) && !taken(u, 1, site.bridgeV())) {
 						return u;
 					}
 					if (d == 0) {
@@ -1679,13 +1689,14 @@ public final class StationPlanner {
 			if (!site.bridge()) {
 				return columnV;
 			}
+			// up to the roof cell over the cap: a sign or a stair there leaves the column carrying nothing
 			final int top = spec.roof() == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
 			final List<Integer> lines = List.of(line);
 			final List<Integer> kept = new ArrayList<>();
 			for (final int v : columnV) {
 				boolean clash = false;
 				for (final int u : lines) {
-					for (int y = StationGeometry.WALK_Y; y < top; y++) {
+					for (int y = StationGeometry.WALK_Y; y <= top; y++) {
 						if (taken(u, y, v)) {
 							clash = true;
 							break;
@@ -1715,7 +1726,7 @@ public final class StationPlanner {
 					}
 					boolean clash = false;
 					for (final int u : lines) {
-						for (int y = StationGeometry.WALK_Y; y < top; y++) {
+						for (int y = StationGeometry.WALK_Y; y <= top; y++) {
 							if (taken(u, y, mid)) {
 								clash = true;
 								break;
@@ -2209,7 +2220,10 @@ public final class StationPlanner {
 					}
 					put(Role.BENCH, u, StationGeometry.WALK_Y, v, front);
 					put(Role.BENCH, u, StationGeometry.WALK_Y, v + 1, front);
-					put(Role.BIN, u, StationGeometry.WALK_Y, v + 2, front);
+					// the bin after the pair, when that cell is still platform (else the bench stands without one)
+					if (v + 2 < length) {
+						put(Role.BIN, u, StationGeometry.WALK_Y, v + 2, front);
+					}
 				}
 			}
 		}

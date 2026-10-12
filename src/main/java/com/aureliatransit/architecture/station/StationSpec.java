@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station;
 
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -18,13 +19,18 @@ import java.util.Objects;
  * @param scale          how grand the building is: storeys, wings, tower; ignored without a building
  * @param hub            a terminus whose two outer tracks run on through, past both sides of the head building (the inner
  *                       tracks end at its buffers); needs island platforms and an even number of tracks, at least four
+ * @param platforms      each platform's own settings, left to right, when they are not all alike (empty otherwise); the list
+ *                       fixes the tracks, up to {@link #MAX_LISTED_TRACKS}
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
-		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, StationScale scale, boolean hub) {
+		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, StationScale scale, boolean hub,
+		List<PlatformSpec> platforms) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
+	/** Tracks of a station with a platform list: ten islands bring twenty. */
+	public static final int MAX_LISTED_TRACKS = 2 * PlatformSpec.MAX_PLATFORMS;
 	public static final int MIN_LENGTH = 16;
 	public static final int MAX_LENGTH = 300;
 	public static final int MIN_WIDTH = 3;
@@ -48,7 +54,14 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(building, "building");
 		Objects.requireNonNull(shed, "shed");
 		Objects.requireNonNull(scale, "scale");
-		check(trackCount, MIN_TRACKS, MAX_TRACKS, "trackCount");
+		platforms = List.copyOf(platforms);
+		check(trackCount, MIN_TRACKS, platforms.isEmpty() ? MAX_TRACKS : MAX_LISTED_TRACKS, "trackCount");
+		if (platforms.size() > PlatformSpec.MAX_PLATFORMS) {
+			throw new IllegalArgumentException("more than " + PlatformSpec.MAX_PLATFORMS + " platforms listed");
+		}
+		if (!platforms.isEmpty() && trackCount != listedTracks(platforms)) {
+			throw new IllegalArgumentException("trackCount " + trackCount + " but the listed platforms bring " + listedTracks(platforms));
+		}
 		check(platformLength, MIN_LENGTH, MAX_LENGTH, "platformLength");
 		check(platformWidth, MIN_WIDTH, MAX_WIDTH, "platformWidth");
 		if (platformLayout == PlatformLayout.ISLAND && trackCount < 2) {
@@ -66,6 +79,20 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		if (name.length() > MAX_NAME) {
 			throw new IllegalArgumentException("name longer than " + MAX_NAME + " characters");
 		}
+	}
+
+	/** Tracks a platform list brings: one per side platform, two per island. */
+	public static int listedTracks(List<PlatformSpec> platforms) {
+		int tracks = 0;
+		for (final PlatformSpec platform : platforms) {
+			tracks += platform.kind().tracks();
+		}
+		return tracks;
+	}
+
+	/** The platforms are listed one by one (Station Studio's advanced platform list). */
+	public boolean listed() {
+		return !platforms.isEmpty();
 	}
 
 	private static void check(int value, int min, int max, String what) {
@@ -86,7 +113,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public Builder toBuilder() {
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
-				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).scale(scale).hub(hub);
+				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).scale(scale).hub(hub).platforms(platforms);
 	}
 
 	public boolean hasBuilding() {
@@ -125,6 +152,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private ShedShape shed = ShedShape.FLAT;
 		private StationScale scale = StationScale.COMPACT;
 		private boolean hub;
+		private List<PlatformSpec> platforms = List.of();
 
 		private Builder() {
 		}
@@ -214,6 +242,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder platforms(List<PlatformSpec> value) {
+			platforms = value;
+			return this;
+		}
+
 		public Builder shed(ShedShape value) {
 			shed = value;
 			return this;
@@ -226,7 +259,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, scale, hub);
+					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, scale, hub, platforms);
 		}
 	}
 }
