@@ -294,35 +294,51 @@ public final class StationAudit {
 		}
 
 		private void roof() {
+			// a roof part over an open platform's cell, or any cover over a roofed platform's cell
 			final Set<Long> roofed = new HashSet<>();
-			final boolean open = spec.roof() == RoofType.NONE;
+			final Set<Long> roofPart = new HashSet<>();
 			for (final PlannedBlock block : plan.blocks()) {
-				final boolean shelter = open ? block.role().roofPart() : block.role().covers();
-				if (shelter && block.y() > StationGeometry.WALK_Y) {
-					roofed.add(key(block.u(), 0, block.v()));
+				if (block.y() > StationGeometry.WALK_Y) {
+					if (block.role().covers()) {
+						roofed.add(key(block.u(), 0, block.v()));
+					}
+					if (block.role().roofPart()) {
+						roofPart.add(key(block.u(), 0, block.v()));
+					}
 				}
 			}
 			int floor = 0;
 			int covered = 0;
+			int openFloor = 0;
+			int openCovered = 0;
 			for (final PlannedBlock block : plan.blocks()) {
 				if (block.role().platformFloor()) {
-					floor++;
-					if (roofed.contains(key(block.u(), 0, block.v()))) {
-						covered++;
+					final TrackLayout.PlatformBand band = bandAt(block.u());
+					final RoofType roof = band == null ? spec.roof() : StationGeometry.roof(spec, band.number());
+					final long key = key(block.u(), 0, block.v());
+					if (roof == RoofType.NONE) {
+						openFloor++;
+						if (roofPart.contains(key)) {
+							openCovered++;
+						}
+					} else {
+						floor++;
+						if (roofed.contains(key)) {
+							covered++;
+						}
 					}
 				}
 			}
-			final int percent = floor == 0 ? 0 : covered * 100 / floor;
-			if (spec.roof() == RoofType.NONE) {
-				if (covered == 0) {
-					pass(Topic.ROOF, "Open platforms, no roof, as requested");
-				} else {
-					fail(Topic.ROOF, "A roof covers " + percent + "% of the platforms although none was requested");
-				}
-			} else if (covered == floor && floor > 0) {
-				pass(Topic.ROOF, "The " + (spec.roof() == RoofType.HALL ? "hall roof" : "canopies") + " cover 100% of the platform area");
+			final String what = spec.roof() == RoofType.HALL ? "hall roof" : "canopies";
+			if (openCovered > 0) {
+				fail(Topic.ROOF, "A roof covers " + (openCovered * 100 / openFloor) + "% of the open platforms although none was requested");
+			} else if (floor == 0) {
+				pass(Topic.ROOF, "Open platforms, no roof, as requested");
+			} else if (covered == floor) {
+				pass(Topic.ROOF, "The " + what + " cover 100% of the " + (openFloor > 0 ? "roofed " : "") + "platform area"
+						+ (openFloor > 0 ? "; the others are open, as requested" : ""));
 			} else {
-				fail(Topic.ROOF, "The " + (spec.roof() == RoofType.HALL ? "hall roof" : "canopies") + " cover " + percent + "% of the platform area; all of it requested");
+				fail(Topic.ROOF, "The " + what + " cover " + (covered * 100 / floor) + "% of the platform area; all of it requested");
 			}
 		}
 

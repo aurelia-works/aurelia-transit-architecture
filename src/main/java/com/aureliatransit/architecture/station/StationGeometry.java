@@ -139,6 +139,31 @@ public final class StationGeometry {
 		return spec.listed() ? spec.platforms().get(index).widthIn(spec.platformWidth()) : spec.platformWidth();
 	}
 
+	/**
+	 * The roof over platform {@code number} (1-based): the station's, or under canopies or none the platform's own canopy or
+	 * open sky when the platforms are listed. A train shed covers every platform.
+	 */
+	public static RoofType roof(StationSpec spec, int number) {
+		if (!spec.listed() || spec.roof() == RoofType.HALL) {
+			return spec.roof();
+		}
+		return switch (spec.platforms().get(number - 1).roof()) {
+			case STATION -> spec.roof();
+			case CANOPY -> RoofType.CANOPY;
+			case OPEN -> RoofType.NONE;
+		};
+	}
+
+	/** Some platform has a canopy. */
+	public static boolean anyCanopy(StationSpec spec) {
+		for (int i = 1; i <= platformCount(spec); i++) {
+			if (roof(spec, i) == RoofType.CANOPY) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/** How many platforms the station has. */
 	public static int platformCount(StationSpec spec) {
 		return (int) bandPattern(spec).chars().filter(c -> c == 'P').count();

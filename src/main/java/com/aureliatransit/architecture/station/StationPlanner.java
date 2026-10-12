@@ -1502,7 +1502,7 @@ public final class StationPlanner {
 				if (!hasStairs(band)) {
 					continue;
 				}
-				if (spec.roof() == RoofType.CANOPY ? stairShaft(band, b) : stairHood(band, b)) {
+				if (roof(band) == RoofType.CANOPY ? stairShaft(band, b) : stairHood(band, b)) {
 					continue;
 				}
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
@@ -1533,11 +1533,11 @@ public final class StationPlanner {
 			}
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
 			// they stop below it, so the canopy runs over them
-			final int flankTop = spec.roof() == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (!site.served().contains(band.number())) {
 					continue;
 				}
+				final int flankTop = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
 				for (final int su : StationLayout.stairColumns(band)) {
 					for (final int du : new int[]{-1, 1}) {
 						final int u = su + du;
@@ -1581,7 +1581,7 @@ public final class StationPlanner {
 				for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 					final int v = site.stairV(y);
 					for (int rail = StationGeometry.WALK_Y; rail <= y; rail++) {
-						if (rail == StationGeometry.CANOPY_Y && spec.roof() == RoofType.CANOPY) {
+						if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
 							continue;
 						}
 						if (!isEdge(band, left)) {
@@ -1660,12 +1660,12 @@ public final class StationPlanner {
 		}
 
 		void columns() {
-			if (spec.roof() == RoofType.NONE) {
-				return;
-			}
-			final int top = spec.roof() == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				for (final int u : columnLines(band, spec.roof())) {
+				if (roof(band) == RoofType.NONE) {
+					continue;
+				}
+				final int top = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
+				for (final int u : columnLines(band, roof(band))) {
 					for (final int v : spec.roof() == RoofType.HALL ? hallRows() : columnVForLine(u)) {
 						final int base = spec.roof() == RoofType.HALL ? standsOn(u, v, top) : StationGeometry.WALK_Y - 1;
 						if (base >= StationGeometry.WALK_Y) {
@@ -1690,7 +1690,7 @@ public final class StationPlanner {
 				return columnV;
 			}
 			// up to the roof cell over the cap: a sign or a stair there leaves the column carrying nothing
-			final int top = spec.roof() == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
+			final int top = StationGeometry.CANOPY_Y;
 			final List<Integer> lines = List.of(line);
 			final List<Integer> kept = new ArrayList<>();
 			for (final int v : columnV) {
@@ -1863,6 +1863,11 @@ public final class StationPlanner {
 			return true;
 		}
 
+		/** The roof over this platform (see {@link StationGeometry#roof}). */
+		private RoofType roof(TrackLayout.PlatformBand band) {
+			return StationGeometry.roof(spec, band.number());
+		}
+
 		private boolean isColumnV(int v) {
 			return spec.roof() == RoofType.HALL ? hallRows().contains(v) : columnV.contains(v);
 		}
@@ -1873,11 +1878,11 @@ public final class StationPlanner {
 		}
 
 		void canopyRoofs() {
-			if (spec.roof() != RoofType.CANOPY) {
-				return;
-			}
 			final int y = StationGeometry.CANOPY_Y;
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (roof(band) != RoofType.CANOPY) {
+					continue;
+				}
 				final List<Integer> lines = columnLines(band, RoofType.CANOPY);
 				for (int v = 0; v < length; v++) {
 					for (int u = band.uMin(); u <= band.uMax(); u++) {
@@ -2185,10 +2190,13 @@ public final class StationPlanner {
 		}
 
 		void lamps() {
-			if (spec.roof() != RoofType.NONE || !spec.furniture()) {
+			if (!spec.furniture()) {
 				return;
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (roof(band) != RoofType.NONE) {
+					continue;
+				}
 				final int u = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
 				final LocalDir front = band.island() ? LocalDir.MINUS_U : towardTrack(band);
 				for (int v = 4; v <= length - 1; v += 8) {

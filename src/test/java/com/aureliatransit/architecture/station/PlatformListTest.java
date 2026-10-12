@@ -58,6 +58,19 @@ class PlatformListTest {
 	}
 
 	@Test
+	void eachPlatformGetsItsOwnRoof() {
+		final StationPlan plan = StationPlanner.plan(parse("no roof; platform 1: side canopy; platform 2: island; platform 3: side open").spec());
+		final TrackLayout layout = plan.layout();
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final boolean roofed = plan.blocks().stream().anyMatch(b -> b.role() == Role.ROOF && b.u() >= band.uMin() && b.u() <= band.uMax());
+			final boolean lamps = plan.blocks().stream().anyMatch(b -> b.role() == Role.LAMP && b.u() >= band.uMin() && b.u() <= band.uMax());
+			assertEquals(band.number() == 1, roofed, "platform " + band.number() + " canopy");
+			assertEquals(band.number() != 1, lamps, "platform " + band.number() + " lamps");
+		}
+		assertTrue(StationAudit.audit(plan).buildable());
+	}
+
+	@Test
 	void mixedListsPlanCleanlyInEveryStationType() {
 		final Random random = new Random(1600);
 		final String[] kinds = {"", "with a station building", "with a footbridge", "terminus", "hub"};
@@ -74,6 +87,7 @@ class PlatformListTest {
 				if (random.nextBoolean()) {
 					text.append(' ').append(StationSpec.MIN_WIDTH + random.nextInt(StationSpec.MAX_WIDTH - StationSpec.MIN_WIDTH + 1)).append(" wide");
 				}
+				text.append(new String[]{"", "", " canopy", " open"}[random.nextInt(4)]);
 			}
 			final String description = text.toString();
 			final StationPlan plan = StationPlanner.plan(parse(description).spec());
