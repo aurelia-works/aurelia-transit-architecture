@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.client;
 
+import com.aureliatransit.architecture.station.StationRecipe;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.ingame.BookScreen;
@@ -23,7 +24,10 @@ import java.util.regex.Pattern;
  * window stays in the background. The request's file name names the screenshot ({@code screenshots/<name>.png}); a request
  * containing {@code nohud} hides the HUD and chat for that shot, and {@code fov=<degrees>} sets the field of view for it.
  * Both are restored afterwards. {@code open=wrench} opens the station wrench screen for the wrench in the main hand, and
- * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. {@code use}
+ * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. Without a
+ * wrench in hand, {@code open=wrench} opens the screen anyway with {@code recipe=<encoded choices>} (or the defaults), for its
+ * live preview; its actions then do nothing. {@code wait=<ticks>} waits longer before the shot (the preview plans and meshes in
+ * the background). {@code use}
  * right-clicks the block under the crosshair with the main-hand item first, like a player would, and any screen that opens is
  * in the shot, then closed. {@code studio} starts Station Studio without opening a browser (its address is in the log), so a
  * script can drive it. Inert in a normal game.
@@ -36,6 +40,8 @@ final class DevScreenshots {
 	private static final int SCREEN_SETTLE_TICKS = 10;
 	private static final Pattern FOV = Pattern.compile("fov=(\\d+)");
 	private static final Pattern PAGE = Pattern.compile("page=(\\d+)");
+	private static final Pattern RECIPE = Pattern.compile("recipe=(\\S+)");
+	private static final Pattern WAIT = Pattern.compile("wait=(\\d+)");
 
 	private static String pending;
 	private static boolean restoreHud;
@@ -110,12 +116,21 @@ final class DevScreenshots {
 		}
 		closeScreen = openScreen(client, content);
 		wait = closeScreen ? SCREEN_SETTLE_TICKS : restoreHud || restoreFov != null ? HUD_SETTLE_TICKS : 1;
+		final Matcher longer = WAIT.matcher(content);
+		if (longer.find()) {
+			wait = Math.max(wait, Math.min(400, Integer.parseInt(longer.group(1))));
+		}
 	}
 
 	/** Opens the screen a request names; returns whether one was opened. */
 	private static boolean openScreen(MinecraftClient client, String content) {
 		if (content.contains("open=wrench")) {
 			StationWrenchScreen.open(Hand.MAIN_HAND);
+			if (client.currentScreen == null) {
+				final Matcher recipe = RECIPE.matcher(content);
+				client.setScreen(new StationWrenchScreen(Hand.MAIN_HAND, "",
+						recipe.find() ? StationRecipe.decode(recipe.group(1)) : StationRecipe.defaults()));
+			}
 		} else if (content.contains("open=book")) {
 			final ItemStack stack = client.player.getMainHandStack();
 			if (!stack.isOf(Items.WRITTEN_BOOK)) {

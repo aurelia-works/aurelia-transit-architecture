@@ -33,7 +33,7 @@ public final class StudioApi {
 	public static final int MAX_TYPED = 1000;
 
 	/** The frame the studio draws in: +x is +u, -z is +v (the game's frame for a player looking north). */
-	private static final LocalFrame FRAME = new LocalFrame(0, 0, 0, Heading.NORTH);
+	public static final LocalFrame FRAME = new LocalFrame(0, 0, 0, Heading.NORTH);
 
 	private final BlockModels models;
 
@@ -176,9 +176,9 @@ public final class StudioApi {
 
 	/**
 	 * Rails, fences and panes join their neighbours in the game (worked out from the world when placed); the studio joins each
-	 * side that has a block of the same family next to it.
+	 * side that has a block of the same family next to it. {@code idAt} maps {@link #cell} keys in {@link #FRAME} to block ids.
 	 */
-	private static String withConnections(PlannedBlock block, Map<Long, String> idAt) {
+	public static String withConnections(PlannedBlock block, Map<Long, String> idAt) {
 		final String family = family(block.blockId());
 		if (family == null) {
 			return block.state();
@@ -205,7 +205,7 @@ public final class StudioApi {
 		return null;
 	}
 
-	private static long cell(int x, int y, int z) {
+	public static long cell(int x, int y, int z) {
 		return ((long) (x + 4096) << 40) | ((long) (y + 4096) << 20) | (z + 4096);
 	}
 

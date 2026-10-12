@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  * the typed description with the preset buttons and every generator action. Choices only change the screen; each action
  * button sends one packet (hand, action, description, choices) and closes the screen so the chat summary and the outline are
  * visible. Closing without an action saves changed choices. The server re-checks the operator level and bounds everything it
- * reads.
+ * reads. Where the window has room, a live 3D preview of the station stands beside the controls ({@link StationPreview}).
  */
 public class StationWrenchScreen extends Screen {
 
@@ -38,6 +38,12 @@ public class StationWrenchScreen extends Screen {
 	/** From the last choice row to the action buttons: the station's one-line summary and the next-step hint. */
 	private static final int SUMMARY = 24;
 	private static final String KEY = EditorWidgets.KEY + "station_wrench.";
+	private static final int GAP = 10;
+	/** The narrowest preview worth showing; below it the controls stay centred on their own. */
+	private static final int MIN_PREVIEW = 150;
+	private static final int MAX_PREVIEW = 480;
+	/** Typing waits this long before the preview replans. */
+	private static final long PREVIEW_DELAY_MS = 350;
 
 	private final Hand hand;
 	private final String initial;
@@ -48,6 +54,9 @@ public class StationWrenchScreen extends Screen {
 	private String typed;
 	private boolean custom;
 	private boolean sent;
+	private final StationPreview preview = new StationPreview();
+	private long editedAt;
+	private boolean dragging;
 
 	public StationWrenchScreen(Hand hand, String description, StationRecipe recipe) {
 		super(Text.translatable(KEY + "title"));
@@ -77,16 +86,105 @@ public class StationWrenchScreen extends Screen {
 		} else {
 			initSimple();
 		}
+		if (previewWidth() > 0) {
+			preview.show(description());
+		}
+	}
+
+	// ---- preview --------------------------------------------------------------------------------------------------
+
+	private int previewWidth() {
+		final int room = width - WIDTH - GAP - 16;
+		return room >= MIN_PREVIEW ? Math.min(room, MAX_PREVIEW) : 0;
+	}
+
+	/** The controls' left edge: centred alone, or centred together with the preview. */
+	private int left() {
+		final int preview = previewWidth();
+		return preview == 0 ? (width - WIDTH) / 2 : (width - WIDTH - GAP - preview) / 2;
+	}
+
+	/** x0, y0, x1, y1 of the preview box, beside the controls and as tall as the page. */
+	private int[] previewBox() {
+		final int total = advanced ? advancedHeight() : simpleHeight();
+		final int top = top(total);
+		final int x0 = left() + WIDTH + GAP;
+		return new int[]{x0, top, x0 + previewWidth(), top + total - 12};
+	}
+
+	private boolean inPreview(double x, double y) {
+		if (previewWidth() == 0) {
+			return false;
+		}
+		final int[] box = previewBox();
+		return x >= box[0] && x < box[2] && y >= box[1] && y < box[3];
+	}
+
+	@Override
+	public void tick() {
+		super.tick();
+		if (editedAt > 0 && System.currentTimeMillis() - editedAt >= PREVIEW_DELAY_MS && previewWidth() > 0) {
+			editedAt = 0;
+			preview.show(description());
+		}
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (inPreview(mouseX, mouseY)) {
+			dragging = true;
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
+	}
+
+	@Override
+	public boolean mouseReleased(double mouseX, double mouseY, int button) {
+		dragging = false;
+		return super.mouseReleased(mouseX, mouseY, button);
+	}
+
+	@Override
+	public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+		if (dragging) {
+			preview.drag(button, deltaX, deltaY);
+			return true;
+		}
+		return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+		if (inPreview(mouseX, mouseY)) {
+			preview.zoom(amount);
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, amount);
+	}
+
+	@Override
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		// R resets the preview's camera when no text field is being typed in
+		if (keyCode == org.lwjgl.glfw.GLFW.GLFW_KEY_R && !(getFocused() instanceof TextFieldWidget) && previewWidth() > 0) {
+			preview.reset();
+			return true;
+		}
+		return super.keyPressed(keyCode, scanCode, modifiers);
 	}
 
 	// ---- simple page ----------------------------------------------------------------------------------------------
 
 	private static int simpleHeight() {
-		return 12 + 6 * ROW + SUMMARY + 26 + ROW + 20;
+		return 12 + (lookRows() + 4) * ROW + SUMMARY + 26 + ROW + 20;
+	}
+
+	/** Rows of look buttons, four to a row. */
+	private static int lookRows() {
+		return (StationRecipe.Look.values().length + COLUMNS - 1) / COLUMNS;
 	}
 
 	private void initSimple() {
-		final int left = (width - WIDTH) / 2;
+		final int left = left();
 		int y = top(simpleHeight()) + 12;
 		final int lookWidth = (WIDTH - (COLUMNS - 1) * 4) / COLUMNS;
 		final StationRecipe.Look[] looks = StationRecipe.Look.values();
@@ -97,7 +195,7 @@ public class StationWrenchScreen extends Screen {
 					.dimensions(left + i % COLUMNS * (lookWidth + 4), y + i / COLUMNS * ROW, lookWidth, 20)
 					.tooltip(Tooltip.of(Text.translatable(KEY + "look.tip"))).build());
 		}
-		y += 2 * ROW;
+		y += lookRows() * ROW;
 		final ButtonWidget mix = cycle(left, y, HALF, "mix",
 				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(nextMix(recipe.mix())));
 		mix.setTooltip(Tooltip.of(Text.translatable(KEY + "mix.tip")));
@@ -132,7 +230,10 @@ public class StationWrenchScreen extends Screen {
 		name.setMaxLength(32);
 		name.setText(recipe.name());
 		name.setPlaceholder(Text.translatable(KEY + "name").formatted(Formatting.DARK_GRAY));
-		name.setChangedListener(text -> recipe = recipe.withName(text));
+		name.setChangedListener(text -> {
+			recipe = recipe.withName(text);
+			editedAt = System.currentTimeMillis();
+		});
 		addDrawableChild(name);
 		y += ROW + SUMMARY;
 		final ButtonWidget place = action(left, y, HALF, "place", StationWrenchItem.Action.PLAN);
@@ -213,7 +314,7 @@ public class StationWrenchScreen extends Screen {
 	}
 
 	private void initAdvanced() {
-		final int left = (width - WIDTH) / 2;
+		final int left = left();
 		int y = top(advancedHeight());
 		final TextFieldWidget field = new TextFieldWidget(textRenderer, left, y, WIDTH, 18, Text.translatable(KEY + "description"));
 		field.setMaxLength(StationDescriptionParser.MAX_INPUT);
@@ -222,6 +323,7 @@ public class StationWrenchScreen extends Screen {
 		field.setChangedListener(text -> {
 			typed = text;
 			custom = true;
+			editedAt = System.currentTimeMillis();
 		});
 		addDrawableChild(field);
 		y += 46;
@@ -286,21 +388,25 @@ public class StationWrenchScreen extends Screen {
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
 		renderBackground(context);
+		if (previewWidth() > 0) {
+			final int[] box = previewBox();
+			preview.render(context, box[0], box[1], box[2], box[3]);
+		}
 		super.render(context, mouseX, mouseY, delta);
-		final int left = (width - WIDTH) / 2;
+		final int left = left();
 		if (advanced) {
 			final int top = top(advancedHeight());
-			context.drawCenteredTextWithShadow(textRenderer, title, width / 2, top - 16, 0xFFFFFF);
+			context.drawCenteredTextWithShadow(textRenderer, title, left + WIDTH / 2, top - 16, 0xFFFFFF);
 			context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "example"), left, top + 22, 0x9AA0A6);
 			context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "hint"), left, top + 32, 0x9AA0A6);
 			return;
 		}
 		final int top = top(simpleHeight());
-		context.drawCenteredTextWithShadow(textRenderer, title, width / 2, top - 16, 0xFFFFFF);
+		context.drawCenteredTextWithShadow(textRenderer, title, left + WIDTH / 2, top - 16, 0xFFFFFF);
 		context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "step_look"), left, top, 0xE0C060);
-		final int summary = top + 12 + 6 * ROW + 1;
-		context.drawCenteredTextWithShadow(textRenderer, Text.literal(recipe.title()), width / 2, summary, 0xFFFFFF);
-		context.drawCenteredTextWithShadow(textRenderer, Text.translatable(KEY + "step_place"), width / 2, summary + 11, 0x9AA0A6);
+		final int summary = top + 12 + (lookRows() + 4) * ROW + 1;
+		context.drawCenteredTextWithShadow(textRenderer, Text.literal(recipe.title()), left + WIDTH / 2, summary, 0xFFFFFF);
+		context.drawCenteredTextWithShadow(textRenderer, Text.translatable(KEY + "step_place"), left + WIDTH / 2, summary + 11, 0x9AA0A6);
 	}
 
 	/** The first row's y; the whole page is centred vertically. */
@@ -315,6 +421,7 @@ public class StationWrenchScreen extends Screen {
 
 	@Override
 	public void removed() {
+		preview.close();
 		if (!sent && (!description().equals(initial) || !recipe.equals(initialRecipe))) {
 			sent = true;
 			ClientPlayNetworking.send(ModPackets.STATION_WRENCH,
