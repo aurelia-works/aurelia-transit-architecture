@@ -162,7 +162,7 @@ class StationDescriptionParserTest {
 		assertEquals(StationSpec.MAX_LENGTH, longOne.spec().platformLength());
 		assertTrue(warned(longOne, "length 400 is too large; using " + StationSpec.MAX_LENGTH));
 		assertEquals(StationSpec.MIN_LENGTH, spec("length 4").platformLength());
-		assertEquals(StationSpec.MAX_WIDTH, spec("20 wide").platformWidth());
+		assertEquals(StationSpec.MAX_WIDTH, spec("30 wide").platformWidth());
 		final ParseResult thin = StationDescriptionParser.parse("width 1");
 		assertEquals(StationSpec.MIN_WIDTH, thin.spec().platformWidth());
 		assertTrue(warned(thin, "width 1 is too small"));

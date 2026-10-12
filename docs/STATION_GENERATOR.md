@@ -55,7 +55,7 @@ Examples:
 | Tracks (1-10) | `3 tracks`, `two-track`, `single/double track`, `two island platforms` (4 tracks) | 2 |
 | Platforms | `island`, `side`, both (an odd last track then gets a side platform) | side for 1-2 tracks, island for 3-4 |
 | Length (16-300) | `64 blocks long`, `100 m`, `length 80`, `short/medium/long/very long`, `small` (32), `large` (96, 4 tracks) | 48; a terminus 160 |
-| Width (3-8) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side (6 with a footbridge), 6 island |
+| Width (3-20) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side (6 with a footbridge), 6 island |
 | Style | modern; dutch/utrecht/leidsche rijn; german/s-bahn/hamburg; metro/u-bahn | modern |
 | Roof | `no roof`/`open`; `canopy`/`covered`; `hall`/`train shed` | canopy |
 | Train shed shape | `flat roof`; `arched`/`barrel`/`vault`/`curved`; `pointed`; `arches`/`vaults`/`multi span`/`several arches` (asks for a train shed) | the building look's own |

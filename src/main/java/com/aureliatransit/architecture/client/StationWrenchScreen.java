@@ -184,7 +184,12 @@ public class StationWrenchScreen extends Screen {
 	// ---- simple page ----------------------------------------------------------------------------------------------
 
 	private static int simpleHeight() {
-		return 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 5 * ROW + SUMMARY + 26 + ROW + 20;
+		return summaryOffset() + SUMMARY + 26 + ROW + 20;
+	}
+
+	/** From the page top to the summary line: the look grid, then the mix, tracks, length, width and building rows. */
+	private static int summaryOffset() {
+		return 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 5 * ROW;
 	}
 
 	/** Rows of look buttons, four to a row. */
@@ -489,7 +494,7 @@ public class StationWrenchScreen extends Screen {
 		final int top = top(simpleHeight());
 		context.drawCenteredTextWithShadow(textRenderer, title, left + WIDTH / 2, top - 16, 0xFFFFFF);
 		context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "step_look"), left, top, 0xE0C060);
-		final int summary = top + 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 4 * ROW + 1;
+		final int summary = top + summaryOffset() + 1;
 		context.drawCenteredTextWithShadow(textRenderer, Text.literal(recipe.title()), left + WIDTH / 2, summary, 0xFFFFFF);
 		context.drawCenteredTextWithShadow(textRenderer, Text.translatable(KEY + "step_place"), left + WIDTH / 2, summary + 11, 0x9AA0A6);
 	}
