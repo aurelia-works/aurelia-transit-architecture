@@ -25,7 +25,14 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		FRANKFURT("Frankfurt", "frankfurt"),
 		ST_PANCRAS("St Pancras", "st pancras"),
 		ANTWERP("Antwerp", "antwerp"),
-		NEW_YORK("New York", "new york");
+		NEW_YORK("New York", "new york"),
+		TOKYO("Tokyo", "tokyo"),
+		ZURICH("Zurich", "zurich"),
+		PARIS("Paris", "paris"),
+		MILAN("Milan", "milan"),
+		BERLIN("Berlin", "berlin"),
+		HONG_KONG("Hong Kong", "hong kong"),
+		BEIJING("Beijing", "beijing");
 
 		private final String label;
 		private final String words;

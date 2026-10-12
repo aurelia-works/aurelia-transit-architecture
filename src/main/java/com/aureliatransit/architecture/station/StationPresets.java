@@ -4,9 +4,9 @@ import java.util.List;
 
 /**
  * Ready-made descriptions behind the wrench screen's preset buttons, one per building look: through stations with a building
- * and footbridge, and the termini (St Pancras, Antwerp, Frankfurt, Grand Central) as they are. They are plain
- * descriptions, so the parser, the design rules and the station checks treat them like typed text; the tests keep every preset
- * free of warnings, ignored words, rule breaks and failed checks.
+ * and footbridge, and the termini (St Pancras, Antwerp, Frankfurt, Grand Central, Tokyo, Zurich, Paris, Milan, Berlin, Hong Kong,
+ * Beijing) as they are. They are plain descriptions, so the parser, the design rules and the station checks treat them like
+ * typed text; the tests keep every preset free of warnings, ignored words, rule breaks and failed checks.
  */
 public final class StationPresets {
 
@@ -34,7 +34,21 @@ public final class StationPresets {
 			new Preset("munich", BuildingStyle.CONCRETE,
 					"two track munich station, island platform, 64 long, station building with footbridge, named Munchen Ost"),
 			new Preset("grand_central", BuildingStyle.BEAUX_ARTS,
-					"eight track grand central terminus, four island platforms, 200 long, named Grand Central"));
+					"eight track grand central terminus, four island platforms, 200 long, named Grand Central"),
+			new Preset("tokyo", BuildingStyle.TOKYO,
+					"ten track tokyo terminus, five island platforms, 240 long, named Tokyo"),
+			new Preset("zurich", BuildingStyle.ZURICH,
+					"eight track zurich terminus, four island platforms, 200 long, train shed, named Zurich HB"),
+			new Preset("paris", BuildingStyle.PARIS,
+					"eight track paris terminus, four island platforms, 200 long, train shed, named Paris Nord"),
+			new Preset("milan", BuildingStyle.MILAN,
+					"ten track milan terminus, five island platforms, 240 long, train shed, named Milano Centrale"),
+			new Preset("berlin", BuildingStyle.BERLIN,
+					"six track berlin terminus, three island platforms, 160 long, train shed, named Berlin Hbf"),
+			new Preset("hong_kong", BuildingStyle.HONG_KONG,
+					"eight track hong kong terminus, four island platforms, 200 long, named West Kowloon"),
+			new Preset("beijing", BuildingStyle.BEIJING,
+					"eight track beijing terminus, four island platforms, 200 long, named Beijing South"));
 
 	private StationPresets() {
 	}

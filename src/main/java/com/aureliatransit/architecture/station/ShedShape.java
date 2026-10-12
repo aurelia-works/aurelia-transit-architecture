@@ -4,20 +4,20 @@ package com.aureliatransit.architecture.station;
 public enum ShedShape {
 	/** A flat roof on a grid of girders. */
 	FLAT,
-	/** One shallow barrel vault over the whole railway (Hamburg, Amsterdam, Antwerp). */
+	/** One shallow barrel vault over the whole railway (Hamburg, Amsterdam, Antwerp, Zurich, Paris, Berlin). */
 	ARCH,
 	/** One tall pointed (Gothic) arch over the whole railway (St Pancras). */
 	POINTED,
-	/** A row of barrel vaults side by side, one over each group of tracks (Frankfurt, Leipzig). */
+	/** A row of barrel vaults side by side, one over each group of tracks (Frankfurt, Leipzig, Milan). */
 	MULTI_ARCH;
 
 	/** The shed that suits a building look (or, without a building, a platform style). */
 	public static ShedShape forLook(BuildingStyle building, StationStyle style) {
 		return switch (building) {
-			case CLINKER, AMSTERDAM, ANTWERP -> ARCH;
+			case CLINKER, AMSTERDAM, ANTWERP, ZURICH, PARIS, BERLIN -> ARCH;
 			case GOTHIC_BRICK -> POINTED;
-			case SANDSTONE -> MULTI_ARCH;
-			case MODERN, CONCRETE, BEAUX_ARTS -> FLAT;
+			case SANDSTONE, MILAN -> MULTI_ARCH;
+			case MODERN, CONCRETE, BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING -> FLAT;
 			case NONE -> style == StationStyle.GERMAN_SBAHN ? ARCH : FLAT;
 		};
 	}

@@ -107,6 +107,13 @@ public final class StudioApi {
 			case CLINKER -> StationRecipe.Look.HAMBURG;
 			case CONCRETE -> StationRecipe.Look.MUNICH;
 			case BEAUX_ARTS -> StationRecipe.Look.NEW_YORK;
+			case TOKYO -> StationRecipe.Look.TOKYO;
+			case ZURICH -> StationRecipe.Look.ZURICH;
+			case PARIS -> StationRecipe.Look.PARIS;
+			case MILAN -> StationRecipe.Look.MILAN;
+			case BERLIN -> StationRecipe.Look.BERLIN;
+			case HONG_KONG -> StationRecipe.Look.HONG_KONG;
+			case BEIJING -> StationRecipe.Look.BEIJING;
 			case MODERN -> StationRecipe.Look.UTRECHT;
 			case NONE -> StationRecipe.Look.AUTO;
 		};
@@ -198,6 +205,7 @@ public final class StudioApi {
 					.append('}');
 		}
 		out.append("],\"passenger\":").append(passenger(layout, idAt));
+		out.append(",\"head\":").append(headView(layout));
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
 		out.append(",\"models\":[").append(String.join(",", modelJson)).append(']');
 		out.append(",\"cells\":[").append(cells).append(']');
@@ -238,6 +246,22 @@ public final class StudioApi {
 
 	public static long cell(int x, int y, int z) {
 		return ((long) (x + 4096) << 40) | ((long) (y + 4096) << 20) | (z + 4096);
+	}
+
+	/**
+	 * Where to look at a terminus's head building from the street: the middle of its front ({@code x}, {@code z}), the way
+	 * the front faces ({@code dx}, {@code dz}) and its width; null for a through station.
+	 */
+	private static String headView(TrackLayout layout) {
+		if (!layout.terminus()) {
+			return "null";
+		}
+		final int u = (layout.headFrom() + layout.headTo()) / 2;
+		final int v = layout.headEnd();
+		final int x = FRAME.x(u, v);
+		final int z = FRAME.z(u, v);
+		return "{\"x\":" + x + ",\"z\":" + z + ",\"dx\":" + (FRAME.x(u, v + 1) - x) + ",\"dz\":" + (FRAME.z(u, v + 1) - z)
+				+ ",\"width\":" + (layout.headTo() - layout.headFrom() + 1) + "}";
 	}
 
 	/**

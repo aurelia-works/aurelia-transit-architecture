@@ -35,6 +35,9 @@ public class StationWrenchScreen extends Screen {
 	private static final int HALF = (WIDTH - 4) / 2;
 	private static final int COLUMNS = 4;
 	private static final int ROW = 22;
+	/** The look and preset grids: shorter buttons, so sixteen cities fit on a small screen. */
+	private static final int GRID_ROW = 18;
+	private static final int GRID_BUTTON = 16;
 	/** From the last choice row to the action buttons: the station's one-line summary and the next-step hint. */
 	private static final int SUMMARY = 24;
 	private static final String KEY = EditorWidgets.KEY + "station_wrench.";
@@ -180,7 +183,7 @@ public class StationWrenchScreen extends Screen {
 	// ---- simple page ----------------------------------------------------------------------------------------------
 
 	private static int simpleHeight() {
-		return 12 + (lookRows() + 4) * ROW + SUMMARY + 26 + ROW + 20;
+		return 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 4 * ROW + SUMMARY + 26 + ROW + 20;
 	}
 
 	/** Rows of look buttons, four to a row. */
@@ -196,10 +199,10 @@ public class StationWrenchScreen extends Screen {
 		for (int i = 0; i < looks.length; i++) {
 			final StationRecipe.Look look = looks[i];
 			addDrawableChild(ButtonWidget.builder(lookLabel(look, recipe.look() == look, lookWidth - 8), b -> change(recipe.withLook(look)))
-					.dimensions(left + i % COLUMNS * (lookWidth + 4), y + i / COLUMNS * ROW, lookWidth, 20)
+					.dimensions(left + i % COLUMNS * (lookWidth + 4), y + i / COLUMNS * GRID_ROW, lookWidth, GRID_BUTTON)
 					.tooltip(Tooltip.of(Text.translatable(KEY + (look == StationRecipe.Look.AUTO ? "look.auto.tip" : "look.tip")))).build());
 		}
-		y += lookRows() * ROW;
+		y += lookRows() * GRID_ROW + ROW - GRID_ROW;
 		final ButtonWidget mix = cycle(left, y, HALF, "mix",
 				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(recipe.nextMix()));
 		mix.setTooltip(Tooltip.of(Text.translatable(KEY + "mix.tip")));
@@ -347,7 +350,7 @@ public class StationWrenchScreen extends Screen {
 	// ---- advanced page --------------------------------------------------------------------------------------------
 
 	private static int advancedHeight() {
-		return 46 + presetRows() * ROW + 6 + 24 + 24 + 28 + 20;
+		return 46 + presetRows() * GRID_ROW + 6 + 24 + 24 + 28 + 20;
 	}
 
 	private void initAdvanced() {
@@ -370,10 +373,10 @@ public class StationWrenchScreen extends Screen {
 			addDrawableChild(ButtonWidget.builder(Text.translatable(KEY + "preset." + preset.key()), b -> {
 				field.setText(preset.description());
 				field.setCursorToStart();
-			}).dimensions(left + i % COLUMNS * (presetWidth + 4), y + i / COLUMNS * ROW, presetWidth, 20)
+			}).dimensions(left + i % COLUMNS * (presetWidth + 4), y + i / COLUMNS * GRID_ROW, presetWidth, GRID_BUTTON)
 					.tooltip(Tooltip.of(Text.literal(preset.description()))).build());
 		}
-		y += presetRows() * ROW + 6;
+		y += presetRows() * GRID_ROW + 6;
 		addDrawableChild(action(left, y, HALF, "plan", StationWrenchItem.Action.PLAN));
 		addDrawableChild(action(left + HALF + 4, y, HALF, "preview", StationWrenchItem.Action.PREVIEW));
 		y += 24;
@@ -442,7 +445,7 @@ public class StationWrenchScreen extends Screen {
 		final int top = top(simpleHeight());
 		context.drawCenteredTextWithShadow(textRenderer, title, left + WIDTH / 2, top - 16, 0xFFFFFF);
 		context.drawTextWithShadow(textRenderer, Text.translatable(KEY + "step_look"), left, top, 0xE0C060);
-		final int summary = top + 12 + (lookRows() + 4) * ROW + 1;
+		final int summary = top + 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 4 * ROW + 1;
 		context.drawCenteredTextWithShadow(textRenderer, Text.literal(recipe.title()), left + WIDTH / 2, summary, 0xFFFFFF);
 		context.drawCenteredTextWithShadow(textRenderer, Text.translatable(KEY + "step_place"), left + WIDTH / 2, summary + 11, 0x9AA0A6);
 	}

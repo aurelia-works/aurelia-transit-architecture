@@ -12,10 +12,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StationRecipeTest {
 
-	private static final Map<StationRecipe.Look, BuildingStyle> BUILDINGS = Map.of(StationRecipe.Look.UTRECHT, BuildingStyle.MODERN,
-			StationRecipe.Look.AMSTERDAM, BuildingStyle.AMSTERDAM, StationRecipe.Look.HAMBURG, BuildingStyle.CLINKER, StationRecipe.Look.MUNICH,
-			BuildingStyle.CONCRETE, StationRecipe.Look.FRANKFURT, BuildingStyle.SANDSTONE, StationRecipe.Look.ST_PANCRAS, BuildingStyle.GOTHIC_BRICK,
-			StationRecipe.Look.ANTWERP, BuildingStyle.ANTWERP, StationRecipe.Look.NEW_YORK, BuildingStyle.BEAUX_ARTS);
+	private static final Map<StationRecipe.Look, BuildingStyle> BUILDINGS = Map.ofEntries(Map.entry(StationRecipe.Look.UTRECHT, BuildingStyle.MODERN),
+			Map.entry(StationRecipe.Look.AMSTERDAM, BuildingStyle.AMSTERDAM), Map.entry(StationRecipe.Look.HAMBURG, BuildingStyle.CLINKER),
+			Map.entry(StationRecipe.Look.MUNICH, BuildingStyle.CONCRETE), Map.entry(StationRecipe.Look.FRANKFURT, BuildingStyle.SANDSTONE),
+			Map.entry(StationRecipe.Look.ST_PANCRAS, BuildingStyle.GOTHIC_BRICK), Map.entry(StationRecipe.Look.ANTWERP, BuildingStyle.ANTWERP),
+			Map.entry(StationRecipe.Look.NEW_YORK, BuildingStyle.BEAUX_ARTS), Map.entry(StationRecipe.Look.TOKYO, BuildingStyle.TOKYO),
+			Map.entry(StationRecipe.Look.ZURICH, BuildingStyle.ZURICH), Map.entry(StationRecipe.Look.PARIS, BuildingStyle.PARIS),
+			Map.entry(StationRecipe.Look.MILAN, BuildingStyle.MILAN), Map.entry(StationRecipe.Look.BERLIN, BuildingStyle.BERLIN),
+			Map.entry(StationRecipe.Look.HONG_KONG, BuildingStyle.HONG_KONG), Map.entry(StationRecipe.Look.BEIJING, BuildingStyle.BEIJING));
 
 	/**
 	 * Every look with every mix, both station types and every roof (tracks, platforms, length and building cycle along): the

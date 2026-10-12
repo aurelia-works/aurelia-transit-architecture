@@ -47,8 +47,8 @@ public final class StationGuide {
 					+ "Roof: canopy, no roof, or a train shed: flat, arched, pointed arch or several arches."),
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
 					+ "Add \"footbridge\" for stairs up to every platform, with lifts where a platform has room."),
-			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich and grand central each pick a "
-					+ "look and its own roof."),
+			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich, grand central, tokyo, zurich, "
+					+ "paris, milan, berlin, hong kong and beijing each pick a look and its own roof."),
 			new Page("Mixing looks", "Join cities with \"and\" or \"combined\":\n\namerican station, utrecht and hamburg combined\n\n"
 					+ "The first gives the building, then the platforms, then the train shed."),
 			new Page("Terminus", "Add \"terminus\" and the tracks end at buffer stops in front of a concourse building.\n\n"

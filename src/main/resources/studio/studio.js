@@ -71,10 +71,12 @@
 
 	// ---- buttons over the hidden selects: the selects stay the single source of what is sent --------------------------
 
-	// one real block texture per city, so a tile shows what the station is built from
+	// one real block texture per city (ATA's unless a namespace is given), so a tile shows what the station is built from
 	const LOOK_TEXTURES = {
 		UTRECHT: "nlbe_wave_top_x", AMSTERDAM: "nlbe_brick", HAMBURG: "hamburg_clinker_brick", MUNICH: "munich_exposed_concrete",
-		FRANKFURT: "frankfurt_sandstone_ashlar", ST_PANCRAS: "nlbe_brick_band_side", ANTWERP: "nlbe_limestone", NEW_YORK: "roma_travertine"
+		FRANKFURT: "frankfurt_sandstone_ashlar", ST_PANCRAS: "nlbe_brick_band_side", ANTWERP: "nlbe_limestone", NEW_YORK: "roma_travertine",
+		TOKYO: "minecraft/block/bricks", ZURICH: "minecraft/block/sandstone_top", PARIS: "minecraft/block/calcite",
+		MILAN: "minecraft/block/polished_diorite", BERLIN: "blue_tinted_glass", HONG_KONG: "minecraft/block/white_concrete", BEIJING: "grey_tinted_glass"
 	};
 	const MODE_HELP = {
 		through: "Trains stop and carry on through the station.",
@@ -116,7 +118,8 @@
 			const sw = document.createElement("i");
 			sw.className = "sw";
 			if (LOOK_TEXTURES[value]) {
-				sw.style.backgroundImage = "url('tex/aurelia_transit_architecture/block/" + LOOK_TEXTURES[value] + ".png')";
+				const tex = LOOK_TEXTURES[value];
+				sw.style.backgroundImage = "url('tex/" + (tex.includes("/") ? tex : "aurelia_transit_architecture/block/" + tex) + ".png')";
 			} else {
 				sw.classList.add("custom");
 				sw.textContent = "✎";
@@ -515,6 +518,10 @@
 			setView(currentView);
 			showPlan.framed = reach;
 		}
+		$("headView").hidden = !plan.head;
+		if (!plan.head && currentView === "head") {
+			setView("overview");
+		}
 		updateCut();
 		draw();
 	}
@@ -558,6 +565,16 @@
 			Object.assign(view, { yaw: 0, pitch: Math.PI / 2 - 0.001, radius: reach * 1.25 });
 		} else if (name === "passenger" && current && current.passenger) {
 			lookFrom(current.passenger);
+		} else if (name === "head" && current && current.head) {
+			// in front of a terminus's head building, a little to one side and above, looking at its street front
+			const h = current.head;
+			const front = new THREE.Vector3(h.x + 0.5, Math.min(size.y * 0.4, 12), h.z + 0.5);
+			// far enough back that the whole front fits, however low the building is
+			const away = Math.max(h.width * 1.5, size.y * 2.2, 24);
+			const side = new THREE.Vector3(-h.dz, 0, h.dx).multiplyScalar(away * 0.25);
+			const eye = front.clone().add(new THREE.Vector3(h.dx, 0, h.dz).multiplyScalar(away)).add(side);
+			eye.y = Math.min(size.y * 0.55, 18);
+			Object.assign(view, viewFrom(eye, front));
 		}
 		draw();
 	}

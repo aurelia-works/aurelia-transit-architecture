@@ -34,6 +34,11 @@ public final class StationPlanner {
 	private static final int TOWER_HEIGHT = 11;
 	/** The state of every stair in a pitched roof. */
 	private static final String PITCH_STATE = "half=bottom,shape=straight";
+	/** Copper for domes, and glass for giant arched windows (whole blocks, so the arch reads from the street). */
+	private static final String DOME = "minecraft:oxidized_cut_copper";
+	private static final String ARCH_GLASS = "aurelia_transit_architecture:curtain_wall_glass";
+	/** A statue's base; its figure is a quartz pillar. */
+	private static final String STATUE = "minecraft:chiseled_quartz_block";
 
 	private StationPlanner() {
 	}
@@ -525,8 +530,12 @@ public final class StationPlanner {
 		 * scale a hipped roof of stairs inside the cornice, over an attic lit through its floor.
 		 */
 		private void roof(int top, int uS, int uP, int vS, int vE) {
+			roof(top, uS, uP, vS, vE, pitchedRoof());
+		}
+
+		/** {@link #roof(int, int, int, int, int)} with the given pitched-roof blocks, or flat for null. */
+		private void roof(int top, int uS, int uP, int vS, int vE, String[] pitched) {
 			final StylePalette.Building b = palette.building();
-			final String[] pitched = pitchedRoof();
 			for (int u = uS; u <= uP; u++) {
 				for (int v = vS; v <= vE; v++) {
 					final boolean edge = u == uS || u == uP || v == vS || v == vE;
@@ -596,8 +605,8 @@ public final class StationPlanner {
 			}
 			return switch (spec.building()) {
 				case AMSTERDAM, ANTWERP, BEAUX_ARTS -> new String[]{"minecraft:oxidized_cut_copper_stairs", "minecraft:oxidized_cut_copper"};
-				case GOTHIC_BRICK, SANDSTONE, CLINKER -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
-				case NONE, MODERN, CONCRETE -> null;
+				case GOTHIC_BRICK, SANDSTONE, CLINKER, TOKYO, ZURICH -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
+				case NONE, MODERN, CONCRETE, PARIS, MILAN, BERLIN, HONG_KONG, BEIJING -> null;
 			};
 		}
 
@@ -608,11 +617,24 @@ public final class StationPlanner {
 		 * roof leaves the tower open.
 		 */
 		private void clockTower(int top, int u0, int v0, LocalDir inward) {
+			tower(top, u0, v0, TOWER_HEIGHT, inward, Cap.PYRAMID, true, false);
+		}
+
+		/** How a tower ends: a pyramid, a pyramid with a tall spire, a copper dome, or flat (a glass tower). */
+		private enum Cap {
+			PYRAMID, SPIRE, DOME, FLAT
+		}
+
+		/**
+		 * A tower five cells across standing on the roof at {@code top}, {@code height} high, like {@link #clockTower}: clock faces
+		 * when {@code clock}, glass between the corners and bands when {@code glass} (a modern glass tower), and its {@code cap}.
+		 */
+		private void tower(int top, int u0, int v0, int height, LocalDir inward, Cap cap, boolean clock, boolean glass) {
 			final StylePalette.Building b = palette.building();
 			final int u1 = u0 + 4;
 			final int v1 = v0 + 4;
 			final int vC = v0 + 2;
-			final int crown = top + TOWER_HEIGHT;
+			final int crown = top + height;
 			for (int u = u0 + 1; u <= u1 - 1; u++) {
 				for (int v = v0 + 1; v <= v1 - 1; v++) {
 					// the roof under the tower is lit so the closed shaft stays dark-free; the rest of the shaft stays empty
@@ -638,7 +660,7 @@ public final class StationPlanner {
 						final LocalDir front = outward(u, v, u0, u1, v0, v1);
 						if (band || corner) {
 							put(Role.WALL, u, y, v, front, b.trim());
-						} else if (louvre && middle) {
+						} else if (glass || louvre && middle) {
 							put(Role.WINDOW, u, y, v, front, b.window());
 						} else {
 							put(Role.WALL, u, y, v, front, b.wall());
@@ -648,16 +670,16 @@ public final class StationPlanner {
 			}
 			// clock faces on the outer sides, one row under the cornice
 			final int clockY = crown - 2;
-			final String clock = ata("amsterdam_clock_face_panel");
+			final String clockFace = ata("amsterdam_clock_face_panel");
 			for (final LocalDir side : LocalDir.values()) {
-				if (side == inward) {
+				if (!clock || side == inward) {
 					continue;
 				}
 				switch (side) {
-					case MINUS_U -> put(Role.FIXTURE, u0 - 1, clockY, vC, side, clock);
-					case PLUS_U -> put(Role.FIXTURE, u1 + 1, clockY, vC, side, clock);
-					case MINUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, side, clock);
-					case PLUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, side, clock);
+					case MINUS_U -> put(Role.FIXTURE, u0 - 1, clockY, vC, side, clockFace);
+					case PLUS_U -> put(Role.FIXTURE, u1 + 1, clockY, vC, side, clockFace);
+					case MINUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, side, clockFace);
+					case PLUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, side, clockFace);
 				}
 			}
 			// the cap: a closed slab, then a pyramid of two rings and a point, then the finial
@@ -670,8 +692,45 @@ public final class StationPlanner {
 					put(Role.BUILDING_ROOF, u, crown, v, LocalDir.PLUS_V, b.roof());
 				}
 			}
-			hipped(u0, u1, v0, v1, crown + 1, stair, solid, 2);
-			put(Role.BUILDING_ROOF, u0 + 2, crown + 4, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
+			switch (cap) {
+				case PYRAMID -> {
+					hipped(u0, u1, v0, v1, crown + 1, stair, solid, 2);
+					put(Role.BUILDING_ROOF, u0 + 2, crown + 4, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
+				}
+				case SPIRE -> {
+					hipped(u0, u1, v0, v1, crown + 1, stair, solid, 2);
+					for (int y = crown + 4; y <= crown + 6; y++) {
+						put(Role.BUILDING_ROOF, u0 + 2, y, vC, LocalDir.PLUS_V, solid);
+					}
+					put(Role.BUILDING_ROOF, u0 + 2, crown + 7, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
+				}
+				case DOME -> {
+					// a round copper dome: the ring without its corners, the middle three by three, then the top and a finial
+					for (int u = u0; u <= u1; u++) {
+						for (int v = v0; v <= v1; v++) {
+							final boolean corner = (u == u0 || u == u1) && (v == v0 || v == v1);
+							if (!corner) {
+								put(Role.BUILDING_ROOF, u, crown + 1, v, LocalDir.PLUS_V, DOME);
+							}
+							if (u > u0 && u < u1 && v > v0 && v < v1) {
+								put(Role.BUILDING_ROOF, u, crown + 2, v, LocalDir.PLUS_V, DOME);
+							}
+						}
+					}
+					put(Role.BUILDING_ROOF, u0 + 2, crown + 3, vC, LocalDir.PLUS_V, DOME);
+					put(Role.BUILDING_ROOF, u0 + 2, crown + 4, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
+				}
+				case FLAT -> {
+					// a parapet round the flat top
+					for (int u = u0; u <= u1; u++) {
+						for (int v = v0; v <= v1; v++) {
+							if (u == u0 || u == u1 || v == v0 || v == v1) {
+								put(Role.BUILDING_ROOF, u, crown + 1, v, outward(u, v, u0, u1, v0, v1), b.cornice());
+							}
+						}
+					}
+				}
+			}
 		}
 
 		/**
@@ -883,6 +942,9 @@ public final class StationPlanner {
 					keepClear(u, y, vE + 2);
 				}
 			}
+			if (scale != StationScale.COMPACT) {
+				headFront(u0, u1, vE, door);
+			}
 			for (int u = u0; u <= u1; u++) {
 				final TrackLayout.PlatformBand band = bandAt(u);
 				for (int v = vL; v <= vE; v++) {
@@ -940,11 +1002,7 @@ public final class StationPlanner {
 				for (int storey = 0; storey < scale.extraStoreys(); storey++) {
 					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, u0, u1, vL, vE, true);
 				}
-				final int roofAt = roofY();
-				if (scale == StationScale.GRAND) {
-					clockTower(roofAt, door - 2, vE - 4, LocalDir.MINUS_V);
-				}
-				roof(roofAt, u0, u1, vL, vE);
+				headCrown(u0, u1, vL, vE, door);
 				return;
 			}
 			// a ceiling with light panels, covered by a flat roof flush with the cornice (the panels' tops would otherwise show
@@ -954,6 +1012,293 @@ public final class StationPlanner {
 					final boolean inner = u > u0 && u < u1 && v > vL && v < vE;
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, inner && (u + v) % 4 == 0 ? b.light() : b.roof());
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, inner ? b.roof() : b.cornice());
+				}
+			}
+		}
+
+		/**
+		 * The street front of a city or grand head building, planned before its plain walls so it takes their cells: giant
+		 * arched windows (one, two or three), tall round-headed windows between columns, or a glass curtain wall, by the look's
+		 * {@link BuildingStyle.Facade}. Brick looks keep their banded walls; their towers come with the roof.
+		 */
+		private void headFront(int u0, int u1, int vE, int door) {
+			final StylePalette.Building b = palette.building();
+			final BuildingStyle look = spec.building();
+			final int width = u1 - u0 + 1;
+			// windows stop two rows under the roof, so the cornice band runs unbroken over them
+			final int top = roofY() - 2;
+			switch (look.facade()) {
+				case BRICK_TOWERS -> {
+				}
+				case ARCHED_GLASS -> {
+					final int arches = look == BuildingStyle.SANDSTONE && width >= 40 ? 3 : look == BuildingStyle.CLINKER && width >= 28 ? 2 : 1;
+					if (arches == 1) {
+						giantArch(door, Math.min(top - 4, Math.max(2, width / 6)), top, vE, u0, u1);
+					} else if (arches == 2) {
+						final int h = Math.min(top - 4, width / 8);
+						giantArch(u0 + width / 4, h, top, vE, u0, u1);
+						giantArch(u1 - width / 4, h, top, vE, u0, u1);
+					} else {
+						final int h = Math.min(top - 4, width / 8);
+						for (final int c : new int[]{door - width / 3, door, door + width / 3}) {
+							giantArch(c, h, top, vE, u0, u1);
+						}
+					}
+				}
+				case SCULPTED_ATTIC -> {
+					if (look == BuildingStyle.PARIS || width < 30) {
+						// one great window over the entrance between pairs of columns
+						final int h = Math.min(top - 4, Math.max(2, width / 6));
+						giantArch(door, h, top, vE, u0, u1);
+						columnPair(door - h - 1, -1, top, vE, u0, u1);
+						columnPair(door + h + 1, 1, top, vE, u0, u1);
+					} else {
+						// three tall round-headed windows, with paired columns between and beside them
+						final int h = 3;
+						for (final int c : new int[]{door - 10, door, door + 10}) {
+							giantArch(c, h, top, vE, u0, u1);
+							columnPair(c - h - 1, -1, top, vE, u0, u1);
+							columnPair(c + h + 1, 1, top, vE, u0, u1);
+						}
+					}
+				}
+				case GLASS_MODERN -> {
+					// a curtain wall: glass between mullions every three cells and a band at every floor
+					for (int u = u0 + 1; u < u1; u++) {
+						for (int y = 1; y < roofY(); y++) {
+							final boolean floorLine = y == StationGeometry.UPPER_FLOOR_Y
+									|| y >= StationGeometry.BUILDING_ROOF_Y && (y - StationGeometry.BUILDING_ROOF_Y) % 4 == 0;
+							if (floorLine || (u - u0) % 3 == 0) {
+								put(Role.WALL, u, y, vE, LocalDir.PLUS_V, b.trim());
+							} else {
+								put(Role.WINDOW, u, y, vE, LocalDir.PLUS_V, b.window());
+							}
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * A giant round-headed window in the street wall (v = {@code vE}), centred on {@code cu}, {@code h} cells each side of
+		 * the middle, its crown at {@code top}: glass with glazing bars every three cells and at the first floor, framed by a
+		 * ring of stone. Left out where it would not fit between the side walls.
+		 */
+		private void giantArch(int cu, int h, int top, int vE, int u0, int u1) {
+			if (h < 2 || cu - h <= u0 || cu + h >= u1) {
+				return;
+			}
+			final StylePalette.Building b = palette.building();
+			final int spring = top - h;
+			// the ring and glazing bars in a stone that stands out from the wall
+			final String frame = switch (spec.building()) {
+				case SANDSTONE -> ata("antwerp_ornate_limestone");
+				case CLINKER, ANTWERP, ZURICH -> ata("frankfurt_sandstone_rusticated");
+				default -> b.trim();
+			};
+			for (int u = cu - h; u <= cu + h; u++) {
+				final int du = Math.abs(u - cu);
+				for (int y = 1; y <= top; y++) {
+					final boolean inside;
+					final boolean ring;
+					if (y <= spring) {
+						inside = du < h;
+						ring = du == h;
+					} else {
+						final double d = Math.hypot(du, y - spring);
+						inside = d < h - 0.5;
+						ring = !inside && d < h + 0.5;
+					}
+					final boolean bar = y == StationGeometry.UPPER_FLOOR_Y || y > 3 && du % 3 == 0;
+					if (ring || inside && bar) {
+						put(Role.WALL, u, y, vE, LocalDir.PLUS_V, frame);
+					} else if (inside) {
+						put(Role.WINDOW, u, y, vE, LocalDir.PLUS_V, ARCH_GLASS);
+					}
+				}
+			}
+		}
+
+		/** Two columns side by side in the street wall from the ground to {@code top}, from {@code u} going {@code dir}. */
+		private void columnPair(int u, int dir, int top, int vE, int u0, int u1) {
+			for (int k = 0; k < 2; k++) {
+				final int at = u + dir * k;
+				if (at <= u0 || at >= u1) {
+					continue;
+				}
+				for (int y = 1; y <= top; y++) {
+					put(Role.WALL, at, y, vE, LocalDir.PLUS_V, "minecraft:quartz_pillar", "axis=y");
+				}
+			}
+		}
+
+		/**
+		 * The top of a city or grand head building, by the look's {@link BuildingStyle.Facade}: clock towers, gables and domed
+		 * pavilions over a hipped roof (brick), a tower or a statue group over the arches (arched), a raised attic with a clock
+		 * and statues on a flat roof (Beaux-Arts), or a flat roof with a street canopy, a glass tower, a wave or a deep
+		 * overhang (modern). Towers and attics come first, so the roof leaves them open.
+		 */
+		private void headCrown(int u0, int u1, int vL, int vE, int door) {
+			final BuildingStyle look = spec.building();
+			final int top = roofY();
+			final int width = u1 - u0 + 1;
+			final boolean grand = scale == StationScale.GRAND;
+			final int towerV = vE - 4;
+			switch (look.facade()) {
+				case BRICK_TOWERS -> {
+					if (look == BuildingStyle.TOKYO && width >= 20) {
+						// domed corner pavilions, and over the entrance a domed clock tower or a gable
+						tower(top, u0, towerV, 5, LocalDir.MINUS_V, Cap.DOME, false, false);
+						tower(top, u1 - 4, towerV, 5, LocalDir.MINUS_V, Cap.DOME, false, false);
+						if (grand) {
+							tower(top, door - 2, towerV, 7, LocalDir.MINUS_V, Cap.DOME, true, false);
+						} else {
+							gable(door, top, vE);
+						}
+					} else if (look == BuildingStyle.AMSTERDAM && grand && width >= 30) {
+						// twin clock towers at a quarter and three quarters of the front, a gable between them
+						tower(top, u0 + width / 4 - 2, towerV, TOWER_HEIGHT, LocalDir.MINUS_V, Cap.PYRAMID, true, false);
+						tower(top, u1 - width / 4 - 2, towerV, TOWER_HEIGHT, LocalDir.MINUS_V, Cap.PYRAMID, true, false);
+						gable(door, top, vE);
+					} else if (grand) {
+						final boolean gothic = look == BuildingStyle.GOTHIC_BRICK;
+						tower(top, door - 2, towerV, gothic ? TOWER_HEIGHT + 4 : TOWER_HEIGHT, LocalDir.MINUS_V, gothic ? Cap.SPIRE : Cap.PYRAMID, true, false);
+					} else {
+						gable(door, top, vE);
+					}
+					roof(top, u0, u1, vL, vE);
+				}
+				case ARCHED_GLASS -> {
+					if (look == BuildingStyle.ZURICH) {
+						attic(door, Math.max(3, Math.min(6, width / 8)), 2, top, vE, u0, u1, true);
+					} else if (grand && look == BuildingStyle.CLINKER) {
+						// the clock tower near one end of the front, a cell in so its side clock stays over the building
+						tower(top, u1 - 5, towerV, TOWER_HEIGHT + 2, LocalDir.MINUS_V, Cap.PYRAMID, true, false);
+					} else if (grand) {
+						tower(top, door - 2, towerV, TOWER_HEIGHT, LocalDir.MINUS_V, look == BuildingStyle.ANTWERP ? Cap.DOME : Cap.PYRAMID, true, false);
+					} else {
+						gable(door, top, vE);
+					}
+					roof(top, u0, u1, vL, vE);
+				}
+				case SCULPTED_ATTIC -> {
+					final int half = Math.max(3, Math.min(9, width / 6));
+					if (look == BuildingStyle.MILAN && grand) {
+						// a stepped centre: a wide attic and a taller narrow one on it
+						attic(door, half, 3, top, vE, u0, u1, false);
+						attic(door, Math.max(2, half / 2), 3, top + 4, vE, u0, u1, true);
+					} else {
+						attic(door, half, look == BuildingStyle.PARIS ? 2 : 3, top, vE, u0, u1, true);
+					}
+					if (look == BuildingStyle.PARIS) {
+						// statues along the parapet
+						for (int u = u0 + 3; u <= u1 - 3; u += 6) {
+							statue(u, top + 2, vE);
+						}
+					}
+					roof(top, u0, u1, vL, vE, null);
+				}
+				case GLASS_MODERN -> {
+					if (look == BuildingStyle.HONG_KONG) {
+						waveRoof(top, u0, u1, vL, vE);
+					}
+					if (look == BuildingStyle.BERLIN && grand && width >= 20) {
+						tower(top, u1 - 4, towerV, TOWER_HEIGHT + 6, LocalDir.MINUS_V, Cap.FLAT, false, true);
+					}
+					roof(top, u0, u1, vL, vE);
+					if (look == BuildingStyle.CONCRETE) {
+						// a deep concrete canopy over the street, at the first floor
+						overhang(StationGeometry.UPPER_FLOOR_Y, u0, u1, vE, false);
+					}
+					if (look == BuildingStyle.BEIJING) {
+						overhang(top, u0, u1, vE, true);
+					}
+				}
+			}
+		}
+
+		/** A stepped gable on the street wall over the entrance, seven cells wide at the cornice, with a clock face. */
+		private void gable(int door, int top, int vE) {
+			final StylePalette.Building b = palette.building();
+			for (int k = 0; k < 3; k++) {
+				for (int u = door - 3 + k; u <= door + 3 - k; u++) {
+					put(Role.WALL, u, top + 1 + k, vE, LocalDir.PLUS_V, k == 0 || u == door - 3 + k || u == door + 3 - k ? b.trim() : b.wall());
+				}
+			}
+			put(Role.FIXTURE, door, top + 2, vE + 1, LocalDir.PLUS_V, ata("amsterdam_clock_face_panel"));
+		}
+
+		/**
+		 * A raised attic over the street front centred on {@code cu}, {@code half} cells each side and {@code high} rows above
+		 * {@code top}, four cells deep: closed walls, a flat top with a cornice, a clock face on its front and, when
+		 * {@code statues}, a statue group round the clock and one at each end.
+		 */
+		private void attic(int cu, int half, int high, int top, int vE, int u0, int u1, boolean statues) {
+			final StylePalette.Building b = palette.building();
+			final int a0 = Math.max(u0 + 1, cu - half);
+			final int a1 = Math.min(u1 - 1, cu + half);
+			final int v0 = vE - 3;
+			final int capY = top + high + 1;
+			for (int u = a0; u <= a1; u++) {
+				for (int v = v0; v <= vE; v++) {
+					final boolean ring = u == a0 || u == a1 || v == v0 || v == vE;
+					if (ring) {
+						for (int y = top + 1; y <= top + high; y++) {
+							put(Role.WALL, u, y, v, outward(u, v, a0, a1, v0, vE), y == top + high ? b.trim() : b.wall());
+						}
+					}
+					put(Role.BUILDING_ROOF, u, capY, v, outward(u, v, a0, a1, v0, vE), ring ? b.cornice() : b.roof());
+				}
+			}
+			put(Role.FIXTURE, cu, top + (high + 1) / 2, vE + 1, LocalDir.PLUS_V, ata("amsterdam_clock_face_panel"));
+			if (statues) {
+				for (final int u : new int[]{cu - 1, cu, cu + 1, a0, a1}) {
+					statue(u, capY + 1, vE - 1);
+				}
+			}
+		}
+
+		/** A statue two cells high from {@code y}: a carved base and a pillar figure. */
+		private void statue(int u, int y, int v) {
+			put(Role.WALL, u, y, v, LocalDir.PLUS_V, STATUE);
+			put(Role.WALL, u, y + 1, v, LocalDir.PLUS_V, "minecraft:quartz_pillar", "axis=y");
+		}
+
+		/**
+		 * A white roof sweeping up from both side walls to a crest over the middle, on the flat roof at {@code top}, closed at
+		 * both ends with curved gable walls: the head building's own wave.
+		 */
+		private void waveRoof(int top, int u0, int u1, int vL, int vE) {
+			final StylePalette.Building b = palette.building();
+			final int span = u1 - u0;
+			final int crest = Math.max(2, Math.min(6, (span + 1) / 8));
+			for (int u = u0; u <= u1; u++) {
+				final int rise = (int) Math.round(crest * Math.sin(Math.PI * (u - u0) / span));
+				for (int v = vL; v <= vE; v++) {
+					final boolean end = v == vL || v == vE;
+					for (int y = top + 1; y <= top + rise; y++) {
+						if (y == top + rise) {
+							put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, b.roof());
+						} else if (end) {
+							put(Role.WALL, u, y, v, v == vL ? LocalDir.MINUS_V : LocalDir.PLUS_V, b.wall());
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * A roof running on two cells past the street wall at {@code y}, across the whole front: a deep street canopy, or with
+		 * {@code upturned} its outer row turned up one cell, like a Chinese station roof.
+		 */
+		private void overhang(int y, int u0, int u1, int vE, boolean upturned) {
+			final StylePalette.Building b = palette.building();
+			for (int u = u0; u <= u1; u++) {
+				for (int v = vE + 1; v <= vE + 2; v++) {
+					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, b.roof());
+				}
+				if (upturned) {
+					put(Role.BUILDING_ROOF, u, y + 1, vE + 2, LocalDir.PLUS_V, b.trim());
 				}
 			}
 		}

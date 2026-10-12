@@ -1030,4 +1030,78 @@ class StationPlannerTest {
 		assertTrue(specs > 300, "specs " + specs);
 		assertEquals(List.of(), failures.subList(0, Math.min(20, failures.size())), failures.size() + " failures of " + specs);
 	}
+
+	/**
+	 * A grand terminus front follows its look, after the photo study's four kinds of terminal: towers on brick, giant arches,
+	 * a sculpted attic on a flat roof, or glass with the city's own extra.
+	 */
+	@Test
+	void terminusFrontsFollowTheLook() {
+		final Map<String, StationPlan> plans = new HashMap<>();
+		for (final String look : List.of("amsterdam", "st pancras", "tokyo", "zurich", "antwerp", "hamburg", "frankfurt", "grand central", "paris",
+				"milan", "munich", "berlin", "hong kong", "beijing")) {
+			final ParseResult result = StationDescriptionParser.parse("eight track " + look + " terminus, four island platforms, 160 long, grand building");
+			assertEquals(List.of(), result.warnings(), look);
+			final StationPlan plan = plan(result.spec());
+			assertEquals(List.of(), LayoutValidator.validate(plan), look);
+			assertTrue(StationAudit.audit(plan).buildable(), look + " " + StationAudit.audit(plan).problems());
+			plans.put(look, plan);
+		}
+		// brick: two towers for Amsterdam, a spire higher than any pyramid for St Pancras, three copper domes for Tokyo
+		assertEquals(2, count(plans.get("amsterdam"), "minecraft:lightning_rod"));
+		assertTrue(top(plans.get("st pancras"), "minecraft:lightning_rod") > top(plans.get("amsterdam"), "minecraft:lightning_rod") + 2);
+		assertEquals(3, count(plans.get("tokyo"), "minecraft:lightning_rod"));
+		assertTrue(count(plans.get("tokyo"), "minecraft:oxidized_cut_copper") > 30);
+		// arches: one, one, two and three runs of arch glass across the front at head height
+		assertEquals(1, archRuns(plans.get("zurich")));
+		assertEquals(1, archRuns(plans.get("antwerp")));
+		assertEquals(2, archRuns(plans.get("hamburg")));
+		assertEquals(3, archRuns(plans.get("frankfurt")));
+		// Beaux-Arts: columns and statues on a flat roof (no roof stairs over the head), Paris with the most statues, Milan's
+		// stepped attic the tallest
+		for (final String look : List.of("grand central", "paris", "milan")) {
+			final StationPlan plan = plans.get(look);
+			assertTrue(count(plan, "minecraft:quartz_pillar") > 20, look);
+			assertTrue(head(plan).noneMatch(b -> b.role() == Role.BUILDING_ROOF && b.blockId().endsWith("_stairs")), look + " roof is flat");
+		}
+		assertTrue(count(plans.get("paris"), "minecraft:chiseled_quartz_block") > count(plans.get("grand central"), "minecraft:chiseled_quartz_block"));
+		assertTrue(top(plans.get("milan"), "minecraft:quartz_pillar") > top(plans.get("grand central"), "minecraft:quartz_pillar"));
+		// glass: Munich's canopy and Beijing's upturned roof over the street, Berlin's glass tower, Hong Kong's wave
+		final int front = plans.get("munich").layout().headEnd();
+		assertTrue(head(plans.get("munich")).anyMatch(b -> b.role() == Role.BUILDING_ROOF && b.v() == front + 2 && b.y() == StationGeometry.UPPER_FLOOR_Y));
+		final StationPlan beijing = plans.get("beijing");
+		assertTrue(head(beijing).anyMatch(b -> b.role() == Role.BUILDING_ROOF && b.v() == beijing.layout().headEnd() + 2 && b.y() > StationGeometry.BUILDING_ROOF_Y));
+		assertTrue(head(plans.get("berlin")).filter(b -> b.role() == Role.WINDOW).mapToInt(PlannedBlock::y).max().orElse(0)
+				> head(plans.get("munich")).filter(b -> b.role() == Role.WINDOW).mapToInt(PlannedBlock::y).max().orElse(0) + 10);
+		assertTrue(head(plans.get("hong kong")).filter(b -> b.role() == Role.BUILDING_ROOF).mapToInt(PlannedBlock::y).max().orElse(0)
+				> head(plans.get("munich")).filter(b -> b.role() == Role.BUILDING_ROOF).mapToInt(PlannedBlock::y).max().orElse(0) + 3);
+	}
+
+	/** The head building's blocks: from the platform ends on. */
+	private static java.util.stream.Stream<PlannedBlock> head(StationPlan plan) {
+		return plan.blocks().stream().filter(b -> b.v() >= plan.layout().platformLength());
+	}
+
+	private static long count(StationPlan plan, String id) {
+		return head(plan).filter(b -> b.blockId().equals(id)).count();
+	}
+
+	private static int top(StationPlan plan, String id) {
+		return head(plan).filter(b -> b.blockId().equals(id)).mapToInt(PlannedBlock::y).max().orElse(-1);
+	}
+
+	/** Separate runs of arch glass along the street front, eight rows up. */
+	private static int archRuns(StationPlan plan) {
+		final int front = plan.layout().headEnd();
+		final Set<Integer> glass = new HashSet<>();
+		head(plan).filter(b -> b.v() == front && b.y() == 8 && b.blockId().endsWith("curtain_wall_glass")).forEach(b -> glass.add(b.u()));
+		int runs = 0;
+		for (final int u : glass) {
+			// count a run at its first cell; glazing bars split a run every three cells, so look up to three back
+			if (!glass.contains(u - 1) && !glass.contains(u - 2) && !glass.contains(u - 3)) {
+				runs++;
+			}
+		}
+		return runs;
+	}
 }

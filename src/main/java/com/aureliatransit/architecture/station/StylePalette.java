@@ -83,6 +83,41 @@ public final class StylePalette {
 						ata("roma_travertine"), ata("metro_recessed_light"), ata("station_stair"), ata("roma_polished_floor"),
 						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
 						ata("antwerp_polished_marble_wall"));
+				case TOKYO -> new Building("minecraft:bricks", ata("amsterdam_brick_sandstone_band"), ata("frankfurt_sandstone_rusticated"),
+						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"), ata("antwerp_marble_floor_tile"),
+						"minecraft:deepslate_tiles", ata("metro_recessed_light"), ata("station_stair"), ata("antwerp_marble_floor_tile"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						"minecraft:smooth_quartz");
+				case ZURICH -> new Building("minecraft:smooth_sandstone", "minecraft:cut_sandstone", ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("munich_terrazzo_floor"), ata("munich_terrazzo_floor"),
+						"minecraft:deepslate_tiles", ata("metro_recessed_light"), ata("station_stair"), ata("munich_terrazzo_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
+						"minecraft:smooth_sandstone");
+				case PARIS -> new Building(ata("roma_travertine"), ata("antwerp_ornate_limestone"), ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"), ata("roma_polished_floor"),
+						ata("roma_travertine"), ata("metro_recessed_light"), ata("station_stair"), ata("roma_polished_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						"minecraft:calcite");
+				case MILAN -> new Building("minecraft:polished_diorite", ata("roma_travertine"), "minecraft:polished_andesite",
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"), ata("roma_polished_floor"),
+						"minecraft:polished_diorite", ata("metro_recessed_light"), ata("station_stair"), ata("roma_polished_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("steel_bench"),
+						ata("antwerp_polished_marble_wall"));
+				case BERLIN -> new Building(ata("metro_steel_cladding"), ata("metro_steel_cladding"), ata("metro_steel_cladding"),
+						ata("metro_steel_cladding"), ata("blue_tinted_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						ata("metro_steel_cladding"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
+						ata("blue_tinted_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
+						ata("metro_pale_concrete"));
+				case HONG_KONG -> new Building("minecraft:white_concrete", "minecraft:smooth_quartz", "minecraft:smooth_quartz",
+						"minecraft:smooth_quartz", ata("low_iron_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						"minecraft:smooth_quartz", ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
+						ata("low_iron_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("utrecht_tree_column_white"), ata("steel_bench"),
+						"minecraft:white_concrete");
+				case BEIJING -> new Building(ata("metro_pale_concrete"), ata("metro_steel_cladding"), ata("metro_steel_cladding"),
+						ata("metro_steel_cladding"), ata("grey_tinted_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						ata("metro_steel_cladding"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
+						ata("grey_tinted_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
+						ata("metro_pale_concrete"));
 			};
 		}
 	}
@@ -134,9 +169,9 @@ public final class StylePalette {
 	public String girderKind() {
 		return switch (buildingStyle) {
 			case GOTHIC_BRICK -> "blue";
-			case ANTWERP, BEAUX_ARTS, AMSTERDAM -> "green";
-			case SANDSTONE, CLINKER, CONCRETE -> "steel";
-			case MODERN -> "white";
+			case ANTWERP, BEAUX_ARTS, AMSTERDAM, PARIS -> "green";
+			case SANDSTONE, CLINKER, CONCRETE, TOKYO, ZURICH, MILAN -> "steel";
+			case MODERN, BERLIN, HONG_KONG, BEIJING -> "white";
 			case NONE -> switch (style) {
 				case MODERN, DUTCH -> "white";
 				case GERMAN_SBAHN, METRO -> "steel";
