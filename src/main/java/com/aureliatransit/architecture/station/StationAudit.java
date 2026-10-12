@@ -129,6 +129,8 @@ public final class StationAudit {
 		private final List<Check> checks = new ArrayList<>();
 		private final List<Face> faces = new ArrayList<>();
 		private final List<Access> access = new ArrayList<>();
+		/** Lifts as step-free links between their ground and upper landings; found by {@link #access()}. */
+		private List<Flight> lifts = List.of();
 
 		Audit(StationPlan plan) {
 			this.plan = plan;
@@ -618,6 +620,67 @@ public final class StationAudit {
 			return flights;
 		}
 
+		/**
+		 * Every lift with a stop at the walk level and one at the upper walk level, landing doors at both and walkable landings:
+		 * one link per car column, from the ground landing in front of the doors to the upper one. A stop cell's front points at
+		 * the shaft's back wall, so the doors are two cells the other way and the landing three; the car's other column is
+		 * clockwise of the stop seen facing the back wall.
+		 */
+		private List<Flight> lifts(Ground[] ground, Ground[] upper) {
+			final List<Flight> found = new ArrayList<>();
+			for (final PlannedBlock stop : plan.blocks()) {
+				if (stop.y() != StationGeometry.WALK_Y || !stop.blockId().equals(StylePalette.MTR_LIFT_FLOOR)) {
+					continue;
+				}
+				final PlannedBlock top = at(stop.u(), StationGeometry.UPPER_WALK_Y, stop.v());
+				if (top == null || !top.blockId().equals(StylePalette.MTR_LIFT_FLOOR)) {
+					continue;
+				}
+				final int[] back = step(stop.front());
+				final int[] beside = step(clockwise(stop.front()));
+				for (int k = 0; k <= 1; k++) {
+					final int u = stop.u() + k * beside[0] - 3 * back[0];
+					final int v = stop.v() + k * beside[1] - 3 * back[1];
+					final boolean doors = isDoor(u + back[0], StationGeometry.WALK_Y, v + back[1])
+							&& isDoor(u + back[0], StationGeometry.UPPER_WALK_Y, v + back[1]);
+					if (doors && inGrid(u, v) && ground[index(u, v)] != Ground.BLOCKED && upper[index(u, v)] != Ground.BLOCKED) {
+						found.add(new Flight(u, v, u, v));
+					}
+				}
+			}
+			return found;
+		}
+
+		private static int[] step(LocalDir dir) {
+			return switch (dir) {
+				case PLUS_U -> new int[]{1, 0};
+				case MINUS_U -> new int[]{-1, 0};
+				case PLUS_V -> new int[]{0, 1};
+				case MINUS_V -> new int[]{0, -1};
+			};
+		}
+
+		/** Seen from above, +u is clockwise of +v (to its right). */
+		private static LocalDir clockwise(LocalDir dir) {
+			return switch (dir) {
+				case PLUS_V -> LocalDir.PLUS_U;
+				case PLUS_U -> LocalDir.MINUS_V;
+				case MINUS_V -> LocalDir.MINUS_U;
+				case MINUS_U -> LocalDir.PLUS_V;
+			};
+		}
+
+		private boolean isDoor(int u, int y, int v) {
+			final PlannedBlock block = at(u, y, v);
+			return block != null && block.blockId().equals(StylePalette.MTR_LIFT_DOOR);
+		}
+
+		private static List<Flight> join(List<Flight> a, List<Flight> b) {
+			final List<Flight> all = new ArrayList<>(a);
+			all.addAll(b);
+			return all;
+		}
+
 		/** Nearest walkable upper cell from the top step towards the landing (at most 6 cells); -1 if none. */
 		private int nearestUpper(Ground[] upper, int u, int v0, int dir) {
 			for (int d = 1; d <= 6; d++) {
@@ -672,8 +735,9 @@ public final class StationAudit {
 						seen[index(nu, nv)] = true;
 						queue.add(new int[]{nu, 1, nv});
 					}
-					if (stairs && upper != null) {
-						for (final Flight flight : flights) {
+					if (upper != null) {
+						// lifts are always step-free; stair flights only count when stairs are allowed
+						for (final Flight flight : stairs ? join(flights, lifts) : lifts) {
 							if (flight.footU() == u && flight.footV() == v && upper[index(flight.topU(), flight.topV())] != Ground.BLOCKED
 									&& !seenUp[index(flight.topU(), flight.topV())]) {
 								seenUp[index(flight.topU(), flight.topV())] = true;
@@ -694,13 +758,11 @@ public final class StationAudit {
 						seenUp[index(nu, nv)] = true;
 						queue.add(new int[]{nu, 6, nv});
 					}
-					if (stairs) {
-						for (final Flight flight : flights) {
-							if (flight.topU() == u && flight.topV() == v && !seen[index(flight.footU(), flight.footV())]
-									&& grid[index(flight.footU(), flight.footV())] != Ground.BLOCKED) {
-								seen[index(flight.footU(), flight.footV())] = true;
-								queue.add(new int[]{flight.footU(), 1, flight.footV()});
-							}
+					for (final Flight flight : stairs ? join(flights, lifts) : lifts) {
+						if (flight.topU() == u && flight.topV() == v && !seen[index(flight.footU(), flight.footV())]
+								&& grid[index(flight.footU(), flight.footV())] != Ground.BLOCKED) {
+							seen[index(flight.footU(), flight.footV())] = true;
+							queue.add(new int[]{flight.footU(), 1, flight.footV()});
 						}
 					}
 				}
@@ -731,6 +793,7 @@ public final class StationAudit {
 					}
 				}
 				flights = flights(grid, upper);
+				lifts = lifts(grid, upper);
 			} else {
 				upper = null;
 				flights = List.of();
@@ -788,7 +851,7 @@ public final class StationAudit {
 					case STAIRS -> {
 						if (spec.stepFree()) {
 							// step-free is the default, so this is not always something the description asked for
-							warn(Topic.ACCESS, which + " only reached by stairs, so not step-free (lifts are not built yet)");
+							warn(Topic.ACCESS, which + " only reached by stairs, so not step-free (no room for a lift)");
 						} else {
 							pass(Topic.ACCESS, which + " reached by stairs (no ramps, as requested)");
 						}

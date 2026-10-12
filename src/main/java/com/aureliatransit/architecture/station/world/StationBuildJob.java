@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.world;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.station.CellKind;
+import com.aureliatransit.architecture.station.StylePalette;
 import com.aureliatransit.architecture.station.WorldOp;
 import com.aureliatransit.architecture.station.world.BlockStateResolver.Prepared;
 import com.aureliatransit.architecture.text.AccentPalette;
@@ -13,6 +14,8 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SpreadableBlock;
+import net.minecraft.registry.Registries;
+import net.minecraft.state.property.Properties;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Property;
 import net.minecraft.text.Text;
@@ -26,6 +29,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -120,6 +124,8 @@ public final class StationBuildJob {
 
 	/** Undoes the log's entries from the newest back; the log shrinks as cells are handled. */
 	public static StationBuildJob undo(ServerWorld world, UUID owner, UndoLog log, Consumer<Text> out) {
+		// MTR keeps lifts in its own data; a plain block reset would leave the lift behind
+		MtrLiftContract.remove(world, log.takeLifts());
 		return new StationBuildJob(world, owner, Mode.UNDO, List.of(), true, log, log.size(), out);
 	}
 
@@ -328,6 +334,7 @@ public final class StationBuildJob {
 		paused = false;
 		if (mode == Mode.BUILD) {
 			nameSigns();
+			lifts();
 			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
 					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
 		} else {
@@ -356,6 +363,53 @@ public final class StationBuildJob {
 		}
 	}
 
+	/**
+	 * Forms an MTR lift from every column of built stops, as the Lift Refresher would, and links the call buttons. A stop's
+	 * FACING points at the shaft's back wall; the car is the 2×2 in front of the stop and clockwise of it, which puts its
+	 * centre half a cell back from the stop's centre and half a cell clockwise.
+	 */
+	private void lifts() {
+		final Map<Long, TreeMap<Integer, BlockPos>> columns = new HashMap<>();
+		final List<BlockPos> buttons = new ArrayList<>();
+		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
+			final String id = Registries.BLOCK.getId(cell.getValue().getBlock()).toString();
+			final BlockPos pos = cell.getKey();
+			if (!probe.loaded(pos.getX(), pos.getZ()) || world.getBlockState(pos).getBlock() != cell.getValue().getBlock()) {
+				continue;
+			}
+			if (id.equals(StylePalette.MTR_LIFT_FLOOR)) {
+				columns.computeIfAbsent(BlockPos.asLong(pos.getX(), 0, pos.getZ()), key -> new TreeMap<>()).put(pos.getY(), pos);
+			} else if (id.equals(StylePalette.MTR_LIFT_BUTTONS)) {
+				buttons.add(pos);
+			}
+		}
+		final List<MtrLiftContract.Shaft> shafts = new ArrayList<>();
+		for (final TreeMap<Integer, BlockPos> stops : columns.values()) {
+			if (stops.size() < 2) {
+				continue;
+			}
+			final BlockState stop = world.getBlockState(stops.firstEntry().getValue());
+			if (!stop.contains(Properties.HORIZONTAL_FACING)) {
+				continue;
+			}
+			final Direction back = stop.get(Properties.HORIZONTAL_FACING);
+			final Direction beside = back.rotateYClockwise();
+			shafts.add(new MtrLiftContract.Shaft(List.copyOf(stops.values()), BlockStateResolver.heading(back.getOpposite()),
+					0.5 + (beside.getOffsetX() - back.getOffsetX()) / 2.0, 0.5 + (beside.getOffsetZ() - back.getOffsetZ()) / 2.0));
+		}
+		if (shafts.isEmpty()) {
+			return;
+		}
+		if (MtrLiftContract.create(world, shafts, buttons)) {
+			for (final MtrLiftContract.Shaft shaft : shafts) {
+				log.addLift(shaft.stops().get(0));
+			}
+			say(Formatting.GREEN, shafts.size() == 1 ? "1 lift is running." : shafts.size() + " lifts are running.");
+		} else {
+			say(Formatting.YELLOW, "Lift shafts built; right-click a lift stop with MTR's Lift Refresher to start each lift.");
+		}
+	}
+
 	// ---- undo -------------------------------------------------------------------------------------------------------
 
 	private Step undoNext() {
@@ -371,7 +425,7 @@ public final class StationBuildJob {
 			keptNodes++;
 		} else if (stillPlaced(current, entry.placed())) {
 			final BlockState processed = Block.postProcessState(entry.previous(), world, pos);
-			world.setBlockState(pos, processed.getBlock() == entry.previous().getBlock() ? processed : entry.previous(), Block.NOTIFY_ALL);
+			world.setBlockState(pos, processed.getBlock() == entry.previous().getBlock() ? processed : entry.previous(), removalFlags(current));
 			restored++;
 			restoreSoil(pos.down());
 		} else if (current.getBlock() == entry.previous().getBlock()) {
@@ -380,6 +434,30 @@ public final class StationBuildJob {
 			skipped++;
 		}
 		return Step.DONE;
+	}
+
+	/**
+	 * Flags for taking a block away. Half of a two-high block (a ticket machine, a kiosk) or one leaf of a door pair goes
+	 * without neighbour shape updates: they would turn its partner to air, and vanilla breaks a block that a shape update
+	 * removes with drops whatever flags the write had. The partner has its own log entry and goes in turn.
+	 */
+	static int removalFlags(BlockState current) {
+		for (final Property<?> property : current.getProperties()) {
+			if (property.getName().equals("side") || property.getName().equals("half") && pairedHalf(property)) {
+				return Block.NOTIFY_ALL | Block.FORCE_STATE;
+			}
+		}
+		return Block.NOTIFY_ALL;
+	}
+
+	/** A half property with upper and lower values (vanilla's or MTR's own enum), not a stair's or slab's top and bottom. */
+	private static <T extends Comparable<T>> boolean pairedHalf(Property<T> property) {
+		for (final T value : property.getValues()) {
+			if (property.name(value).equals("upper")) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** Grass or mycelium the build covered and vanilla turned into dirt comes back once nothing of ours stands on it. */

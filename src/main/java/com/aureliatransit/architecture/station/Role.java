@@ -59,6 +59,11 @@ public enum Role {
 	 * cameras, speakers. Its front faces the passengers.
 	 */
 	FIXTURE,
+	/**
+	 * Part of an MTR lift: a track or stop cell (front towards the shaft's back wall), a landing door half or a call button
+	 * (front towards the car). The build job turns each column of stops into a working lift.
+	 */
+	LIFT,
 	/** Station name sign, in rows of three along the platform; front (text side) points at the track. */
 	NAME_SIGN,
 	/** Ground fill under unsupported cells; only used by {@link SiteSurvey} when terrain changes are approved. */
@@ -67,7 +72,7 @@ public enum Role {
 	/** Things standing in the walking space, which must keep off platform edge cells. */
 	public boolean obstructsWalkway() {
 		return switch (this) {
-			case COLUMN, COLUMN_CAP, LAMP, BENCH, BIN, NAME_SIGN, STAIR, BRIDGE_PIER, WALL, WINDOW, GATE, BARRIER, RAILING, BUFFER_STOP, FIXTURE -> true;
+			case COLUMN, COLUMN_CAP, LAMP, BENCH, BIN, NAME_SIGN, STAIR, BRIDGE_PIER, WALL, WINDOW, GATE, BARRIER, RAILING, BUFFER_STOP, FIXTURE, LIFT -> true;
 			default -> false;
 		};
 	}

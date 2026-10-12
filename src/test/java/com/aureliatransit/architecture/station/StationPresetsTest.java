@@ -30,7 +30,7 @@ class StationPresetsTest {
 			final StationPlan plan = StationPlanner.plan(parse.spec());
 			assertTrue(LayoutValidator.validate(plan).isEmpty(), preset.key() + " violations: " + LayoutValidator.validate(plan));
 			final StationAudit.Result audit = StationAudit.audit(plan);
-			// platforms reached over the footbridge warn that stairs are not step-free (no lifts yet); nothing else may warn
+			// platforms reached over the footbridge warn that stairs are not step-free when no lift fits; nothing else may warn
 			assertTrue(audit.buildable() && audit.problems().stream().allMatch(StationPresetsTest::stairsOnly), preset.key() + " checks: " + audit.problems());
 		}
 		for (final BuildingStyle look : BuildingStyle.values()) {

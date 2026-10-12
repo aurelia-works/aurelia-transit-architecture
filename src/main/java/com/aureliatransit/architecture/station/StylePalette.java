@@ -9,6 +9,11 @@ public final class StylePalette {
 
 	/** MTR 4's rail node block. */
 	public static final String MTR_RAIL_NODE = "mtr:rail";
+	/** MTR lift parts: the track a car runs on, the track cell of a stop, a landing door half and a call button. */
+	public static final String MTR_LIFT_TRACK = "mtr:lift_track_1";
+	public static final String MTR_LIFT_FLOOR = "mtr:lift_track_floor_1";
+	public static final String MTR_LIFT_DOOR = "mtr:lift_door_1";
+	public static final String MTR_LIFT_BUTTONS = "mtr:lift_buttons_1";
 
 	private static final String FOUNDATION = "minecraft:stone_bricks";
 	private static final String ATA = "aurelia_transit_architecture:";
@@ -181,6 +186,7 @@ public final class StylePalette {
 			case RAILING -> ata("handrail");
 			case BUFFER_STOP -> ata("structural_beam");
 			case FIXTURE -> ata("help_point");
+			case LIFT -> MTR_LIFT_TRACK;
 		};
 	}
 

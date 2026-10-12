@@ -27,6 +27,8 @@ public final class UndoLog {
 	private final RegistryKey<World> dimension;
 	private final List<Entry> entries = new ArrayList<>();
 	private final Map<BlockPos, BlockState> coveredSoil = new HashMap<>();
+	/** One stop of each MTR lift the build formed; undo deletes those lifts before the blocks. */
+	private final List<BlockPos> lifts = new ArrayList<>();
 
 	public UndoLog(RegistryKey<World> dimension) {
 		this.dimension = dimension;
@@ -56,6 +58,22 @@ public final class UndoLog {
 	/** The covered soil state at {@code pos}, or null. */
 	BlockState coveredSoil(BlockPos pos) {
 		return coveredSoil.get(pos);
+	}
+
+	void addLift(BlockPos stop) {
+		lifts.add(stop);
+	}
+
+	/** How many MTR lifts the build formed (and undo will delete). */
+	public int lifts() {
+		return lifts.size();
+	}
+
+	/** The lifts' stops, once: undo deletes the lifts and forgets them. */
+	List<BlockPos> takeLifts() {
+		final List<BlockPos> taken = List.copyOf(lifts);
+		lifts.clear();
+		return taken;
 	}
 
 	Entry last() {

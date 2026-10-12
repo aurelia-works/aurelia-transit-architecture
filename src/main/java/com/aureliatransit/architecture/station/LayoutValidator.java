@@ -336,6 +336,27 @@ public final class LayoutValidator {
 					}
 				}
 			}
+			// a wall standing from the walk level up to a roof's level carries it too (a canopy fixed to a building or a lift
+			// shaft): any roof cell within reach and no more than one above the wall's top
+			final Map<Long, Integer> wallReach = new HashMap<>();
+			final Map<Long, Integer> wallTop = new HashMap<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.WALL) {
+					wallTop.merge(key(block.u(), block.v()), block.y(), Math::max);
+				}
+			}
+			for (final Map.Entry<Long, Integer> wall : wallTop.entrySet()) {
+				final int u = (int) (wall.getKey() >> 32);
+				final int v = (int) (long) wall.getKey();
+				if (!wallFromFloor(u, v, wall.getValue())) {
+					continue;
+				}
+				for (int du = -reachLimit; du <= reachLimit; du++) {
+					for (int dv = -reachLimit; dv <= reachLimit; dv++) {
+						wallReach.merge(key(u + du, v + dv), wall.getValue(), Math::max);
+					}
+				}
+			}
 			final List<Violation> found = new ArrayList<>();
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
@@ -343,12 +364,23 @@ public final class LayoutValidator {
 					continue;
 				}
 				final Integer carrierY = reach.get(key(block.u(), block.v()));
-				if (carrierY == null || carrierY >= block.y()) {
+				final Integer wallY = wallReach.get(key(block.u(), block.v()));
+				if ((carrierY == null || carrierY >= block.y()) && (wallY == null || wallY < block.y() - 1)) {
 					found.add(at(Violation.Kind.ROOF_UNSUPPORTED, block,
 							where(block) + " is more than " + reachLimit + " cells from any column top or beam"));
 				}
 			}
 			return found;
+		}
+
+		/** True when the wall cells at (u, v) run unbroken from the walk level up to {@code top}. */
+		private boolean wallFromFloor(int u, int v, int top) {
+			for (int y = StationGeometry.WALK_Y; y <= top; y++) {
+				if (!has(u, y, v, Role.WALL)) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		private static long key(int u, int v) {

@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.registry.ModItems;
+import com.aureliatransit.architecture.station.world.MtrLiftContract;
 import com.aureliatransit.architecture.station.world.StationActions;
 import com.aureliatransit.architecture.station.world.StationGuide;
 import com.aureliatransit.architecture.station.world.StationWrenchItem;
@@ -58,6 +59,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.WrittenBookItem;
 import net.minecraft.item.ItemUsageContext;
+import net.minecraft.entity.ItemEntity;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -89,6 +93,8 @@ public class StationGameTests implements FabricGameTest {
 	private static final BlockPos FEET_LARGE = new BlockPos(12, 3, 1);
 	private static final String TERMINUS = "two track terminus, island platform, length 16, width 3, train shed, named Test";
 	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
+	/** The smallest footbridge station with lifts: platforms six wide take a two-column stair and a lift beside it. */
+	private static final String LIFTS = "two track station, side platforms, length 24, width 6, footbridge, named Test";
 	/**
 	 * Feet of the imaginary planning player in each site: rail level, on the template's two stone layers. Test-relative y is one
 	 * below template y (the structure sits one above the test origin), so template y = 2 is relative y = 3.
@@ -184,10 +190,60 @@ public class StationGameTests implements FabricGameTest {
 	}
 
 	/**
-	 * Plans a description through the command path without rule breaks, site issues, warnings or failed checks, builds it, and
-	 * checks every planned block is in the world with its planned id; then undo restores every cell.
+	 * A footbridge station's lifts: shafts, MTR stops, landing doors and call buttons built as planned, each button linked to
+	 * the stop at its level, the stops numbered from the bottom, an MTR lift formed per shaft and deleted again by undo.
 	 */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void footbridgeLiftsAreFormedAndUndone(TestContext context) {
+		check(MtrLiftContract.available(), "MTR's lift API was not found");
+		buildsEveryPlannedBlock(context, LIFTS, new UUID(0, 13), (pending, job) -> {
+			final ServerWorld world = context.getWorld();
+			final List<BlockPos> stops = new ArrayList<>();
+			final List<BlockPos> buttons = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.blockId().equals(StylePalette.MTR_LIFT_FLOOR)) {
+					stops.add(cellPos(pending, block));
+				} else if (block.blockId().equals(StylePalette.MTR_LIFT_BUTTONS)) {
+					buttons.add(cellPos(pending, block));
+				}
+			}
+			check(stops.size() == 4 && buttons.size() == 4, "expected two lifts with two stops and two buttons each: " + stops + " " + buttons);
+			check(job.undoLog().lifts() == 2, "lifts formed: " + job.undoLog().lifts());
+			for (final BlockPos stop : stops) {
+				final NbtCompound data = world.getBlockEntity(stop).createNbt();
+				final boolean bottom = stops.stream().noneMatch(other -> other.getX() == stop.getX() && other.getZ() == stop.getZ() && other.getY() < stop.getY());
+				check(data.getString("floor_number").equals(bottom ? "0" : "1"), "stop " + stop + " numbered " + data.getString("floor_number"));
+			}
+			for (final BlockPos button : buttons) {
+				final long[] linked = world.getBlockEntity(button).createNbt().getLongArray("track_floor_pos");
+				final BlockPos stop = linked.length == 1 ? BlockPos.fromLong(linked[0]) : null;
+				check(stop != null && stops.contains(stop) && stop.getY() == button.getY() && stop.getSquaredDistance(button) <= 9,
+						"button " + button + " linked to " + java.util.Arrays.toString(linked));
+			}
+		});
+	}
+
+	/** The cells of a planned station and one around them (neighbouring test plots are cleared with drops of their own). */
+	private static Box around(StationSessions.Pending pending) {
+		Box box = null;
+		for (final PlannedBlock block : pending.plan().blocks()) {
+			final Box cell = new Box(cellPos(pending, block));
+			box = box == null ? cell : box.union(cell);
+		}
+		return box.expand(1);
+	}
+
 	private static void buildsEveryPlannedBlock(TestContext context, String description, UUID owner) {
+		buildsEveryPlannedBlock(context, description, owner, (pending, job) -> {
+		});
+	}
+
+	/**
+	 * Plans a description through the command path without rule breaks, site issues, warnings or failed checks, builds it, and
+	 * checks every planned block is in the world with its planned id, then runs {@code built}; then undo restores every cell.
+	 */
+	private static void buildsEveryPlannedBlock(TestContext context, String description, UUID owner,
+			java.util.function.BiConsumer<StationSessions.Pending, StationBuildJob> built) {
 		final ServerWorld world = context.getWorld();
 		final StationSessions.Pending pending = StationCommand.prepare(world, description, context.getAbsolutePos(FEET_LARGE), Heading.SOUTH);
 		check(pending.parse().warnings().isEmpty() && pending.parse().ignored().isEmpty(),
@@ -208,6 +264,7 @@ public class StationGameTests implements FabricGameTest {
 				}
 			}
 			Fixtures.failIfAny(problems, "built blocks of \"" + description + "\"");
+			built.accept(pending, job);
 			StationSessions.cancelJob(owner);
 			// undo puts every cell back, two-high blocks included, and skips none
 			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
@@ -217,6 +274,10 @@ public class StationGameTests implements FabricGameTest {
 			}
 			check(undo.restored() == job.placed() && undo.skipped() == 0, "undo restored " + undo.restored() + " of " + job.placed() + ", skipped "
 					+ undo.skipped());
+			check(job.undoLog().lifts() == 0, "undo left " + job.undoLog().lifts() + " lifts to delete");
+			// two-high and paired blocks (ticket machines, kiosks, lift doors) go without dropping as items (none dropped this tick)
+			final List<ItemEntity> dropped = world.getEntitiesByClass(ItemEntity.class, around(pending), entity -> entity.getItemAge() == 0);
+			check(dropped.isEmpty(), "undo dropped items: " + dropped.stream().map(entity -> entity.getStack().toString()).toList());
 			for (final PlannedBlock block : pending.plan().blocks()) {
 				check(world.getBlockState(cellPos(pending, block)).isAir(), "not restored to air at " + block);
 			}

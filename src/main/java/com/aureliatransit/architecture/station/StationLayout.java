@@ -151,6 +151,61 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return Math.max(entranceV + 2 * innerStairSide, entranceV + 8 * innerStairSide);
 	}
 
+	/**
+	 * A lift shaft beside a stair: a 2×2 car at columns c0..c0+1 and rows doorV+out, doorV+2·out, landing doors in row doorV
+	 * at the walk level and the upper walk level, the back wall in row doorV+3·out and side walls in columns c0-1 and c0+2.
+	 *
+	 * @param out +1 when the shaft lies towards higher v from its door row, -1 towards lower v
+	 */
+	public record Lift(int c0, int doorV, int out) {
+
+		/** Lowest and highest v of the shaft, door row to back wall. */
+		public int vMin() {
+			return Math.min(doorV, doorV + 3 * out);
+		}
+
+		public int vMax() {
+			return Math.max(doorV, doorV + 3 * out);
+		}
+	}
+
+	/**
+	 * The lift from a served platform up to the footbridge: on the stair columns, on the other side of the corridor from the
+	 * stair, its doors in the corridor wall. Null when the platform has a one-column stair (too narrow for a car and a
+	 * walkway beside it) or the shaft would run off the platform end.
+	 */
+	public Lift platformLift(TrackLayout.PlatformBand band, TrackLayout layout) {
+		if (!bridge || !served.contains(band.number())) {
+			return null;
+		}
+		final List<Integer> columns = stairColumns(band);
+		if (columns.size() != 2) {
+			return null;
+		}
+		final int c0 = columns.get(0);
+		final boolean edgeLeft = band.trackLeft() && c0 - 1 == band.uMin();
+		final boolean edgeRight = band.trackRight() && c0 + 2 == band.uMax();
+		if (c0 - 1 < band.uMin() || c0 + 2 > band.uMax() || edgeLeft || edgeRight) {
+			return null;
+		}
+		final int out = -stairSide;
+		final Lift lift = new Lift(c0, bridgeV + 2 * out, out);
+		return lift.vMin() >= 0 && lift.vMax() <= layout.platformLength() - 1 ? lift : null;
+	}
+
+	/**
+	 * The lift in the station building, from the paid hall up to the footbridge floor: on the inner stair's columns, on the
+	 * other side of the entrance. Null without a footbridge or when the building is too short (two bays).
+	 */
+	public Lift buildingLift(TrackLayout layout) {
+		if (!building || !bridge) {
+			return null;
+		}
+		final int out = -innerStairSide;
+		final Lift lift = new Lift(platformWall(layout) - 2, entranceV + 2 * out, out);
+		return lift.vMin() >= vStart + 1 && lift.vMax() <= vEnd - 1 ? lift : null;
+	}
+
 	/** Centre v of each facade bay. */
 	public int bayCentre(int bay) {
 		return vStart + StationGeometry.BAY * bay + 3;

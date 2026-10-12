@@ -46,7 +46,7 @@ public final class StationGuide {
 					+ "Styles: modern, dutch, s-bahn, metro.\n"
 					+ "Roof: canopy, no roof, or a train shed: flat, arched, pointed arch or several arches."),
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
-					+ "Add \"footbridge\" for stairs up to every platform."),
+					+ "Add \"footbridge\" for stairs up to every platform, with lifts where a platform has room."),
 			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich and grand central each pick a "
 					+ "look and its own roof."),
 			new Page("Mixing looks", "Join cities with \"and\" or \"combined\":\n\namerican station, utrecht and hamburg combined\n\n"

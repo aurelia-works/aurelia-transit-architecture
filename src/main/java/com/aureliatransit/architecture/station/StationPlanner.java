@@ -33,6 +33,7 @@ public final class StationPlanner {
 		planning.floors();
 		planning.ramps();
 		planning.railNodes();
+		planning.lifts();
 		planning.building();
 		planning.head();
 		planning.footbridge();
@@ -258,7 +259,9 @@ public final class StationPlanner {
 			}
 			for (int bay = 0; bay < site.bays(); bay++) {
 				final int centre = site.bayCentre(bay);
-				if (centre + 1 < site.innerStairMin() || centre - 1 > site.innerStairMax()) {
+				final StationLayout.Lift lift = site.buildingLift(layout);
+				final boolean clearOfLift = lift == null || centre + 1 < lift.vMin() || centre - 1 > lift.vMax();
+				if (clearOfLift && (centre + 1 < site.innerStairMin() || centre - 1 > site.innerStairMax())) {
 					for (int v = centre - 1; v <= centre + 1; v++) {
 						for (int y = 1; y <= 3; y++) {
 							keepClear(uP, y, v);
@@ -391,6 +394,91 @@ public final class StationPlanner {
 				final int v = site.innerStairV(y);
 				for (int u = uA; u <= uB; u++) {
 					put(Role.STAIR, u, y, v, site.innerStairFront(), b.stair());
+				}
+			}
+		}
+
+		/**
+		 * Lift shafts: one per footbridge platform wide enough for a two-column stair, beside the corridor on the side away from
+		 * the stair, and one in the station building beside the inner stair. Planned before the building and the footbridge so
+		 * the slab, deck and corridor walls leave the shafts open; MTR turns each column of stops into a lift when the build is
+		 * done.
+		 */
+		void lifts() {
+			final StylePalette.Building b = palette.building();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final StationLayout.Lift lift = site.platformLift(band, layout);
+				if (lift != null) {
+					shaft(lift, b.bridgeWall(), true, b.bridgeRoof());
+				}
+			}
+			final StationLayout.Lift hall = site.buildingLift(layout);
+			if (hall != null) {
+				// the building's own platform wall closes the shaft's far side, and its roof covers it
+				shaft(hall, b.interiorWall(), false, null);
+			}
+		}
+
+		/**
+		 * One shaft: a track column against the back wall with a stop at the walk level and at the upper walk level, a pair of
+		 * landing doors at each stop with a call button beside them, walls, and a roof unless {@code roofId} is null. The car
+		 * space stays empty from the walk level to the roof.
+		 */
+		private void shaft(StationLayout.Lift lift, String wallId, boolean farWall, String roofId) {
+			final int o = lift.out();
+			final LocalDir in = o > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+			final int c0 = lift.c0();
+			final int c1 = c0 + 1;
+			final int vD = lift.doorV();
+			final int vBack = vD + 3 * o;
+			// MTR centres the car on the track cell's corner; the track goes in the column whose clockwise neighbour (seen
+			// facing the back wall) is the car's other column, so the car lies in front of it
+			final int cT = in == LocalDir.PLUS_V ? c0 : c1;
+			final int low = StationGeometry.WALK_Y;
+			final int high = StationGeometry.UPPER_WALK_Y;
+			final int roof = StationGeometry.BUILDING_ROOF_Y;
+			for (int y = low; y <= high + 1; y++) {
+				put(Role.LIFT, cT, y, vD + 2 * o, in, y == low || y == high ? StylePalette.MTR_LIFT_FLOOR : StylePalette.MTR_LIFT_TRACK);
+			}
+			for (int c = c0; c <= c1; c++) {
+				for (int v = vD + o; v != vBack; v += o) {
+					for (int y = low; y < roof; y++) {
+						keepClear(c, y, v);
+					}
+				}
+				for (int y = low; y <= low + 2; y++) {
+					keepClear(c, y, vD - o);
+				}
+			}
+			for (final int stop : new int[]{low, high}) {
+				for (int c = c0; c <= c1; c++) {
+					final String side = c == cT ? "side=left" : "side=right";
+					put(Role.LIFT, c, stop, vD, in, StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
+					put(Role.LIFT, c, stop + 1, vD, in, StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
+				}
+				put(Role.LIFT, c0 - 1, stop, vD, in, StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
+			}
+			final int cMax = farWall ? c1 + 1 : c1;
+			for (int y = low; y < roof; y++) {
+				for (int c = c0 - 1; c <= cMax; c++) {
+					// the door row's floor at the upper level is the deck or the slab
+					if (y != StationGeometry.UPPER_FLOOR_Y) {
+						put(Role.WALL, c, y, vD, in.opposite(), wallId);
+					}
+					put(Role.WALL, c, y, vBack, in, wallId);
+				}
+				for (int v = vD + o; v != vBack; v += o) {
+					put(Role.WALL, c0 - 1, y, v, LocalDir.MINUS_U, wallId);
+					if (farWall) {
+						put(Role.WALL, c1 + 1, y, v, LocalDir.PLUS_U, wallId);
+					}
+				}
+			}
+			if (roofId != null) {
+				for (int c = c0 - 1; c <= c1 + 1; c++) {
+					for (int v = vD + o; v != vBack + o; v += o) {
+						put(Role.BUILDING_ROOF, c, roof, v, LocalDir.PLUS_V, roofId);
+					}
 				}
 			}
 		}
@@ -1386,8 +1474,10 @@ public final class StationPlanner {
 			final int endWall = atStart ? lo : hi;
 			final int from = Math.min(lo, partition);
 			final int to = Math.max(hi, partition);
+			final StationLayout.Lift lift = site.buildingLift(layout);
 			if (to >= site.innerStairMin() - 1 && from <= site.innerStairMax() + 1
-					|| site.bridge() && to >= site.bridgeV() - 2 && from <= site.bridgeV() + 2) {
+					|| site.bridge() && to >= site.bridgeV() - 2 && from <= site.bridgeV() + 2
+					|| lift != null && to >= lift.vMin() - 1 && from <= lift.vMax() + 1) {
 				return null;
 			}
 			final int door = (uS + uP) / 2;

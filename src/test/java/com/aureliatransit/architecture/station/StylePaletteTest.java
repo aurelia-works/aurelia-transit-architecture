@@ -60,7 +60,8 @@ class StylePaletteTest {
 						assertTrue(hasBlockstate(id.substring(ATA.length())), "no blockstate for " + id + " (" + label(spec) + " " + role + ")");
 					}
 				} else {
-					assertTrue(id.equals(StylePalette.MTR_RAIL_NODE) || id.equals("minecraft:stone_bricks"), "unexpected id " + id + " for " + role);
+					assertTrue(id.equals(StylePalette.MTR_RAIL_NODE) || id.equals(StylePalette.MTR_LIFT_TRACK) || id.equals("minecraft:stone_bricks"),
+							"unexpected id " + id + " for " + role);
 				}
 			}
 		});
