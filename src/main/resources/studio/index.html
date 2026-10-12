@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="studio.css">
 </head>
 <body data-token="{{TOKEN}}" data-ingame="{{INGAME}}">
+<canvas id="silk" aria-hidden="true"></canvas>
 <header class="top">
 	<div>
 		<p class="eyebrow">Aurelia Transit Architecture</p>
@@ -111,7 +112,7 @@
 				<canvas id="view" aria-label="3D view of the planned station"></canvas>
 				<div id="labels" class="labels"></div>
 				<div id="pick" class="pick" hidden></div>
-				<div id="busy" class="busy" hidden>Planning…</div>
+				<div id="busy" class="busy" hidden><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>Planning…</div>
 				<p id="banner" class="banner"></p>
 			</div>
 			<p class="hint">Left-drag: rotate · Shift + left-drag or right-drag: pan · Scroll: zoom · Click a block to see what it is</p>
@@ -137,6 +138,7 @@
 		</details>
 	</section>
 </main>
+<script src="silk.js"></script>
 <script src="three.min.js"></script>
 <script src="studio.js"></script>
 </body>

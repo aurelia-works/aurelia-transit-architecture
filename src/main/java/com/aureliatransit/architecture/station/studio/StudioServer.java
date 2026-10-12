@@ -102,7 +102,7 @@ public final class StudioServer {
 			if (path.equals("/") || path.equals("/index.html")) {
 				final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null));
 				reply(exchange, 200, "text/html; charset=utf-8", page);
-			} else if (path.equals("/studio.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
+			} else if (path.equals("/studio.js") || path.equals("/silk.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
 				reply(exchange, 200, path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", resource(path.substring(1)));
 			} else if (path.equals("/api/options")) {
 				reply(exchange, 200, "application/json", api.options());

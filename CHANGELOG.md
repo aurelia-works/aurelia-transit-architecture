@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0
 
 - **Smart Station Generator (first version):** `/ata_station plan <description>` plans a straight ground-level station from a short English description (1-4 tracks, side or island platforms, length, width, Modern, Dutch, German S-Bahn or Metro style, canopy or hall roof, materials, ramps, name signs), checks it against railway clearances and the ground, and shows a particle outline. `/ata_station confirm` builds it in batches with cancel and undo. Terrain is only changed after `/ata_station confirm replace_terrain`. Fully offline and deterministic. MTR rail nodes are placed at the platform ends for you to connect. Existing MTR rail nodes are never replaced or removed: one already where a node goes is kept. Operators only. See docs/STATION_GENERATOR.md.
 - **Station Wrench:** the station generator without commands. Right-click a block to plan the wrench's description there, sneak + right-click a block to build, left-click to cancel, right-click the air to open its screen with Plan, Preview, Build, Build with terrain replacement, Cancel and Undo. Operators only. It never breaks blocks.
@@ -25,6 +25,7 @@
 - **Longer descriptions:** descriptions may now be 1200 characters (was 256); chat commands keep Minecraft's own chat limit.
 - **More realistic blocks:** about 80 block textures repainted (still 16x16 and just as light): bricks and clinker with a tone per brick, sandstone ashlar and rustication, Munich concrete with formwork joints and tie holes, marble, terrazzo and stone floors, hall ironwork with rivets, standing-seam roofs and canopies, roof glazing with glazing bars, platform paving, coping, blister and guidance paving, chequer-plate stairs and boarding steps, timber slats, cable runs, bus kerbs, glass with a faint joint between 1 m panes, and sign faces with a soft sheen. Car stop boards get corner bolts. The S-Bahn platform edges are now a coping on a wall instead of a plain cube, the structural beam is an I-beam, and the square steel column has visible arrises. No block ids, names or states changed.
 - **Plan viewer:** `tools/StationPlanExport.java` exports plans as JSON with suspect blocks flagged, and `tools/station-plan-viewer.html` shows them in 3D. See docs/STATION_GENERATOR.md.
+- **Wrench screen and Studio polish:** the chosen look button no longer cuts its name off; the no-city look is called *Custom*, as in the station summary. Station Studio has a slow animated silk background (a still frame if your system asks for reduced motion; it pauses in a hidden tab) and a small loader while it plans. Its character count and its requested-and-built table no longer wrap mid-word, and `tools/station-studio.sh` opens the port the studio really took when the game's studio is already running.
 
 ## 1.5.0
 

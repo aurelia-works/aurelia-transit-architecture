@@ -20,11 +20,14 @@
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--fg); font: 14px/1.45 var(--sans); padding: 16px; min-height: 100vh; }
 button, select, input, textarea { font: inherit; color: inherit; }
+/* The Silk shader (silk.js) fills the window behind everything; the panels stay solid so the controls read the same. */
+#silk { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; pointer-events: none; }
 
 .top { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin: 0 0 14px; flex-wrap: wrap; }
 .eyebrow { margin: 0; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
 .where { margin: 0; color: var(--muted); font-size: 13px; }
+.where:not(:empty) { padding: 4px 10px; border-radius: 6px; background: rgba(13, 15, 18, .72); }
 .where b { color: var(--fg); font-weight: 600; }
 
 .app { display: grid; grid-template-columns: minmax(0, 330px) minmax(0, 1fr); gap: 16px; align-items: start; }
@@ -37,7 +40,7 @@ textarea, select, input[type="text"] { width: 100%; background: var(--panel-2); 
 textarea { resize: vertical; min-height: 96px; }
 textarea:focus-visible, select:focus-visible, input:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .field-foot { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
-.field-foot #count { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.field-foot #count { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; flex-shrink: 0; }
 .range-head { display: flex; justify-content: space-between; align-items: baseline; }
 .range-head output { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
 input[type="range"] { width: 100%; accent-color: var(--accent); }
@@ -69,14 +72,21 @@ canvas#view:active { cursor: grabbing; }
 .labels { position: absolute; inset: 0; pointer-events: none; }
 .face-label { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: var(--face); color: #fff; font: 600 12px/22px var(--sans); text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
 .banner { position: absolute; left: 10px; top: 8px; margin: 0; padding: 3px 8px; border-radius: 5px; background: rgba(0,0,0,.55); font-size: 12px; font-family: var(--mono); max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.busy { position: absolute; right: 10px; top: 8px; padding: 3px 8px; border-radius: 5px; background: rgba(0,0,0,.55); font-size: 12px; }
+.busy { position: absolute; right: 10px; top: 8px; display: flex; align-items: center; gap: 7px; padding: 3px 8px; border-radius: 5px; background: rgba(0,0,0,.55); font-size: 12px; }
+.busy[hidden] { display: none; }
+.bars { display: inline-flex; align-items: center; gap: 2px; height: 12px; }
+.bars i { width: 3px; height: 100%; border-radius: 1px; background: var(--accent); animation: bar 0.9s ease-in-out infinite; }
+.bars i:nth-child(2) { animation-delay: .15s; }
+.bars i:nth-child(3) { animation-delay: .3s; }
+@keyframes bar { 0%, 100% { transform: scaleY(.35); opacity: .6; } 50% { transform: scaleY(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bars i { animation: none; transform: scaleY(.7); } }
 .pick { position: absolute; left: 10px; bottom: 10px; padding: 6px 9px; border-radius: 6px; background: rgba(0,0,0,.7); font-size: 12px; font-family: var(--mono); max-width: calc(100% - 20px); }
 .hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
 
 .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { text-align: left; font-weight: 500; color: var(--muted); padding: 3px 8px 3px 0; vertical-align: top; white-space: nowrap; }
-td { padding: 3px 8px 3px 0; vertical-align: top; overflow-wrap: anywhere; }
+td { padding: 3px 8px 3px 0; vertical-align: top; overflow-wrap: break-word; }
 td.ok { color: var(--pass); }
 td.diff { color: var(--warn); }
 .group { margin: 0 0 10px; }

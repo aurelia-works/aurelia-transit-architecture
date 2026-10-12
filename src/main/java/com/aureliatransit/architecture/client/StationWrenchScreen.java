@@ -190,10 +190,9 @@ public class StationWrenchScreen extends Screen {
 		final StationRecipe.Look[] looks = StationRecipe.Look.values();
 		for (int i = 0; i < looks.length; i++) {
 			final StationRecipe.Look look = looks[i];
-			final Text label = recipe.look() == look ? Text.literal("> " + look.label() + " <").formatted(Formatting.YELLOW) : Text.literal(look.label());
-			addDrawableChild(ButtonWidget.builder(label, b -> change(recipe.withLook(look)))
+			addDrawableChild(ButtonWidget.builder(lookLabel(look, recipe.look() == look, lookWidth - 8), b -> change(recipe.withLook(look)))
 					.dimensions(left + i % COLUMNS * (lookWidth + 4), y + i / COLUMNS * ROW, lookWidth, 20)
-					.tooltip(Tooltip.of(Text.translatable(KEY + "look.tip"))).build());
+					.tooltip(Tooltip.of(Text.translatable(KEY + (look == StationRecipe.Look.AUTO ? "look.auto.tip" : "look.tip")))).build());
 		}
 		y += lookRows() * ROW;
 		final ButtonWidget mix = cycle(left, y, HALF, "mix",
@@ -255,6 +254,16 @@ public class StationWrenchScreen extends Screen {
 		more.setTooltip(Tooltip.of(Text.translatable(KEY + "advanced.tip")));
 		addDrawableChild(more);
 		addDrawableChild(studioButton(left + HALF + 4, y, HALF));
+	}
+
+	/** A look's button text within {@code room} pixels: "> label <" when chosen, without the arrows when that is too wide. */
+	private Text lookLabel(StationRecipe.Look look, boolean chosen, int room) {
+		final String name = look == StationRecipe.Look.AUTO ? Text.translatable(KEY + "look.auto").getString() : look.label();
+		if (!chosen) {
+			return Text.literal(name);
+		}
+		final String marked = "> " + name + " <";
+		return Text.literal(textRenderer.getWidth(marked) <= room ? marked : name).formatted(Formatting.YELLOW);
 	}
 
 	/** A "Label: value" button that replaces the choices with {@code next} when pressed. */

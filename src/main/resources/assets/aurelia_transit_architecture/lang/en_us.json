@@ -394,6 +394,8 @@
   "screen.aurelia_transit_architecture.station_wrench.hint": "Right-click a block with the wrench to plan there",
   "screen.aurelia_transit_architecture.station_wrench.length": "Length",
   "screen.aurelia_transit_architecture.station_wrench.look.tip": "The station building, platforms and roof of this city",
+  "screen.aurelia_transit_architecture.station_wrench.look.auto": "Custom",
+  "screen.aurelia_transit_architecture.station_wrench.look.auto.tip": "No city style: a plain station from the size, platforms and roof you pick",
   "screen.aurelia_transit_architecture.station_wrench.mix": "Mix with",
   "screen.aurelia_transit_architecture.station_wrench.mix.tip": "Takes the train shed (or the platforms) from a second city",
   "screen.aurelia_transit_architecture.station_wrench.name": "Station name",

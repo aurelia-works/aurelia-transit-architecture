@@ -22,7 +22,7 @@ Forge, NeoForge and other Minecraft versions are not supported.
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.5.0+mc1.20.1-fabric.jar`
+   - `aurelia-transit-architecture-1.6.0+mc1.20.1-fabric.jar`
 3. Start the game. The pieces are in five creative tabs: **ATA Architecture**, **ATA Wayfinding**, **ATA Passenger Equipment**, **ATA Bus / Street Transit** and **ATA Glass**.
 
 Install the mod on both the server and the clients.
@@ -45,6 +45,14 @@ Install the mod on both the server and the clients.
 | **Glass** (22) | Clear float, low-iron, grey / bronze / blue tinted, reflective, frosted, fritted and wired glass (each a block and a pane), glass brick, curtain wall glass, structural glass fin, glass floor panel |
 | **European stations** (55) | Utrecht, Leidsche Rijn, Amsterdam, Rotterdam, Antwerp, Frankfurt, Munich, Hamburg, S-Bahn and Roma: roofs, trusses, brick and stone, floors, glazing, Dutch and German signs |
 | **Metro** (27) | Tiles, ceilings, floors, columns and tunnel finishes |
+
+### What 1.6 adds
+
+- **Station generator and Station Wrench:** right-click the air with the wrench, pick a city look (or mix two), tracks, platforms, length, roof and building, then *Place in front of me* and *Build it!*. Undo takes it all away again. Operators only.
+- **Big stations:** up to 10 tracks and 250 blocks long, with compact, city or grand buildings (storeys, wings, a clock tower and hipped roofs), termini with head buildings, train sheds, footbridges and working MTR lifts.
+- **3D preview** beside the wrench buttons, and **Station Studio**, a local web page with a larger description box, views, cuts and every station check.
+- **More realistic blocks:** about 80 textures repainted at the same 16x16 size; no block ids changed.
+- See [docs/STATION_GENERATOR.md](docs/STATION_GENERATOR.md).
 
 ### What 1.5 adds
 
