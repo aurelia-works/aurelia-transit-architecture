@@ -702,6 +702,180 @@ def munich_terrazzo():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Batch B: metro surfaces (the tile, ribbed, steel and azulejo sheets were already detailed and stay as generated)
+# ---------------------------------------------------------------------------------------------------------------------
+
+@paint("metro_terrazzo_floor")
+def amsterdam_terrazzo():
+    """Amsterdam metro terrazzo: anthracite ground with small pale and grey chips, ground flat, a fine joint every metre."""
+    chips = [(196, 190, 178), (150, 132, 120), (222, 220, 212), (104, 112, 124), (170, 160, 150)]
+    img = terrazzo((58, 60, 64), chips, "rl_ams_terrazzo", 44)
+    for i in range(16):
+        put(img, i, 0, (44, 46, 50))
+        put(img, 0, i, (46, 48, 52))
+    return img
+
+
+@paint("metro_ceiling_strip", "metro_concrete_plain")
+def metro_concrete():
+    """Plain cast concrete for the unseen faces of the metro ceiling and floor blocks: soft bloom, pores, a faint pour line."""
+    colour = (140, 140, 136)
+    img = base(colour, 3, "rl_metro_concrete")
+    clouds(img, "rl_metro_concrete", count=6, strength=5)
+    specks(img, "rl_metro_concrete", 9, (-20, -14, 8))
+    for x in range(16):
+        tint(img, x, 10, -7)
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Batch C: roofs and canopies (shared canopy sheets, Utrecht wave ceiling, Rotterdam stainless, hall roof glazing)
+# ---------------------------------------------------------------------------------------------------------------------
+
+import math  # noqa: E402
+
+
+def standing_seams(img, rows, colour, lit=18, shadow=-14):
+    """Standing seams running along x on the given rows: a bright ridge with its shadow on the next row."""
+    for y in rows:
+        for x in range(16):
+            put(img, x, y, g.shade(colour, lit + (2 if x % 5 == 0 else 0)))
+            tint(img, x, y + 1, shadow)
+
+
+def brushed_rows(img, name, amount=4, rate=0.5):
+    r = g.rng(name + "-brush")
+    for y in range(16):
+        if r.random() < rate:
+            d = r.choice((-amount, amount, -amount // 2, amount // 2))
+            for x in range(16):
+                if r.random() < 0.85:
+                    tint(img, x, y, d)
+
+
+@paint("canopy_flat", "canopy_top")
+def canopy_top():
+    """Platform canopy roof from above: grey standing-seam metal sheet, seams every 8 px along the canopy, light weathering."""
+    colour = (128, 132, 134)
+    img = base(colour, 2, "rl_canopy_top")
+    brushed_rows(img, "rl_canopy_top", 3)
+    clouds(img, "rl_canopy_top", count=4, strength=4)
+    standing_seams(img, (7, 15), colour)
+    return img
+
+
+@paint("canopy_flat", "canopy_underside")
+def canopy_underside():
+    """Canopy soffit: white linear metal strip ceiling, 4 px strips with a lit edge and a dark gap between them."""
+    colour = (222, 223, 219)
+    img = base(colour, 2, "rl_canopy_under")
+    for x in range(16):
+        k = x % 4
+        d = (-34, 8, 2, -4)[(k + 1) % 4]  # gap on x % 4 == 3, lit edge right after it
+        for y in range(16):
+            tint(img, x, y, d)
+    return img
+
+
+@paint("canopy_flat", "roof_glass")
+def roof_glass():
+    """Roof glazing (canopy skylights, Antwerp vault): patent glazing with an opaque glazing bar every 8 px, slightly dirty
+    panes that are a little denser at their lower end, and a soft diagonal sheen. Alpha stays inside the glass convention."""
+    tint_ = (150, 170, 176)
+    bar = (64, 70, 76)
+    img = g.new()
+    for y in range(16):
+        for x in range(16):
+            a = 112 + (y // 4)  # grime collects towards the lower lap
+            c = tint_
+            d = (x + y) % 16
+            if d in (11, 12):
+                c, a = g.shade(c, 22), a + 14
+            elif d == 4:
+                c, a = g.shade(c, 10), a + 6
+            put(img, x, y, c, g.clamp(a))
+    for y in range(16):
+        for bx in (0, 8):
+            put(img, bx, y, g.shade(bar, 14))  # lit side of the bar
+            put(img, bx + 1, y, bar, 232)
+    for x in range(16):  # pane lap every block
+        put(img, x, 15, g.shade(tint_, -30), 170)
+    return img
+
+
+@paint("hamburg_glass_roof", "hamburg_roof_glass")
+def hamburg_roof_glass():
+    """Hamburg Hbf hall roof: steel glazing bars every 4 px (blue-grey paint like the hall ironwork), clear panes."""
+    tint_ = (160, 178, 186)
+    bar = (74, 84, 94)
+    img = g.new()
+    for y in range(16):
+        for x in range(16):
+            d = (x + y) % 16
+            c, a = tint_, 92 + (y % 8) * 2
+            if d in (12, 13):
+                c, a = g.shade(c, 24), a + 16
+            put(img, x, y, c, g.clamp(a))
+    for y in range(16):
+        for bx in (0, 4, 8, 12):
+            put(img, bx, y, g.shade(bar, 10 if y % 8 else 20))
+    for x in range(16):
+        put(img, x, 0, g.shade(bar, -6), 220)  # transverse bar
+    return img
+
+
+WHITE_STEEL = (236, 237, 233)
+
+
+@paint("utrecht_wave_roof_rise", "nlbe_wave_under")
+def utrecht_wave_under():
+    """Utrecht Centraal ceiling under the wave roof: white panels, seams every 8 px and one LED line per block that follows
+    the undulation (here along y), with a soft glow beside it."""
+    img = base(WHITE_STEEL, 2, "rl_wave_under")
+    for y in range(16):
+        swell = 13 * math.sin(2 * math.pi * y / 16)
+        for x in range(16):
+            tint(img, x, y, -6 + swell * 0.5)
+    for y in range(16):
+        tint(img, 0, y, -20)
+        tint(img, 8, y, -9)
+        put(img, 4, y, (255, 255, 250))
+        tint(img, 3, y, 4)
+        tint(img, 5, y, 4)
+    return img
+
+
+@paint("utrecht_wave_roof_panel", "nlbe_wave_under_x")
+def utrecht_wave_under_x():
+    """The same ceiling for the panel and edge, whose undulation runs along x: seams and the LED line run along x."""
+    img = base(WHITE_STEEL, 2, "rl_wave_under_x")
+    for x in range(16):
+        slope = math.cos(2 * math.pi * (x - 4 + 0.5) / 16)
+        for y in range(16):
+            tint(img, x, y, -8 + 3 * slope)
+    for x in range(16):
+        tint(img, x, 0, -9)
+        tint(img, x, 8, -9)
+        put(img, x, 4, (255, 255, 250))
+        tint(img, x, 3, 4)
+        tint(img, x, 5, 4)
+    return img
+
+
+@paint("rotterdam_stainless_roof_panel", "nlbe_stainless")
+def rotterdam_stainless():
+    """Rotterdam Centraal stainless cladding: brushed sheet with a soft sky reflection, standing seams every 8 px."""
+    colour = (172, 178, 182)
+    img = base(colour, 2, "rl_stainless")
+    brushed_rows(img, "rl_stainless", 6, rate=0.7)
+    for y in range(16):
+        for x in range(16):
+            tint(img, x, y, 6 * math.sin(2 * math.pi * x / 16))
+    standing_seams(img, (7, 15), colour, lit=26, shadow=-20)
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 def render_all():
     out = {}
