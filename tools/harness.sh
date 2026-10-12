@@ -58,6 +58,7 @@ snapshot() {
 
 generate_and_compare() {
 	local before after
+	"$PY" tools/paint_realism.py --check || { echo "Painted textures in tools/models are stale: run python3 tools/paint_realism.py"; return 1; }
 	before=$(snapshot) || return 1
 	"$PY" tools/generate_assets.py || return 1
 	after=$(snapshot) || return 1

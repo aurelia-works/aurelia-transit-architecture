@@ -1,8 +1,8 @@
 {
   "parent": "block/block",
   "textures": {
-    "particle": "aurelia_transit_architecture:block/steel",
-    "side": "aurelia_transit_architecture:block/steel"
+    "steel_column_square_steel": "aurelia_transit_architecture:block/steel_column_square_steel",
+    "particle": "aurelia_transit_architecture:block/steel_column_square_steel"
   },
   "elements": [
     {
@@ -17,15 +17,41 @@
         12
       ],
       "faces": {
-        "down": {
+        "north": {
           "uv": [
             4,
-            4,
+            0,
             12,
-            12
+            16
           ],
-          "texture": "#side",
-          "cullface": "down"
+          "texture": "#steel_column_square_steel"
+        },
+        "east": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "south": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "west": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
         },
         "up": {
           "uv": [
@@ -34,44 +60,18 @@
             12,
             12
           ],
-          "texture": "#side",
+          "texture": "#steel_column_square_steel",
           "cullface": "up"
         },
-        "north": {
+        "down": {
           "uv": [
             4,
-            0.0,
-            12,
-            16.0
-          ],
-          "texture": "#side"
-        },
-        "south": {
-          "uv": [
             4,
-            0.0,
             12,
-            16.0
+            12
           ],
-          "texture": "#side"
-        },
-        "west": {
-          "uv": [
-            4,
-            0.0,
-            12,
-            16.0
-          ],
-          "texture": "#side"
-        },
-        "east": {
-          "uv": [
-            4,
-            0.0,
-            12,
-            16.0
-          ],
-          "texture": "#side"
+          "texture": "#steel_column_square_steel",
+          "cullface": "down"
         }
       }
     }

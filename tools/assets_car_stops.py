@@ -67,10 +67,19 @@ def number(img, text, color, rows=16):
                     g.rect(img, gx + c * step_x, y0 + r * 2, gx + c * step_x + cell_w, y0 + r * 2 + 2, color)
 
 
+def bolts(img, rows=16, colour=(150, 154, 158)):
+    """A fixing bolt in each corner of the plate (one texel, the plate is drawn at half scale)."""
+    for x, y in ((1, 1), (14, 1), (1, rows - 2), (14, rows - 2)):
+        g.rect(img, x, y, x + 1, y + 1, colour)
+
+
 def uk(n):
     img = g.new()
     fill(img, UK_WHITE)
+    g.rect(img, 0, UK_ROWS - 1, 16, UK_ROWS, g.shade(UK_WHITE, -22))  # shaded lower edge of the plate
+    g.rect(img, 15, 0, 16, UK_ROWS, g.shade(UK_WHITE, -14))
     number(img, str(n), UK_INK, UK_ROWS)
+    bolts(img, UK_ROWS)
     return img
 
 
@@ -79,6 +88,7 @@ def german(n):
     fill(img, DE_BLACK)
     frame(img, DE_YELLOW)
     number(img, "H" if n == 0 else str(n), DE_WHITE)
+    bolts(img, colour=(96, 98, 102))
     return img
 
 
@@ -92,6 +102,7 @@ def dutch(n):
     fill(img, NL_WHITE)
     frame(img, NL_FRAME)
     number(img, str(n), NL_INK)
+    bolts(img)
     return img
 
 
