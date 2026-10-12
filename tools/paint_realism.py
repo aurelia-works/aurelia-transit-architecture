@@ -965,6 +965,133 @@ def guidance_paving():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Batch A2: hall ironwork, remaining station floors and ceilings
+# ---------------------------------------------------------------------------------------------------------------------
+
+def rivets(img, colour, rows, cols, lit=22, shadow=-26):
+    """Snap-head rivets: a lit pixel with its shadow below right, on the given rows and columns."""
+    for y in rows:
+        for x in cols:
+            put(img, x, y, g.shade(colour, lit))
+            tint(img, x + 1, y + 1, shadow)
+
+
+def riveted_paint(colour, name):
+    """Old painted hall ironwork: layered paint with slight mottling, a few chips showing darker primer, and rivet lines
+    every 4 px (the trusses show this sheet on their chords and posts at any UV window, so the pattern is uniform)."""
+    img = base(colour, 3, name)
+    clouds(img, name, count=5, strength=4, radius=3)
+    rivets(img, colour, range(1, 16, 4), range(1, 16, 4))
+    return img
+
+
+@paint("frankfurt_hall_truss", "frankfurt_truss_paint")
+def frankfurt_truss_paint():
+    return riveted_paint((92, 110, 100), "rl_frankfurt_paint")
+
+
+@paint("hamburg_hall_truss", "hamburg_truss_paint")
+def hamburg_truss_paint():
+    return riveted_paint((74, 84, 94), "rl_hamburg_paint")
+
+
+@paint("amsterdam_cast_iron_shed_leg", "nlbe_cast_iron")
+def cast_iron():
+    """Handyside's cast iron in dark green paint: slightly pitted casting under the paint, a sparse rivet line."""
+    colour = (38, 66, 54)
+    img = base(colour, 3, "rl_cast_iron")
+    clouds(img, "rl_cast_iron", count=5, strength=4, radius=3)
+    specks(img, "rl_cast_iron", 10, (-10, 8))
+    rivets(img, colour, (3, 11), (3, 11), lit=20, shadow=-14)
+    return img
+
+
+@paint("roma_polished_floor")
+def roma_floor():
+    """Roma Termini concourse floor: large pale polished stone slabs (two 16 x 8 px slabs per block), long faint streaks
+    in the stone and a polish reflection."""
+    stone = (208, 196, 176)
+    img = base(stone, 2, "rl_roma_floor")
+    r = g.rng("rl_roma_floor-streaks")
+    for _ in range(7):
+        y, x0, length = r.randint(0, 15), r.randint(0, 15), r.randint(5, 12)
+        d = r.choice((-9, -6, 6))
+        for i in range(length):
+            tint(img, x0 + i, y + (i // 6), d)
+    units(img, [(0, 0, 16, 8), (0, 8, 16, 8)], g.shade(stone, -30), "rl_roma_floor", tone=5, lit=5, shadow=-5)
+    polish(img, 7, band=(9, 12))
+    return img
+
+
+@paint("utrecht_light_grey_floor_tile", "nlbe_floor_tile")
+def utrecht_floor():
+    """Utrecht Centraal concourse: large light grey stone tiles (8 px, 50 cm), fine grey speckle, hairline joints."""
+    colour = (184, 186, 186)
+    img = base(colour, 2, "rl_utrecht_floor")
+    clouds(img, "rl_utrecht_floor", count=4, strength=3)
+    units(img, grid(8, 8), g.shade(colour, -22), "rl_utrecht_floor", tone=4, lit=4, shadow=-5)
+    specks(img, "rl_utrecht_floor", 26, (-14, -9, 7))
+    return img
+
+
+@paint("rotterdam_timber_slat_ceiling", "nlbe_slats")
+def rotterdam_slats():
+    """Rotterdam Centraal timber slat ceiling: warm 3 px slats with their own tone and grain along the slat, a dark 1 px
+    shadow gap between them."""
+    wood = (190, 142, 88)
+    img = base(wood, 3, "rl_rdam_slats")
+    r = g.rng("rl_rdam_slats-boards")
+    for x0 in range(0, 16, 4):
+        tone = r.randint(-9, 9)
+        for x in range(x0, x0 + 3):
+            for y in range(16):
+                tint(img, x, y, tone + (7 if x == x0 else -6 if x == x0 + 2 else 0))
+        for _ in range(3):
+            gx, gy, gl = x0 + r.randint(0, 2), r.randint(0, 15), r.randint(4, 8)
+            d = r.choice((-10, -7, 6))
+            for i in range(gl):
+                tint(img, gx, gy + i, d)
+        for y in range(16):
+            put(img, x0 + 3, y, g.shade((52, 36, 24), r.randint(-4, 4)))
+    return img
+
+
+@paint("utrecht_wave_roof_rise", "nlbe_wave_top")
+def utrecht_wave_top():
+    """Utrecht wave roof from above: white-grey standing-seam sheet, seams every 4 px running with the undulation (along y),
+    the main ones every 8 px a little stronger, and the old swell shading kept so the wave still reads."""
+    colour = (226, 228, 225)
+    img = base(colour, 2, "rl_wave_top")
+    for y in range(16):
+        swell = 13 * math.sin(2 * math.pi * y / 16)
+        for x in range(16):
+            tint(img, x, y, swell)
+    for x0 in (0, 4, 8, 12):
+        strong = x0 % 8 == 0
+        for y in range(16):
+            tint(img, x0, y, 14 if strong else 9)
+            tint(img, x0 + 1, y, -12 if strong else -7)
+    return img
+
+
+@paint("utrecht_wave_roof_panel", "nlbe_wave_top_x")
+def utrecht_wave_top_x():
+    """The same roof sheet for the panel and edge, whose undulation runs along x: seams run along x on rows 0, 4, 8, 12."""
+    colour = (226, 228, 225)
+    img = base(colour, 2, "rl_wave_top_x")
+    for x in range(16):
+        slope = math.cos(2 * math.pi * (x - 4 + 0.5) / 16)
+        for y in range(16):
+            tint(img, x, y, 10 * slope + (4 if x in (7, 8) else 0))
+    for y0 in (0, 4, 8, 12):
+        strong = y0 % 8 == 0
+        for x in range(16):
+            tint(img, x, y0, 14 if strong else 9)
+            tint(img, x, y0 + 1, -12 if strong else -7)
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 def render_all():
     out = {}
