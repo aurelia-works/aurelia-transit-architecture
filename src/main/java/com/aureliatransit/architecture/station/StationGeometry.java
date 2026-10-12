@@ -107,7 +107,8 @@ public final class StationGeometry {
 				final int uMin = i == 0 ? 0 : leftIsPlatform ? previousU + 1 : previousU + EDGE_OFFSET;
 				final int uMax = uMin + platformWidth(spec, platforms.size()) - 1;
 				final int[] run = platformRun(spec, platforms.size());
-				platforms.add(new TrackLayout.PlatformBand(platforms.size() + 1, uMin, uMax, leftIsTrack, rightIsTrack, run[0], run[1]));
+				final boolean deadEnd = spec.listed() && !spec.terminus() && spec.platforms().get(platforms.size()).bay();
+				platforms.add(new TrackLayout.PlatformBand(platforms.size() + 1, uMin, uMax, leftIsTrack, rightIsTrack, run[0], run[1], deadEnd));
 				previousU = uMax;
 			}
 			previousTrack = track;
@@ -125,7 +126,7 @@ public final class StationGeometry {
 		final List<TrackLayout.PlatformBand> shiftedPlatforms = new ArrayList<>();
 		for (final TrackLayout.PlatformBand band : platforms) {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight(),
-					band.vFrom(), band.vTo()));
+					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
 		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
 	}
@@ -153,7 +154,9 @@ public final class StationGeometry {
 	 */
 	public static int[] platformRun(StationSpec spec, int index) {
 		final int length = spec.platformLength();
-		final int own = spec.listed() ? spec.platforms().get(index).lengthIn(length) : length;
+		// a through station's bay platform stops a row short of the end, so its buffer stops stand inside the station
+		final boolean bay = spec.listed() && !spec.terminus() && spec.platforms().get(index).bay();
+		final int own = spec.listed() ? Math.min(spec.platforms().get(index).lengthIn(length), bay ? length - 1 : length) : length;
 		if (own >= length) {
 			return new int[]{0, length - 1};
 		}
@@ -166,12 +169,16 @@ public final class StationGeometry {
 			from = StationLayout.entranceV(spec.sideBuilding(), length) - own / 2;
 			to = from + own - 1;
 		}
+		if (bay && from + own - 1 >= length - 1) {
+			from = length - 1 - own;
+			to = length - 2;
+		}
 		if (!spec.terminus() || spec.hub()) {
 			final int line = StationLayout.entranceV(spec.sideBuilding(), length);
 			from = Math.min(from, line - BRIDGE_REACH);
 			to = Math.max(to, line + BRIDGE_REACH);
 		}
-		return new int[]{Math.max(0, from), Math.min(length - 1, to)};
+		return new int[]{Math.max(0, from), Math.min(bay ? length - 2 : length - 1, to)};
 	}
 
 	/** Width of the platform at {@code index} (0-based, left to right): its own when the platforms are listed. */

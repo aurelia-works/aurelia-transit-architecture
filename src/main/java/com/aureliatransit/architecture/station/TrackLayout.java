@@ -28,7 +28,7 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		final List<PlatformBand> bands = new ArrayList<>();
 		for (final PlatformBand band : platforms) {
 			bands.add(band.vTo() < 0 ? new PlatformBand(band.number(), band.uMin(), band.uMax(), band.trackLeft(), band.trackRight(), 0,
-					platformLength - 1) : band);
+					platformLength - 1, band.deadEnd()) : band);
 		}
 		platforms = List.copyOf(bands);
 	}
@@ -69,7 +69,13 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	/** Last v this track (and its clearance) runs to: its buffer stop, or the footprint end for a track running through. */
 	public int trackEnd(Track track) {
-		return bay(track) ? platformLength - 1 : vMax();
+		return bay(track) ? platformLength - 1 : deadEnd(track) ? platformOf(track).vTo() : vMax();
+	}
+
+	/** A through station's bay track: it ends at a buffer stop at row {@code trackEnd(track) + 1}, past its platform's end. */
+	public boolean deadEnd(Track track) {
+		final PlatformBand band = terminus() ? null : platformOf(track);
+		return band != null && band.deadEnd();
 	}
 
 	/** The platform along this track (the longer, for a track between two), or null for a track between no platforms. */
@@ -197,8 +203,14 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	 * @param number     1-based, left to right
 	 * @param trackLeft  a track runs along its uMin edge
 	 * @param trackRight a track runs along its uMax edge
+	 * @param deadEnd    a through station's bay platform: its tracks end at buffer stops just past vTo
 	 */
-	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo) {
+	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo, boolean deadEnd) {
+
+		/** A platform the trains run on past. */
+		public PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo) {
+			this(number, uMin, uMax, trackLeft, trackRight, vFrom, vTo, false);
+		}
 
 		/** A platform the whole length of the station. */
 		public PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight) {

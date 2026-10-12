@@ -31,7 +31,7 @@ class PlatformListTest {
 
 	@Test
 	void wordsReadBackToTheSamePlatform() {
-		final List<PlatformSpec> platforms = List.of(new PlatformSpec(PlatformSpec.Kind.ISLAND, 14, 120, PlatformSpec.Roof.OPEN),
+		final List<PlatformSpec> platforms = List.of(new PlatformSpec(PlatformSpec.Kind.ISLAND, 14, 120, PlatformSpec.Roof.OPEN, true),
 				new PlatformSpec(PlatformSpec.Kind.SIDE, 0, 0, PlatformSpec.Roof.CANOPY), PlatformSpec.of(PlatformSpec.Kind.SIDE));
 		final StringBuilder text = new StringBuilder("200 long");
 		for (int i = 0; i < platforms.size(); i++) {
@@ -92,6 +92,28 @@ class PlatformListTest {
 	}
 
 	@Test
+	void aBayTrackEndsAtABufferStopPastItsPlatform() {
+		final StationPlan plan = StationPlanner.plan(parse("80 long; platform 1: side; platform 2: island bay 40 long; platform 3: side").spec());
+		final TrackLayout layout = plan.layout();
+		final TrackLayout.PlatformBand bay = layout.platforms().get(1);
+		assertTrue(bay.deadEnd());
+		for (final TrackLayout.Track track : layout.tracks()) {
+			final boolean dead = layout.platformOf(track) == bay;
+			assertEquals(dead, layout.deadEnd(track), "track " + track.number());
+			assertEquals(dead ? bay.vTo() : layout.vMax(), layout.trackEnd(track), "track " + track.number());
+			assertEquals(dead, plan.blocks().stream().anyMatch(b -> b.role() == Role.BUFFER_STOP && b.u() == track.u() && b.v() == bay.vTo() + 1),
+					"buffer stop on track " + track.number());
+		}
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		assertTrue(StationAudit.audit(plan).buildable());
+		// a full-length bay stops a row short, so its buffer stops stay inside the station
+		final TrackLayout full = StationGeometry.layout(parse("no ramps 60 long; platform 1: side bay; platform 2: side").spec());
+		assertEquals(58, full.platforms().get(0).vTo());
+		// in a terminus every track already ends at the head
+		assertFalse(StationGeometry.layout(parse("terminus; platform 1: island bay; platform 2: island").spec()).platforms().get(0).deadEnd());
+	}
+
+	@Test
 	void mixedListsPlanCleanlyInEveryStationType() {
 		final Random random = new Random(1600);
 		final String[] kinds = {"", "with a station building", "with a footbridge", "terminus", "hub"};
@@ -105,6 +127,9 @@ class PlatformListTest {
 			for (int i = 1; i <= count; i++) {
 				final boolean island = kind.equals("hub") || random.nextBoolean();
 				text.append("; platform ").append(i).append(": ").append(island ? "island" : "side");
+				if (random.nextInt(4) == 0) {
+					text.append(" bay");
+				}
 				if (random.nextBoolean()) {
 					text.append(' ').append(StationSpec.MIN_WIDTH + random.nextInt(StationSpec.MAX_WIDTH - StationSpec.MIN_WIDTH + 1)).append(" wide");
 				}

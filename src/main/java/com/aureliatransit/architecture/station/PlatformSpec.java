@@ -12,8 +12,10 @@ import java.util.Objects;
  * @param length the platform's length in blocks, {@link StationSpec#MIN_LENGTH} up to the station's length, or 0 for the
  *               station's length
  * @param roof  the platform's own roof, or {@link Roof#STATION} for the station's
+ * @param bay   a bay platform of a through station: its tracks come in from the station's start and end at buffer stops just
+ *              past its far end, instead of running on through
  */
-public record PlatformSpec(Kind kind, int width, int length, Roof roof) {
+public record PlatformSpec(Kind kind, int width, int length, Roof roof, boolean bay) {
 
 	/** Most platforms one station can list. */
 	public static final int MAX_PLATFORMS = 10;
@@ -43,6 +45,11 @@ public record PlatformSpec(Kind kind, int width, int length, Roof roof) {
 		}
 	}
 
+	/** A platform the trains run on past. */
+	public PlatformSpec(Kind kind, int width, int length, Roof roof) {
+		this(kind, width, length, roof, false);
+	}
+
 	public static PlatformSpec of(Kind kind) {
 		return new PlatformSpec(kind, 0, 0, Roof.STATION);
 	}
@@ -57,9 +64,12 @@ public record PlatformSpec(Kind kind, int width, int length, Roof roof) {
 		return length == 0 ? stationLength : Math.min(length, stationLength);
 	}
 
-	/** The words the parser reads back, e.g. "island 12 wide 120 long open". */
+	/** The words the parser reads back, e.g. "island bay 12 wide 120 long open". */
 	public String words() {
 		final StringBuilder out = new StringBuilder(kind == Kind.ISLAND ? "island" : "side");
+		if (bay) {
+			out.append(" bay");
+		}
 		if (width != 0) {
 			out.append(' ').append(width).append(" wide");
 		}

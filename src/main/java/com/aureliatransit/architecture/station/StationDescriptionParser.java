@@ -265,6 +265,7 @@ public final class StationDescriptionParser {
 			int platformWidth = 0;
 			int platformLength = 0;
 			PlatformSpec.Roof platformRoof = PlatformSpec.Roof.STATION;
+			boolean bay = false;
 			for (int i = 0; i < t.length; i++) {
 				final String w = t[i];
 				final String next = i + 1 < t.length ? t[i + 1] : "";
@@ -273,6 +274,8 @@ public final class StationDescriptionParser {
 					kind = PlatformSpec.Kind.ISLAND;
 				} else if (w.equals("side")) {
 					kind = PlatformSpec.Kind.SIDE;
+				} else if (w.equals("bay") || w.equals("dead") || w.equals("end") || w.equals("terminating")) {
+					bay = true;
 				} else if (n != null && (next.equals("wide") || next.equals("width"))) {
 					platformWidth = clamp(n, StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH, "platform " + number + " width");
 					i++;
@@ -287,7 +290,7 @@ public final class StationDescriptionParser {
 					warn("platform " + number + ": \"" + w + "\" not understood");
 				}
 			}
-			return new PlatformSpec(kind, platformWidth, platformLength, platformRoof);
+			return new PlatformSpec(kind, platformWidth, platformLength, platformRoof, bay);
 		}
 
 		// ---- name -------------------------------------------------------------------------------------------------------
@@ -1038,6 +1041,9 @@ public final class StationDescriptionParser {
 				if (tracks != null || islandPlatforms != null || sidePlatforms) {
 					// the wrench and Studio always say how many tracks; the list wins, so this is not worth a warning
 					note(-1, "tracks and platforms from the platform list");
+				}
+				if (terminus && list.stream().anyMatch(PlatformSpec::bay)) {
+					note(-1, "every track of a terminus ends at the head building, so \"bay\" changes nothing there");
 				}
 				final int listedTracks = StationSpec.listedTracks(list);
 				if (hub && (listedTracks < 4 || listedTracks % 2 != 0 || list.stream().anyMatch(p -> p.kind() != PlatformSpec.Kind.ISLAND))) {

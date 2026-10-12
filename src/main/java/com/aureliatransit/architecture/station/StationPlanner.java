@@ -48,6 +48,7 @@ public final class StationPlanner {
 		planning.floors();
 		planning.ramps();
 		planning.railNodes();
+		planning.bayEnds();
 		planning.lifts();
 		planning.building();
 		planning.wings();
@@ -293,6 +294,22 @@ public final class StationPlanner {
 			for (final TrackLayout.Track track : layout.tracks()) {
 				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformFrom(track), LocalDir.PLUS_V);
 				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformTo(track), LocalDir.PLUS_V);
+			}
+		}
+
+		/**
+		 * A buffer stop across each bay track's clearance at rail level, just past its platform's end, on ground the build makes
+		 * sure of (a terminus has its own, on the head building's floor).
+		 */
+		void bayEnds() {
+			for (final TrackLayout.Track track : layout.tracks()) {
+				if (!layout.deadEnd(track)) {
+					continue;
+				}
+				final int v = layout.trackEnd(track) + 1;
+				for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+					put(Role.BUFFER_STOP, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U);
+				}
 			}
 		}
 
@@ -2716,6 +2733,11 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
 				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd(track)));
+				if (layout.deadEnd(track)) {
+					// the ground under a bay track's buffer stop
+					final int v = layout.trackEnd(track) + 1;
+					supports.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, -1, v, track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, -1, v));
+				}
 			}
 			if (layout.terminus()) {
 				supports.add(new Box(layout.headFrom(), -1, length, layout.headTo(), -1, layout.headEnd()));

@@ -65,7 +65,7 @@
 	function updateOutputs() {
 		if ($("listOn") && $("listOn").checked) {
 			// the advanced platform list sets the tracks
-			const listed = plats.reduce((n, p) => n + (p.kind === "island" ? 2 : 1), 0);
+			const listed = plats.reduce((n, p) => n + (p.kind.startsWith("island") ? 2 : 1), 0);
 			$("tracksOut").textContent = listed + (listed === 1 ? " track" : " tracks");
 		} else {
 			$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
@@ -235,7 +235,7 @@
 		if (!$("listOn").checked) {
 			return "";
 		}
-		return plats.map((p, i) => "platform " + (i + 1) + ": " + p.kind + (p.width ? " " + p.width + " wide" : "")
+		return plats.map((p, i) => "platform " + (i + 1) + ": " + p.kind.replace("-", " ") + (p.width ? " " + p.width + " wide" : "")
 			+ (p.length ? " " + p.length + " long" : "") + (p.roof !== "station" ? " " + p.roof : "") + ";").join(" ");
 	}
 
@@ -247,7 +247,7 @@
 			const w = m[2].toLowerCase();
 			const width = /(\d+)\s+wide/.exec(w);
 			const length = /(\d+)\s+long/.exec(w);
-			out.push({ kind: /island/.test(w) ? "island" : "side", width: width ? +width[1] : 0, length: length ? +length[1] : 0,
+			out.push({ kind: (/island/.test(w) ? "island" : "side") + (/\bbay\b/.test(w) ? "-bay" : ""), width: width ? +width[1] : 0, length: length ? +length[1] : 0,
 				roof: /canopy/.test(w) ? "canopy" : /open/.test(w) ? "open" : "station" });
 		}
 		return out;
@@ -295,8 +295,9 @@
 		$("platOut").textContent = plats.length + (plats.length === 1 ? " platform" : " platforms");
 		$("platDown").disabled = plats.length <= 1;
 		$("platUp").disabled = plats.length >= MAX_PLATFORMS;
-		const tracks = plats.reduce((n, p) => n + (p.kind === "island" ? 2 : 1), 0);
-		$("platNote").textContent = on ? tracks + (tracks === 1 ? " track" : " tracks") + ". Auto uses the station's width, length and roof." : "";
+		const tracks = plats.reduce((n, p) => n + (p.kind.startsWith("island") ? 2 : 1), 0);
+		$("platNote").textContent = on ? tracks + (tracks === 1 ? " track" : " tracks") + ". Auto uses the station's width, length and roof."
+			+ " A bay's tracks end at buffer stops past its far end (in a terminus every track does)." : "";
 		const rows = $("platRows");
 		rows.innerHTML = "";
 		const widths = [["0", "Auto width"]];
@@ -323,7 +324,7 @@
 				platsChanged();
 			});
 			row.append(num,
-				platSelect([["side", "Side"], ["island", "Island"]], p.kind, (v) => { p.kind = v; platsChanged(); }, "Platform " + (i + 1) + " type"),
+				platSelect([["side", "Side"], ["island", "Island"], ["side-bay", "Side bay"], ["island-bay", "Island bay"]], p.kind, (v) => { p.kind = v; platsChanged(); }, "Platform " + (i + 1) + " type"),
 				platSelect([["station", "Station roof"], ["canopy", "Canopy"], ["open", "Open"]], p.roof, (v) => { p.roof = v; platsChanged(); },
 					"Platform " + (i + 1) + " roof"),
 				platSelect(widths, p.width, (v) => { p.width = +v; platsChanged(); }, "Platform " + (i + 1) + " width"),
