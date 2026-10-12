@@ -87,9 +87,10 @@ class StationDescriptionParserTest {
 
 	@Test
 	void trackCountsAreClampedWithWarnings() {
-		final ParseResult many = StationDescriptionParser.parse("9 tracks");
+		final ParseResult many = StationDescriptionParser.parse("14 tracks");
 		assertEquals(StationSpec.MAX_TRACKS, many.spec().trackCount());
-		assertTrue(warned(many, "more than 4"));
+		assertTrue(warned(many, "more than " + StationSpec.MAX_TRACKS));
+		assertEquals(9, spec("9 tracks").trackCount());
 		final ParseResult none = StationDescriptionParser.parse("0 tracks");
 		assertEquals(StationSpec.MIN_TRACKS, none.spec().trackCount());
 		assertTrue(warned(none, "too few"));
@@ -150,7 +151,7 @@ class StationDescriptionParserTest {
 	void sizesAreClampedWithWarnings() {
 		final ParseResult longOne = StationDescriptionParser.parse("400 m long");
 		assertEquals(StationSpec.MAX_LENGTH, longOne.spec().platformLength());
-		assertTrue(warned(longOne, "length 400 is too large; using 160"));
+		assertTrue(warned(longOne, "length 400 is too large; using " + StationSpec.MAX_LENGTH));
 		assertEquals(StationSpec.MIN_LENGTH, spec("length 4").platformLength());
 		assertEquals(StationSpec.MAX_WIDTH, spec("20 wide").platformWidth());
 		final ParseResult thin = StationDescriptionParser.parse("width 1");

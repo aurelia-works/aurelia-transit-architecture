@@ -83,7 +83,7 @@ class StationRecipeTest {
 		assertEquals(recipe, StationRecipe.decode(recipe.encode()));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode(""));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode("nonsense"));
-		final StationRecipe partial = StationRecipe.decode("MUNICH;BOGUS;0;9");
+		final StationRecipe partial = StationRecipe.decode("MUNICH;BOGUS;0;99");
 		assertEquals(StationRecipe.Look.MUNICH, partial.look());
 		assertNull(partial.mix());
 		assertEquals(StationRecipe.MAX_TRACKS, partial.tracks());

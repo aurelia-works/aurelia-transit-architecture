@@ -21,9 +21,9 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed) {
 
 	public static final int MIN_TRACKS = 1;
-	public static final int MAX_TRACKS = 4;
+	public static final int MAX_TRACKS = 10;
 	public static final int MIN_LENGTH = 16;
-	public static final int MAX_LENGTH = 160;
+	public static final int MAX_LENGTH = 250;
 	public static final int MIN_WIDTH = 3;
 	public static final int MAX_WIDTH = 8;
 	public static final int MAX_NAME = 32;

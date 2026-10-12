@@ -21,6 +21,8 @@ public final class StationDescriptionParser {
 
 	/** Longer descriptions are cut to this many characters (with a warning). */
 	public static final int MAX_INPUT = 1200;
+	/** Tracks for "large" or "big" without a number. */
+	static final int LARGE_TRACKS = 4;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");
@@ -883,7 +885,7 @@ public final class StationDescriptionParser {
 				trackCount = clampTracks(islandPlatforms * 2);
 				note(islandAt, trackCount + " tracks");
 			} else if (large) {
-				trackCount = StationSpec.MAX_TRACKS;
+				trackCount = LARGE_TRACKS;
 			} else if (island || sidePlatforms) {
 				trackCount = StationSpec.DEFAULT_TRACKS;
 				note(Math.max(islandAt, sideAt), trackCount + " tracks");

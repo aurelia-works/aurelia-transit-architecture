@@ -862,6 +862,14 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				for (final int u : columnLines(band, spec.roof())) {
 					for (final int v : spec.roof() == RoofType.HALL ? hallRows() : columnVForBand(band)) {
+						final int base = spec.roof() == RoofType.HALL ? standsOn(u, v, top) : StationGeometry.WALK_Y - 1;
+						if (base >= StationGeometry.WALK_Y) {
+							// the row crosses a lift shaft or another roof: a pier on that roof carries the frame
+							for (int y = base + 1; y < top; y++) {
+								put(Role.BRIDGE_PIER, u, y, v, LocalDir.PLUS_V, palette.building().pier());
+							}
+							continue;
+						}
 						for (int y = StationGeometry.WALK_Y; y < top - 1; y++) {
 							put(Role.COLUMN, u, y, v, LocalDir.PLUS_V);
 						}
@@ -966,8 +974,70 @@ public final class StationPlanner {
 				}
 			}
 			rows.sort(Comparator.naturalOrder());
+			// shifting rows off doorways can leave an end out of the girders' reach (short platforms): add a row near that end
+			final int reach = StationGeometry.MAX_CANTILEVER;
+			if (!rows.isEmpty() && rows.get(rows.size() - 1) < length - 1 - reach) {
+				endRow(rows, length - 1 - reach, length - 1, top);
+			}
+			if (!rows.isEmpty() && rows.get(0) > reach) {
+				endRow(rows, 0, reach, top);
+			}
+			rows.sort(Comparator.naturalOrder());
 			hallRows = rows;
 			return rows;
+		}
+
+		/**
+		 * Adds the first free row in {@code from..to}, clear of doorways if one is, else clear of what is built, else one whose
+		 * columns can stand on a roof, wall or deck below the frame (a lift shaft's roof on a short platform).
+		 */
+		private void endRow(List<Integer> rows, int from, int to, int top) {
+			for (final boolean doors : new boolean[] {true, false}) {
+				for (int v = from; v <= to; v++) {
+					if (!rows.contains(v) && rowFree(v, top, doors)) {
+						rows.add(v);
+						return;
+					}
+				}
+			}
+			for (int v = to; v >= from; v--) {
+				if (!rows.contains(v) && rowCarried(v, top)) {
+					rows.add(v);
+					return;
+				}
+			}
+		}
+
+		/** The y of the highest block under the frame at (u, v) that a pier can stand on, or WALK_Y - 1 when the cell column is clear. */
+		private int standsOn(int u, int v, int top) {
+			for (int y = top - 1; y >= StationGeometry.WALK_Y; y--) {
+				if (cells.containsKey(new Cell(u, y, v))) {
+					return y;
+				}
+			}
+			return StationGeometry.WALK_Y - 1;
+		}
+
+		/** Every column line at {@code v} is clear up to the frame or ends on a solid roof, wall or deck it can stand on. */
+		private boolean rowCarried(int v, int top) {
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				for (final int u : columnLines(band, RoofType.HALL)) {
+					for (int y = top - 1; y >= StationGeometry.WALK_Y; y--) {
+						final PlannedBlock below = cells.get(new Cell(u, y, v));
+						if (air.contains(new Cell(u, y, v)) && below == null) {
+							return false;
+						}
+						if (below != null) {
+							final Role role = below.role();
+							if (role != Role.BUILDING_ROOF && role != Role.WALL && role != Role.BRIDGE_DECK && role != Role.ROOF) {
+								return false;
+							}
+							break;
+						}
+					}
+				}
+			}
+			return true;
 		}
 
 		private boolean rowFree(int v, int top, boolean doors) {

@@ -340,6 +340,7 @@ public final class StationAudit {
 			int lowest = Integer.MAX_VALUE;
 			int tooLow = 0;
 			PlannedBlock example = null;
+			final int top = plan.maxY();
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
 				if (block.y() != StationGeometry.PLATFORM_Y && block.y() != StationGeometry.UPPER_FLOOR_Y
@@ -359,7 +360,7 @@ public final class StationAudit {
 				if (underStairs) {
 					continue;
 				}
-				for (int y = walkY + 1; y <= plan.maxY(); y++) {
+				for (int y = walkY + 1; y <= top; y++) {
 					final PlannedBlock above = at(block.u(), y, block.v());
 					if (above != null && above.role().overhead()) {
 						final int clear = y - walkY;
