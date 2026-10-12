@@ -170,4 +170,50 @@ class StudioTest {
 			server.stop();
 		}
 	}
+
+	@Test
+	void pagesReloadWhenTheirFilesChangeOrTheServerRestarts() throws Exception {
+		final HttpClient http = HttpClient.newHttpClient();
+		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		String oldToken;
+		String oldVersion;
+		try {
+			final HttpResponse<String> page = http.send(HttpRequest.newBuilder(URI.create(first.url())).build(), HttpResponse.BodyHandlers.ofString());
+			oldToken = page.body().replaceAll("(?s).*data-token=\"([0-9a-f]+)\".*", "$1");
+			final HttpResponse<String> version = http.send(HttpRequest.newBuilder(URI.create(first.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString());
+			assertEquals(200, version.statusCode());
+			assertEquals("no-store", version.headers().firstValue("Cache-Control").orElse(""));
+			assertTrue(!version.body().contains(oldToken), "the version never gives the token away");
+			oldVersion = version.body();
+			assertEquals(oldVersion, http.send(HttpRequest.newBuilder(URI.create(first.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString()).body(),
+					"nothing changed, the same answer");
+			// a page file changing on disk changes the answer
+			final java.nio.file.Path script = java.nio.file.Path.of(StudioServer.class.getResource("/studio/studio.js").toURI());
+			final java.nio.file.attribute.FileTime was = java.nio.file.Files.getLastModifiedTime(script);
+			try {
+				java.nio.file.Files.setLastModifiedTime(script, java.nio.file.attribute.FileTime.fromMillis(was.toMillis() + 5000));
+				final String touched = http.send(HttpRequest.newBuilder(URI.create(first.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString()).body();
+				assertTrue(!touched.equals(oldVersion), "an edited page file reloads the page");
+			} finally {
+				java.nio.file.Files.setLastModifiedTime(script, was);
+			}
+		} finally {
+			first.stop();
+		}
+		// a restarted server answers differently and has a new token: the reloaded page picks it up, the old one is refused
+		final StudioServer second = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		try {
+			final String version = http.send(HttpRequest.newBuilder(URI.create(second.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString()).body();
+			assertTrue(!version.equals(oldVersion));
+			final HttpRequest.Builder send = HttpRequest.newBuilder(URI.create(second.url() + "api/send")).POST(HttpRequest.BodyPublishers.ofString("action=plan"));
+			assertEquals(403, http.send(send.header("X-Studio-Token", oldToken).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
+			final String page = http.send(HttpRequest.newBuilder(URI.create(second.url())).build(), HttpResponse.BodyHandlers.ofString()).body();
+			final String token = page.replaceAll("(?s).*data-token=\"([0-9a-f]+)\".*", "$1");
+			final HttpRequest.Builder again = HttpRequest.newBuilder(URI.create(second.url() + "api/send")).POST(HttpRequest.BodyPublishers.ofString("action=plan"));
+			assertEquals(200, http.send(again.header("X-Studio-Token", token).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
+			assertTrue(page.contains("studio.js"));
+		} finally {
+			second.stop();
+		}
+	}
 }

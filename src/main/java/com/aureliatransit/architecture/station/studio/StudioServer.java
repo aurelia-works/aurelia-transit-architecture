@@ -9,8 +9,12 @@ import java.io.OutputStream;
 import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HexFormat;
@@ -27,6 +31,10 @@ import java.util.concurrent.Executors;
  * <p>Only this machine can connect. Requests must name localhost as their host (so a web page elsewhere cannot reach it through
  * a renamed DNS entry), and sending a design into the game also needs the token the page was served with, which other web
  * pages cannot read.
+ *
+ * <p>The page asks {@code /api/version} every few seconds and reloads itself when the answer changes: when its files change
+ * on disk (served from {@code build/resources/main}, so after {@code ./gradlew processResources}) or the server restarts. A
+ * restarted server has a new token, and the reload picks it up. The answer holds no token.
  */
 public final class StudioServer {
 
@@ -40,6 +48,8 @@ public final class StudioServer {
 	public static final int FIRST_PORT = 25680;
 	private static final int PORTS = 10;
 	private static final int MAX_BODY = 16 * 1024;
+	/** The page's own files; a change to any of them reloads open pages. */
+	static final String[] PAGE_FILES = {"index.html", "studio.js", "silk.js", "studio.css", "three.min.js"};
 
 	private final HttpServer server;
 	private final ExecutorService executor;
@@ -47,6 +57,8 @@ public final class StudioServer {
 	private final BlockModels.AssetSource assets;
 	private final Sender sender;
 	private final String token;
+	/** Changes on every start, so pages can tell a restarted server; not the token. */
+	private final String boot;
 
 	private StudioServer(HttpServer server, StudioApi api, BlockModels.AssetSource assets, Sender sender) {
 		this.server = server;
@@ -56,6 +68,8 @@ public final class StudioServer {
 		final byte[] random = new byte[16];
 		new SecureRandom().nextBytes(random);
 		this.token = HexFormat.of().formatHex(random);
+		new SecureRandom().nextBytes(random);
+		this.boot = HexFormat.of().formatHex(random, 0, 8);
 		this.executor = Executors.newFixedThreadPool(2, runnable -> {
 			final Thread thread = new Thread(runnable, "ATA Station Studio");
 			thread.setDaemon(true);
@@ -104,6 +118,9 @@ public final class StudioServer {
 				reply(exchange, 200, "text/html; charset=utf-8", page);
 			} else if (path.equals("/studio.js") || path.equals("/silk.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
 				reply(exchange, 200, path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", resource(path.substring(1)));
+			} else if (path.equals("/api/version")) {
+				exchange.getResponseHeaders().set("Cache-Control", "no-store");
+				reply(exchange, 200, "application/json", "{\"boot\":\"" + boot + "\",\"files\":\"" + filesVersion() + "\"}");
 			} else if (path.equals("/api/options")) {
 				reply(exchange, 200, "application/json", api.options());
 			} else if (path.equals("/api/plan") && method.equals("POST")) {
@@ -149,6 +166,28 @@ public final class StudioServer {
 		}
 		exchange.getResponseHeaders().set("Cache-Control", "max-age=3600");
 		reply(exchange, 200, "image/png", png);
+	}
+
+	/**
+	 * A cheap fingerprint of the page files: their modification times and sizes when they are plain files (the dev build),
+	 * otherwise fixed (inside a jar they cannot change while the game runs).
+	 */
+	static String filesVersion() {
+		long hash = 17;
+		for (final String name : PAGE_FILES) {
+			final URL url = StudioServer.class.getResource("/studio/" + name);
+			if (url == null || !"file".equals(url.getProtocol())) {
+				continue;
+			}
+			try {
+				final Path file = Path.of(url.toURI());
+				hash = hash * 31 + Files.getLastModifiedTime(file).toMillis();
+				hash = hash * 31 + Files.size(file);
+			} catch (IOException | URISyntaxException | RuntimeException e) {
+				hash = hash * 31 + 1;
+			}
+		}
+		return Long.toHexString(hash);
 	}
 
 	private static String resource(String name) throws IOException {

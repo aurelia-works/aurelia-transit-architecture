@@ -202,6 +202,11 @@
 		}
 	}
 
+	function showWhere() {
+		$("where").innerHTML = IN_GAME ? "Connected to <b>your game</b>" : "Design mode · not connected to a game";
+		$("where").classList.toggle("live", IN_GAME);
+	}
+
 	let timer = 0;
 	function changed() {
 		updateOutputs();
@@ -230,8 +235,7 @@
 		buildButtons();
 		restore();
 		updateOutputs();
-		$("where").innerHTML = IN_GAME ? "Connected to <b>your game</b>" : "Design mode · not connected to a game";
-		$("where").classList.toggle("live", IN_GAME);
+		showWhere();
 		$("game").hidden = !IN_GAME;
 		$("offline").hidden = IN_GAME;
 		// A terminus is a city's main station: one still at the default size becomes 8 tracks, 160 long (as on the wrench).
@@ -832,7 +836,37 @@
 				+ passed.map((c) => "<li>" + esc(c.message) + "</li>").join("") + "</ul></details>" : "");
 	}
 
+	// ---- reload on change ----------------------------------------------------------------------------------------------
+	// The page reloads itself when its files change on disk or the studio restarts (which also brings a new token). The
+	// controls are kept in local storage, so a reload keeps them.
+
+	let version = null;
+	let lost = false;
+	async function watch() {
+		try {
+			const r = await fetch("api/version", { cache: "no-store" });
+			const now = await r.text();
+			if (version !== null && now !== version) {
+				location.reload();
+				return;
+			}
+			version = now;
+			if (lost) {
+				lost = false;
+				showWhere();
+			}
+		} catch (e) {
+			if (!lost) {
+				lost = true;
+				$("where").textContent = "Station Studio stopped · this page reloads when it is back";
+				$("where").classList.remove("live");
+			}
+		}
+		setTimeout(watch, document.hidden ? 5000 : 1500);
+	}
+
 	init().catch((e) => {
 		$("banner").textContent = "Station Studio could not start: " + e;
 	});
+	watch();
 })();

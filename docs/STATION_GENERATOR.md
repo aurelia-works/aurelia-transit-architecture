@@ -178,6 +178,12 @@ client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) a
   outline and chat summary), then *Build it*, *Cancel plan* and *Undo last build*. The design is also saved on a Station Wrench
   you hold, so right-clicking the ground with it places the same station.
 
+- **Reloads by itself:** the page asks the studio every 1.5 s (5 s in a hidden tab) for `/api/version`: a start id and the
+  modification times of the page files. When either changes (the page files on disk, or the studio restarted, e.g. a new game
+  session) the page reloads, keeping your settings; while the studio is stopped the top-right pill says so. A restarted studio
+  has a new token, and the reload brings it, so the in-game buttons keep working. Page files are served from
+  `build/resources/main`, so run `./gradlew processResources` after editing `src/main/resources/studio/`.
+
 Safety: the studio only listens on this computer, refuses requests that name another host, and only the page the game served
 (which carries a per-session token) can act in the game. The game still checks operator rights for every action.
 
