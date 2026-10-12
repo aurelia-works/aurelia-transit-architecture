@@ -1092,6 +1092,231 @@ def utrecht_wave_top_x():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Batch D: platform edges (metro granite edge, Leidsche Rijn pavers, boarding step plate, bus kerb)
+# ---------------------------------------------------------------------------------------------------------------------
+
+METRO_GRANITE = (160, 158, 152)
+
+
+def speckled(colour, name, rate=0.18, tones=(-26, -18, 12), amount=4):
+    """Fine-grained granite: base noise plus dark mica and pale feldspar grains."""
+    img = base(colour, amount, name)
+    r = g.rng(name + "-grain")
+    for y in range(16):
+        for x in range(16):
+            if r.random() < rate:
+                tint(img, x, y, r.choice(tones))
+    return img
+
+
+@paint("metro_tactile_edge", "metro_tactile_edge_top")
+def metro_tactile_edge_top():
+    """Metro platform edge from above: the yellow blister strip at the track edge (rows 0-4) with a lit arris on its
+    outer row, a dark joint, then 8 px grey granite flags with bevelled arrises."""
+    img = speckled(METRO_GRANITE, "rl_metro_edge_top")
+    units(img, [(0, 5, 8, 11), (8, 5, 8, 11)], g.shade(METRO_GRANITE, -34), "rl_metro_edge_top", tone=5, lit=6, shadow=-8)
+    blisters(img, 0, 5, "rl_metro_edge_top", joint=False)
+    for x in range(16):
+        tint(img, x, 0, 10)
+        put(img, x, 5, mix(g.shade(METRO_GRANITE, -50), TACTILE, 0.25))
+        put(img, x, 15, g.shade(get(img, x, 15), -4))
+    for y in range(5):
+        put(img, 0, y, g.shade(TACTILE, -30))
+    return img
+
+
+@paint("metro_tactile_edge", "metro_granite_side")
+def metro_granite_side():
+    """Front of the granite coping (the edge model shows rows 0-3): lit arris, speckled face, a dark drip groove under
+    it; the head joint between stones every block."""
+    img = speckled(g.shade(METRO_GRANITE, -10), "rl_metro_granite_side")
+    for x in range(16):
+        tint(img, x, 0, 16)
+        tint(img, x, 1, 5)
+        put(img, x, 3, g.shade(METRO_GRANITE, -54))
+        put(img, x, 15, g.shade(METRO_GRANITE, -50))
+    for y in range(16):
+        put(img, 0, y, g.shade(METRO_GRANITE, -36))
+    return img
+
+
+@paint("metro_tactile_edge", "metro_edge_face")
+def metro_edge_face():
+    """Track-side wall under the metro platform edge: dark concrete with brake-dust streaks running down and a soft bloom."""
+    colour = (100, 100, 98)
+    img = base(colour, 3, "rl_metro_edge_face")
+    clouds(img, "rl_metro_edge_face", count=5, strength=5)
+    r = g.rng("rl_metro_edge_face-streaks")
+    for x in range(16):
+        d = r.choice((-7, -4, 0, 0, 0, 3))
+        for y in range(16):
+            tint(img, x, y, d - y // 5)
+    specks(img, "rl_metro_edge_face", 8, (-18, -12, 7))
+    return img
+
+
+@paint("leidsche_rijn_concrete_platform_paver", "nlbe_paver")
+def leidsche_rijn_paver():
+    """Dutch platform pavers: 8 px (30x30 cm reads best as half a block) concrete tiles, each its own tone, bevelled."""
+    return flags((160, 160, 156), "rl_nlbe_paver", joint_amount=-34, aggregate=26)
+
+
+@paint("boarding_step_edge", "step_plate")
+def step_plate():
+    """Slide-out boarding step: aluminium chequer plate with a yellow anti-slip nosing on row 0 (the track edge)."""
+    plate = (150, 154, 158)
+    img = base(plate, 2, "rl_step_plate")
+    for cy in range(2, 16, 4):
+        for cx in range(0, 16, 4):
+            if (cx // 4 + cy // 4) % 2 == 0:
+                put(img, cx + 2, cy, g.shade(plate, 28))
+                put(img, cx + 1, cy + 1, g.shade(plate, 18))
+                put(img, cx + 1, cy + 2, g.shade(plate, -20))
+            else:
+                put(img, cx, cy, g.shade(plate, 28))
+                put(img, cx + 1, cy + 1, g.shade(plate, 18))
+                put(img, cx + 2, cy + 2, g.shade(plate, -20))
+    r = g.rng("rl_step_plate-nosing")
+    for x in range(16):
+        put(img, x, 0, g.shade((240, 196, 40), r.randint(-6, 4)))
+        put(img, x, 1, g.shade(plate, -30))
+    return img
+
+
+@paint("boarding_step_edge", "step_edge")
+def step_edge():
+    """Front of the step: yellow powder coat with a lit top edge and a scuffed lower edge."""
+    yellow = (236, 192, 40)
+    img = base(yellow, 3, "rl_step_edge")
+    for x in range(16):
+        tint(img, x, 0, 14)
+        tint(img, x, 15, -22)
+    specks(img, "rl_step_edge", 6, (-30, -20))
+    return img
+
+
+@paint("bus_curb", "curb_top")
+def curb_top():
+    """Bus stop kerb from above: 1 m speckled concrete kerb units with a joint, a rounded lit arris on the road side
+    (row 0), the white stop line (rows 2-3) and a darker back joint."""
+    stone = (196, 194, 186)
+    img = speckled(stone, "rl_curb", rate=0.12, tones=(-18, -12, 8), amount=3)
+    for x in range(16):
+        put(img, x, 0, g.shade(stone, -14))
+        tint(img, x, 1, 12)
+        for y in (2, 3):
+            put(img, x, y, g.shade((238, 238, 232), (-6 if y == 3 else 0) + g.rng("rl_curb-line" + str(x)).randint(-3, 2)))
+        put(img, x, 15, g.shade(stone, -30))
+    for y in range(16):
+        put(img, 0, y, g.shade(stone, -28))
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Batch E: architectural glass. Each block is one structural glass pane: the existing tint, alpha and streak (assets_glass)
+# plus a butt joint on its top and left edge (the green-dark polished edge of the pane, a little denser than the glass)
+# and a 1 px glint inside it, so a wall or a pane run reads as separate 1 m panes. Alpha stays far below the opaque rim
+# of vanilla glass; glass brick, curtain wall, fin and floor already have their own frames and stay as generated.
+# ---------------------------------------------------------------------------------------------------------------------
+
+import assets_glass  # noqa: E402
+
+
+def glass_joint(img, edge, edge_alpha, glint=6):
+    px = img.load()
+    for i in range(16):
+        for x, y in ((i, 0), (0, i)):
+            if px[x, y][3] < 255:  # leave opaque wire and frit dots alone
+                px[x, y] = g.shade(edge, -4 if x == 0 else 4) + (edge_alpha,)
+        for x, y in ((i, 1), (1, i)):
+            if i > 0 and px[x, y][3] < 255:
+                c = px[x, y]
+                px[x, y] = g.shade(c[:3], glint) + (g.clamp(c[3] + 6),)
+    return img
+
+
+def _glass(ident, face):
+    def painter():
+        img = assets_glass.pane(ident, **face)
+        joint = mix(face["tint"], face["edge"], 0.6) if not face.get("sky") else face["edge"]
+        return glass_joint(img, joint, g.clamp(face["alpha"] + 48))
+    painter.__doc__ = f"{ident}: generated pane plus a butt joint on the top/left edge."
+    return painter
+
+
+for _ident, _name, _tip, _face, _edge in assets_glass.TYPES:
+    paint(_ident)(_glass(_ident, _face))
+
+
+@paint("fritted_glass")
+def fritted_glass():
+    return glass_joint(assets_glass.frit("fritted_glass"), (130, 178, 156), 92)
+
+
+@paint("wired_glass")
+def wired_glass():
+    return glass_joint(assets_glass.wired("wired_glass"), (130, 178, 156), 92)
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# Batch G: sign faces. Sign boards join left and right and each sign maps a different band of rows of the shared face
+# texture, so the finish has no rows of its own: a very fine enamel/ACM grain, a faint bloom and a soft diagonal sheen
+# that wraps across blocks. Colours stay exactly as before (NS yellow and navy, DB white, the mod's own blue/charcoal).
+# ---------------------------------------------------------------------------------------------------------------------
+
+def sign_face(colour, name, sheen=5):
+    img = base(colour, 1, name)
+    clouds(img, name, count=4, strength=2, radius=4)
+    polish(img, sheen, band=(10, 13))
+    return img
+
+
+@paint("station_name_sign", "sign_blue")
+def sign_blue():
+    return sign_face(g.SIGN_BLUE, "rl_sign_blue")
+
+
+@paint("direction_sign", "sign_charcoal")
+def sign_charcoal():
+    return sign_face(g.CHARCOAL, "rl_sign_charcoal", 4)
+
+
+@paint("composition_board", "composition_face")
+def composition_face():
+    return sign_face((40, 52, 66), "rl_composition_face", 4)
+
+
+@paint("exit_sign", "wf_exit_green")
+def exit_green():
+    return sign_face((30, 107, 69), "rl_exit_green")
+
+
+@paint("german_station_sign", "german_sign_face")
+def german_sign_face():
+    return sign_face((240, 240, 236), "rl_german_sign_face", 3)
+
+
+@paint("dutch_station_sign", "nlbe_sign_yellow")
+def ns_yellow():
+    return sign_face((250, 200, 24), "rl_ns_yellow", 4)
+
+
+@paint("bus_stop_sign", "panel_white")
+def panel_white():
+    return sign_face(g.WHITE, "rl_panel_white", 3)
+
+
+@paint("steel_bench", "steel_dark")
+def steel_dark():
+    """Dark grey powder coat (frames, housings, posts all over the mod): fine orange-peel grain, a faint bloom and a few
+    lighter scuffs. No rims or lines, because every model maps a different window of it."""
+    img = base(g.STEEL_DARK, 2, "rl_steel_dark")
+    clouds(img, "rl_steel_dark", count=5, strength=3, radius=3)
+    specks(img, "rl_steel_dark", 6, (8, 10, -6))
+    return img
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 def render_all():
     out = {}
