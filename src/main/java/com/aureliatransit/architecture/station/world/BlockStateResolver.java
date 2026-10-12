@@ -114,6 +114,10 @@ public final class BlockStateResolver {
 		return new Resolution(prepared, List.copyOf(missing), railSkipped);
 	}
 
+	/** Blocks whose front (the ticket machine's screen) faces against their FACING property: MTR sets FACING to the way the
+	 * placing player looks, so the screen faces the player. */
+	static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine");
+
 	/**
 	 * The state for a block facing {@code facing}: FACING for facing-shaped blocks, the facing's axis for axis blocks, and for
 	 * {@code mtr:rail} the {@code facing} flag true for a track along X, with no 45 or 22.5 degree angle and not connected.
@@ -128,7 +132,8 @@ public final class BlockStateResolver {
 			return withBoolean(rail, "is_connected", false);
 		}
 		if (state.contains(Properties.HORIZONTAL_FACING)) {
-			return state.with(Properties.HORIZONTAL_FACING, direction(heading));
+			final Direction front = direction(heading);
+			return state.with(Properties.HORIZONTAL_FACING, FACING_AWAY.contains(Registries.BLOCK.getId(block).toString()) ? front.getOpposite() : front);
 		}
 		if (state.contains(Properties.HORIZONTAL_AXIS)) {
 			return state.with(Properties.HORIZONTAL_AXIS, direction(heading).getAxis());

@@ -108,6 +108,8 @@ public final class StationPlanner {
 		private final List<Box> extraSupport = new ArrayList<>();
 		private final StationLayout site;
 		private List<Integer> hallRows;
+		/** v of the building's platform-side doorways: no shed column stands in front of them. */
+		private final java.util.Set<Integer> doorV = new java.util.HashSet<>();
 
 		Planning(StationSpec spec) {
 			this.spec = spec;
@@ -261,6 +263,7 @@ public final class StationPlanner {
 						for (int y = 1; y <= 3; y++) {
 							keepClear(uP, y, v);
 						}
+						doorV.add(v);
 					}
 				}
 			}
@@ -625,7 +628,7 @@ public final class StationPlanner {
 				if (!hasStairs(band)) {
 					continue;
 				}
-				if (spec.roof() == RoofType.CANOPY && stairShaft(band, b)) {
+				if (spec.roof() == RoofType.CANOPY ? stairShaft(band, b) : stairHood(band, b)) {
 					continue;
 				}
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
@@ -855,13 +858,23 @@ public final class StationPlanner {
 			final int top = hallBeamY();
 			final List<Integer> rows = new ArrayList<>();
 			for (final int v0 : columnV) {
+				// clear of the building's doorways when a shift of up to 3 allows it, else only clear of what is built
+				int found = -1;
+				for (final int d : new int[] {0, 1, -1, 2, -2, 3, -3}) {
+					final int v = v0 + d;
+					if (v >= 0 && v < length && !rows.contains(v) && rowFree(v, top, true)) {
+						found = v;
+						break;
+					}
+				}
 				for (final int d : new int[] {0, 1, -1, 2, -2}) {
 					final int v = v0 + d;
-					if (v < 0 || v >= length || rows.contains(v) || !rowFree(v, top)) {
-						continue;
+					if (found < 0 && v >= 0 && v < length && !rows.contains(v) && rowFree(v, top, false)) {
+						found = v;
 					}
-					rows.add(v);
-					break;
+				}
+				if (found >= 0) {
+					rows.add(found);
 				}
 			}
 			rows.sort(Comparator.naturalOrder());
@@ -869,9 +882,13 @@ public final class StationPlanner {
 			return rows;
 		}
 
-		private boolean rowFree(int v, int top) {
+		private boolean rowFree(int v, int top, boolean doors) {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				for (final int u : columnLines(band, RoofType.HALL)) {
+					if (doors && site.building() && Math.abs(u - site.platformWall(layout)) <= 3 && (doorV.contains(v - 1) || doorV.contains(v)
+							|| doorV.contains(v + 1))) {
+						return false;
+					}
 					for (int y = StationGeometry.WALK_Y; y < top; y++) {
 						if (taken(u, y, v) || air.contains(new Cell(u, y, v))) {
 							return false;
@@ -961,20 +978,27 @@ public final class StationPlanner {
 				rows.add(site.bridgeV());
 				rows.sort(Comparator.naturalOrder());
 			}
+			// a single vault is its own arch: no tie girders across the tracks, only brackets over the platforms and eaves (the
+			// bridge row still crosses on its piers); several vaults keep full ties, which carry their valley gutters
+			final boolean freeArch = spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED;
+			final boolean[] untied = freeArch ? betweenPlatforms() : new boolean[layout.width()];
 			for (final int v : rows) {
 				for (int u = u0; u <= u1; u++) {
+					if (untied[u] && !(onBridge && v == site.bridgeV())) {
+						continue;
+					}
 					put(Role.BEAM, u, beamY, v, LocalDir.PLUS_U, girder, kind);
 				}
 			}
-			// girders along v: column lines, eaves, valleys, and purlins halving any gap wider than 8 so every roof cell is
-			// within reach of one
+			// girders along v: column lines, eaves, valleys, and (under a flat roof) purlins halving any gap wider than 8 so
+			// every roof cell is within reach of one; a vault carries its purlins in the curve instead (below)
 			final java.util.TreeSet<Integer> along = new java.util.TreeSet<>();
 			for (int i = 0; i < n; i++) {
 				if (lit[u0 + i] || i == 0 || i == n - 1 || spec.shed().arched() && rise[i] == 0) {
 					along.add(i);
 				}
 			}
-			for (boolean added = true; added; ) {
+			for (boolean added = !spec.shed().arched(); added; ) {
 				added = false;
 				Integer previous = null;
 				for (final int i : List.copyOf(along)) {
@@ -1048,6 +1072,14 @@ public final class StationPlanner {
 					}
 				}
 			}
+			// purlins in the curve: girder lines along v just under the vault, joining every rib, about every 4 across
+			for (int i = 2; i < n - 2; i++) {
+				if (rise[i] > 0 && (i % 4 == 2 || isCrown(rise, i))) {
+					for (int v = 0; v < length; v++) {
+						put(Role.RIB, u0 + i, ribTop[i], v, LocalDir.PLUS_V, girder, kind);
+					}
+				}
+			}
 			// hangers from the frame over each column line up to the rib
 			for (final int v : rows) {
 				for (int i = 0; i < n; i++) {
@@ -1069,14 +1101,42 @@ public final class StationPlanner {
 			}
 		}
 
+		/**
+		 * Cells strictly between the column lines of two neighbouring platforms: the bays over the tracks that a single vault
+		 * spans without a tie. Every other piece of a cross girder ends on a column line.
+		 */
+		private boolean[] betweenPlatforms() {
+			final boolean[] out = new boolean[layout.width()];
+			int previous = -1;
+			TrackLayout.PlatformBand previousBand = null;
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final List<Integer> lines = columnLines(band, RoofType.HALL);
+				if (lines.isEmpty()) {
+					continue;
+				}
+				final int first = java.util.Collections.min(lines);
+				if (previousBand != null) {
+					for (int u = previous + 1; u < first; u++) {
+						out[u] = true;
+					}
+				}
+				previous = java.util.Collections.max(lines);
+				previousBand = band;
+			}
+			return out;
+		}
+
 		/** The vault's solid lower band: the style's roof when that is a full block, otherwise steel cladding. */
 		private String vaultCladding() {
 			return ata("metro_steel_cladding");
 		}
 
+		/** Height of a round vault over its span. */
+		private static final double ARCH_RISE = 0.4;
+
 		/**
-		 * Rise of the vault above the eaves at each u0 + i: 0 for a flat roof; a parabola (barrel vault), a pointed arch, or
-		 * one parabola per span between the island platforms' centre lines (several vaults side by side).
+		 * Rise of the vault above the eaves at each u0 + i: 0 for a flat roof; half an ellipse (barrel vault), a pointed arch, or
+		 * one half ellipse per span between the island platforms' centre lines (several vaults side by side).
 		 */
 		private int[] shedRise(int u0, int n) {
 			final int[] rise = new int[n];
@@ -1100,7 +1160,7 @@ public final class StationPlanner {
 					}
 					cuts.add(n - 1);
 					for (int k = 0; k + 1 < cuts.size(); k++) {
-						vault(rise, cuts.get(k), cuts.get(k + 1), false, 0.36);
+						vault(rise, cuts.get(k), cuts.get(k + 1), false, ARCH_RISE);
 					}
 				}
 			}
@@ -1108,7 +1168,12 @@ public final class StationPlanner {
 		}
 
 		private static void vault(int[] rise, int a, int b, boolean pointed) {
-			vault(rise, a, b, pointed, 0.25);
+			vault(rise, a, b, pointed, ARCH_RISE);
+		}
+
+		/** The middle of a vault's flat crown: as high as both neighbours and not left of an equal one. */
+		private static boolean isCrown(int[] rise, int i) {
+			return rise[i] >= rise[i + 1] && rise[i] > rise[i - 1];
 		}
 
 		private static void vault(int[] rise, int a, int b, boolean pointed, double ratio) {
@@ -1118,8 +1183,9 @@ public final class StationPlanner {
 			final int height = pointed ? Math.max(3, (int) Math.round(span * 0.42)) : Math.max(2, (int) Math.round(span * ratio));
 			for (int u = a; u <= b; u++) {
 				final double x = Math.min(1, Math.abs(u - centre) / half);
-				// pointed: two arcs centred half a span outside and below the crown's opposite side, meeting at the crown at an angle
-				final double f = pointed ? Math.sqrt(Math.max(0, 2.5 - (x + 0.5) * (x + 0.5))) - 0.5 : 1 - x * x;
+				// pointed: two arcs centred half a span outside and below the crown's opposite side, meeting at the crown at an
+				// angle; round: half an ellipse, which springs steeply from the eaves like a real barrel vault
+				final double f = pointed ? Math.sqrt(Math.max(0, 2.5 - (x + 0.5) * (x + 0.5))) - 0.5 : Math.sqrt(1 - x * x);
 				rise[u] = Math.max(rise[u], (int) Math.round(height * f));
 			}
 		}
@@ -1264,9 +1330,11 @@ public final class StationPlanner {
 				}
 				tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "mtr:ticket_machine");
 			}
-			// information kiosk on the unpaid side
-			if (vEntr - 4 >= vS + 1 && vEntr - 4 <= vE - 1) {
-				tallFixture(uS + 2, 1, vEntr - 4, LocalDir.PLUS_V, "aurelia_transit_architecture:passenger_info_kiosk");
+			// information kiosk on the unpaid side, against the street wall beside the machines (or by the entrance)
+			for (final int v : new int[]{vEntr - 6, vEntr - 3}) {
+				if (v >= vS + 1 && v <= vE - 1 && tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "aurelia_transit_architecture:passenger_info_kiosk")) {
+					break;
+				}
 			}
 			// benches in the paid hall and on the unpaid side (only with furniture, only inside the building)
 			if (spec.furniture()) {
@@ -1467,6 +1535,38 @@ public final class StationPlanner {
 			}
 			for (int u = left; u <= right; u++) {
 				for (int v = top; v != end + side; v += side) {
+					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
+				}
+			}
+			return true;
+		}
+
+		/**
+		 * Without a canopy, a stair flight is glazed like the corridor it leaves: glass walls on both flanks from the platform
+		 * up to a roof over the flight alone, open at the bottom step. A flank on a boarding edge stays open.
+		 */
+		private boolean stairHood(TrackLayout.PlatformBand band, StylePalette.Building b) {
+			final List<Integer> flight = StationLayout.stairColumns(band);
+			if (flight.isEmpty()) {
+				return false;
+			}
+			final int left = Math.max(band.uMin(), flight.get(0) - 1);
+			final int right = Math.min(band.uMax(), flight.get(flight.size() - 1) + 1);
+			final boolean wallLeft = left < flight.get(0) && !isEdge(band, left);
+			final boolean wallRight = right > flight.get(flight.size() - 1) && !isEdge(band, right);
+			final int top = site.stairV(StationGeometry.STAIR_STEPS);
+			final int bottom = site.stairV(1);
+			final int side = Integer.signum(bottom - top);
+			for (int v = top; v != bottom + side; v += side) {
+				for (int y = StationGeometry.WALK_Y; y < StationGeometry.BUILDING_ROOF_Y; y++) {
+					if (wallLeft) {
+						put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
+					}
+					if (wallRight) {
+						put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+					}
+				}
+				for (int u = left; u <= right; u++) {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
 				}
 			}

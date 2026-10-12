@@ -139,6 +139,9 @@ def build(key, x, z, direction="south"):
     mark = log_length()
     rcon(f"execute as {PLAYER} at @s run ata_station plan {description}")
     time.sleep(1.5)
+    # the plan's chat summary is short; the footprint is in the full one
+    rcon(f"execute as {PLAYER} at @s run ata_station details")
+    time.sleep(1)
     for line in chat_since(mark):
         if line.startswith("Footprint") or line.startswith("Cannot build") or line.startswith("Site check"):
             print(line)
