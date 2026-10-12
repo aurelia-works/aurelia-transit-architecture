@@ -23,23 +23,24 @@ public final class LiveBlocks {
 	private static final String TIP_LIVE_CONFIG = TIP + "live_config";
 	private static final String TIP_LIVE_JOINS = TIP + "live_joins";
 	private static final String TIP_LIVE_HANGING = TIP + "live_hanging";
+	private static final String TIP_LIVE_FREE = TIP + "live_free";
 	private static final String TIP_SPEAKER = TIP + "live_speaker";
 
 	public static final Block PLATFORM_CIS = ModBlocks.register("platform_cis", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.CIS, false, 12.5F, 0, box(0, 0, 12, 16, 16, 16)),
-			TIP_LIVE_CONFIG, TIP_LIVE_JOINS);
+			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_FREE);
 	public static final Block HANGING_PLATFORM_CIS = ModBlocks.register("hanging_platform_cis", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.CIS, true, 6.5F, 3, box(0, 0, 6, 16, 16, 10)),
-			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_HANGING);
+			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_HANGING, TIP_LIVE_FREE);
 	public static final Block PLATFORM_PIDS = ModBlocks.register("platform_pids", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.PIDS, false, 12.5F, 0, box(0, 0, 12, 16, 16, 16)),
-			TIP_LIVE_CONFIG, TIP_LIVE_JOINS);
+			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_FREE);
 	public static final Block HANGING_PLATFORM_PIDS = ModBlocks.register("hanging_platform_pids", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.PIDS, true, 6.5F, 3, box(0, 0, 6, 16, 16, 10)),
-			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_HANGING);
+			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_HANGING, TIP_LIVE_FREE);
 	public static final Block CONCOURSE_BOARD = ModBlocks.register("concourse_board", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.CONCOURSE, false, 11.5F, 0, box(0, 0, 11, 16, 16, 16)),
-			TIP_LIVE_CONFIG, TIP_LIVE_JOINS);
+			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_FREE);
 	public static final Block WALL_SPEAKER = ModBlocks.register("wall_speaker", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new SpeakerBlock(ModBlocks.metal(), box(4, 4, 13, 12, 12, 16)),
 			TIP_SPEAKER);

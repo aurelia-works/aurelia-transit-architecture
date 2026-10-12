@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.live;
 
 import com.aureliatransit.architecture.block.FacingShapedBlock;
+import com.aureliatransit.architecture.block.FreePlacement;
 import com.aureliatransit.architecture.block.Placement;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
@@ -27,6 +28,9 @@ import java.util.function.Consumer;
  * A live passenger-information display (CIS, PIDS or concourse board). Identical displays with the same facing that
  * touch each other join into one larger screen. Connection flags are from the <b>viewer's</b> point of view; the
  * top-left block (no left and no up neighbour) is the owner that stores the config and draws the whole screen.
+ * <p>
+ * Sneak-placing turns a display to face you in 16 steps and nudges it towards where you click ({@link FreePlacement}); a
+ * turned display stands alone, and only displays nudged alike join.
  */
 public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider {
 
@@ -81,6 +85,8 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
 		super.appendProperties(builder);
 		builder.add(LEFT, RIGHT, UP, DOWN);
+		FreePlacement.addTurn(builder);
+		FreePlacement.addNudge(builder);
 	}
 
 	/**
@@ -95,7 +101,7 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 	}
 
 	private boolean joinsWith(BlockState self, BlockState other) {
-		return other.isOf(this) && other.get(FACING) == self.get(FACING);
+		return other.isOf(this) && other.get(FACING) == self.get(FACING) && FreePlacement.joinable(self, other);
 	}
 
 	private BlockState withConnections(BlockState state, WorldAccess world, BlockPos pos) {

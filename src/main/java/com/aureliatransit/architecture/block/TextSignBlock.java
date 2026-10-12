@@ -59,6 +59,7 @@ public class TextSignBlock extends FacingShapedBlock implements BlockEntityProvi
 	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
 		super.appendProperties(builder);
 		builder.add(LEFT, RIGHT);
+		FreePlacement.addNudge(builder);
 	}
 
 	public static Direction localLeft(Direction facing) {
@@ -70,7 +71,7 @@ public class TextSignBlock extends FacingShapedBlock implements BlockEntityProvi
 	}
 
 	private boolean joinsWith(BlockState self, BlockState other) {
-		return layout.joins() && other.isOf(this) && other.get(FACING) == self.get(FACING);
+		return layout.joins() && other.isOf(this) && other.get(FACING) == self.get(FACING) && FreePlacement.joinable(self, other);
 	}
 
 	private BlockState withConnections(BlockState state, WorldAccess world, BlockPos pos) {

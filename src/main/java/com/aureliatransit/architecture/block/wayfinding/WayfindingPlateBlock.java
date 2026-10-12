@@ -1,14 +1,17 @@
 package com.aureliatransit.architecture.block.wayfinding;
 
 import com.aureliatransit.architecture.block.FacingShapedBlock;
+import com.aureliatransit.architecture.block.FreePlacement;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity;
 import com.aureliatransit.architecture.wayfinding.WayfindingPanelKind;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.state.StateManager;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.BlockHitResult;
@@ -45,6 +48,12 @@ public class WayfindingPlateBlock extends FacingShapedBlock implements BlockEnti
 
 	public WayfindingPanelSpec spec() {
 		return spec;
+	}
+
+	@Override
+	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+		super.appendProperties(builder);
+		FreePlacement.addNudge(builder);
 	}
 
 	/**

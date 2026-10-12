@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.client.interactive;
 import com.aureliatransit.architecture.block.InfoDisplayBlock;
 import com.aureliatransit.architecture.block.InfoLayout;
 import com.aureliatransit.architecture.block.entity.InfoDisplayBlockEntity;
+import com.aureliatransit.architecture.client.FreePlacementRender;
 import com.aureliatransit.architecture.text.ConfigurableTextData;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.util.Shapes;
@@ -57,6 +58,7 @@ public class InfoDisplayRenderer implements BlockEntityRenderer<InfoDisplayBlock
 		final int textLight = state.getLuminance() > 0 ? LightmapTextureManager.MAX_LIGHT_COORDINATE : light;
 
 		matrices.push();
+		FreePlacementRender.apply(matrices, state);
 		matrices.translate(0.5, 0, 0.5);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(state.get(InfoDisplayBlock.FACING))));
 		matrices.translate(-0.5, 0, -0.5);

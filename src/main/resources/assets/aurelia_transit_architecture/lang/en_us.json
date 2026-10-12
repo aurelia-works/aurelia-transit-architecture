@@ -547,6 +547,7 @@
   "tooltip.aurelia_transit_architecture.joins": "Joins neighbours into one wide sign",
   "tooltip.aurelia_transit_architecture.lift_status": "Shows lift levels and status; right-click to edit",
   "tooltip.aurelia_transit_architecture.live_config": "Right-click to pick a station and style",
+  "tooltip.aurelia_transit_architecture.live_free": "Sneak to place it turned or off-centre",
   "tooltip.aurelia_transit_architecture.live_hanging": "Hangs from the ceiling; readable both sides",
   "tooltip.aurelia_transit_architecture.live_joins": "Joins neighbours into one big screen",
   "tooltip.aurelia_transit_architecture.live_speaker": "Right-click to set up; plays announcements",

@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.client.interactive;
 
 import com.aureliatransit.architecture.block.ClockBlock;
 import com.aureliatransit.architecture.block.entity.ClockBlockEntity;
+import com.aureliatransit.architecture.client.FreePlacementRender;
 import com.aureliatransit.architecture.interactive.ClockTime;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.TextFit;
@@ -54,6 +55,7 @@ public class ClockRenderer implements BlockEntityRenderer<ClockBlockEntity> {
 		final int textLight = LightmapTextureManager.MAX_LIGHT_COORDINATE;
 
 		matrices.push();
+		FreePlacementRender.apply(matrices, state);
 		matrices.translate(0.5, 0, 0.5);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(state.get(ClockBlock.FACING))));
 		matrices.translate(-0.5, 0, -0.5);

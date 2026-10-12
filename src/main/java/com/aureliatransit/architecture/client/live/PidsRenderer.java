@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.client.live;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
+import com.aureliatransit.architecture.client.FreePlacementRender;
 import com.aureliatransit.architecture.live.LiveDebug;
 import com.aureliatransit.architecture.live.NearestPlatformProvider;
 import com.aureliatransit.architecture.live.PidsBlock;
@@ -113,6 +114,7 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		LiveDebug.count(LiveDebug.Counter.BOARD_FRAMES);
 
 		matrices.push();
+		FreePlacementRender.apply(matrices, state);
 		matrices.translate(0.5, 0, 0.5);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(facing)));
 		matrices.translate(-0.5, 0, -0.5);

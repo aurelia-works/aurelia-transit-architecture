@@ -98,6 +98,7 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 		final int textLight = state.getLuminance() > 0 ? LightmapTextureManager.MAX_LIGHT_COORDINATE : light;
 
 		matrices.push();
+		FreePlacementRender.apply(matrices, state);
 		matrices.translate(0.5, 0, 0.5);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(state.get(TextSignBlock.FACING))));
 		matrices.translate(-0.5, 0, -0.5);

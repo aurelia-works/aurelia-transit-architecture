@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.block.wayfinding;
 
+import com.aureliatransit.architecture.block.FreePlacement;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -35,7 +36,7 @@ public class WayfindingSignBlock extends WayfindingPlateBlock {
 	}
 
 	private boolean joinsWith(BlockState self, BlockState other) {
-		return other.isOf(this) && other.get(FACING) == self.get(FACING);
+		return other.isOf(this) && other.get(FACING) == self.get(FACING) && FreePlacement.joinable(self, other);
 	}
 
 	private BlockState withConnections(BlockState state, WorldAccess world, BlockPos pos) {

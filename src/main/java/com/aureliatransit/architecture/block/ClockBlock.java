@@ -1,9 +1,11 @@
 package com.aureliatransit.architecture.block;
 
 import com.aureliatransit.architecture.block.entity.ClockBlockEntity;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockEntityProvider;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.state.StateManager;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.shape.VoxelShape;
 
@@ -37,6 +39,13 @@ public class ClockBlock extends FacingShapedBlock implements BlockEntityProvider
 
 	public Face getFace() {
 		return face;
+	}
+
+	@Override
+	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+		super.appendProperties(builder);
+		FreePlacement.addTurn(builder);
+		FreePlacement.addNudge(builder);
 	}
 
 	@Override

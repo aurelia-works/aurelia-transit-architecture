@@ -2,10 +2,13 @@ package com.aureliatransit.architecture.block.wayfinding;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.FacingShapedBlock;
+import com.aureliatransit.architecture.block.FreePlacement;
 import com.aureliatransit.architecture.block.Placement;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
+import net.minecraft.state.StateManager;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -24,6 +27,13 @@ public class HelpPointBlock extends FacingShapedBlock {
 
 	public HelpPointBlock(Settings settings, VoxelShape northOutline) {
 		super(settings, Placement.TOWARD_PLAYER, northOutline);
+	}
+
+	@Override
+	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+		super.appendProperties(builder);
+		FreePlacement.addTurn(builder);
+		FreePlacement.addNudge(builder);
 	}
 
 	@Override

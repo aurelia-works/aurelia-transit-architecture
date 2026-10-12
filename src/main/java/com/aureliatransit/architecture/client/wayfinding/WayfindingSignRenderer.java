@@ -4,10 +4,10 @@ import com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingPanelSpec;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock;
 import com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock;
+import com.aureliatransit.architecture.client.FreePlacementRender;
 import com.aureliatransit.architecture.client.interactive.PanelDrawer;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
-import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.text.PanelLayout;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.StationAssociation;
@@ -17,6 +17,7 @@ import com.aureliatransit.architecture.util.Shapes;
 import com.aureliatransit.architecture.wayfinding.ResolvedWayfinding;
 import com.aureliatransit.architecture.wayfinding.ServiceMessages;
 import com.aureliatransit.architecture.wayfinding.StationBoardLayout;
+import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.wayfinding.Wayfinding;
 import com.aureliatransit.architecture.wayfinding.WayfindingData;
 import com.aureliatransit.architecture.wayfinding.WayfindingLayout;
@@ -108,6 +109,7 @@ public final class WayfindingSignRenderer implements BlockEntityRenderer<Wayfind
 		final float centerX = spec.panelCenterX(cached.rowLength);
 
 		matrices.push();
+		FreePlacementRender.apply(matrices, state);
 		matrices.translate(0.5, 0, 0.5);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(facing)));
 		matrices.translate(-0.5, 0, -0.5);

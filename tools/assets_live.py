@@ -126,6 +126,7 @@ def lang():
         p + "live_config": "Right-click to pick a station and style",
         p + "live_joins": "Joins neighbours into one big screen",
         p + "live_hanging": "Hangs from the ceiling; readable both sides",
+        p + "live_free": "Sneak to place it turned or off-centre",
         p + "live_speaker": "Right-click to set up; plays announcements",
         s + "live_display_title": "Passenger Information Display",
         s + "live_speaker_title": "Announcement Speaker",

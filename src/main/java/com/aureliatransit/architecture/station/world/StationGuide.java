@@ -58,6 +58,9 @@ public final class StationGuide {
 					+ "footbridge takes you out to them."),
 			new Page("Finding your train", "Each platform has its own colour at the gates: follow the stripe on the floor.\n\n"
 					+ "A big number hangs over the gates and under the footbridge, so you always know which platform you are on."),
+			new Page("Moving screens", "Sneak while placing a screen, sign or clock.\n\n"
+					+ "Screens and clocks turn to face you. Click near an edge to sit it flush there, right at the edge to move it "
+					+ "half a block."),
 			new Page("Examples", "two track dutch station, island platform, 64 long, named Leidsche Rijn\n\n"
 					+ "small single track s-bahn halt, no roof"),
 			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"

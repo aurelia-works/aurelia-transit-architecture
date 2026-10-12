@@ -17,7 +17,8 @@ import net.minecraft.world.BlockView;
 import java.util.Map;
 
 /**
- * A horizontally rotating block whose shapes are authored facing north and rotated per facing.
+ * A horizontally rotating block whose shapes are authored facing north and rotated per facing. A subclass that adds the
+ * {@link FreePlacement} properties can also be turned between the facings and nudged off the block centre.
  */
 public class FacingShapedBlock extends HorizontalFacingBlock {
 
@@ -45,17 +46,23 @@ public class FacingShapedBlock extends HorizontalFacingBlock {
 	@Override
 	public BlockState getPlacementState(ItemPlacementContext ctx) {
 		final Direction looking = ctx.getHorizontalPlayerFacing();
-		return getDefaultState().with(FACING, placement == Placement.TOWARD_PLAYER ? looking.getOpposite() : looking);
+		final BlockState state = getDefaultState().with(FACING, placement == Placement.TOWARD_PLAYER ? looking.getOpposite() : looking);
+		return FreePlacement.place(state, ctx, placement == Placement.TOWARD_PLAYER);
+	}
+
+	/** The outline facing {@code facing} before any {@link FreePlacement} turn or nudge. */
+	public VoxelShape squareOutline(Direction facing) {
+		return outlines.get(facing);
 	}
 
 	@Override
 	public VoxelShape getOutlineShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-		return outlines.get(state.get(FACING));
+		return FreePlacement.outline(state, outlines.get(state.get(FACING)));
 	}
 
 	@Override
 	public VoxelShape getCollisionShape(BlockState state, BlockView world, BlockPos pos, ShapeContext context) {
-		return collisions.get(state.get(FACING));
+		return FreePlacement.collision(state, collisions.get(state.get(FACING)));
 	}
 
 	@Override
@@ -65,6 +72,6 @@ public class FacingShapedBlock extends HorizontalFacingBlock {
 
 	@Override
 	public BlockState mirror(BlockState state, BlockMirror mirror) {
-		return state.rotate(mirror.getRotation(state.get(FACING)));
+		return FreePlacement.mirror(state.rotate(mirror.getRotation(state.get(FACING))), state, mirror);
 	}
 }
