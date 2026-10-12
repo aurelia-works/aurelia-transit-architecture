@@ -101,9 +101,9 @@ public final class ElevatedBlocks {
 	private static final net.minecraft.util.shape.VoxelShape EDGE = union(box(0, 12, 0, 16, 16, 16), box(0, 0, 2, 16, 12, 16));
 
 	public static final Block SCREEN_DOOR_PANEL = ModBlocks.register("screen_door_panel", BlockFamily.PLATFORMS, RenderKind.TRANSLUCENT,
-			new CurvedScreenDoorBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL), false), TIP_STYLE, TIP + "screen_door_panel");
+			new CurvedScreenDoorBlock(ModBlocks.glass().sounds(net.minecraft.sound.BlockSoundGroup.METAL), false), TIP_STYLE, TIP + "hand_cycle", TIP + "screen_door_panel");
 	public static final Block SCREEN_DOOR_DOORWAY = ModBlocks.register("screen_door_doorway", BlockFamily.PLATFORMS, RenderKind.CUTOUT,
-			MtrPlatformContract.screenDoorway(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "screen_door_doorway");
+			MtrPlatformContract.screenDoorway(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP + "hand_cycle", TIP + "screen_door_doorway");
 	public static final Block DROP_BARRIER_EDGE = ModBlocks.register("drop_barrier_edge", BlockFamily.PLATFORMS, RenderKind.CUTOUT,
 			MtrPlatformContract.trainEdge(ModBlocks.paving(MapColor.STONE_GRAY).nonOpaque(), EDGE, TrainEdgeBlock.Mode.BARRIER), TIP + "drop_barrier_edge");
 	public static final Block BOARDING_STEP_EDGE = ModBlocks.register("boarding_step_edge", BlockFamily.PLATFORMS, RenderKind.CUTOUT,

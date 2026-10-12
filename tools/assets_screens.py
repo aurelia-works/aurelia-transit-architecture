@@ -206,7 +206,8 @@ def recipes():
 def write_extra(assets, data, write_json):
     ref = lambda name: f"{MOD}:block/{name}"
     states = assets / "blockstates"
-    for block, prop, values in (("screen_door_panel", "kind", KINDS), ("screen_door_doorway", "kind", KINDS),
-                                ("drop_barrier_edge", "part", PARTS), ("boarding_step_edge", "part", PARTS)):
+    for block in ("screen_door_panel", "screen_door_doorway"):
+        write_json(states / f"{block}.json", {"variants": g.handed_variants(lambda k: ref(f"{block}_{k}"), KINDS, symmetric=("straight",))})
+    for block, prop, values in (("drop_barrier_edge", "part", PARTS), ("boarding_step_edge", "part", PARTS)):
         write_json(states / f"{block}.json", {"variants": {
             f"facing={f},{prop}={v}": {"model": ref(f"{block}_{v}")} | ({"y": y} if y else {}) for v in values for f, y in g.FACING_Y.items()}})

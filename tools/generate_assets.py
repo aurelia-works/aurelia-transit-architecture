@@ -899,6 +899,19 @@ def write_json(path, data):
 FACING_Y = {"north": 0, "east": 90, "south": 180, "west": 270}
 
 
+def handed_variants(model_of, kinds, symmetric=()):
+    """Variants for a left/right-handed piece (Java: FacingKindBlock.MIRRORED). The left-hand piece is the right-hand
+    model turned one more quarter anticlockwise (y + 270): the shapes are mirror images of themselves across a diagonal.
+    Symmetric kinds (a straight piece) look the same either hand."""
+    out = {}
+    for k in kinds:
+        for f, y in FACING_Y.items():
+            for mirrored in (False, True):
+                turn = (y + (270 if mirrored and k not in symmetric else 0)) % 360
+                out[f"facing={f},kind={k},mirrored={str(mirrored).lower()}"] = {"model": model_of(k)} | ({"y": turn} if turn else {})
+    return out
+
+
 # Sign pole joins the sign above / below it (Java: SignPoleBlock, tag pole_mounts). Under a street sign the pole moves
 # under the sign's own off-centre post instead (align=<street sign facing>; model sign_pole_post, rotated like the sign).
 # The extension is a little slimmer

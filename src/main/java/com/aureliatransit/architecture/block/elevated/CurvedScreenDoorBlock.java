@@ -2,6 +2,8 @@ package com.aureliatransit.architecture.block.elevated;
 
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.ScreenCurveKind;
+import net.minecraft.block.BlockState;
+import net.minecraft.item.ItemPlacementContext;
 import net.minecraft.state.property.EnumProperty;
 import net.minecraft.util.shape.VoxelShape;
 import net.minecraft.util.shape.VoxelShapes;
@@ -13,6 +15,9 @@ import static net.minecraft.block.Block.createCuboidShape;
  * a fixed screen, or an always-open doorway (header and posts only). The doorway carries MTR's platform marker
  * through {@code MtrPlatformContract}, so train doors open beside it; there is no moving leaf, because MTR exposes no
  * door state to addons and a moving door would need per-tick work. See docs/DESIGN_1.4.md (b).
+ * <p>
+ * Curved pieces come as left- and right-hand pieces like the edges; placed on a curved platform edge, a screen takes
+ * that edge's facing, hand and curve, so it follows the edge line.
  */
 public class CurvedScreenDoorBlock extends FacingKindBlock<ScreenCurveKind> {
 
@@ -33,5 +38,33 @@ public class CurvedScreenDoorBlock extends FacingKindBlock<ScreenCurveKind> {
 	@Override
 	protected EnumProperty<ScreenCurveKind> kindProperty() {
 		return KIND;
+	}
+
+	@Override
+	protected boolean handed() {
+		return true;
+	}
+
+	@Override
+	protected boolean symmetric(ScreenCurveKind kind) {
+		return kind == ScreenCurveKind.STRAIGHT;
+	}
+
+	@Override
+	public BlockState getPlacementState(ItemPlacementContext ctx) {
+		final BlockState state = super.getPlacementState(ctx);
+		final BlockState below = ctx.getWorld().getBlockState(ctx.getBlockPos().down());
+		return state == null || !(below.getBlock() instanceof PlatformEdgeCurveBlock) ? state : onEdge(state, below);
+	}
+
+	/** A screen standing on a curved edge piece: the same facing, hand and curve. */
+	public static BlockState onEdge(BlockState screen, BlockState edge) {
+		ScreenCurveKind kind = screen.get(KIND);
+		for (final ScreenCurveKind candidate : ScreenCurveKind.values()) {
+			if (candidate.curve() == edge.get(PlatformEdgeCurveBlock.KIND)) {
+				kind = candidate;
+			}
+		}
+		return screen.with(FACING, edge.get(FACING)).with(MIRRORED, edge.get(MIRRORED)).with(KIND, kind);
 	}
 }

@@ -396,6 +396,9 @@ def lang():
         TIP + "style_cycle_beam": "Right-click to change type; sneak to swap material",
         TIP + "railing_joins": "Joins nearby railings and fences",
         TIP + "brace_facing": "Rises toward where you look",
+        TIP + "hand_cycle": "Sneak + right-click for the other hand",
+        f"message.{MOD}.hand.left": "Left-hand piece",
+        f"message.{MOD}.hand.right": "Right-hand piece",
         MSG + "viaduct_beam.steel": "Beam material: steel",
         MSG + "viaduct_beam.concrete": "Beam material: concrete",
     }
@@ -457,8 +460,10 @@ def write_extra(assets, data, write_json):
             variants[f"axis=z,kind={k},concrete={str(c).lower()}"] = {"model": model, "y": 90}
     put("viaduct_beam", variants)
     for block, kinds in (("viaduct_brace", BRACE), ("stair_enclosure", ENCLOSURE), ("platform_windscreen", WINDSCREEN), ("platform_fascia", FASCIA),
-                         ("tactile_junction", JUNCTION), ("platform_edge_curve", CURVE)):
+                         ("tactile_junction", JUNCTION)):
         put(block, {f"facing={f},kind={k}": {"model": ref(f"{block}_{k}")} | ({"y": y} if y else {}) for k in kinds for f, y in g.FACING_Y.items()})
+
+    put("platform_edge_curve", g.handed_variants(lambda k: ref(f"platform_edge_curve_{k}"), CURVE))
 
     # utility run: x/z share the x model (z turned), y has its own
     variants = {}

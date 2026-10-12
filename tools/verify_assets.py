@@ -24,6 +24,8 @@ REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architec
 JAVA = REGISTRY / "ModBlocks.java"
 REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksDeIt.java", "MetroBlocks.java")
 
+# Properties the blockstate variants key on. FreePlacement's angle and offset are left out on purpose: no model keys on
+# them, a client model wrapper turns and moves the quads.
 EXPECTED_PROPERTIES = {
     "Block": set(),
     "ShapedBlock": set(),
@@ -61,9 +63,9 @@ EXPECTED_PROPERTIES = {
     "UtilityRunBlock": {"axis", "kind"},
     "HandrailBlock": {"kind", "north", "east", "south", "west"},
     "TactileJunctionBlock": {"facing", "kind"},
-    "PlatformEdgeCurveBlock": {"facing", "kind"},
+    "PlatformEdgeCurveBlock": {"facing", "kind", "mirrored"},
     # 1.4
-    "CurvedScreenDoorBlock": {"facing", "kind"},
+    "CurvedScreenDoorBlock": {"facing", "kind", "mirrored"},
     "TrainEdgeBlock": {"facing", "part"},
     # 1.5
     "CarStopMarkerBlock": {"facing", "wall", "cars"},

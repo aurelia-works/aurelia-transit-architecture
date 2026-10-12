@@ -156,7 +156,7 @@ class ElevatedBlockStatesTest {
 		checkVariants("platform_fascia", new PlatformFasciaBlock(settings()), List.of("facing", "kind"));
 		checkVariants("utility_run", new UtilityRunBlock(settings()), List.of("axis", "kind"));
 		checkVariants("tactile_junction", new TactileJunctionBlock(settings()), List.of("facing", "kind"));
-		checkVariants("platform_edge_curve", new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings()), List.of("facing", "kind"));
+		checkVariants("platform_edge_curve", new com.aureliatransit.architecture.block.elevated.PlatformEdgeCurveBlock(settings()), List.of("facing", "kind", "mirrored"));
 		checkVariants("station_stair", new StationStairBlock(settings()), List.of("facing", "half", "shape"));
 		// changed or added in 1.3 outside the elevated family
 		checkVariants("boarding_marker", new com.aureliatransit.architecture.block.wayfinding.BoardingMarkerBlock(settings(), net.minecraft.util.shape.VoxelShapes.fullCube()),

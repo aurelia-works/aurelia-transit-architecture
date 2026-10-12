@@ -1,64 +1,124 @@
 {
   "variants": {
-    "facing=north,kind=straight": {
+    "facing=north,kind=straight,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_straight"
     },
-    "facing=east,kind=straight": {
+    "facing=north,kind=straight,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_straight"
+    },
+    "facing=east,kind=straight,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
       "y": 90
     },
-    "facing=south,kind=straight": {
+    "facing=east,kind=straight,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
+      "y": 90
+    },
+    "facing=south,kind=straight,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
       "y": 180
     },
-    "facing=west,kind=straight": {
+    "facing=south,kind=straight,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
+      "y": 180
+    },
+    "facing=west,kind=straight,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
       "y": 270
     },
-    "facing=north,kind=diagonal": {
+    "facing=west,kind=straight,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_straight",
+      "y": 270
+    },
+    "facing=north,kind=diagonal,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal"
     },
-    "facing=east,kind=diagonal": {
-      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
-      "y": 90
-    },
-    "facing=south,kind=diagonal": {
-      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
-      "y": 180
-    },
-    "facing=west,kind=diagonal": {
+    "facing=north,kind=diagonal,mirrored=true": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
       "y": 270
     },
-    "facing=north,kind=outer": {
+    "facing=east,kind=diagonal,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
+      "y": 90
+    },
+    "facing=east,kind=diagonal,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal"
+    },
+    "facing=south,kind=diagonal,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
+      "y": 180
+    },
+    "facing=south,kind=diagonal,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
+      "y": 90
+    },
+    "facing=west,kind=diagonal,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
+      "y": 270
+    },
+    "facing=west,kind=diagonal,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_diagonal",
+      "y": 180
+    },
+    "facing=north,kind=outer,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_outer"
     },
-    "facing=east,kind=outer": {
-      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
-      "y": 90
-    },
-    "facing=south,kind=outer": {
-      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
-      "y": 180
-    },
-    "facing=west,kind=outer": {
+    "facing=north,kind=outer,mirrored=true": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
       "y": 270
     },
-    "facing=north,kind=inner": {
+    "facing=east,kind=outer,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
+      "y": 90
+    },
+    "facing=east,kind=outer,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer"
+    },
+    "facing=south,kind=outer,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
+      "y": 180
+    },
+    "facing=south,kind=outer,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
+      "y": 90
+    },
+    "facing=west,kind=outer,mirrored=false": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
+      "y": 270
+    },
+    "facing=west,kind=outer,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_outer",
+      "y": 180
+    },
+    "facing=north,kind=inner,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_inner"
     },
-    "facing=east,kind=inner": {
+    "facing=north,kind=inner,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
+      "y": 270
+    },
+    "facing=east,kind=inner,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
       "y": 90
     },
-    "facing=south,kind=inner": {
+    "facing=east,kind=inner,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_inner"
+    },
+    "facing=south,kind=inner,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
       "y": 180
     },
-    "facing=west,kind=inner": {
+    "facing=south,kind=inner,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
+      "y": 90
+    },
+    "facing=west,kind=inner,mirrored=false": {
       "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
       "y": 270
+    },
+    "facing=west,kind=inner,mirrored=true": {
+      "model": "aurelia_transit_architecture:block/screen_door_doorway_inner",
+      "y": 180
     }
   }
 }

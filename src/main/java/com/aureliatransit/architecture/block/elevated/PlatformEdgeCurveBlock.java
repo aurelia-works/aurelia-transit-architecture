@@ -15,6 +15,9 @@ import static com.aureliatransit.architecture.util.Shapes.union;
  * {@code MtrPlatformContract}, the same MTR door marker. MTR checks only the block type near a doorway, never its
  * shape, so the angled outline does not change door behaviour. Purely architectural: MTR platforms themselves are
  * defined by MTR's rails, not by these blocks.
+ * <p>
+ * Every kind comes in four facings and as a left- and a right-hand piece ({@link #MIRRORED}): the right-hand piece facing
+ * the track cuts the corner on your right, the left-hand piece the corner on your left.
  */
 public class PlatformEdgeCurveBlock extends FacingKindBlock<CurveKind> {
 
@@ -46,5 +49,10 @@ public class PlatformEdgeCurveBlock extends FacingKindBlock<CurveKind> {
 	@Override
 	protected EnumProperty<CurveKind> kindProperty() {
 		return KIND;
+	}
+
+	@Override
+	protected boolean handed() {
+		return true;
 	}
 }
