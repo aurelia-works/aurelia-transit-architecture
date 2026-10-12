@@ -58,10 +58,23 @@ public final class StudioApi {
 		return recipe.withName(q.getOrDefault("name", ""));
 	}
 
-	/** The typed words of a request, cut to {@link #MAX_TYPED}. */
+	/** The longest platform list a request may carry: ten platforms with every setting. */
+	public static final int MAX_PLATFORM_WORDS = 600;
+
+	/**
+	 * The typed words of a request, cut to {@link #MAX_TYPED}, after the advanced platform list ("platform 1: island 12 wide;
+	 * ..."), which comes first so a long description never cuts it off.
+	 */
 	public static String typed(Map<String, String> q) {
-		final String text = q.getOrDefault("text", "").replace('\n', ' ').strip();
-		return text.length() > MAX_TYPED ? text.substring(0, MAX_TYPED) : text;
+		String text = q.getOrDefault("text", "").replace('\n', ' ').strip();
+		if (text.length() > MAX_TYPED) {
+			text = text.substring(0, MAX_TYPED);
+		}
+		String platforms = q.getOrDefault("platforms", "").replaceAll("[^A-Za-z0-9 :;]", " ").strip();
+		if (platforms.length() > MAX_PLATFORM_WORDS) {
+			platforms = platforms.substring(0, platforms.lastIndexOf(';', MAX_PLATFORM_WORDS) + 1);
+		}
+		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}
 
 	/** The choices the page offers and their limits. */
@@ -157,7 +170,11 @@ public final class StudioApi {
 
 		final StringBuilder out = new StringBuilder("{");
 		out.append("\"text\":").append(Json.quote(text));
-		out.append(",\"title\":").append(Json.quote(recipe.title()));
+		// a platform list sets the tracks (and may lengthen the station), so the title says what it built
+		final String title = !spec.listed() ? recipe.title() : recipe.title().replaceFirst(", \\d+ tracks?, \\d+ long$", ", "
+				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
+				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
+		out.append(",\"title\":").append(Json.quote(title));
 		out.append(",\"encoded\":").append(Json.quote(recipe.encode()));
 		out.append(",\"typed\":").append(Json.quote(typed));
 		out.append(",\"understood\":").append(Json.strings(parse.understood()));

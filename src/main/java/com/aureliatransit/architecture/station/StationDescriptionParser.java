@@ -1036,7 +1036,8 @@ public final class StationDescriptionParser {
 			if (!list.isEmpty()) {
 				note(-1, list.size() + (list.size() == 1 ? " platform" : " platforms") + " listed one by one");
 				if (tracks != null || islandPlatforms != null || sidePlatforms) {
-					warn("the platform list sets the tracks and platforms; the other track and platform words are ignored");
+					// the wrench and Studio always say how many tracks; the list wins, so this is not worth a warning
+					note(-1, "tracks and platforms from the platform list");
 				}
 				final int listedTracks = StationSpec.listedTracks(list);
 				if (hub && (listedTracks < 4 || listedTracks % 2 != 0 || list.stream().anyMatch(p -> p.kind() != PlatformSpec.Kind.ISLAND))) {

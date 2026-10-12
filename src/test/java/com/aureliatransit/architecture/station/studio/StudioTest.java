@@ -102,6 +102,22 @@ class StudioTest {
 	}
 
 	@Test
+	void thePlatformListComesFirstAndSetsTheTracks() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final String list = "platform 1: side 12 wide 30 long canopy; platform 2: island 10 wide; platform 3: side open;";
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "64", "platforms", list,
+				"text", "x".repeat(5000)))));
+		final StationSpec spec = StationDescriptionParser.parse(StudioApi.recipe(Map.of("tracks", "2", "length", "64"))
+				.text(StudioApi.typed(Map.of("platforms", list)))).spec();
+		assertEquals(3, spec.platforms().size());
+		assertEquals(4, spec.trackCount());
+		assertTrue(((String) plan.get("text")).contains("platform 3: side open"), "a long description never cuts the list off");
+		assertTrue(((String) plan.get("title")).contains("3 platforms, 4 tracks, 64 long"), (String) plan.get("title"));
+		// anything but words, numbers, colons and semicolons is dropped
+		assertEquals("platform 1  side", StudioApi.typed(Map.of("platforms", "platform 1\" side\n")));
+	}
+
+	@Test
 	void facingPicksTheVariantAndConnectionsPickParts() {
 		final BlockModels models = new BlockModels(OWN_ASSETS);
 		final String north = models.describe("aurelia_transit_architecture:fare_gate", Heading.NORTH, "");

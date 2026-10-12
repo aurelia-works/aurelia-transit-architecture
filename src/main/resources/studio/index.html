@@ -74,6 +74,23 @@
 				<textarea id="text" rows="5" aria-label="Station description" placeholder="e.g. sandstone terminus with an arched glass train shed and a clock tower"></textarea>
 				<div class="field-foot"><span id="count"></span></div>
 			</details>
+
+			<details class="step words" id="perPlatform">
+				<summary>Platforms one by one <span class="tag">Advanced</span></summary>
+				<p class="help">Give each platform its own type, width, length and roof. The list sets the tracks: one per side platform, two per island.</p>
+				<label class="check"><input type="checkbox" id="listOn"> Set each platform myself</label>
+				<div id="listBody" class="plat-body" hidden>
+					<div class="stepper">
+						<span class="stepper-label">Platforms</span>
+						<button type="button" class="round" id="platDown" aria-label="Fewer platforms">−</button>
+						<output id="platOut"></output>
+						<button type="button" class="round" id="platUp" aria-label="More platforms">+</button>
+					</div>
+					<div id="platRows" class="plat-rows"></div>
+					<p class="help" id="platNote"></p>
+				</div>
+				<input type="hidden" id="platforms">
+			</details>
 		</div>
 
 		<div class="dock">

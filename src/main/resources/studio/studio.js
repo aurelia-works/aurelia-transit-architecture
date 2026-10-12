@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";
@@ -63,7 +63,13 @@
 	}
 
 	function updateOutputs() {
-		$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
+		if ($("listOn") && $("listOn").checked) {
+			// the advanced platform list sets the tracks
+			const listed = plats.reduce((n, p) => n + (p.kind === "island" ? 2 : 1), 0);
+			$("tracksOut").textContent = listed + (listed === 1 ? " track" : " tracks");
+		} else {
+			$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
+		}
 		$("lengthOut").textContent = $("length").value + " blocks";
 		$("count").textContent = $("text").value.length + " / " + options.maxTyped;
 		syncButtons();
@@ -218,6 +224,141 @@
 		timer = setTimeout(generate, 350);
 	}
 
+	// ---- advanced: platforms one by one -----------------------------------------------------------------------------------
+	// The rows are written into the hidden "platforms" field as words the game's parser reads ("platform 1: island 12 wide;"),
+	// so the plan, the wrench and a typed description all agree.
+
+	const MAX_PLATFORMS = 10;
+	let plats = [];
+
+	function platWords() {
+		if (!$("listOn").checked) {
+			return "";
+		}
+		return plats.map((p, i) => "platform " + (i + 1) + ": " + p.kind + (p.width ? " " + p.width + " wide" : "")
+			+ (p.length ? " " + p.length + " long" : "") + (p.roof !== "station" ? " " + p.roof : "") + ";").join(" ");
+	}
+
+	function readPlats(text) {
+		const out = [];
+		const clause = /platform\s+(\d+)\s*:\s*([^;]*);?/gi;
+		let m;
+		while ((m = clause.exec(text)) && out.length < MAX_PLATFORMS) {
+			const w = m[2].toLowerCase();
+			const width = /(\d+)\s+wide/.exec(w);
+			const length = /(\d+)\s+long/.exec(w);
+			out.push({ kind: /island/.test(w) ? "island" : "side", width: width ? +width[1] : 0, length: length ? +length[1] : 0,
+				roof: /canopy/.test(w) ? "canopy" : /open/.test(w) ? "open" : "station" });
+		}
+		return out;
+	}
+
+	/** A first list from the buttons above: two side platforms for one or two tracks, islands for more. */
+	function defaultPlats() {
+		const tracks = +$("tracks").value;
+		const islands = $("layout").value === "SIDE" ? 0 : tracks <= 2 && $("layout").value !== "ISLAND" ? 0 : Math.floor(tracks / 2);
+		const list = [];
+		if (islands === 0) {
+			list.push({ kind: "side", width: 0, length: 0, roof: "station" });
+			if (tracks >= 2) {
+				list.push({ kind: "side", width: 0, length: 0, roof: "station" });
+			}
+		} else {
+			for (let i = 0; i < islands; i++) {
+				list.push({ kind: "island", width: 0, length: 0, roof: "station" });
+			}
+			if (tracks % 2 === 1) {
+				list.push({ kind: "side", width: 0, length: 0, roof: "station" });
+			}
+		}
+		return list.slice(0, MAX_PLATFORMS);
+	}
+
+	function platSelect(pairs, value, onChange, label) {
+		const s = document.createElement("select");
+		s.setAttribute("aria-label", label);
+		for (const [v, l] of pairs) {
+			s.append(new Option(l, v));
+		}
+		s.value = String(value);
+		s.addEventListener("input", () => onChange(s.value));
+		return s;
+	}
+
+	function renderPlats() {
+		const on = $("listOn").checked;
+		$("listBody").hidden = !on;
+		// the list sets the tracks and the platform kinds, so those controls step aside while it is on
+		for (const id of ["tracksDown", "tracksUp", "layoutSeg"]) {
+			$(id).classList.toggle("dimmed", on);
+		}
+		$("platOut").textContent = plats.length + (plats.length === 1 ? " platform" : " platforms");
+		$("platDown").disabled = plats.length <= 1;
+		$("platUp").disabled = plats.length >= MAX_PLATFORMS;
+		const tracks = plats.reduce((n, p) => n + (p.kind === "island" ? 2 : 1), 0);
+		$("platNote").textContent = on ? tracks + (tracks === 1 ? " track" : " tracks") + ". Auto uses the station's width, length and roof." : "";
+		const rows = $("platRows");
+		rows.innerHTML = "";
+		const widths = [["0", "Auto width"]];
+		for (let w = 3; w <= 20; w++) {
+			widths.push([String(w), w + " wide"]);
+		}
+		plats.forEach((p, i) => {
+			const row = document.createElement("div");
+			row.className = "plat";
+			const num = document.createElement("span");
+			num.className = "num";
+			num.textContent = i + 1;
+			const length = document.createElement("input");
+			length.type = "number";
+			length.min = options.length[0];
+			length.max = options.length[1];
+			length.placeholder = "Auto length";
+			length.setAttribute("aria-label", "Platform " + (i + 1) + " length");
+			length.value = p.length || "";
+			length.addEventListener("change", () => {
+				const n = Math.round(+length.value);
+				p.length = length.value === "" || !n ? 0 : Math.min(options.length[1], Math.max(options.length[0], n));
+				length.value = p.length || "";
+				platsChanged();
+			});
+			row.append(num,
+				platSelect([["side", "Side"], ["island", "Island"]], p.kind, (v) => { p.kind = v; platsChanged(); }, "Platform " + (i + 1) + " type"),
+				platSelect([["station", "Station roof"], ["canopy", "Canopy"], ["open", "Open"]], p.roof, (v) => { p.roof = v; platsChanged(); },
+					"Platform " + (i + 1) + " roof"),
+				platSelect(widths, p.width, (v) => { p.width = +v; platsChanged(); }, "Platform " + (i + 1) + " width"),
+				length);
+			rows.append(row);
+		});
+	}
+
+	function platsChanged() {
+		$("platforms").value = platWords();
+		renderPlats();
+		changed();
+	}
+
+
+	function setupPlatforms() {
+		plats = readPlats($("platforms").value);
+		$("listOn").checked = plats.length > 0;
+		$("listOn").addEventListener("input", () => {
+			if ($("listOn").checked && plats.length === 0) {
+				plats = defaultPlats();
+			}
+			platsChanged();
+		});
+		$("platDown").addEventListener("click", () => {
+			plats.pop();
+			platsChanged();
+		});
+		$("platUp").addEventListener("click", () => {
+			plats.push({ kind: plats.length ? plats[plats.length - 1].kind : "side", width: 0, length: 0, roof: "station" });
+			platsChanged();
+		});
+		renderPlats();
+	}
+
 	async function init() {
 		options = await (await fetch("api/options")).json();
 		fillSelect($("layout"), options.layouts);
@@ -237,6 +378,7 @@
 		$("name").maxLength = options.maxName;
 		buildButtons();
 		restore();
+		setupPlatforms();
 		updateOutputs();
 		showWhere();
 		$("game").hidden = !IN_GAME;
