@@ -21,6 +21,11 @@ public final class StationPlanner {
 	private static final String HANGING_PIDS = "aurelia_transit_architecture:hanging_platform_pids";
 	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
+	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
+	/** One colour per platform at a terminus gate line, in turn: a stripe on the floor and over the arcade, to follow to the gates. */
+	private static final List<String> PLATFORM_COLOURS = List.of("aurelia_transit_architecture:metro_tile_blue",
+			"aurelia_transit_architecture:metro_tile_green", "aurelia_transit_architecture:metro_tile_orange",
+			"aurelia_transit_architecture:metro_tile_yellow");
 
 	private static final Comparator<PlannedBlock> BUILD_ORDER = Comparator.comparingInt((PlannedBlock b) -> b.role().ordinal())
 			.thenComparingInt(PlannedBlock::y).thenComparingInt(PlannedBlock::v).thenComparingInt(PlannedBlock::u);
@@ -201,6 +206,31 @@ public final class StationPlanner {
 
 		private static boolean isEdge(TrackLayout.PlatformBand band, int u) {
 			return u == band.uMin() && band.trackLeft() || u == band.uMax() && band.trackRight();
+		}
+
+		/** The platform in column u, or null. */
+		private TrackLayout.PlatformBand bandAt(int u) {
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (u >= band.uMin() && u <= band.uMax()) {
+					return band;
+				}
+			}
+			return null;
+		}
+
+		/** A platform's colour at the gate line. */
+		private static String platformColour(TrackLayout.PlatformBand band) {
+			return PLATFORM_COLOURS.get((band.number() - 1) % PLATFORM_COLOURS.size());
+		}
+
+		/** A big platform number plate hung from the structure above; double-sided, so it reads from both ways. */
+		private boolean numberSign(TrackLayout.PlatformBand band, int u, int y, int v, LocalDir front) {
+			final Cell cell = new Cell(u, y, v);
+			if (cells.containsKey(cell) || air.contains(cell)) {
+				return false;
+			}
+			cells.put(cell, new PlannedBlock(u, y, v, Role.FIXTURE, NUMBER_SIGN, front, Integer.toString(band.number()), ""));
+			return true;
 		}
 
 		void floors() {
@@ -854,9 +884,12 @@ public final class StationPlanner {
 				}
 			}
 			for (int u = u0; u <= u1; u++) {
+				final TrackLayout.PlatformBand band = bandAt(u);
 				for (int v = vL; v <= vE; v++) {
 					final boolean edge = u == u0 || u == u1 || v == vE;
-					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
+					// each platform's colour runs across the floor either side of its gates
+					final boolean stripe = !edge && band != null && (v == vL + 1 || v == vL + 3);
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : stripe ? platformColour(band) : b.floor());
 				}
 			}
 			// buffer stops across each track's clearance, just past its last rail node
@@ -889,7 +922,10 @@ public final class StationPlanner {
 					final boolean street = window || !pilaster && (y == 2 || y == 3) && Math.abs(u - door) > 2;
 					put(street ? Role.WINDOW : Role.WALL, u, y, vE, LocalDir.PLUS_V, street ? b.window() : id);
 					if (y >= StationGeometry.UPPER_FLOOR_Y) {
-						put(window ? Role.WINDOW : Role.WALL, u, y, vL, LocalDir.MINUS_V, window ? b.window() : id);
+						// the lintel over each platform carries its colour, with its number hung below
+						final TrackLayout.PlatformBand band = bandAt(u);
+						final String lintel = y == StationGeometry.UPPER_FLOOR_Y && band != null ? platformColour(band) : id;
+						put(window ? Role.WINDOW : Role.WALL, u, y, vL, LocalDir.MINUS_V, window ? b.window() : lintel);
 					}
 				}
 			}
@@ -952,6 +988,12 @@ public final class StationPlanner {
 					final int i = u - band.uMin();
 					final String kind = i == 0 || i == band.width() - 1 ? "kind=end" : i == band.width() / 2 ? "kind=wide" : "kind=gate";
 					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.MINUS_V, palette.blockId(Role.GATE), kind);
+				}
+			}
+			// a big number under the lintel over each platform, in the middle of its gates
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (band.uMax() > u0 && band.uMin() < u1) {
+					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.CANOPY_Y, vL, LocalDir.PLUS_V);
 				}
 			}
 			// boards over the gate line, hung from the lintel, and the clock above them
@@ -1094,6 +1136,12 @@ public final class StationPlanner {
 				final int uMid = (band.uMin() + band.uMax()) / 2;
 				for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 					put(Role.BRIDGE_PIER, uMid, y, vB, LocalDir.PLUS_V, b.pier());
+				}
+			}
+			// a big number under the deck beside each platform's pier, seen as you come off the stairs
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (site.served().contains(band.number())) {
+					numberSign(band, (band.uMin() + band.uMax()) / 2, StationGeometry.CANOPY_Y, vB - site.stairSide(), LocalDir.PLUS_V);
 				}
 			}
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy

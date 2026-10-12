@@ -15,11 +15,11 @@ import java.util.List;
  *                       building beside the tracks); the railway starts at u = buildingWidth
  * @param headDepth      a terminus: rows v = platformLength.. taken by the head building across the track ends and its
  *                       entrance apron (0 for a through station, whose tracks run on past both platform ends)
- * @param hub            a terminus whose first and last tracks run on through, past both sides of the head building, which
- *                       then only spans the platforms from the first to the last
+ * @param hubThrough     a hub: how many tracks on each side run on through, past the head building, which then only spans
+ *                       the platforms beside a bay track (0 for any other station; see {@link StationGeometry#hubThrough})
  */
 public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
-		int headDepth, boolean hub) {
+		int headDepth, int hubThrough) {
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -28,11 +28,16 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
 			int headDepth) {
-		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, false);
+		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, 0);
 	}
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms) {
 		this(width, platformLength, rampLength, tracks, platforms, 0, 0);
+	}
+
+	/** A terminus whose outer tracks run on through, past both sides of the head building. */
+	public boolean hub() {
+		return hubThrough > 0;
 	}
 
 	/** The tracks end at buffer stops in front of a head building at v = platformLength. */
@@ -50,9 +55,9 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return terminus() ? platformLength - 1 : vMax();
 	}
 
-	/** The track ends at the head building's buffer stops: every track of a terminus except a hub's first and last. */
+	/** The track ends at the head building's buffer stops: every track of a terminus except a hub's outer ones on each side. */
 	public boolean bay(Track track) {
-		return terminus() && !(hub && (track.number() == 1 || track.number() == tracks.size()));
+		return terminus() && track.number() > hubThrough && track.number() <= tracks.size() - hubThrough;
 	}
 
 	/** Last v this track (and its clearance) runs to: its buffer stop, or the footprint end for a track running through. */
@@ -60,14 +65,39 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return bay(track) ? platformLength - 1 : vMax();
 	}
 
-	/** First column of a terminus head building: the whole width, or a hub's first platform. */
-	public int headFrom() {
-		return hub ? platforms.get(0).uMin() : 0;
+	/** A platform beside at least one bay track: it runs level into the head building's concourse. */
+	public boolean bay(PlatformBand band) {
+		for (final Track track : tracks) {
+			if (bay(track) && (track.u() == band.uMin() - StationGeometry.EDGE_OFFSET && band.trackLeft()
+					|| track.u() == band.uMax() + StationGeometry.EDGE_OFFSET && band.trackRight())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
-	/** Last column of a terminus head building: the whole width, or a hub's last platform. */
+	/** First column of a terminus head building: the whole width, or a hub's first platform beside a bay track. */
+	public int headFrom() {
+		if (hub()) {
+			for (final PlatformBand band : platforms) {
+				if (bay(band)) {
+					return band.uMin();
+				}
+			}
+		}
+		return 0;
+	}
+
+	/** Last column of a terminus head building: the whole width, or a hub's last platform beside a bay track. */
 	public int headTo() {
-		return hub ? platforms.get(platforms.size() - 1).uMax() : width - 1;
+		if (hub()) {
+			for (int i = platforms.size() - 1; i >= 0; i--) {
+				if (bay(platforms.get(i))) {
+					return platforms.get(i).uMax();
+				}
+			}
+		}
+		return width - 1;
 	}
 
 	/** Inside a station building: the side building's columns, or a terminus head building's rows. */

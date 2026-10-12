@@ -52,8 +52,11 @@ class HubStationTest {
 				final StationAudit.Result audit = StationAudit.audit(plan);
 				assertTrue(audit.buildable(), label + ": " + audit.problems());
 				assertTrue(audit.access().stream().allMatch(a -> a == StationAudit.Access.STEP_FREE), label + ": " + audit.access());
+				// four to six tracks keep one through track a side; eight and ten get two, an outer island with both running through
+				final int through = tracks >= 8 ? 2 : 1;
+				assertEquals(through, layout.hubThrough(), label);
 				for (final TrackLayout.Track track : layout.tracks()) {
-					final boolean outer = track.number() == 1 || track.number() == tracks;
+					final boolean outer = track.number() <= through || track.number() > tracks - through;
 					assertEquals(!outer, layout.bay(track), label + " track " + track.number());
 					final boolean buffer = plan.blocks().stream().anyMatch(b -> b.role() == Role.BUFFER_STOP && b.u() == track.u());
 					assertEquals(!outer, buffer, label + ": buffer stop on track " + track.number());
@@ -62,6 +65,63 @@ class HubStationTest {
 					assertEquals(outer, reachesEnd, label + ": track " + track.number() + " runs past the head");
 				}
 			}
+		}
+	}
+
+	@Test
+	void theHeadBuildingSpansOnlyThePlatformsWithBayTracks() {
+		for (final int tracks : new int[] {4, 6, 8, 10}) {
+			final StationPlan plan = StationPlanner.plan(spec(tracks).build());
+			final TrackLayout layout = plan.layout();
+			final List<TrackLayout.PlatformBand> bays = layout.platforms().stream().filter(layout::bay).toList();
+			assertEquals(tracks >= 8 ? layout.platforms().size() - 2 : layout.platforms().size(), bays.size(), tracks + " tracks");
+			assertEquals(bays.get(0).uMin(), layout.headFrom(), tracks + " tracks");
+			assertEquals(bays.get(bays.size() - 1).uMax(), layout.headTo(), tracks + " tracks");
+			final boolean wider = plan.blocks().stream().anyMatch(b -> b.role() == Role.FLOOR && b.v() >= layout.platformLength()
+					&& b.v() <= layout.headEnd() && (b.u() < layout.headFrom() || b.u() > layout.headTo()));
+			assertFalse(wider, tracks + " tracks: head floor outside its platforms");
+			// the outer islands of a big hub are reached by a footbridge with a lift on every platform
+			final StationLayout site = StationLayout.of(plan.spec(), layout);
+			assertEquals(tracks >= 8, site.bridge(), tracks + " tracks");
+			if (site.bridge()) {
+				for (final TrackLayout.PlatformBand band : layout.platforms()) {
+					assertTrue(site.platformLift(band, layout) != null, tracks + " tracks: lift on platform " + band.number());
+				}
+			}
+		}
+	}
+
+	@Test
+	void narrowPlatformsKeepOneThroughTrackASide() {
+		for (final int width : new int[] {3, 4, 5}) {
+			final StationPlan plan = StationPlanner.plan(spec(10).platformWidth(width).build());
+			assertEquals(1, plan.layout().hubThrough(), "width " + width);
+			final StationAudit.Result audit = StationAudit.audit(plan);
+			assertTrue(audit.buildable(), "width " + width + ": " + audit.problems());
+			assertTrue(audit.access().stream().allMatch(a -> a == StationAudit.Access.STEP_FREE), "width " + width + ": " + audit.access());
+		}
+	}
+
+	@Test
+	void everyPlatformHasABigNumberAndAColourAtItsGates() {
+		for (final int tracks : new int[] {4, 10}) {
+			final StationPlan plan = StationPlanner.plan(spec(tracks).build());
+			final TrackLayout layout = plan.layout();
+			final java.util.Set<String> colours = new java.util.HashSet<>();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final String number = Integer.toString(band.number());
+				final boolean signed = plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":platform_number_sign") && b.text().equals(number)
+						&& b.u() >= band.uMin() && b.u() <= band.uMax());
+				assertTrue(signed, tracks + " tracks: number sign for platform " + number);
+				if (layout.bay(band)) {
+					final int mid = (band.uMin() + band.uMax()) / 2;
+					final String stripe = plan.blocks().stream().filter(b -> b.u() == mid && b.y() == 0 && b.v() == layout.platformLength() + 1)
+							.findFirst().orElseThrow().blockId();
+					assertTrue(stripe.contains("metro_tile_"), tracks + " tracks platform " + number + ": " + stripe);
+					colours.add(stripe);
+				}
+			}
+			assertEquals(Math.min(4, (int) layout.platforms().stream().filter(layout::bay).count()), colours.size(), "neighbours differ");
 		}
 	}
 

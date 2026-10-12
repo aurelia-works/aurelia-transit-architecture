@@ -63,6 +63,8 @@ public final class StationGeometry {
 	public static final int HEAD_DEPTH = 12;
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
+	/** Narrowest island with a two-column stair and room for a lift beside the walkway. */
+	public static final int MIN_LIFT_ISLAND_WIDTH = 6;
 	/** Stairs from a walking level to the footbridge or upper floor: one step per block of rise. */
 	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
 
@@ -107,7 +109,7 @@ public final class StationGeometry {
 		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : 0;
 		if (shift == 0) {
 			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
-					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, spec.hub());
+					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, hubThrough(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {
@@ -118,6 +120,18 @@ public final class StationGeometry {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight()));
 		}
 		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
+	}
+
+	/**
+	 * How many tracks on each side of a hub run on through past the head building: one up to six tracks, two from eight (an
+	 * outer island whose tracks both run through, reached by a footbridge), when the platforms are wide enough for its lifts;
+	 * 0 for any other station.
+	 */
+	public static int hubThrough(StationSpec spec) {
+		if (!spec.hub()) {
+			return 0;
+		}
+		return spec.trackCount() >= 8 && spec.platformWidth() >= MIN_LIFT_ISLAND_WIDTH ? 2 : 1;
 	}
 
 	/** Bands left to right: 'T' for a track, 'P' for a platform. */

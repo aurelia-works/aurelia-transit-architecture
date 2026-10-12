@@ -65,7 +65,8 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 				served.add(band.number());
 			}
 		}
-		boolean bridge = (spec.footbridge() || building) && !served.isEmpty() && (building || layout.platforms().size() >= 2);
+		// a big hub's outer islands have through tracks on both sides, so a footbridge links them to the bay platforms
+		boolean bridge = (spec.footbridge() || building || outerIslands(layout)) && !served.isEmpty() && (building || layout.platforms().size() >= 2);
 		final int bridgeV = entranceV;
 		int stairSide = 0;
 		if (bridgeV + 1 + 7 <= length - 1) {
@@ -84,6 +85,19 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		}
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
 				bridge ? served : List.of());
+	}
+
+	/** A hub with platforms beside no bay track: islands cut off from the head building by tracks running through. */
+	public static boolean outerIslands(TrackLayout layout) {
+		if (!layout.hub()) {
+			return false;
+		}
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			if (!layout.bay(band)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** v of the corridor's long wall that the platform stairs leave through. */
