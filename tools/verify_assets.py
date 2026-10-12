@@ -46,6 +46,7 @@ EXPECTED_PROPERTIES = {
     # 1.3
     "ViaductColumnBlock": {"style"},
     "ViaductBeamBlock": {"axis", "kind", "concrete"},
+    "GirderBlock": {"kind", "axis", "north", "east", "south", "west", "up", "down"},
     "ViaductBraceBlock": {"facing", "kind"},
     "StationStairBlock": {"facing", "half", "shape"},
     "StairEnclosureBlock": {"facing", "kind"},
@@ -185,7 +186,7 @@ def main():
                 for apply in part["apply"] if isinstance(part["apply"], list) else [part["apply"]]:
                     check_model(apply["model"], seen_models)
                 conditions = part.get("when", {})
-                for clause in conditions.get("AND", [conditions]):
+                for clause in conditions.get("AND", conditions.get("OR", [conditions])):
                     used |= set(clause)
             if expected is not None and not used <= expected:
                 problem(f"{block_id}: multipart conditions use {used - expected} not on {cls}")

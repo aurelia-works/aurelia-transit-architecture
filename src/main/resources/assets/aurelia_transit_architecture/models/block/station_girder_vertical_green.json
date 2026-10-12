@@ -1,0 +1,80 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/girder_green",
+    "s": "aurelia_transit_architecture:block/girder_green"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        0,
+        7
+      ],
+      "to": [
+        12,
+        16,
+        9
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            4,
+            7,
+            12,
+            9
+          ],
+          "texture": "#s",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            4,
+            7,
+            12,
+            9
+          ],
+          "texture": "#s",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#s"
+        },
+        "south": {
+          "uv": [
+            4,
+            0.0,
+            12,
+            16.0
+          ],
+          "texture": "#s"
+        },
+        "west": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            16.0
+          ],
+          "texture": "#s"
+        },
+        "east": {
+          "uv": [
+            7,
+            0.0,
+            9,
+            16.0
+          ],
+          "texture": "#s"
+        }
+      }
+    }
+  ],
+  "ambientocclusion": false
+}

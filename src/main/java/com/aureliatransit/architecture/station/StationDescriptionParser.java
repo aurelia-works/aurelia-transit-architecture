@@ -54,7 +54,7 @@ public final class StationDescriptionParser {
 	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct");
 	/** City words that pick a station building's look when a building is asked for (some also pick the platform style). */
 	private static final Map<String, BuildingStyle> CITY_BUILDINGS = Map.ofEntries(Map.entry("utrecht", BuildingStyle.MODERN),
-			Map.entry("leidsche", BuildingStyle.MODERN), Map.entry("rotterdam", BuildingStyle.MODERN), Map.entry("berlin", BuildingStyle.MODERN),
+			Map.entry("leidsche", BuildingStyle.MODERN), Map.entry("berlin", BuildingStyle.MODERN),
 			Map.entry("amsterdam", BuildingStyle.AMSTERDAM), Map.entry("hamburg", BuildingStyle.CLINKER), Map.entry("munich", BuildingStyle.CONCRETE),
 			Map.entry("munchen", BuildingStyle.CONCRETE), Map.entry("frankfurt", BuildingStyle.SANDSTONE), Map.entry("london", BuildingStyle.GOTHIC_BRICK),
 			Map.entry("pancras", BuildingStyle.GOTHIC_BRICK), Map.entry("gothic", BuildingStyle.GOTHIC_BRICK), Map.entry("victorian", BuildingStyle.GOTHIC_BRICK),
@@ -62,7 +62,12 @@ public final class StationDescriptionParser {
 			Map.entry("philadelphia", BuildingStyle.BEAUX_ARTS), Map.entry("washington", BuildingStyle.BEAUX_ARTS), Map.entry("chicago", BuildingStyle.BEAUX_ARTS),
 			Map.entry("american", BuildingStyle.BEAUX_ARTS), Map.entry("beaux", BuildingStyle.BEAUX_ARTS), Map.entry("classical", BuildingStyle.BEAUX_ARTS),
 			Map.entry("brick", BuildingStyle.AMSTERDAM), Map.entry("sandstone", BuildingStyle.SANDSTONE), Map.entry("limestone", BuildingStyle.ANTWERP),
-			Map.entry("marble", BuildingStyle.ANTWERP), Map.entry("clinker", BuildingStyle.CLINKER), Map.entry("brutalist", BuildingStyle.CONCRETE));
+			Map.entry("marble", BuildingStyle.ANTWERP), Map.entry("clinker", BuildingStyle.CLINKER), Map.entry("brutalist", BuildingStyle.CONCRETE),
+			Map.entry("america", BuildingStyle.BEAUX_ARTS), Map.entry("usa", BuildingStyle.BEAUX_ARTS), Map.entry("us", BuildingStyle.BEAUX_ARTS),
+			Map.entry("amtrak", BuildingStyle.BEAUX_ARTS), Map.entry("nyc", BuildingStyle.BEAUX_ARTS), Map.entry("york", BuildingStyle.BEAUX_ARTS),
+			Map.entry("boston", BuildingStyle.BEAUX_ARTS), Map.entry("english", BuildingStyle.GOTHIC_BRICK), Map.entry("british", BuildingStyle.GOTHIC_BRICK),
+			Map.entry("uk", BuildingStyle.GOTHIC_BRICK), Map.entry("leipzig", BuildingStyle.SANDSTONE), Map.entry("cologne", BuildingStyle.CLINKER),
+			Map.entry("koln", BuildingStyle.CLINKER), Map.entry("brussels", BuildingStyle.ANTWERP), Map.entry("rotterdam", BuildingStyle.MODERN));
 	/** Famous stations: naming one asks for its building. */
 	private static final Set<String> LANDMARKS = Set.of("pancras", "antwerp", "antwerpen", "philadelphia", "washington", "chicago");
 	/** Words that ask for a station building with a furnished interior. */
@@ -74,6 +79,14 @@ public final class StationDescriptionParser {
 	private static final Set<String> FOOTBRIDGE_WORDS = Set.of("footbridge", "footbridges", "overbridge", "overpass", "bridge", "skywalk");
 	private static final Set<String> TERRAIN_WORDS = Set.of("clear", "flatten", "level", "demolish", "replace", "remove", "terraform", "dig");
 	private static final Set<String> HALL_WORDS = Set.of("hall", "trainshed", "shed");
+	/** Shed shapes; each also asks for a hall roof. */
+	private static final Map<String, ShedShape> SHED_WORDS = Map.ofEntries(Map.entry("arch", ShedShape.ARCH), Map.entry("arched", ShedShape.ARCH),
+			Map.entry("barrel", ShedShape.ARCH), Map.entry("vault", ShedShape.ARCH), Map.entry("vaulted", ShedShape.ARCH), Map.entry("curved", ShedShape.ARCH),
+			Map.entry("pointed", ShedShape.POINTED), Map.entry("arches", ShedShape.MULTI_ARCH), Map.entry("vaults", ShedShape.MULTI_ARCH),
+			Map.entry("multispan", ShedShape.MULTI_ARCH));
+	/** Words that say several looks are mixed ("Utrecht and Hamburg combined"); read so they are not reported as ignored. */
+	private static final Set<String> MIX_WORDS = Set.of("combined", "combine", "combo", "mix", "mixed", "mixture", "hybrid", "fusion", "meets",
+			"cross", "crossed", "x", "blend", "blended", "inspired", "inspiration", "both", "between", "together", "merged", "merge");
 	private static final Set<String> CANOPY_WORDS = Set.of("canopy", "canopies", "covered", "roofed", "shelter", "shelters");
 	private static final Set<String> OPEN_WORDS = Set.of("open", "uncovered", "roofless");
 	private static final Set<String> STOP_WORDS = Set.of("a", "an", "the", "with", "and", "or", "of", "for", "to", "in", "on", "at", "by", "as",
@@ -91,6 +104,10 @@ public final class StationDescriptionParser {
 
 	/** A recognised phrase and the token where it started, so feedback comes out in text order. */
 	private record Note(int at, String text) {
+	}
+
+	/** A city or look word: the building look it gives, and the platform style it gives (null for looks such as "american"). */
+	private record Look(int at, String word, BuildingStyle building, StationStyle style) {
 	}
 
 	/** One parse: the tokens, what each was used for, and what the text set. Null fields were not mentioned. */
@@ -136,6 +153,10 @@ public final class StationDescriptionParser {
 		private int terminusAt = -1;
 		/** The first word that only sets a building's look (e.g. "brick"), to warn about when no building was asked for. */
 		private String lookOnlyWord;
+		/** City and look words in text order; mixed together when there are several. */
+		private final List<Look> looks = new ArrayList<>();
+		private boolean mixing;
+		private ShedShape shed;
 
 		ParseResult run(String description) {
 			String text = description;
@@ -390,6 +411,44 @@ public final class StationDescriptionParser {
 						return true;
 					}
 					return false;
+				case "flat":
+					if (next.equals("roof") || HALL_WORDS.contains(next)) {
+						if (shed == null) {
+							shed = ShedShape.FLAT;
+						}
+						setRoof(RoofType.HALL, i);
+						use(i, i + 1);
+						return true;
+					}
+					return false;
+				case "single":
+				case "multi":
+				case "multiple":
+				case "several":
+				case "triple":
+				case "twin":
+					if (next.equals("span") || next.equals("arch") || next.equals("arches") || next.equals("vault") || next.equals("vaults")) {
+						if (shed == null) {
+							shed = token.equals("single") ? ShedShape.ARCH : ShedShape.MULTI_ARCH;
+							note(i, shed == ShedShape.ARCH ? "one arched train shed" : "train shed of several arches");
+						}
+						if (roof == null) {
+							roof = RoofType.HALL;
+						}
+						use(i, i + 1);
+						return true;
+					}
+					return false;
+				case "new":
+					if (next.equals("york")) {
+						setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
+						if (looks.stream().noneMatch(look -> look.building() == BuildingStyle.BEAUX_ARTS)) {
+							looks.add(new Look(i, "new york", BuildingStyle.BEAUX_ARTS, null));
+						}
+						use(i, i + 1);
+						return true;
+					}
+					return false;
 				case "overall":
 				case "full":
 				case "big":
@@ -542,22 +601,43 @@ public final class StationDescriptionParser {
 				return true;
 			}
 			final BuildingStyle city = CITY_BUILDINGS.get(token);
-			if (city != null) {
+			if (city != null && !(token.equals("us") && !looks.isEmpty())) {
 				setBuildingStyle(city, i);
 				if (LANDMARKS.contains(token)) {
 					askBuilding(i);
 				}
-				if (token.equals("antwerp") || token.equals("antwerpen") || token.equals("belgian")) {
-					setStyle(StationStyle.DUTCH, i);
+				final StationStyle platformStyle = token.equals("antwerp") || token.equals("antwerpen") || token.equals("belgian")
+						|| token.equals("brussels") ? StationStyle.DUTCH : STYLE_WORDS.get(token);
+				if (looks.stream().noneMatch(look -> look.building() == city && look.style() == platformStyle)) {
+					looks.add(new Look(i, token, city, platformStyle));
 				}
-				if (!STYLE_WORDS.containsKey(token)) {
-					if (!LANDMARKS.contains(token) && lookOnlyWord == null) {
-						lookOnlyWord = token;
-					}
-					use(i, i);
-					return true;
+				if (lookOnlyWord == null && platformStyle == null && !LANDMARKS.contains(token)) {
+					lookOnlyWord = token;
 				}
-				return false; // the style branch still reads it
+				use(i, i);
+				return true;
+			}
+			if (MIX_WORDS.contains(token)) {
+				mixing = true;
+				use(i, i);
+				return true;
+			}
+			final ShedShape shape = SHED_WORDS.get(token);
+			if (shape != null) {
+				if (shed == null) {
+					shed = shape;
+					note(i, switch (shape) {
+						case ARCH -> "arched train shed";
+						case POINTED -> "pointed-arch train shed";
+						case MULTI_ARCH -> "train shed of several arches";
+						case FLAT -> "flat train shed";
+					});
+				}
+				if (roof == null) {
+					roof = RoofType.HALL;
+				}
+				use(i, i);
+				return true;
 			}
 			if (BUILDING_WORDS.contains(token)) {
 				askBuilding(i);
@@ -580,6 +660,67 @@ public final class StationDescriptionParser {
 				return true;
 			}
 			return false;
+		}
+
+		/**
+		 * City and look words: the first gives the building's look and, unless the text says "no station building", asks for
+		 * a building; the first that has a platform style gives the platforms (an explicit style word wins). The train shed
+		 * comes from the last other look whose own station has an arched shed (Hamburg, Amsterdam, St Pancras, Antwerp,
+		 * Frankfurt), or from the only look when that has one, unless the text chose a roof.
+		 */
+		private void resolveLooks() {
+			if (looks.isEmpty()) {
+				return;
+			}
+			final Look first = looks.get(0);
+			if (building == null) {
+				askBuilding(first.at());
+			}
+			Look platforms = null;
+			if (style == null) {
+				for (final Look look : looks) {
+					if (look.style() != null) {
+						style = look.style();
+						platforms = look;
+						note(look.at(), styleName(style) + " platforms");
+						break;
+					}
+				}
+			}
+			Look shedLook = null;
+			for (int k = looks.size() - 1; k >= 0 && shedLook == null; k--) {
+				final Look look = looks.get(k);
+				if ((k > 0 || looks.size() == 1) && ShedShape.forLook(look.building(), look.style() == null ? StationStyle.MODERN : look.style()).arched()) {
+					shedLook = look;
+				}
+			}
+			if (shedLook != null && !roofNone && (roof == null && !weakRoof || roof == RoofType.HALL)) {
+				if (roof == null) {
+					roof = RoofType.HALL;
+				}
+				if (shed == null) {
+					shed = ShedShape.forLook(shedLook.building(), shedLook.style() == null ? StationStyle.MODERN : shedLook.style());
+					note(shedLook.at(), switch (shed) {
+						case POINTED -> "pointed-arch train shed";
+						case MULTI_ARCH -> "train shed of several arches";
+						default -> "arched glass train shed";
+					});
+				}
+			}
+			if (looks.size() > 1 || mixing) {
+				final StringBuilder mix = new StringBuilder("mix: building from ").append(title(first.word()));
+				if (platforms != null) {
+					mix.append(", platforms from ").append(title(platforms.word()));
+				}
+				if (shedLook != null && roof == RoofType.HALL) {
+					mix.append(", train shed from ").append(title(shedLook.word()));
+				}
+				note(first.at(), mix.toString());
+			}
+		}
+
+		private static String title(String word) {
+			return word.length() <= 3 ? word.toUpperCase(Locale.ROOT) : Character.toUpperCase(word.charAt(0)) + word.substring(1);
 		}
 
 		private void askBuilding(int i) {
@@ -811,6 +952,7 @@ public final class StationDescriptionParser {
 				defaulted.add("width " + defaultWidth + " (default)");
 			}
 
+			resolveLooks();
 			if (style != null) {
 				builder.style(style);
 			} else {
@@ -875,10 +1017,9 @@ public final class StationDescriptionParser {
 			} else if (bridge) {
 				builder.footbridge(true);
 			}
-			if ((wantsBuilding && !terminus || bridge && !terminus) && !roofNone && roof == RoofType.HALL) {
-				builder.roof(RoofType.CANOPY);
-				warn("a hall roof cannot be combined with a footbridge or a building beside the tracks yet (a terminus can have one); "
-						+ "using canopies");
+			if (roof == RoofType.HALL && !roofNone) {
+				builder.shed(shed != null ? shed : ShedShape.forLook(wantsBuilding ? builder.build().building() : BuildingStyle.NONE,
+						style != null ? style : StationStyle.MODERN));
 			}
 			builder.name(name);
 			return builder.build();

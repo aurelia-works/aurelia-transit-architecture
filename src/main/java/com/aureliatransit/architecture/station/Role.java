@@ -31,8 +31,10 @@ public enum Role {
 	COLUMN,
 	/** Top block of a column, under the roof (a style may use a capital such as the Utrecht tree column). */
 	COLUMN_CAP,
-	/** Hall roof beam across the station, carried by platform columns. */
+	/** Hall roof girder across the station or along a column line, eaves or valley, carried by platform columns. */
 	BEAM,
+	/** Arch rib or hanger of a vaulted hall: girders under the vault, joined to the frame. */
+	RIB,
 	ROOF,
 	/** Outer roof cell; its front points outwards. */
 	ROOF_EDGE,
@@ -75,7 +77,7 @@ public enum Role {
 	}
 
 	public boolean roofPart() {
-		return this == BEAM || this == ROOF || this == ROOF_EDGE || this == ROOF_LIGHT;
+		return this == BEAM || this == RIB || this == ROOF || this == ROOF_EDGE || this == ROOF_LIGHT;
 	}
 
 	/** A full block a passenger can stand on top of (ramps and stairs have their own rules). */

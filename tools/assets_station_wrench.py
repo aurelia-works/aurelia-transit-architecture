@@ -14,6 +14,8 @@ import generate_assets as g
 MOD = g.MOD
 TIP = f"tooltip.{MOD}.station_wrench"
 SCREEN = f"screen.{MOD}.station_wrench."
+PRESETS = {"utrecht": "Utrecht", "amsterdam": "Amsterdam", "st_pancras": "St Pancras", "antwerp": "Antwerp", "frankfurt": "Frankfurt",
+           "hamburg": "Hamburg", "munich": "Munich", "grand_central": "Grand Central"}
 SOURCE = Path(__file__).resolve().parent / "models" / "station_wrench"
 
 
@@ -36,7 +38,7 @@ def lang():
         SCREEN + "build_replace.tip": "Also changes the terrain the plan listed",
         SCREEN + "cancel": "Cancel",
         SCREEN + "undo": "Undo last build",
-    }
+    } | {SCREEN + f"preset.{k}": n for k, n in PRESETS.items()}
 
 
 def write_extra(assets, data, write_json):

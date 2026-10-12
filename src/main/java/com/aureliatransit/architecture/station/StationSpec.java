@@ -14,10 +14,11 @@ import java.util.Objects;
  * @param building       the station building's style; {@link BuildingStyle#NONE} for platforms only
  * @param footbridge     a footbridge over the tracks to every platform was asked for (a building adds one when a platform
  *                       needs it)
+ * @param shed           the hall roof's cross-section; ignored unless {@code roof} is {@link RoofType#HALL}
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
-		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus) {
+		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 4;
@@ -40,6 +41,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(roofMaterial, "roofMaterial");
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(building, "building");
+		Objects.requireNonNull(shed, "shed");
 		check(trackCount, MIN_TRACKS, MAX_TRACKS, "trackCount");
 		check(platformLength, MIN_LENGTH, MAX_LENGTH, "platformLength");
 		check(platformWidth, MIN_WIDTH, MAX_WIDTH, "platformWidth");
@@ -51,9 +53,6 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		}
 		if (terminus && footbridge) {
 			throw new IllegalArgumentException("a terminus is reached from its concourse, not a footbridge");
-		}
-		if (roof == RoofType.HALL && (footbridge || building != BuildingStyle.NONE && !terminus)) {
-			throw new IllegalArgumentException("a hall roof cannot be combined with a footbridge or a building beside the tracks yet");
 		}
 		if (name.length() > MAX_NAME) {
 			throw new IllegalArgumentException("name longer than " + MAX_NAME + " characters");
@@ -78,7 +77,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public Builder toBuilder() {
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
-				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus);
+				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed);
 	}
 
 	public boolean hasBuilding() {
@@ -109,6 +108,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private BuildingStyle building = BuildingStyle.NONE;
 		private boolean footbridge;
 		private boolean terminus;
+		private ShedShape shed = ShedShape.FLAT;
 
 		private Builder() {
 		}
@@ -193,9 +193,14 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder shed(ShedShape value) {
+			shed = value;
+			return this;
+		}
+
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name, building, footbridge, terminus);
+					tactile, furniture, railNodes, name, building, footbridge, terminus, shed);
 		}
 	}
 }

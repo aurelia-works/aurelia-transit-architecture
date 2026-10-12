@@ -327,7 +327,7 @@ public final class LayoutValidator {
 			final Map<Long, Integer> reach = new HashMap<>();
 			final int reachLimit = StationGeometry.MAX_CANTILEVER;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role() != Role.COLUMN_CAP && block.role() != Role.BEAM && block.role() != Role.BRIDGE_PIER) {
+				if (block.role() != Role.COLUMN_CAP && block.role() != Role.BEAM && block.role() != Role.RIB && block.role() != Role.BRIDGE_PIER) {
 					continue;
 				}
 				for (int du = -reachLimit; du <= reachLimit; du++) {
@@ -359,7 +359,7 @@ public final class LayoutValidator {
 			// Beam lines: BEAM cells with the same y and v, as u -> block, in u order.
 			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role() == Role.BEAM) {
+				if (block.role() == Role.BEAM && !alongV(block)) {
 					lines.computeIfAbsent(((long) block.y() << 32) ^ (block.v() & 0xFFFFFFFFL), k -> new TreeMap<>()).put(block.u(), block);
 				}
 			}
@@ -380,7 +380,73 @@ public final class LayoutValidator {
 					checkRun(found, line.get(runStart), runStart, previous);
 				}
 			}
+			found.addAll(longitudinalSpans());
 			return found;
+		}
+
+		private static boolean alongV(PlannedBlock block) {
+			return block.front() == LocalDir.PLUS_V || block.front() == LocalDir.MINUS_V;
+		}
+
+		/**
+		 * Girders along v (column lines, eaves) rest on cross beams or caps: each run needs a support at an end or a cap under
+		 * it, spans at most {@link StationGeometry#MAX_BEAM_SPAN} between supports and overhangs at most
+		 * {@link StationGeometry#MAX_CANTILEVER} past its last one.
+		 */
+		private List<Violation> longitudinalSpans() {
+			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.BEAM && alongV(block)) {
+					lines.computeIfAbsent(((long) block.y() << 32) ^ (block.u() & 0xFFFFFFFFL), k -> new TreeMap<>()).put(block.v(), block);
+				}
+			}
+			final List<Violation> found = new ArrayList<>();
+			for (final TreeMap<Integer, PlannedBlock> line : lines.values()) {
+				final List<int[]> runs = new ArrayList<>();
+				for (final int v : line.keySet()) {
+					if (!runs.isEmpty() && runs.get(runs.size() - 1)[1] == v - 1) {
+						runs.get(runs.size() - 1)[1] = v;
+					} else {
+						runs.add(new int[]{v, v});
+					}
+				}
+				final PlannedBlock any = line.firstEntry().getValue();
+				final int u = any.u();
+				final int y = any.y();
+				for (final int[] run : runs) {
+					final boolean before = carriesGirder(u, y, run[0] - 1);
+					final boolean after = carriesGirder(u, y, run[1] + 1);
+					boolean capped = false;
+					for (int v = run[0]; v <= run[1] && !capped; v++) {
+						capped = has(u, y - 1, v, Role.COLUMN_CAP);
+					}
+					final int length = run[1] - run[0] + 1;
+					final String where = "girder at u=" + u + " v=" + run[0] + ".." + run[1];
+					if (!before && !after && !capped) {
+						found.add(new Violation(Violation.Kind.ROOF_SPAN, u, y, run[0], where + " rests on nothing"));
+					} else if (before && after && length > StationGeometry.MAX_BEAM_SPAN) {
+						found.add(new Violation(Violation.Kind.ROOF_SPAN, u, y, run[0], where + " spans " + length + " cells (max " + StationGeometry.MAX_BEAM_SPAN + ")"));
+					} else if (before != after && !capped && length > StationGeometry.MAX_CANTILEVER) {
+						found.add(new Violation(Violation.Kind.ROOF_SPAN, u, y, run[0], where + " overhangs " + length + " cells (max " + StationGeometry.MAX_CANTILEVER + ")"));
+					}
+				}
+			}
+			return found;
+		}
+
+		/** A cross beam, a column cap, a wall or a pier at (u, y, v) that a girder along v can end on. */
+		private boolean carriesGirder(int u, int y, int v) {
+			final List<PlannedBlock> here = cells.get(new Cell(u, y, v));
+			if (here == null) {
+				return false;
+			}
+			for (final PlannedBlock block : here) {
+				final Role role = block.role();
+				if (role == Role.BEAM && !alongV(block) || role == Role.COLUMN_CAP || role == Role.WALL || role == Role.BRIDGE_PIER) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		private void checkRun(List<Violation> found, PlannedBlock first, int uStart, int uEnd) {
@@ -388,7 +454,7 @@ public final class LayoutValidator {
 			final int v = first.v();
 			final List<Integer> caps = new ArrayList<>();
 			for (int u = uStart; u <= uEnd; u++) {
-				if (has(u, y - 1, v, Role.COLUMN_CAP)) {
+				if (has(u, y - 1, v, Role.COLUMN_CAP) || has(u, y - 1, v, Role.BRIDGE_PIER)) {
 					caps.add(u);
 				}
 			}

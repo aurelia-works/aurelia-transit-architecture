@@ -404,7 +404,9 @@ class StationDescriptionParserTest {
 		assertEquals(BuildingStyle.NONE, spec("no station building").building());
 		assertTrue(spec("station with footbridge").footbridge());
 		assertTrue(spec("station building with footbridge").footbridge());
-		assertTrue(StationDescriptionParser.parse("station building with hall roof").warnings().stream().anyMatch(w -> w.contains("hall roof")));
+		// a train shed now goes over a station with a building beside the tracks (tall enough to clear its footbridge)
+		assertTrue(StationDescriptionParser.parse("station building with hall roof").warnings().isEmpty());
+		assertEquals(RoofType.HALL, spec("station building with hall roof").roof());
 	}
 
 	@Test
@@ -419,7 +421,56 @@ class StationDescriptionParserTest {
 		final ParseResult bridge = StationDescriptionParser.parse("terminus with footbridge");
 		assertFalse(bridge.spec().footbridge());
 		assertTrue(bridge.warnings().stream().anyMatch(w -> w.contains("no footbridge")), bridge.warnings().toString());
-		assertTrue(StationDescriptionParser.parse("station building, hall roof").warnings().stream().anyMatch(w -> w.contains("hall roof")));
+		assertEquals(RoofType.HALL, spec("station building, hall roof").roof());
 		assertFalse(spec("station building").terminus());
+	}
+
+	// ---- mixed looks and train sheds -------------------------------------------------------------------------------
+
+	@Test
+	void mixedLooksGiveBuildingPlatformsAndShedFromDifferentCities() {
+		final ParseResult result = StationDescriptionParser.parse("make an american train station and make utrecht and hamburg combined");
+		final StationSpec spec = result.spec();
+		assertEquals(BuildingStyle.BEAUX_ARTS, spec.building(), "the first look gives the building");
+		assertEquals(StationStyle.DUTCH, spec.style(), "the first look with platforms gives them");
+		assertEquals(RoofType.HALL, spec.roof(), "a Hamburg look brings its train shed");
+		assertEquals(ShedShape.ARCH, spec.shed());
+		assertEquals(List.of(), result.warnings());
+		assertEquals(List.of(), result.ignored());
+		assertTrue(result.understood().stream().anyMatch(line -> line.startsWith("mix: building from American")), result.understood().toString());
+		assertTrue(LayoutValidator.validate(StationPlanner.plan(spec)).isEmpty());
+		assertTrue(StationAudit.audit(StationPlanner.plan(spec)).buildable());
+
+		final StationSpec utrechtHamburg = spec("utrecht x hamburg");
+		assertEquals(BuildingStyle.MODERN, utrechtHamburg.building());
+		assertEquals(StationStyle.DUTCH, utrechtHamburg.style());
+		assertEquals(ShedShape.ARCH, utrechtHamburg.shed());
+	}
+
+	@Test
+	void aCityAsksForItsBuildingAndSignatureShed() {
+		assertEquals(BuildingStyle.CLINKER, spec("hamburg station").building());
+		assertEquals(RoofType.HALL, spec("hamburg station").roof());
+		assertEquals(ShedShape.POINTED, spec("st pancras terminus").shed());
+		assertEquals(ShedShape.MULTI_ARCH, spec("frankfurt terminus").shed());
+		assertEquals(BuildingStyle.BEAUX_ARTS, spec("american train station").building());
+		assertEquals(RoofType.CANOPY, spec("american train station").roof(), "Grand Central has no train shed");
+		assertEquals(BuildingStyle.BEAUX_ARTS, spec("new york station").building());
+		// a chosen roof wins over the city's shed, and "no station building" keeps platforms only
+		assertEquals(RoofType.CANOPY, spec("hamburg station with canopies").roof());
+		assertEquals(BuildingStyle.NONE, spec("hamburg station, no station building").building());
+		assertEquals(StationStyle.GERMAN_SBAHN, spec("hamburg station, no station building").style());
+		// a style word still wins over a city's platforms
+		assertEquals(StationStyle.METRO, spec("metro style utrecht station").style());
+	}
+
+	@Test
+	void shedWordsPickTheShape() {
+		assertEquals(ShedShape.ARCH, spec("arched roof").shed());
+		assertEquals(RoofType.HALL, spec("vaulted roof").roof());
+		assertEquals(ShedShape.POINTED, spec("pointed arch train shed").shed());
+		assertEquals(ShedShape.MULTI_ARCH, spec("four tracks, multi span shed").shed());
+		assertEquals(ShedShape.FLAT, spec("hamburg station, flat roof").shed());
+		assertEquals(List.of(), StationDescriptionParser.parse("utrecht and hamburg mixed, pointed arch").ignored());
 	}
 }

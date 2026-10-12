@@ -11,6 +11,7 @@ import com.aureliatransit.architecture.block.elevated.CurvedScreenDoorBlock;
 import com.aureliatransit.architecture.block.elevated.TrainEdgeBlock;
 import com.aureliatransit.architecture.block.mtr.MtrPlatformContract;
 import com.aureliatransit.architecture.block.elevated.FareGateBlock;
+import com.aureliatransit.architecture.block.elevated.GirderBlock;
 import com.aureliatransit.architecture.block.elevated.HandrailBlock;
 import com.aureliatransit.architecture.block.elevated.LiftStatusPanelBlock;
 import com.aureliatransit.architecture.block.elevated.NoiseBarrierBlock;
@@ -41,6 +42,7 @@ public final class ElevatedBlocks {
 	private static final String TIP = "tooltip." + AureliaTransitArchitecture.MOD_ID + ".";
 	private static final String TIP_STYLE = TIP + "style_cycle";
 	private static final String TIP_BEAM = TIP + "style_cycle_beam";
+	private static final String TIP_GIRDER = TIP + "girder_joins";
 	private static final String TIP_JOINS_RAIL = TIP + "railing_joins";
 	private static final String TIP_BRACE = TIP + "brace_facing";
 
@@ -109,6 +111,10 @@ public final class ElevatedBlocks {
 
 	private ElevatedBlocks() {
 	}
+
+	/** Full-depth station roof girder that joins its neighbours on all six sides; the station generator's hall frames and arch ribs. */
+	public static final Block STATION_GIRDER = ModBlocks.register("station_girder", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
+			new GirderBlock(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP_GIRDER);
 
 	public static void init() {
 		// Class loading registers everything declared here.

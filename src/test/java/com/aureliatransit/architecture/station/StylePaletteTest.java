@@ -129,7 +129,7 @@ class StylePaletteTest {
 		assertEquals(ATA + surface, palette.blockId(Role.PLATFORM_SURFACE), label);
 		assertEquals(ATA + column, palette.blockId(Role.COLUMN), label);
 		assertEquals(ATA + cap, palette.blockId(Role.COLUMN_CAP), label);
-		assertEquals(ATA + "structural_beam", palette.blockId(Role.BEAM), label);
+		assertEquals(ATA + "station_girder", palette.blockId(Role.BEAM), label);
 		assertEquals(ATA + roofId, palette.blockId(Role.ROOF), label);
 		assertEquals(ATA + roofEdge, palette.blockId(Role.ROOF_EDGE), label);
 		assertEquals(ATA + light, palette.blockId(Role.ROOF_LIGHT), label);

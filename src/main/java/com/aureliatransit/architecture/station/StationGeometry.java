@@ -32,6 +32,10 @@ public final class StationGeometry {
 	public static final int HALL_BEAM_Y = ENVELOPE_HEIGHT;
 	/** ... and the hall roof on top of them. */
 	public static final int HALL_ROOF_Y = HALL_BEAM_Y + 1;
+	/** The frame of a wide vaulted shed, so the vault springs well above the trains. */
+	public static final int HIGH_HALL_BEAM_Y = 8;
+	/** The frame of a shed over a footbridge or beside a station building: above the bridge roof and the building's cornice. */
+	public static final int TALL_HALL_BEAM_Y = 11;
 	/** Columns stand every this many cells along a platform. */
 	public static final int COLUMN_SPACING = 8;
 	/** A roof cell must be within this many cells (along u and along v) of a column top or a beam carried by columns. */

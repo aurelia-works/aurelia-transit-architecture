@@ -24,6 +24,9 @@ public final class StylePalette {
 	private final String bench;
 	private final String sign;
 	private Building building = Building.of(BuildingStyle.MODERN);
+	private BuildingStyle buildingStyle = BuildingStyle.NONE;
+	private StationStyle style = StationStyle.MODERN;
+	private RoofMaterial roofMaterial = RoofMaterial.STYLE_DEFAULT;
 
 	/**
 	 * Materials of a station building and its footbridge. Ids are ATA or vanilla blocks; {@code cornice} and {@code window}
@@ -116,7 +119,29 @@ public final class StylePalette {
 		final StylePalette palette = new StylePalette(surfaceOverride(spec.surface(), base.surface), base.edge, base.column, base.cap,
 				roofOverride(spec.roofMaterial(), hall, base.roof), base.roofEdge, base.roofLight, base.lamp, base.bench, base.sign);
 		palette.building = Building.of(spec.building());
+		palette.buildingStyle = spec.building();
+		palette.style = spec.style();
+		palette.roofMaterial = spec.roofMaterial();
 		return palette;
+	}
+
+	/** The {@code kind} state of the station girders: the colour of the roof steel, from the building look or the platform style. */
+	public String girderKind() {
+		return switch (buildingStyle) {
+			case GOTHIC_BRICK -> "blue";
+			case ANTWERP, BEAUX_ARTS, AMSTERDAM -> "green";
+			case SANDSTONE, CLINKER, CONCRETE -> "steel";
+			case MODERN -> "white";
+			case NONE -> switch (style) {
+				case MODERN, DUTCH -> "white";
+				case GERMAN_SBAHN, METRO -> "steel";
+			};
+		};
+	}
+
+	/** The spec asked for a glass roof. */
+	public boolean roofMaterialGlass() {
+		return roofMaterial == RoofMaterial.GLASS;
 	}
 
 	/** The station building's materials (the modern set when the spec has no building). */
@@ -134,7 +159,7 @@ public final class StylePalette {
 			case RAIL_NODE -> MTR_RAIL_NODE;
 			case COLUMN -> column;
 			case COLUMN_CAP -> cap;
-			case BEAM -> ata("structural_beam");
+			case BEAM, RIB -> ata("station_girder");
 			case ROOF -> roof;
 			case ROOF_EDGE -> roofEdge;
 			case ROOF_LIGHT -> roofLight;

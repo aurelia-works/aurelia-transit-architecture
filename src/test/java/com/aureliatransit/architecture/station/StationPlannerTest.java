@@ -29,6 +29,7 @@ class StationPlannerTest {
 	private static final int[] LENGTHS = {16, 47, 160};
 	private static final int[] WIDTHS = {3, 8};
 	private static final String NAME = "Leidsche Rijn";
+	private static final String ATA = "aurelia_transit_architecture:";
 	private static final int MAX_REPORTED = 8;
 
 	// ---------------------------------------------------------------- the matrix scan
@@ -595,11 +596,22 @@ class StationPlannerTest {
 		final StationPlan plan = plan(spec);
 		final int width = plan.layout().width();
 		final List<Integer> positions = StationPlanner.columnPositions(spec.platformLength());
-		assertEquals(positions.size() * width, blocks(plan, Role.BEAM).size());
+		final List<PlannedBlock> across = blocks(plan, Role.BEAM).stream().filter(b -> b.front() == LocalDir.PLUS_U).toList();
+		assertEquals(positions.size() * width, across.size());
+		for (final PlannedBlock beam : across) {
+			assertTrue(positions.contains(beam.v()));
+		}
+		// girders along both eaves and both column lines of the island, between the cross girders
+		final List<PlannedBlock> along = blocks(plan, Role.BEAM).stream().filter(b -> b.front() == LocalDir.PLUS_V).toList();
+		assertEquals(4 * (spec.platformLength() - positions.size()), along.size());
 		for (final PlannedBlock beam : blocks(plan, Role.BEAM)) {
 			assertEquals(StationGeometry.HALL_BEAM_Y, beam.y());
-			assertEquals(LocalDir.PLUS_U, beam.front());
-			assertTrue(positions.contains(beam.v()));
+			assertEquals(ATA + "station_girder", beam.blockId());
+			assertEquals("kind=white", beam.state());
+		}
+		// every column cap carries a girder: nothing floats between the column and the roof
+		for (final PlannedBlock cap : blocks(plan, Role.COLUMN_CAP)) {
+			assertTrue(blocks(plan, Role.BEAM).stream().anyMatch(b -> b.u() == cap.u() && b.v() == cap.v() && b.y() == cap.y() + 1), cap.toString());
 		}
 		final int roofCells = blocks(plan, Role.ROOF).size() + blocks(plan, Role.ROOF_EDGE).size() + blocks(plan, Role.ROOF_LIGHT).size();
 		assertEquals(width * spec.platformLength(), roofCells);
@@ -963,6 +975,59 @@ class StationPlannerTest {
 	void terminusNeedsAHeadBuildingAndNoFootbridge() {
 		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().terminus(true).build());
 		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().building(BuildingStyle.MODERN).terminus(true).footbridge(true).build());
-		assertThrows(IllegalArgumentException.class, () -> StationSpec.builder().building(BuildingStyle.MODERN).roof(RoofType.HALL).build());
+	}
+
+	@Test
+	void shedMatrixIsSoundForEveryShapeBuildingAndLayout() {
+		final List<String> failures = new ArrayList<>();
+		int specs = 0;
+		for (final ShedShape shape : ShedShape.values()) {
+			for (int tracks = 1; tracks <= 4; tracks++) {
+				for (final PlatformLayout layout : PlatformLayout.values()) {
+					if (layout == PlatformLayout.ISLAND && tracks < 2 || layout == PlatformLayout.SIDE && tracks >= 3) {
+						continue;
+					}
+					for (final BuildingStyle building : BuildingStyle.values()) {
+						for (final int mode : new int[] {0, 1, 2}) {
+							// 0: platforms only, 1: building beside the tracks (with its footbridge), 2: terminus
+							if (mode > 0 && building == BuildingStyle.NONE || mode == 0 && building != BuildingStyle.NONE) {
+								continue;
+							}
+							for (final int length : new int[] {32, 64, 97}) {
+								final StationSpec spec = StationSpec.builder().trackCount(tracks).platformLayout(layout).roof(RoofType.HALL).shed(shape)
+										.building(building).terminus(mode == 2).platformLength(length)
+										.platformWidth(layout == PlatformLayout.ISLAND ? 6 : 4).name("Alpha").build();
+								specs++;
+								final StationPlan plan = plan(spec);
+								final String label = shape + " " + tracks + "x" + layout + " " + building + " mode" + mode + " L" + length;
+								final List<Violation> violations = LayoutValidator.validate(plan);
+								if (!violations.isEmpty()) {
+									failures.add(label + ": " + violations.get(0));
+								}
+								final StationAudit.Result report = StationAudit.audit(plan);
+								if (!report.buildable()) {
+									failures.add(label + ": audit " + report.problems());
+								}
+								final List<PlannedBlock> floating = unconnected(plan);
+								if (!floating.isEmpty()) {
+									failures.add(label + ": " + floating.size() + " floating, first " + floating.get(0));
+								}
+								for (final PlannedBlock block : plan.blocks()) {
+									for (final TrackLayout.Track track : plan.layout().tracks()) {
+										if (block.role() != Role.RAIL_NODE && block.role() != Role.BUFFER_STOP
+												&& Math.abs(block.u() - track.u()) <= StationGeometry.ENVELOPE_HALF_WIDTH && block.y() >= 0
+												&& block.y() < StationGeometry.ENVELOPE_HEIGHT && block.v() <= plan.layout().trackEnd()) {
+											failures.add(label + ": " + block + " in the envelope of track " + track.number());
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		assertTrue(specs > 300, "specs " + specs);
+		assertEquals(List.of(), failures.subList(0, Math.min(20, failures.size())), failures.size() + " failures of " + specs);
 	}
 }

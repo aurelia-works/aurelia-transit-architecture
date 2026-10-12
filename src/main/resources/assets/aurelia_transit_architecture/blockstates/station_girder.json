@@ -1,0 +1,484 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "kind": "steel"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_node_steel"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "steel",
+            "north": "true"
+          },
+          {
+            "kind": "steel",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_steel"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "steel",
+            "east": "true"
+          },
+          {
+            "kind": "steel",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_steel",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "steel",
+            "south": "true"
+          },
+          {
+            "kind": "steel",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_steel",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "steel",
+            "west": "true"
+          },
+          {
+            "kind": "steel",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_steel",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "steel",
+            "up": "true"
+          },
+          {
+            "kind": "steel",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_vertical_steel"
+      }
+    },
+    {
+      "when": {
+        "kind": "white"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_node_white"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "white",
+            "north": "true"
+          },
+          {
+            "kind": "white",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_white"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "white",
+            "east": "true"
+          },
+          {
+            "kind": "white",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_white",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "white",
+            "south": "true"
+          },
+          {
+            "kind": "white",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_white",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "white",
+            "west": "true"
+          },
+          {
+            "kind": "white",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_white",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "white",
+            "up": "true"
+          },
+          {
+            "kind": "white",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_vertical_white"
+      }
+    },
+    {
+      "when": {
+        "kind": "blue"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_node_blue"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "blue",
+            "north": "true"
+          },
+          {
+            "kind": "blue",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_blue"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "blue",
+            "east": "true"
+          },
+          {
+            "kind": "blue",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_blue",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "blue",
+            "south": "true"
+          },
+          {
+            "kind": "blue",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_blue",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "blue",
+            "west": "true"
+          },
+          {
+            "kind": "blue",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_blue",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "blue",
+            "up": "true"
+          },
+          {
+            "kind": "blue",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_vertical_blue"
+      }
+    },
+    {
+      "when": {
+        "kind": "green"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_node_green"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "green",
+            "north": "true"
+          },
+          {
+            "kind": "green",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_green"
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "green",
+            "east": "true"
+          },
+          {
+            "kind": "green",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_green",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "green",
+            "south": "true"
+          },
+          {
+            "kind": "green",
+            "axis": "z",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_green",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "green",
+            "west": "true"
+          },
+          {
+            "kind": "green",
+            "axis": "x",
+            "north": "false",
+            "east": "false",
+            "south": "false",
+            "west": "false",
+            "up": "false",
+            "down": "false"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_arm_green",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "OR": [
+          {
+            "kind": "green",
+            "up": "true"
+          },
+          {
+            "kind": "green",
+            "down": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_girder_vertical_green"
+      }
+    }
+  ]
+}

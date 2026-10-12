@@ -297,4 +297,14 @@ public final class ElevatedKinds {
 			return id(this);
 		}
 	}
+
+	/** Station roof girder colour: dark steel, white (modern), St Pancras blue, cast-iron green. */
+	public enum GirderKind implements StringIdentifiable {
+		STEEL, WHITE, BLUE, GREEN;
+
+		@Override
+		public String asString() {
+			return id(this);
+		}
+	}
 }
