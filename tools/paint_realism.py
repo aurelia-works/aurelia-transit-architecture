@@ -499,6 +499,209 @@ def concrete_light():
 
 
 # ---------------------------------------------------------------------------------------------------------------------
+# Batch A: station shells (brick, clinker, stone trim, marble)
+# ---------------------------------------------------------------------------------------------------------------------
+
+def brick_course(img, y0, offset, palette, mortar, r, dark_rate=0.07, iron=0.04, burnt=None):
+    """One course: a 1 px bed joint on row y0, then 3 px of bricks 8 px long (7 + a 1 px head joint), shifted by offset.
+    Each brick has its own colour, a lit top arris, a shaded bottom row and right end, and now and then a chipped corner."""
+    for x in range(16):  # bed joint, shaded where the brick above overhangs it (light from the top)
+        put(img, x, y0, g.shade(mortar, r.randint(-4, 4) - 6))
+    for sx in range(-offset, 16, 8):
+        colour = r.choice(palette)
+        if burnt and r.random() < dark_rate:
+            colour = burnt
+        put(img, sx, y0 + 1, g.shade(mortar, r.randint(-4, 4)))
+        put(img, sx, y0 + 2, g.shade(mortar, r.randint(-4, 4) - 3))
+        put(img, sx, y0 + 3, g.shade(mortar, r.randint(-4, 4) - 5))
+        for y in range(y0 + 1, y0 + 4):
+            for x in range(sx + 1, sx + 8):
+                c = g.shade(colour, r.randint(-6, 6))
+                if y == y0 + 1:
+                    c = g.shade(c, 9)
+                elif y == y0 + 3:
+                    c = g.shade(c, -7)
+                if x == sx + 7:
+                    c = g.shade(c, -5)
+                elif x == sx + 1:
+                    c = g.shade(c, 3)
+                if r.random() < iron:
+                    c = g.shade(c, -24)
+                put(img, x, y, c)
+        if r.random() < 0.1:  # chipped arris
+            cx = sx + r.choice((1, 7))
+            put(img, cx, y0 + r.choice((1, 3)), g.shade(mortar, -8))
+
+
+def brick_wall(palette, mortar, name, rows=(0, 1, 2, 3), burnt=None, dark_rate=0.07):
+    img = g.new()
+    r = g.rng(name + "-bricks")
+    for row in rows:
+        brick_course(img, row * 4, 0 if row % 2 == 0 else 4, palette, mortar, r, burnt=burnt, dark_rate=dark_rate)
+    return img
+
+
+def stone_course(img, y0, h, length, offset, colour, joint, r, lit=10, drip=-16):
+    """A stone band course of height h with long stones, a lit top, a drip shadow on its lowest row and thin joints."""
+    for sx in range(-offset, 16, length):
+        tone = r.randint(-5, 5)
+        for y in range(y0, y0 + h):
+            for x in range(sx, sx + length):
+                c = g.shade(colour, tone + r.randint(-3, 3))
+                if y == y0:
+                    c = g.shade(joint, r.randint(-3, 3))
+                elif y == y0 + 1:
+                    c = g.shade(c, lit)
+                elif y == y0 + h - 1:
+                    c = g.shade(c, drip)
+                if x == sx and y > y0:
+                    c = g.shade(joint, r.randint(-3, 3))
+                put(img, x, y, c)
+
+
+AMSTERDAM_BRICK = [(146, 62, 50), (136, 56, 46), (156, 70, 54), (128, 54, 46), (150, 66, 48), (140, 60, 52)]
+AMSTERDAM_MORTAR = (170, 162, 148)
+AMSTERDAM_SANDSTONE = (214, 196, 160)
+HAMBURG_CLINKER = [(86, 54, 48), (74, 46, 44), (102, 62, 50), (62, 48, 54), (94, 58, 44), (70, 56, 60)]
+HAMBURG_MORTAR = (140, 134, 124)
+HAMBURG_STONE = (190, 178, 150)
+SBAHN_BRICK = [(148, 66, 50), (134, 58, 46), (160, 76, 56), (120, 56, 50), (144, 70, 44)]
+SBAHN_MORTAR = (172, 164, 152)
+
+
+@paint("amsterdam_red_brick", "nlbe_brick")
+def amsterdam_brick():
+    """Cuypers' red facing brick in running bond, warm grey lime mortar."""
+    return brick_wall(AMSTERDAM_BRICK, AMSTERDAM_MORTAR, "rl_ams_brick", burnt=(104, 44, 40))
+
+
+@paint("amsterdam_brick_sandstone_band", "nlbe_brick_band_side")
+def amsterdam_band():
+    """A course of brick, a two-course sandstone band (lit top, drip shadow), then brick again; brick courses line up with
+    the plain brick block above and below."""
+    img = brick_wall(AMSTERDAM_BRICK, AMSTERDAM_MORTAR, "rl_ams_band", rows=(0, 3), burnt=(104, 44, 40))
+    r = g.rng("rl_ams_band-stone")
+    stone_course(img, 4, 4, 16, 3, AMSTERDAM_SANDSTONE, g.shade(AMSTERDAM_SANDSTONE, -40), r)
+    stone_course(img, 8, 4, 16, 11, AMSTERDAM_SANDSTONE, g.shade(AMSTERDAM_SANDSTONE, -40), r, lit=6, drip=-26)
+    return img
+
+
+@paint("hamburg_clinker_brick")
+def hamburg_clinker():
+    """Hamburg Backstein clinker: dark, partly burnt bricks in purple-brown tones, grey mortar."""
+    return brick_wall(HAMBURG_CLINKER, HAMBURG_MORTAR, "rl_hh_clinker", burnt=(52, 40, 46), dark_rate=0.12)
+
+
+@paint("hamburg_clinker_stone_trim")
+def hamburg_clinker_trim():
+    """Clinker with one sandstone string course (rows 4-7); the top of the block meets the stone cap."""
+    img = brick_wall(HAMBURG_CLINKER, HAMBURG_MORTAR, "rl_hh_trim", rows=(0, 2, 3), burnt=(52, 40, 46), dark_rate=0.12)
+    stone_course(img, 4, 4, 16, 5, HAMBURG_STONE, g.shade(HAMBURG_STONE, -44), g.rng("rl_hh_trim-stone"), lit=10, drip=-28)
+    return img
+
+
+@paint("hamburg_stone_trim")
+def hamburg_trim():
+    """Sandstone dressings: two 8 px courses of long stones with fine joints, a lit bed and a soft shadow under each."""
+    img = base(HAMBURG_STONE, 3, "rl_hh_stone")
+    sandstone_bedding(img, "rl_hh_stone", 4)
+    units(img, courses((8, 8), (16, 16), (4, 12)), g.shade(HAMBURG_STONE, -34), "rl_hh_stone", tone=6, lit=8, shadow=-10)
+    specks(img, "rl_hh_stone", 8, (-16, -10, 8))
+    return img
+
+
+@paint("sbahn_clinker_brick")
+def sbahn_clinker():
+    return brick_wall(SBAHN_BRICK, SBAHN_MORTAR, "rl_sbahn_clinker", burnt=(98, 46, 40))
+
+
+def veins(img, name, count, colour_shift, length=22, wobble=0.45):
+    """Meandering marble veins: random walks that drift diagonally and wrap round the tile edges."""
+    r = g.rng(name + "-veins")
+    for _ in range(count):
+        x, y = r.uniform(0, 16), r.uniform(0, 16)
+        dx, dy = r.choice((1, -1)) * 0.8, 0.6
+        for _ in range(length):
+            tint(img, int(x), int(y), colour_shift + r.randint(-3, 3))
+            if r.random() < 0.25:
+                tint(img, int(x) + 1, int(y), colour_shift // 2)
+            dx += r.uniform(-wobble, wobble)
+            dx = max(-1.2, min(1.2, dx))
+            x, y = x + dx, y + dy
+
+
+def polish(img, strength=8, band=(9, 13)):
+    """A soft diagonal reflection, as on polished stone."""
+    for y in range(16):
+        for x in range(16):
+            d = (x + y) % 16
+            if band[0] <= d <= band[1]:
+                tint(img, x, y, strength - abs(d - (band[0] + band[1]) // 2) * 2)
+
+
+@paint("antwerp_polished_marble_wall", "nlbe_marble_wall")
+def antwerp_marble_wall():
+    """Polished cream marble panel (one per block, hairline joint), soft grey veining and a polish reflection."""
+    cream = (230, 226, 216)
+    img = base(cream, 2, "rl_antwerp_marble")
+    clouds(img, "rl_antwerp_marble", count=6, strength=4)
+    veins(img, "rl_antwerp_marble", 2, -20, length=26, wobble=0.18)
+    veins(img, "rl_antwerp_marble_fine", 3, -8, length=14, wobble=0.25)
+    polish(img, 7)
+    for i in range(16):
+        put(img, i, 0, g.shade(cream, -30))
+        put(img, 0, i, g.shade(cream, -26))
+        tint(img, i, 1, 6)
+    return img
+
+
+@paint("antwerp_marble_floor_tile", "nlbe_marble_floor")
+def antwerp_marble_floor():
+    """Chequered marble floor: cream and Belgian black 8 px tiles, each veined, polished and set with a hairline joint."""
+    cream, black = (226, 220, 206), (54, 58, 60)
+    img = g.new()
+    for (x0, y0) in ((0, 0), (8, 8), (8, 0), (0, 8)):
+        colour = cream if x0 == y0 else black
+        tile = base(colour, 2, f"rl_antwerp_floor{x0}{y0}")
+        veins(tile, f"rl_antwerp_floor{x0}{y0}", 2, -20 if colour == cream else 22, length=14)
+        for y in range(8):
+            for x in range(8):
+                c = get(tile, x0 + x, y0 + y)
+                if x == 0 or y == 0:
+                    c = g.shade(colour, -26 if colour == cream else -12)
+                elif x == 1 or y == 1:
+                    c = g.shade(c, 7)
+                put(img, x0 + x, y0 + y, c)
+    polish(img, 8, band=(10, 13))
+    return img
+
+
+def terrazzo(ground, chips, name, count, strip=None, strip_dark=None):
+    """Ground terrazzo: a fine cement matrix with small marble chips (mostly single pixels, a few 2 px), ground flat so the
+    contrast stays low, and an optional dividing strip on the top/left edge."""
+    img = base(ground, 2, name)
+    clouds(img, name, count=4, strength=3)
+    r = g.rng(name + "-chips")
+    for _ in range(count):
+        x, y, c = r.randint(0, 15), r.randint(0, 15), r.choice(chips)
+        put(img, x, y, mix(get(img, x, y), c, 0.75))
+        if r.random() < 0.25:
+            put(img, x + 1, y, mix(get(img, x + 1, y), g.shade(c, -10), 0.5))
+    if strip:
+        for i in range(16):
+            put(img, i, 0, g.shade(strip, r.randint(-6, 6)))
+            put(img, 0, i, g.shade(strip_dark or strip, r.randint(-6, 6)))
+    return img
+
+
+@paint("munich_terrazzo_floor")
+def munich_terrazzo():
+    """Munich U-Bahn terrazzo: warm pale ground, white, grey and ochre chips, a dull brass divider every metre."""
+    chips = [(244, 242, 236), (128, 128, 128), (184, 150, 108), (160, 96, 80), (98, 104, 104), (226, 218, 198)]
+    return terrazzo((204, 198, 186), chips, "rl_munich_terrazzo", 40, strip=(168, 146, 96), strip_dark=(150, 128, 82))
+
+
+# ---------------------------------------------------------------------------------------------------------------------
 
 def render_all():
     out = {}
