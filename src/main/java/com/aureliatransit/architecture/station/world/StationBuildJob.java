@@ -35,8 +35,9 @@ import java.util.function.Consumer;
 
 /**
  * Builds the ops of a survey (or undoes a build) in small batches, driven by {@link StationSessions}. Every cell is probed
- * again just before it is written; the first surprise stops the job and keeps the undo log. A cell in an unloaded chunk
- * pauses the job, it never loads the chunk.
+ * again just before it is written; the first surprise stops the job and keeps the undo log. The probe loads the chunks it
+ * needs (and holds them with a short ticket), so a station longer than the view distance builds; the job only pauses if a
+ * chunk still is not loaded.
  */
 public final class StationBuildJob {
 
