@@ -15,7 +15,7 @@ import java.util.Objects;
  * @param footbridge     a footbridge over the tracks to every platform was asked for (a building adds one when a platform
  *                       needs it)
  * @param shed           the hall roof's cross-section; ignored unless {@code roof} is {@link RoofType#HALL}
- * @param scale          how grand a side building is: storeys, wings, tower; ignored without a side building
+ * @param scale          how grand the building is: storeys, wings, tower; ignored without a building
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
@@ -91,9 +91,9 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		return hasBuilding() && !terminus;
 	}
 
-	/** The scale the side building is built at: {@link StationScale#COMPACT} without a side building. */
+	/** The scale the station building (a side building or a terminus's head building) is built at; compact without one. */
 	public StationScale buildingScale() {
-		return sideBuilding() ? scale : StationScale.COMPACT;
+		return hasBuilding() ? scale : StationScale.COMPACT;
 	}
 
 	/** Mutable builder; starts at {@link #defaults()}. {@link #build()} applies the constructor's checks. */

@@ -165,7 +165,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		}
 		if (!building) {
 			text.append(", no station building");
-		} else if (size != Size.AUTO && !terminus) {
+		} else if (size != Size.AUTO) {
 			text.append(", ").append(size.words).append(" building");
 		}
 		if (!name.isEmpty()) {

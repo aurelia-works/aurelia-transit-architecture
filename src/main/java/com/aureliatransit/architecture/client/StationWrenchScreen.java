@@ -218,11 +218,10 @@ public class StationWrenchScreen extends Screen {
 		addDrawableChild(roof);
 		y += ROW;
 		final Text buildingLabel = !recipe.building() ? ScreenTexts.NO
-				: recipe.size() == StationRecipe.Size.AUTO || recipe.terminus() ? ScreenTexts.YES : Text.literal(recipe.size().label());
+				: recipe.size() == StationRecipe.Size.AUTO ? ScreenTexts.YES : Text.literal(recipe.size().label());
 		final ButtonWidget building = cycle(left, y, HALF, "building", buildingLabel, this::nextBuilding);
 		building.setTooltip(Tooltip.of(Text.translatable(KEY + "building.tip")));
 		if (recipe.terminus()) {
-			building.active = false;
 			building.setTooltip(Tooltip.of(Text.translatable(KEY + "building.terminus")));
 		}
 		addDrawableChild(building);
@@ -293,6 +292,10 @@ public class StationWrenchScreen extends Screen {
 
 	/** No building, then a building sized by the station, then compact, city and grand, then no building again. */
 	private StationRecipe nextBuilding() {
+		if (recipe.terminus()) {
+			// a terminus always has its head building: only its size changes
+			return recipe.withSize(next(recipe.size()));
+		}
 		if (!recipe.building()) {
 			return recipe.withBuilding(true).withSize(StationRecipe.Size.AUTO);
 		}

@@ -491,7 +491,9 @@ class StationDescriptionParserTest {
 		assertEquals(StationScale.COMPACT, spec("2 track station with station building, 32 long").scale());
 		assertEquals(StationScale.COMPACT, spec("small station with station building").scale());
 		assertEquals(StationScale.COMPACT, spec("6 tracks").buildingScale(), "no building, nothing to size");
-		assertTrue(warned(StationDescriptionParser.parse("grand terminus"), "one size"));
+		assertEquals(StationScale.GRAND, spec("grand terminus").buildingScale(), "a head building has a size too");
+		assertEquals(StationScale.GRAND, spec("four track grand central terminus, two island platforms, 96 long").scale());
+		assertTrue(StationDescriptionParser.parse("four track grand central terminus").warnings().isEmpty());
 		assertTrue(warned(StationDescriptionParser.parse("grand city station"), "given twice"));
 	}
 }

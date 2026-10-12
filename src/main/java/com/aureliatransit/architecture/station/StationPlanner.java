@@ -412,7 +412,7 @@ public final class StationPlanner {
 			}
 			final int top = roofY();
 			if (scale == StationScale.GRAND) {
-				clockTower(top, uS, site.entranceV());
+				clockTower(top, uS, site.entranceV() - 2, LocalDir.PLUS_U);
 			}
 			roof(top, uS, uP, vS, vE);
 			// inner stair flights (two columns wide)
@@ -573,15 +573,15 @@ public final class StationPlanner {
 
 		/**
 		 * A grand station's clock tower over the entrance, standing on the street wall: a hollow square shaft five cells across
-		 * rising {@link #TOWER_HEIGHT} above the roof, louvred openings, a clock face on its three outer sides, a cornice and a
-		 * pyramid cap with a finial. Planned before the roof so the roof leaves the tower open.
+		 * (u0..u0+4, v0..v0+4) rising {@link #TOWER_HEIGHT} above the roof, louvred openings, a clock face on every side but the
+		 * one facing {@code inward} (into the building), a cornice and a pyramid cap with a finial. Planned before the roof so the
+		 * roof leaves the tower open.
 		 */
-		private void clockTower(int top, int uS, int vC) {
+		private void clockTower(int top, int u0, int v0, LocalDir inward) {
 			final StylePalette.Building b = palette.building();
-			final int u0 = uS;
-			final int u1 = uS + 4;
-			final int v0 = vC - 2;
-			final int v1 = vC + 2;
+			final int u1 = u0 + 4;
+			final int v1 = v0 + 4;
+			final int vC = v0 + 2;
 			final int crown = top + TOWER_HEIGHT;
 			for (int u = u0 + 1; u <= u1 - 1; u++) {
 				for (int v = v0 + 1; v <= v1 - 1; v++) {
@@ -616,11 +616,20 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// clock faces on the street side and both ends, one row under the cornice
+			// clock faces on the outer sides, one row under the cornice
 			final int clockY = crown - 2;
-			put(Role.FIXTURE, u0 - 1, clockY, vC, LocalDir.MINUS_U, ata("amsterdam_clock_face_panel"));
-			put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, LocalDir.MINUS_V, ata("amsterdam_clock_face_panel"));
-			put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, LocalDir.PLUS_V, ata("amsterdam_clock_face_panel"));
+			final String clock = ata("amsterdam_clock_face_panel");
+			for (final LocalDir side : LocalDir.values()) {
+				if (side == inward) {
+					continue;
+				}
+				switch (side) {
+					case MINUS_U -> put(Role.FIXTURE, u0 - 1, clockY, vC, side, clock);
+					case PLUS_U -> put(Role.FIXTURE, u1 + 1, clockY, vC, side, clock);
+					case MINUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, side, clock);
+					case PLUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, side, clock);
+				}
+			}
 			// the cap: a closed slab, then a pyramid of two rings and a point, then the finial
 			final String[] pitched = pitchedRoof();
 			final String stair = pitched != null ? pitched[0] : "minecraft:stone_brick_stairs";
@@ -883,6 +892,19 @@ public final class StationPlanner {
 			for (int u = door - 1; u <= door + 1; u++) {
 				put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, vE + 1, LocalDir.PLUS_V);
 				put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, vE + 2, LocalDir.PLUS_V);
+			}
+			if (scale != StationScale.COMPACT) {
+				// a city or grand head building: storeys over the whole concourse (its ceiling is their first floor), the roof,
+				// and a grand one's clock tower over the entrance
+				for (int storey = 0; storey < scale.extraStoreys(); storey++) {
+					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, 0, w - 1, vL, vE, true);
+				}
+				final int roofAt = roofY();
+				if (scale == StationScale.GRAND) {
+					clockTower(roofAt, door - 2, vE - 4, LocalDir.MINUS_V);
+				}
+				roof(roofAt, 0, w - 1, vL, vE);
+				return;
 			}
 			// a ceiling with light panels, covered by a flat roof flush with the cornice (the panels' tops would otherwise show
 			// from above as a checkerboard)

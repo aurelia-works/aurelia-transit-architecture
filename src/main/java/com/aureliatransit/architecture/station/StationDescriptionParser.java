@@ -168,8 +168,6 @@ public final class StationDescriptionParser {
 		private ShedShape shed;
 		private StationScale scale;
 		private int scaleAt = -1;
-		/** The scale came from a landmark's name (Grand Central), not from a size word. */
-		private boolean landmarkScale;
 
 		ParseResult run(String description) {
 			String text = description;
@@ -610,9 +608,9 @@ public final class StationDescriptionParser {
 				setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
 				askBuilding(i);
 				if (scale == null) {
-					// the landmark's own size, not a size word: a terminus keeps its one head building without a warning
+					// the landmark's own size; a size word said before it wins without a warning
 					scale = StationScale.GRAND;
-					landmarkScale = true;
+					scaleAt = i;
 				}
 				use(i, i + 1);
 				return true;
@@ -1047,19 +1045,17 @@ public final class StationDescriptionParser {
 			} else if (lookOnlyWord != null) {
 				warn("\"" + lookOnlyWord + "\" only sets a station building's look; add \"station building\" to get one");
 			}
-			if (wantsBuilding && !terminus) {
+			if (wantsBuilding) {
 				final StationSpec sized = builder.build();
 				if (scale != null) {
 					builder.scale(scale);
-					note(Math.max(0, scaleAt), scale.label() + " station building");
+					note(scaleAt, scale.label() + " station building");
 				} else {
 					final StationScale auto = StationScale.forSize(true, sized.trackCount(), sized.platformLength());
 					builder.scale(auto);
 					defaulted.add(auto.label() + " station building (default for " + sized.trackCount() + (sized.trackCount() == 1 ? " track, " : " tracks, ")
 							+ sized.platformLength() + " long)");
 				}
-			} else if (scale != null && scale != StationScale.COMPACT && terminus && !landmarkScale) {
-				warn("a terminus's head building has one size; \"" + tokens[scaleAt] + "\" only sizes a building beside the tracks");
 			}
 			if (terminus) {
 				builder.terminus(true);

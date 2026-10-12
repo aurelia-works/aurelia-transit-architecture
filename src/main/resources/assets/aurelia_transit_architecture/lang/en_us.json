@@ -386,7 +386,7 @@
   "screen.aurelia_transit_architecture.station_wrench.build_replace.tip": "Also changes the terrain the plan listed",
   "screen.aurelia_transit_architecture.station_wrench.building": "Building",
   "screen.aurelia_transit_architecture.station_wrench.building.tip": "Yes sizes the building by the station: grand for 3+ tracks or 100+ long. Compact, City and Grand choose it",
-  "screen.aurelia_transit_architecture.station_wrench.building.terminus": "A terminus always has its head building",
+  "screen.aurelia_transit_architecture.station_wrench.building.terminus": "A terminus always has its head building; this sets its size: Yes (by the station), Compact, City or Grand",
   "screen.aurelia_transit_architecture.station_wrench.cancel": "Cancel",
   "screen.aurelia_transit_architecture.station_wrench.cancel_plan": "Cancel plan",
   "screen.aurelia_transit_architecture.station_wrench.description": "Describe the station",
