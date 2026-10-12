@@ -113,6 +113,40 @@ class StudioTest {
 		assertTrue(joined.split("\"from\"").length > alone.split("\"from\"").length, "a joined handrail adds its side pieces");
 	}
 
+	/**
+	 * Every boarding face has a view from its platform: the passenger stands on a platform floor with three clear blocks above,
+	 * within a few blocks of the face's edge, looking at a point further along.
+	 */
+	@Test
+	void everyFaceHasAViewFromItsPlatform() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final Map<String, String> q : List.of(Map.of("look", "ST_PANCRAS", "mode", "terminus", "tracks", "8", "building", "1"),
+				Map.of("tracks", "2", "length", "40"), Map.of("look", "HAMBURG", "tracks", "5", "layout", "SIDE", "roof", "HALL"))) {
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			final List<Object> cells = Json.list(plan.get("cells"));
+			final java.util.Set<Long> taken = new java.util.HashSet<>();
+			for (int i = 0; i < cells.size(); i += 5) {
+				taken.add(StudioApi.cell(((Double) cells.get(i)).intValue(), ((Double) cells.get(i + 1)).intValue(), ((Double) cells.get(i + 2)).intValue()));
+			}
+			final List<Object> faces = Json.list(plan.get("faceLabels"));
+			assertFalse(faces.isEmpty(), q.toString());
+			for (final Object o : faces) {
+				final Map<String, Object> face = Json.object(o);
+				final Map<String, Object> view = Json.object(face.get("view"));
+				assertNotNull(view, q + " face " + face.get("n"));
+				final int x = ((Double) view.get("x")).intValue();
+				final int z = ((Double) view.get("z")).intValue();
+				assertTrue(taken.contains(StudioApi.cell(x, 0, z)), q + " face " + face.get("n") + " stands on a floor");
+				for (int y = 1; y <= 3; y++) {
+					assertFalse(taken.contains(StudioApi.cell(x, y, z)), q + " face " + face.get("n") + " has headroom at y " + y);
+				}
+				final double across = Math.min(Math.abs(x - (Double) face.get("x")), Math.abs(z - (Double) face.get("z")));
+				assertTrue(across <= 3, q + " face " + face.get("n") + " stands beside its edge");
+				assertTrue(!view.get("tx").equals(view.get("x")) || !view.get("tz").equals(view.get("z")), "looks somewhere else");
+			}
+		}
+	}
+
 	@Test
 	void serverAnswersOnlyThisComputerAndGuardsTheGame() throws IOException, InterruptedException {
 		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok " + action);

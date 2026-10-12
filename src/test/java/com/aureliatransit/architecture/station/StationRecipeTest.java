@@ -54,12 +54,12 @@ class StationRecipeTest {
 		mixes.addAll(List.of(StationRecipe.Look.values()));
 		for (final StationRecipe.Look look : StationRecipe.Look.values()) {
 			for (final StationRecipe.Look mix : mixes) {
-				for (final boolean terminus : new boolean[] {false, true}) {
+				for (final int type : new int[] {0, 1, 2}) { // through, terminus, hub
 					for (final StationRecipe.Roof roof : StationRecipe.Roof.values()) {
 						index++;
 						final int tracks = 1 + index % 4;
-						final StationRecipe recipe = new StationRecipe(look, mix, terminus, tracks, StationRecipe.Platforms.values()[index % 3],
-								LENGTHS[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "", StationRecipe.Size.values()[index % 4]);
+						final StationRecipe recipe = new StationRecipe(look, mix, type > 0, tracks, StationRecipe.Platforms.values()[index % 3],
+								LENGTHS[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "", StationRecipe.Size.values()[index % 4], type == 2);
 						final ParseResult result = StationDescriptionParser.parse(recipe.description());
 						final String label = recipe.encode() + " -> " + recipe.description();
 						if (!result.warnings().isEmpty() || !result.ignored().isEmpty()) {
@@ -67,7 +67,7 @@ class StationRecipeTest {
 							continue;
 						}
 						final StationSpec spec = result.spec();
-						if (spec.trackCount() != recipe.tracks() || spec.terminus() != recipe.terminus()
+						if (spec.trackCount() != recipe.tracks() || spec.terminus() != recipe.terminus() || spec.hub() != recipe.hub()
 								|| spec.platformLength() != recipe.length() || !spec.name().equals(recipe.name())
 								|| spec.hasBuilding() != recipe.building() || recipe.building() && look != StationRecipe.Look.AUTO && spec.building() != BUILDINGS.get(look)) {
 							failures.add(label + ": got " + spec);
@@ -101,8 +101,11 @@ class StationRecipeTest {
 	@Test
 	void encodeRoundTripsAndBadInputFallsBack() {
 		final StationRecipe recipe = new StationRecipe(StationRecipe.Look.HAMBURG, StationRecipe.Look.UTRECHT, true, 4, StationRecipe.Platforms.ISLAND,
-				96, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf", StationRecipe.Size.CITY);
+				96, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf", StationRecipe.Size.CITY, false);
 		assertEquals(recipe, StationRecipe.decode(recipe.encode()));
+		final StationRecipe hub = recipe.withHub(true);
+		assertEquals(hub, StationRecipe.decode(hub.encode()));
+		assertTrue(StationRecipe.decode(hub.encode()).hub());
 		assertEquals(StationRecipe.Size.AUTO, StationRecipe.decode("MUNICH;;0;2;AUTO;64;AUTO;1;Name").size(), "wrenches saved before sizes");
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode(""));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode("nonsense"));

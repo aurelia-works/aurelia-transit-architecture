@@ -9,6 +9,7 @@ import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.Role;
 import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationGeometry;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationPresets;
@@ -47,7 +48,7 @@ public final class StudioApi {
 		StationRecipe recipe = StationRecipe.defaults();
 		recipe = recipe.withLook(look(q.get("look"), StationRecipe.Look.AUTO));
 		recipe = recipe.withMix(look(q.get("mix"), null));
-		recipe = recipe.withTerminus("terminus".equals(q.get("mode")));
+		recipe = recipe.withTerminus("terminus".equals(q.get("mode"))).withHub("hub".equals(q.get("mode")));
 		recipe = recipe.withTracks(number(q.get("tracks"), recipe.tracks()));
 		recipe = recipe.withPlatforms(value(StationRecipe.Platforms.class, q.get("layout"), StationRecipe.Platforms.AUTO));
 		recipe = recipe.withLength(number(q.get("length"), recipe.length()));
@@ -91,7 +92,7 @@ public final class StudioApi {
 		final StationSpec spec = StationDescriptionParser.parse(preset.description()).spec();
 		final String words = preset.description().replaceFirst(",?\\s*named .*$", "");
 		return "{\"key\":" + Json.quote(preset.key()) + ",\"description\":" + Json.quote(preset.description()) + ",\"text\":" + Json.quote(words)
-				+ ",\"tracks\":" + spec.trackCount() + ",\"length\":" + spec.platformLength() + ",\"mode\":" + Json.quote(spec.terminus() ? "terminus" : "through")
+				+ ",\"tracks\":" + spec.trackCount() + ",\"length\":" + spec.platformLength() + ",\"mode\":" + Json.quote(spec.hub() ? "hub" : spec.terminus() ? "terminus" : "through")
 				+ ",\"layout\":" + Json.quote(spec.platformLayout().name()) + ",\"look\":" + Json.quote(look(preset.building()).name())
 				+ ",\"name\":" + Json.quote(spec.name()) + "}";
 	}
@@ -156,12 +157,12 @@ public final class StudioApi {
 		out.append(",\"defaulted\":").append(Json.strings(parse.defaulted()));
 		out.append(",\"warnings\":").append(Json.strings(parse.warnings()));
 		out.append(",\"ignored\":").append(Json.strings(parse.ignored()));
-		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.terminus() ? "Terminus" : "Through station"))
+		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.hub() ? "Hub" : recipe.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(recipe.platforms().label())).append(",\"tracks\":").append(recipe.tracks())
 				.append(",\"length\":").append(recipe.length()).append(",\"look\":").append(Json.quote(recipe.look().label()))
 				.append(",\"roof\":").append(Json.quote(recipe.roof().label())).append(",\"building\":").append(recipe.building())
 				.append(",\"size\":").append(Json.quote(recipe.size().label())).append('}');
-		out.append(",\"built\":{\"mode\":").append(Json.quote(spec.terminus() ? "Terminus" : "Through station"))
+		out.append(",\"built\":{\"mode\":").append(Json.quote(spec.hub() ? "Hub" : spec.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(lower(spec.platformLayout().name()) + " platforms"))
 				.append(",\"tracks\":").append(spec.trackCount()).append(",\"platforms\":").append(layout.platforms().size())
 				.append(",\"faces\":").append(audit.faces().size()).append(",\"length\":").append(spec.platformLength())
@@ -193,7 +194,8 @@ public final class StudioApi {
 			final int u = track.u() + (face.leftOfTrack() ? -2 : 2);
 			final int v = face.vStart() + face.length() / 2;
 			out.append(i == 0 ? "" : ",").append("{\"n\":").append(i + 1).append(",\"platform\":").append(face.platform()).append(",\"x\":")
-					.append(FRAME.x(u, v)).append(",\"z\":").append(FRAME.z(u, v)).append('}');
+					.append(FRAME.x(u, v)).append(",\"z\":").append(FRAME.z(u, v)).append(",\"view\":").append(faceView(face, track, idAt))
+					.append('}');
 		}
 		out.append("],\"passenger\":").append(passenger(layout, idAt));
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
@@ -263,6 +265,41 @@ public final class StudioApi {
 			}
 		}
 		return "null";
+	}
+
+	/**
+	 * Where a passenger stands to look along one boarding face: on its platform a block or two back from the edge, near the
+	 * face's start, in a cell with three clear blocks above the floor and nothing at eye height just ahead (so not behind a
+	 * column), looking at the track some way ahead.
+	 */
+	private static String faceView(StationAudit.Face face, TrackLayout.Track track, Map<Long, String> idAt) {
+		final int inward = face.leftOfTrack() ? -1 : 1;
+		final int edge = track.u() + inward * StationGeometry.EDGE_OFFSET;
+		final int last = Math.max(face.vStart(), face.vEnd() - 8);
+		for (int v = Math.min(face.vStart() + 3, last); v <= last; v++) {
+			for (final int back : new int[]{1, 2, 0, 3}) {
+				final int u = edge + inward * back;
+				final int x = FRAME.x(u, v);
+				final int z = FRAME.z(u, v);
+				final int y = StationGeometry.WALK_Y;
+				if (idAt.containsKey(cell(x, y - 1, z)) && !idAt.containsKey(cell(x, y, z)) && !idAt.containsKey(cell(x, y + 2, z))
+						&& clearAhead(u, v, y + 1, Math.min(v + 8, face.vEnd()), idAt)) {
+					final int ahead = Math.min(v + 20, face.vEnd());
+					return "{\"x\":" + x + ",\"z\":" + z + ",\"tx\":" + FRAME.x(track.u(), ahead) + ",\"tz\":" + FRAME.z(track.u(), ahead) + "}";
+				}
+			}
+		}
+		return "null";
+	}
+
+	/** Nothing at eye height from row v to row to in column u, so no column stands right in front of the passenger. */
+	private static boolean clearAhead(int u, int v, int y, int to, Map<Long, String> idAt) {
+		for (int w = v; w <= to; w++) {
+			if (idAt.containsKey(cell(FRAME.x(u, w), y, FRAME.z(u, w)))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private static String roof(StationSpec spec) {

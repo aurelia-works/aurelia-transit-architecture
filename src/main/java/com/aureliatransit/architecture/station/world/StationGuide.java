@@ -53,6 +53,8 @@ public final class StationGuide {
 					+ "The first gives the building, then the platforms, then the train shed."),
 			new Page("Terminus", "Add \"terminus\" and the tracks end at buffer stops in front of a concourse building.\n\n"
 					+ "Every platform is reached step-free through the gates."),
+			new Page("Hub", "Add \"hub\" for a bit of both: the middle tracks end at the station hall and the two outer ones "
+					+ "run on past it.\n\nA hub has island platforms and an even number of tracks, 4 or more."),
 			new Page("Examples", "two track dutch station, island platform, 64 long, named Leidsche Rijn\n\n"
 					+ "small single track s-bahn halt, no roof"),
 			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"

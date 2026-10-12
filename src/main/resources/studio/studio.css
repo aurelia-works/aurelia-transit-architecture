@@ -136,6 +136,12 @@ canvas#view { display: block; width: 100%; height: 100%; touch-action: none; cur
 canvas#view:active { cursor: grabbing; }
 .labels { position: absolute; inset: 0; pointer-events: none; }
 .face-label { position: absolute; transform: translate(-50%, -50%); width: 22px; height: 22px; border-radius: 50%; background: var(--face); color: #fff; font: 700 12px/22px var(--sans); text-align: center; box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+button.face-label { border: 0; padding: 0; pointer-events: auto; cursor: pointer; transition: transform .12s ease, box-shadow .12s ease, background-color .12s ease; }
+button.face-label:hover { transform: translate(-50%, -50%) scale(1.18); box-shadow: 0 0 0 2px rgba(255, 255, 255, .85), 0 2px 8px rgba(0, 0, 0, .6); }
+button.face-label[aria-pressed="true"] { background: #fff; color: var(--face); box-shadow: 0 0 0 3px var(--face), 0 2px 8px rgba(0, 0, 0, .6); }
+button.face-label:disabled { cursor: default; }
+button.face-label:disabled:hover { transform: translate(-50%, -50%); box-shadow: 0 1px 4px rgba(0, 0, 0, .5); }
+@media (prefers-reduced-motion: reduce) { button.face-label { transition: none; } }
 .overlay { position: absolute; margin: 0; }
 .top-left { left: 12px; top: 12px; }
 .top-right { right: 12px; top: 12px; display: flex; align-items: center; gap: 6px; }

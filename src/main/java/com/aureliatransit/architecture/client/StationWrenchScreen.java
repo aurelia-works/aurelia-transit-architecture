@@ -204,15 +204,16 @@ public class StationWrenchScreen extends Screen {
 				recipe.mix() == null ? Text.translatable(KEY + "none") : Text.literal(recipe.mix().label()), () -> recipe.withMix(recipe.nextMix()));
 		mix.setTooltip(Tooltip.of(Text.translatable(KEY + "mix.tip")));
 		addDrawableChild(mix);
-		final ButtonWidget type = cycle(left + HALF + 4, y, HALF, "type", Text.translatable(KEY + (recipe.terminus() ? "terminus" : "through")),
+		final ButtonWidget type = cycle(left + HALF + 4, y, HALF, "type", Text.translatable(KEY + (recipe.hub() ? "hub" : recipe.terminus() ? "terminus" : "through")),
 				this::nextType);
 		type.setTooltip(Tooltip.of(Text.translatable(KEY + "type.tip")));
 		addDrawableChild(type);
 		y += ROW;
-		addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> change(recipe.withTracks(recipe.tracks() - 1))).dimensions(left, y, 20, 20).build());
+		final int trackStep = recipe.trackStep();
+		addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> change(recipe.withTracks(recipe.tracks() - trackStep))).dimensions(left, y, 20, 20).build());
 		addDrawableChild(ButtonWidget.builder(Text.translatable(KEY + "tracks", recipe.tracks()), b -> change(recipe.withTracks(
-				recipe.tracks() % StationRecipe.MAX_TRACKS + 1))).dimensions(left + 22, y, HALF - 44, 20).build());
-		addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> change(recipe.withTracks(recipe.tracks() + 1)))
+				recipe.tracks() % StationRecipe.MAX_TRACKS + trackStep))).dimensions(left + 22, y, HALF - 44, 20).build());
+		addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> change(recipe.withTracks(recipe.tracks() + trackStep)))
 				.dimensions(left + HALF - 20, y, 20, 20).build());
 		addDrawableChild(cycle(left + HALF + 4, y, HALF, "platforms", Text.literal(recipe.platforms().label()),
 				() -> recipe.withPlatforms(next(recipe.platforms()))));
@@ -310,11 +311,12 @@ public class StationWrenchScreen extends Screen {
 	}
 
 	/**
-	 * Through station or terminus. A terminus is a city's main station, so switching a station still at the default size makes it
-	 * {@link #TERMINUS_TRACKS} tracks and {@link #TERMINUS_LENGTH} long; any size the player already chose is kept.
+	 * Through station, then terminus, then hub, then through again. A terminus (or hub) is a city's main station, so switching a
+	 * station still at the default size makes it {@link #TERMINUS_TRACKS} tracks and {@link #TERMINUS_LENGTH} long; any size the
+	 * player already chose is kept.
 	 */
 	private StationRecipe nextType() {
-		final StationRecipe value = recipe.withTerminus(!recipe.terminus());
+		final StationRecipe value = recipe.hub() ? recipe.withTerminus(false) : recipe.terminus() ? recipe.withHub(true) : recipe.withTerminus(true);
 		final StationRecipe fresh = StationRecipe.defaults();
 		if (value.terminus() && recipe.tracks() == fresh.tracks() && recipe.length() == fresh.length()) {
 			return value.withTracks(TERMINUS_TRACKS).withLength(TERMINUS_LENGTH);

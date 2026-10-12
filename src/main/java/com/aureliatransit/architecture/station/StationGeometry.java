@@ -107,7 +107,7 @@ public final class StationGeometry {
 		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : 0;
 		if (shift == 0) {
 			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
-					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0);
+					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, spec.hub());
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {

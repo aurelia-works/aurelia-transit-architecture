@@ -826,21 +826,23 @@ public final class StationPlanner {
 
 		/** The u of a terminus head building's street entrance (the middle of the 3-wide doorway). */
 		private int headDoor() {
-			return layout.width() / 2;
+			return (layout.headFrom() + layout.headTo() + 1) / 2;
 		}
 
 		/**
-		 * A terminus head building across the track ends (v = L .. L+11, the full width): the floor runs level from the
-		 * platform ends; buffer stops close every track at v = L; the platform side is open under a lintel with clerestory
-		 * windows; side and street walls carry windows and a trim band; a 3-wide street entrance with ramps outside; a flat roof
-		 * with light panels and a cornice. The gate line and fittings are in {@link #headInterior()}.
+		 * A terminus head building across the track ends (v = L .. L+11, the full width, or only a hub's platforms): the floor
+		 * runs level from the platform ends; buffer stops close every bay track at v = L; the platform side is open under a
+		 * lintel with clerestory windows; side and street walls carry windows and a trim band; a 3-wide street entrance with
+		 * ramps outside; a flat roof with light panels and a cornice. The gate line and fittings are in {@link #headInterior()}.
 		 */
 		void head() {
 			if (!layout.terminus()) {
 				return;
 			}
 			final StylePalette.Building b = palette.building();
-			final int w = layout.width();
+			// a hub's head building spans its platforms only; the outer tracks run on past its side walls
+			final int u0 = layout.headFrom();
+			final int u1 = layout.headTo();
 			final int vL = length;
 			final int vE = layout.headEnd();
 			final int door = headDoor();
@@ -851,14 +853,17 @@ public final class StationPlanner {
 					keepClear(u, y, vE + 2);
 				}
 			}
-			for (int u = 0; u < w; u++) {
+			for (int u = u0; u <= u1; u++) {
 				for (int v = vL; v <= vE; v++) {
-					final boolean edge = u == 0 || u == w - 1 || v == vE;
+					final boolean edge = u == u0 || u == u1 || v == vE;
 					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
 				}
 			}
 			// buffer stops across each track's clearance, just past its last rail node
 			for (final TrackLayout.Track track : layout.tracks()) {
+				if (!layout.bay(track)) {
+					continue;
+				}
 				for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
 					put(Role.BUFFER_STOP, u, StationGeometry.WALK_Y, vL, LocalDir.PLUS_U);
 				}
@@ -870,13 +875,13 @@ public final class StationPlanner {
 				for (int y = 1; y <= top; y++) {
 					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
 					final boolean window = !pilaster && (y == 2 || y == 3 || y == 6 || y == 7);
-					put(window ? Role.WINDOW : Role.WALL, 0, y, v, LocalDir.MINUS_U, window ? b.window() : id);
-					put(window ? Role.WINDOW : Role.WALL, w - 1, y, v, LocalDir.PLUS_U, window ? b.window() : id);
+					put(window ? Role.WINDOW : Role.WALL, u0, y, v, LocalDir.MINUS_U, window ? b.window() : id);
+					put(window ? Role.WINDOW : Role.WALL, u1, y, v, LocalDir.PLUS_U, window ? b.window() : id);
 				}
 			}
 			// street wall with the entrance, and the platform-side lintel and clerestory over the open arcade
-			for (int u = 1; u < w - 1; u++) {
-				final boolean pilaster = u % 3 == 0;
+			for (int u = u0 + 1; u < u1; u++) {
+				final boolean pilaster = (u - u0) % 3 == 0;
 				for (int y = 1; y <= top; y++) {
 					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
 					final boolean window = !pilaster && (y == 6 || y == 7);
@@ -897,20 +902,20 @@ public final class StationPlanner {
 				// a city or grand head building: storeys over the whole concourse (its ceiling is their first floor), the roof,
 				// and a grand one's clock tower over the entrance
 				for (int storey = 0; storey < scale.extraStoreys(); storey++) {
-					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, 0, w - 1, vL, vE, true);
+					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, u0, u1, vL, vE, true);
 				}
 				final int roofAt = roofY();
 				if (scale == StationScale.GRAND) {
 					clockTower(roofAt, door - 2, vE - 4, LocalDir.MINUS_V);
 				}
-				roof(roofAt, 0, w - 1, vL, vE);
+				roof(roofAt, u0, u1, vL, vE);
 				return;
 			}
 			// a ceiling with light panels, covered by a flat roof flush with the cornice (the panels' tops would otherwise show
 			// from above as a checkerboard)
-			for (int u = 0; u < w; u++) {
+			for (int u = u0; u <= u1; u++) {
 				for (int v = vL; v <= vE; v++) {
-					final boolean inner = u > 0 && u < w - 1 && v > vL && v < vE;
+					final boolean inner = u > u0 && u < u1 && v > vL && v < vE;
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, inner && (u + v) % 4 == 0 ? b.light() : b.roof());
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, inner ? b.roof() : b.cornice());
 				}
@@ -928,12 +933,13 @@ public final class StationPlanner {
 				return;
 			}
 			final StylePalette.Building b = palette.building();
-			final int w = layout.width();
+			final int u0 = layout.headFrom();
+			final int u1 = layout.headTo();
 			final int vL = length;
 			final int vE = layout.headEnd();
 			final int gateV = vL + 2;
 			final int door = headDoor();
-			for (int u = 1; u < w - 1; u++) {
+			for (int u = u0 + 1; u < u1; u++) {
 				TrackLayout.PlatformBand band = null;
 				for (final TrackLayout.PlatformBand candidate : layout.platforms()) {
 					if (u >= candidate.uMin() && u <= candidate.uMax()) {
@@ -953,38 +959,38 @@ public final class StationPlanner {
 				put(Role.FIXTURE, u, StationGeometry.UPPER_FLOOR_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
 			}
 			put(Role.FIXTURE, door, StationGeometry.UPPER_WALK_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:wall_digital_clock");
-			// ticket office against the u=0 wall: interior u=1..2, v=vE-5..vE-4, window facing the concourse
+			// ticket office against the first side wall: interior u0+1..u0+2, v=vE-5..vE-4, window facing the concourse
 			final int o0 = vE - 5;
 			final int o1 = vE - 4;
-			if (door - 1 > 4) {
-				for (int u = 1; u <= 3; u++) {
+			if (door - 1 - u0 > 4) {
+				for (int u = u0 + 1; u <= u0 + 3; u++) {
 					for (int y = 1; y <= 2; y++) {
 						put(Role.WALL, u, y, o0 - 1, LocalDir.MINUS_V, b.interiorWall());
 						put(Role.WALL, u, y, o1 + 1, LocalDir.PLUS_V, b.interiorWall());
 					}
 				}
-				put(Role.FIXTURE, 3, 1, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
-				put(Role.WALL, 3, 2, o0, LocalDir.PLUS_U, b.interiorWall());
-				put(Role.WALL, 3, 1, o1, LocalDir.PLUS_U, b.interiorWall());
-				put(Role.WALL, 3, 2, o1, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.FIXTURE, u0 + 3, 1, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+				put(Role.WALL, u0 + 3, 2, o0, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.WALL, u0 + 3, 1, o1, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.WALL, u0 + 3, 2, o1, LocalDir.PLUS_U, b.interiorWall());
 			} else { // too narrow for an office: a ticket window in the side wall's corner by the entrance
-				put(Role.FIXTURE, 1, 1, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+				put(Role.FIXTURE, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
 			}
 			// ticket machines and the kiosk against the far wall
 			for (int i = 0; i < 2; i++) {
-				tallFixture(w - 2, 1, o0 + i, LocalDir.MINUS_U, "mtr:ticket_machine");
+				tallFixture(u1 - 1, 1, o0 + i, LocalDir.MINUS_U, "mtr:ticket_machine");
 			}
-			tallFixture(w - 2, 1, o1 + 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
+			tallFixture(u1 - 1, 1, o1 + 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
 			// benches facing the boards, either side of the walk from the entrance
 			if (spec.furniture()) {
 				int seats = 0;
 				for (final int u : new int[]{door - 3, door - 2, door + 2, door + 3}) {
-					if (u > 0 && u < w - 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
+					if (u > u0 && u < u1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
 						seats++;
 					}
 				}
 				// a narrow concourse: any free cell in the row that keeps the walk from the entrance clear
-				for (int u = 1; u < w - 1 && seats == 0; u++) {
+				for (int u = u0 + 1; u < u1 && seats == 0; u++) {
 					if (Math.abs(u - door) > 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
 						seats++;
 					}
@@ -2156,7 +2162,7 @@ public final class StationPlanner {
 			final List<Box> supports = new ArrayList<>();
 			for (final TrackLayout.Track track : layout.tracks()) {
 				envelopes.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.PLATFORM_Y, layout.vMin(),
-						track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.ENVELOPE_HEIGHT - 1, layout.trackEnd()));
+						track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.ENVELOPE_HEIGHT - 1, layout.trackEnd(track)));
 			}
 			final List<Box> headroom = new ArrayList<>();
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
@@ -2165,10 +2171,10 @@ public final class StationPlanner {
 				supports.add(new Box(band.uMin(), -1, layout.vMin(), band.uMax(), -1, layout.trackEnd()));
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
-				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd()));
+				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd(track)));
 			}
 			if (layout.terminus()) {
-				supports.add(new Box(0, -1, length, layout.width() - 1, -1, layout.headEnd()));
+				supports.add(new Box(layout.headFrom(), -1, length, layout.headTo(), -1, layout.headEnd()));
 				supports.add(new Box(headDoor() - 1, -1, layout.headEnd() + 1, headDoor() + 1, -1, layout.vMax()));
 			}
 			if (site.building()) {

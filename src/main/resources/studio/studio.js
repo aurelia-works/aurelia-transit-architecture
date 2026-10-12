@@ -78,7 +78,8 @@
 	};
 	const MODE_HELP = {
 		through: "Trains stop and carry on through the station.",
-		terminus: "The tracks end at buffer stops in front of a big station hall."
+		terminus: "The tracks end at buffer stops in front of a big station hall.",
+		hub: "A bit of both: the middle tracks end at the station hall, the outer ones carry on through."
 	};
 	const synced = [];
 
@@ -150,9 +151,12 @@
 			synced.push(() => press(b, $("building").value === has && (has === "0" || $("size").value === size)));
 		}
 
+		// A hub needs an even number of tracks, at least 4 (two run through, the rest end), so it steps by two.
+		const hub = () => $("mode").value === "hub";
+		const lowest = () => hub() ? 4 : +$("tracks").min;
 		const step = (delta) => {
 			const t = $("tracks");
-			const next = Math.max(+t.min, Math.min(+t.max, +t.value + delta));
+			const next = Math.max(lowest(), Math.min(+t.max, +t.value + delta * (hub() ? 2 : 1)));
 			if (String(next) !== t.value) {
 				set("tracks", next);
 			}
@@ -160,8 +164,8 @@
 		$("tracksDown").addEventListener("click", () => step(-1));
 		$("tracksUp").addEventListener("click", () => step(1));
 		synced.push(() => {
-			$("tracksDown").disabled = $("tracks").value === $("tracks").min;
-			$("tracksUp").disabled = $("tracks").value === $("tracks").max;
+			$("tracksDown").disabled = +$("tracks").value <= lowest();
+			$("tracksUp").disabled = +$("tracks").value + (hub() ? 2 : 1) > +$("tracks").max;
 		});
 
 		const presets = $("presets");
@@ -232,9 +236,14 @@
 		$("offline").hidden = IN_GAME;
 		// A terminus is a city's main station: one still at the default size becomes 8 tracks, 160 long (as on the wrench).
 		$("mode").addEventListener("input", () => {
-			if ($("mode").value === "terminus" && $("tracks").value === "2" && $("length").value === String(options.length[2])) {
+			if ($("mode").value !== "through" && $("tracks").value === "2" && $("length").value === String(options.length[2])) {
 				$("tracks").value = 8;
 				$("length").value = 160;
+			}
+			if ($("mode").value === "hub") {
+				const t = +$("tracks").value;
+				$("tracks").value = Math.min(+$("tracks").max - +$("tracks").max % 2, Math.max(4, t + t % 2));
+				$("layout").value = "AUTO";
 			}
 		});
 		for (const f of fields) {
@@ -507,10 +516,27 @@
 	}
 
 	let currentView = "overview";
-	function setView(name) {
+	// A face view is named "face:<n>": standing on that boarding face's platform, from the plan's per-face view.
+	function setView(name, smooth) {
+		const face = /^face:/.test(name) && current ? current.faceLabels.find((f) => "face:" + f.n === name && f.view) : null;
+		if (/^face:/.test(name) && !face) {
+			name = "overview";
+		}
 		currentView = name;
+		glide = null;
 		for (const b of document.querySelectorAll("[data-view]")) {
 			b.setAttribute("aria-pressed", String(b.dataset.view === name));
+		}
+		if (face) {
+			const from = { eye: camera.position.clone(), at: view.target.clone() };
+			lookFrom(face.view);
+			if (smooth && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+				const to = { eye: orbitEye(), at: view.target.clone() };
+				glide = { from, to, start: performance.now(), ms: 650 };
+				Object.assign(view, viewFrom(from.eye, from.at));
+			}
+			draw();
+			return;
 		}
 		const c = bounds.getCenter(new THREE.Vector3());
 		const size = bounds.getSize(new THREE.Vector3());
@@ -527,26 +553,55 @@
 		} else if (name === "plan") {
 			Object.assign(view, { yaw: 0, pitch: Math.PI / 2 - 0.001, radius: reach * 1.25 });
 		} else if (name === "passenger" && current && current.passenger) {
-			const p = current.passenger;
-			const eye = new THREE.Vector3(p.x + 0.5, 2.6, p.z + 0.5);
-			const ahead = new THREE.Vector3(p.tx + 0.5, 2.4, p.tz + 0.5);
-			const dir = ahead.clone().sub(eye).normalize();
-			view.target.copy(eye).addScaledVector(dir, 12);
-			const off = eye.clone().sub(view.target);
-			view.radius = off.length();
-			view.yaw = Math.atan2(off.x, off.z);
-			view.pitch = Math.asin(off.y / view.radius);
+			lookFrom(current.passenger);
 		}
 		draw();
 	}
 
-	function place() {
-		const p = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.001, view.pitch));
-		view.pitch = p;
-		camera.position.set(
+	// Stand at a passenger's eye height in cell {x, z}, looking towards cell {tx, tz}; the orbit turns about a point ahead.
+	function lookFrom(p) {
+		const eye = new THREE.Vector3(p.x + 0.5, 2.6, p.z + 0.5);
+		const ahead = new THREE.Vector3(p.tx + 0.5, 2.4, p.tz + 0.5);
+		const dir = ahead.clone().sub(eye).normalize();
+		Object.assign(view, viewFrom(eye, eye.clone().addScaledVector(dir, 12)));
+	}
+
+	function viewFrom(eye, at) {
+		const off = eye.clone().sub(at);
+		const radius = Math.max(off.length(), 0.01);
+		return { target: at.clone(), radius, yaw: Math.atan2(off.x, off.z), pitch: Math.asin(off.y / radius) };
+	}
+
+	function orbitEye() {
+		const p = view.pitch;
+		return new THREE.Vector3(
 			view.target.x + view.radius * Math.cos(p) * Math.sin(view.yaw),
 			view.target.y + view.radius * Math.sin(p),
 			view.target.z + view.radius * Math.cos(p) * Math.cos(view.yaw));
+	}
+
+	// A short eased camera move into a face view: eye and look point travel in straight lines, so the view turns as it goes.
+	let glide = null;
+	function stepGlide() {
+		if (!glide) {
+			return;
+		}
+		const t = Math.min(1, (performance.now() - glide.start) / glide.ms);
+		const k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+		const eye = glide.from.eye.clone().lerp(glide.to.eye, k);
+		const at = glide.from.at.clone().lerp(glide.to.at, k);
+		Object.assign(view, viewFrom(eye, at));
+		if (t >= 1) {
+			Object.assign(view, viewFrom(glide.to.eye, glide.to.at));
+			glide = null;
+		} else {
+			draw();
+		}
+	}
+
+	function place() {
+		view.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.001, view.pitch));
+		camera.position.copy(orbitEye());
 		camera.lookAt(view.target);
 		camera.near = Math.max(0.05, view.radius / 2000);
 		camera.updateProjectionMatrix();
@@ -561,6 +616,7 @@
 		requestAnimationFrame(() => {
 			pending = false;
 			resize();
+			stepGlide();
 			place();
 			renderer.render(scene, camera);
 			labels();
@@ -576,26 +632,41 @@
 		}
 	}
 
+	// The number badges are buttons kept from frame to frame (so hover, focus and a click survive redraws); one jumps to the
+	// view from its platform.
+	let badges = [];
 	function labels() {
 		const box = $("labels");
-		box.innerHTML = "";
-		if (!current || !$("faces").checked) {
-			return;
+		const faces = current && $("faces").checked ? current.faceLabels : [];
+		if (badges.length !== faces.length || badges.some((b, i) => b.face !== faces[i])) {
+			box.innerHTML = "";
+			badges = faces.map((f) => {
+				const b = document.createElement("button");
+				b.type = "button";
+				b.className = "face-label";
+				b.textContent = f.n;
+				b.face = f;
+				if (f.view) {
+					b.title = "View from platform " + f.platform + " (boarding face " + f.n + ")";
+					b.addEventListener("click", () => setView("face:" + f.n, true));
+				} else {
+					b.title = "Boarding face " + f.n + " (platform " + f.platform + ")";
+					b.disabled = true;
+				}
+				box.append(b);
+				return b;
+			});
 		}
 		const w = canvas.clientWidth;
 		const h = canvas.clientHeight;
-		for (const f of current.faceLabels) {
+		for (const b of badges) {
+			const f = b.face;
 			const v = new THREE.Vector3(f.x + 0.5, 2.5, f.z + 0.5).project(camera);
-			if (v.z > 1 || v.x < -1 || v.x > 1 || v.y < -1 || v.y > 1) {
-				continue;
-			}
-			const d = document.createElement("div");
-			d.className = "face-label";
-			d.textContent = f.n;
-			d.title = "Boarding face " + f.n + " (platform " + f.platform + ")";
-			d.style.left = ((v.x + 1) / 2) * w + "px";
-			d.style.top = ((1 - v.y) / 2) * h + "px";
-			box.append(d);
+			const off = v.z > 1 || v.x < -1 || v.x > 1 || v.y < -1 || v.y > 1;
+			b.hidden = off;
+			b.style.left = ((v.x + 1) / 2) * w + "px";
+			b.style.top = ((1 - v.y) / 2) * h + "px";
+			b.setAttribute("aria-pressed", String(currentView === "face:" + f.n));
 		}
 	}
 
@@ -627,6 +698,7 @@
 	let drag = null;
 	canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 	canvas.addEventListener("pointerdown", (e) => {
+		glide = null;
 		canvas.setPointerCapture(e.pointerId);
 		drag = { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2, moved: 0 };
 	});
@@ -658,6 +730,7 @@
 	});
 	canvas.addEventListener("wheel", (e) => {
 		e.preventDefault();
+		glide = null;
 		view.radius = Math.max(2, Math.min(3000, view.radius * Math.exp(e.deltaY * 0.0012)));
 		draw();
 	}, { passive: false });

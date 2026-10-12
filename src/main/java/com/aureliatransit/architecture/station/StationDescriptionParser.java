@@ -84,7 +84,7 @@ public final class StationDescriptionParser {
 	/** Words that ask for a station building with a furnished interior. */
 	private static final Set<String> BUILDING_WORDS = Set.of("building", "buildings", "concourse", "interior", "interiors", "interiorized",
 			"interiorised", "furnished", "ticket", "tickets", "entrance", "centraal", "central", "centrale", "hauptbahnhof", "hbf", "terminal",
-			"terminus", "termini", "kopfbahnhof", "depot");
+			"terminus", "termini", "kopfbahnhof", "depot", "hub", "interchange");
 	/** Words that ask for a grand station building (and so for a building at all). */
 	private static final Set<String> GRAND_WORDS = Set.of("grand", "monumental", "majestic", "palatial", "imposing", "magnificent",
 			"hauptbahnhof", "hbf");
@@ -94,6 +94,8 @@ public final class StationDescriptionParser {
 	private static final Set<String> COMPACT_WORDS = Set.of("compact", "halt", "village", "rural");
 	/** Words that make the tracks end at buffer stops in front of a head building. */
 	private static final Set<String> TERMINUS_WORDS = Set.of("terminus", "termini", "terminal", "kopfbahnhof");
+	/** A terminus whose outer tracks run on through: some trains end here, some carry on. */
+	private static final Set<String> HUB_WORDS = Set.of("hub", "interchange");
 	private static final Set<String> FOOTBRIDGE_WORDS = Set.of("footbridge", "footbridges", "overbridge", "overpass", "bridge", "skywalk");
 	private static final Set<String> TERRAIN_WORDS = Set.of("clear", "flatten", "level", "demolish", "replace", "remove", "terraform", "dig");
 	private static final Set<String> HALL_WORDS = Set.of("hall", "trainshed", "shed");
@@ -169,6 +171,8 @@ public final class StationDescriptionParser {
 		private Boolean footbridge;
 		private boolean terminus;
 		private int terminusAt = -1;
+		private boolean hub;
+		private int hubAt = -1;
 		/** The first word that only sets a building's look (e.g. "brick"), to warn about when no building was asked for. */
 		private String lookOnlyWord;
 		/** City and look words in text order; mixed together when there are several. */
@@ -681,6 +685,14 @@ public final class StationDescriptionParser {
 					terminus = true;
 					terminusAt = i;
 				}
+				if (HUB_WORDS.contains(token) && !hub) {
+					hub = true;
+					hubAt = i;
+					if (!terminus) {
+						terminus = true;
+						terminusAt = i;
+					}
+				}
 				if (token.equals("furnished") && furniture == null) {
 					furniture = true;
 				}
@@ -926,7 +938,7 @@ public final class StationDescriptionParser {
 			final boolean island = islandAt >= 0;
 
 			// tracks
-			final int trackCount;
+			int trackCount;
 			if (tracks != null) {
 				trackCount = clampTracks(tracks);
 				note(tracksAt, trackCount + (trackCount == 1 ? " track" : " tracks"));
@@ -945,11 +957,22 @@ public final class StationDescriptionParser {
 				trackCount = StationSpec.DEFAULT_TRACKS;
 				defaulted.add(trackCount + " tracks (default)");
 			}
+			if (hub && (trackCount < 4 || trackCount % 2 != 0)) {
+				// the outer two tracks run through and the inner ones end in pairs at island platforms
+				final int even = Math.min(StationSpec.MAX_TRACKS, Math.max(4, trackCount + trackCount % 2));
+				warn("a hub needs an even number of tracks, at least 4; using " + even);
+				trackCount = even;
+			}
 			builder.trackCount(trackCount);
 
 			// layout
 			final PlatformLayout layout;
-			if (island && sidePlatforms) {
+			if (hub) {
+				layout = PlatformLayout.ISLAND;
+				if (sidePlatforms) {
+					warn("a hub has island platforms, each shared by a track that ends and one that runs through");
+				}
+			} else if (island && sidePlatforms) {
 				if (trackCount >= 3) {
 					layout = PlatformLayout.ISLAND;
 					note(Math.min(islandAt, sideAt), "island and side platforms");
@@ -1081,7 +1104,10 @@ public final class StationDescriptionParser {
 							+ sized.platformLength() + " long)");
 				}
 			}
-			if (terminus) {
+			if (terminus && hub) {
+				builder.terminus(true).hub(true);
+				note(hubAt, "hub: the outer tracks run through past the head building, the inner ones end at its buffer stops");
+			} else if (terminus) {
 				builder.terminus(true);
 				note(terminusAt, "terminus: the tracks end at buffer stops in front of the head building");
 			}

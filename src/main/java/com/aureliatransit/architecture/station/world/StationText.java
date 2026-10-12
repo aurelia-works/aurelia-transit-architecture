@@ -40,7 +40,7 @@ final class StationText {
 					case NONE -> "no roof";
 					case CANOPY -> "canopy";
 					case HALL -> "hall roof";
-				}) + (spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+				}) + (spec.hub() ? ", hub" : spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
 	}
 
 	/** A clickable chat button that runs {@code command} (an operator's own /ata_station command). */
@@ -64,7 +64,7 @@ final class StationText {
 		};
 		return spec.trackCount() + (spec.trackCount() == 1 ? " track, " : " tracks, ") + lower(spec.platformLayout().name()) + " platforms, "
 				+ spec.platformLength() + " long, " + roof + (spec.hasBuilding() ? ", " + spec.building().label() : "")
-				+ (spec.terminus() ? ", terminus" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+				+ (spec.hub() ? ", hub" : spec.terminus() ? ", terminus" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
 	}
 
 	/**

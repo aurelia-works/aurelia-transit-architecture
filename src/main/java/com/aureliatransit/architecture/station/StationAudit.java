@@ -431,7 +431,8 @@ public final class StationAudit {
 		 */
 		private boolean trackColumn(int u, int v) {
 			for (final Box envelope : plan.trackEnvelopes()) {
-				if (u >= envelope.uMin() && u <= envelope.uMax() && v >= envelope.vMin() - 1 && v <= envelope.vMax() + (layout.terminus() ? 0 : 1)) {
+				// a track running through (to the footprint end) carries on one cell past it; one ending at buffers does not
+				if (u >= envelope.uMin() && u <= envelope.uMax() && v >= envelope.vMin() - 1 && v <= envelope.vMax() + (envelope.vMax() >= layout.vMax() ? 1 : 0)) {
 					return true;
 				}
 			}
@@ -440,6 +441,11 @@ public final class StationAudit {
 
 		private Ground ground(int u, int v) {
 			if (u < 0 || u >= layout.width()) {
+				return Ground.APPROACH;
+			}
+			// the street in front of a terminus head building: a hub's through tracks fence off both sides, so its passengers
+			// come in through the head building's street door
+			if (layout.terminus() && v > layout.vMax() && !trackColumn(u, v)) {
 				return Ground.APPROACH;
 			}
 			for (int y = StationGeometry.WALK_Y; y <= StationGeometry.WALK_Y + 2; y++) {
