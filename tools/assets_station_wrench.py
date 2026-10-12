@@ -53,6 +53,7 @@ def lang():
         SCREEN + "roof": "Roof",
         SCREEN + "roof.tip": "Auto uses the city's own roof. A train shed is one big roof over all the tracks",
         SCREEN + "building": "Building",
+        SCREEN + "building.tip": "Yes sizes the building by the station: grand for 3+ tracks or 100+ long. Compact, City and Grand choose it",
         SCREEN + "building.terminus": "A terminus always has its head building",
         SCREEN + "name": "Station name",
         SCREEN + "place": "Place in front of me",

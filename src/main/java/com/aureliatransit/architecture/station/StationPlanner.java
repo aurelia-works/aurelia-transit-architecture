@@ -25,6 +25,11 @@ public final class StationPlanner {
 	private static final Comparator<PlannedBlock> BUILD_ORDER = Comparator.comparingInt((PlannedBlock b) -> b.role().ordinal())
 			.thenComparingInt(PlannedBlock::y).thenComparingInt(PlannedBlock::v).thenComparingInt(PlannedBlock::u);
 
+	/** How far a grand station's clock tower rises above the building block's roof, to its cornice. */
+	private static final int TOWER_HEIGHT = 11;
+	/** The state of every stair in a pitched roof. */
+	private static final String PITCH_STATE = "half=bottom,shape=straight";
+
 	private StationPlanner() {
 	}
 
@@ -35,6 +40,7 @@ public final class StationPlanner {
 		planning.railNodes();
 		planning.lifts();
 		planning.building();
+		planning.wings();
 		planning.head();
 		planning.footbridge();
 		planning.columns();
@@ -111,6 +117,9 @@ public final class StationPlanner {
 		private List<Integer> hallRows;
 		/** v of the building's platform-side doorways: no shed column stands in front of them. */
 		private final java.util.Set<Integer> doorV = new java.util.HashSet<>();
+		private final StationScale scale;
+		/** Whole bays each wing runs along the platform from the building block's end wall; 0 for no wings. */
+		private final int wingBays;
 
 		Planning(StationSpec spec) {
 			this.spec = spec;
@@ -119,6 +128,28 @@ public final class StationPlanner {
 			this.length = layout.platformLength();
 			this.columnV = columnPositions(length);
 			this.site = StationLayout.of(spec, layout);
+			this.scale = spec.buildingScale();
+			this.wingBays = site.building() ? wingBays(scale, length, site.vStart(), site.vEnd()) : 0;
+		}
+
+		/** Whole bays per wing so the block and both wings cover about the scale's share of the platform, the same both sides. */
+		private static int wingBays(StationScale scale, int length, int vStart, int vEnd) {
+			final int span = length * scale.wingPercent() / 100;
+			if (span == 0) {
+				return 0;
+			}
+			final int from = (length - span) / 2;
+			final int to = from + span - 1;
+			return Math.max(0, Math.min((vStart - from) / StationGeometry.BAY, (to - vEnd) / StationGeometry.BAY));
+		}
+
+		/** First and last v the building and its wings stand on. */
+		private int buildingFrom() {
+			return site.vStart() - wingBays * StationGeometry.BAY;
+		}
+
+		private int buildingTo() {
+			return site.vEnd() + wingBays * StationGeometry.BAY;
 		}
 
 		/** Places a block unless the cell is taken or must stay empty; true if placed. */
@@ -375,25 +406,326 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// flat roof and cornice parapet
-			for (int u = uS; u <= uP; u++) {
-				for (int v = vS; v <= vE; v++) {
-					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.roof());
-				}
+			// storeys above the second (a city or grand station), the clock tower, then the roof and cornice parapet
+			for (int storey = 0; storey < scale.extraStoreys(); storey++) {
+				storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, uS, uP, vS, vE, true);
 			}
-			for (int v = vS; v <= vE; v++) {
-				put(Role.BUILDING_ROOF, uS, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.MINUS_U, b.cornice());
-				put(Role.BUILDING_ROOF, uP, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_U, b.cornice());
+			final int top = roofY();
+			if (scale == StationScale.GRAND) {
+				clockTower(top, uS, site.entranceV());
 			}
-			for (int u = uS; u <= uP; u++) {
-				put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, vS, LocalDir.MINUS_V, b.cornice());
-				put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, vE, LocalDir.PLUS_V, b.cornice());
-			}
+			roof(top, uS, uP, vS, vE);
 			// inner stair flights (two columns wide)
 			for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 				final int v = site.innerStairV(y);
 				for (int u = uA; u <= uB; u++) {
 					put(Role.STAIR, u, y, v, site.innerStairFront(), b.stair());
+				}
+			}
+		}
+
+		/** y of the building block's roof: above its two storeys and any storeys a city or grand station adds. */
+		private int roofY() {
+			return StationGeometry.BUILDING_ROOF_Y + 4 * scale.extraStoreys();
+		}
+
+		/**
+		 * One more storey on a building box from {@code floorY}: the slab (a trim band round the edge, the floor with light
+		 * panels inside, which light the storey below too) and three wall rows with a window row in the middle, pilasters
+		 * every bay along the long walls. {@code endWindows} puts windows in the end walls too (a wing's end walls are shared).
+		 */
+		private void storey(int floorY, int uS, int uP, int vS, int vE, boolean endWindows) {
+			final StylePalette.Building b = palette.building();
+			for (int u = uS; u <= uP; u++) {
+				for (int v = vS; v <= vE; v++) {
+					final boolean edge = u == uS || u == uP || v == vS || v == vE;
+					if (edge) {
+						put(Role.WALL, u, floorY, v, outward(u, v, uS, uP, vS, vE), b.trim());
+					} else {
+						slabCell(u, floorY, v);
+					}
+				}
+			}
+			for (int y = floorY + 1; y <= floorY + 3; y++) {
+				final boolean windowRow = y == floorY + 2;
+				for (int v = vS; v <= vE; v++) {
+					final boolean pilaster = Math.floorMod(v - vS, StationGeometry.BAY) == 0;
+					final boolean window = windowRow && !pilaster && Math.abs(Math.floorMod(v - vS, StationGeometry.BAY) - 3) <= 1;
+					for (final int u : new int[]{uS, uP}) {
+						final LocalDir front = u == uS ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+						if (window) {
+							put(Role.WINDOW, u, y, v, front, b.window());
+						} else {
+							put(Role.WALL, u, y, v, front, pilaster ? b.trim() : b.wall());
+						}
+					}
+				}
+				for (int u = uS + 1; u <= uP - 1; u++) {
+					final boolean window = endWindows && windowRow && u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0;
+					for (final int v : new int[]{vS, vE}) {
+						final LocalDir front = v == vS ? LocalDir.MINUS_V : LocalDir.PLUS_V;
+						put(window ? Role.WINDOW : Role.WALL, u, y, v, front, window ? b.window() : (u - uS) % 3 == 0 ? b.trim() : b.wall());
+					}
+				}
+			}
+		}
+
+		/** A floor slab cell: a light panel on every fourth diagonal, so no floor cell above or below is more than 2 from one. */
+		private void slabCell(int u, int y, int v) {
+			final StylePalette.Building b = palette.building();
+			if (Math.floorMod(u + v, 4) == 0) {
+				put(Role.LIGHT_PANEL, u, y, v, LocalDir.PLUS_V, b.light());
+			} else {
+				put(Role.FLOOR, u, y, v, LocalDir.PLUS_V, b.upperFloor());
+			}
+		}
+
+		private static LocalDir outward(int u, int v, int uS, int uP, int vS, int vE) {
+			if (u == uS) {
+				return LocalDir.MINUS_U;
+			}
+			if (u == uP) {
+				return LocalDir.PLUS_U;
+			}
+			return v == vS ? LocalDir.MINUS_V : LocalDir.PLUS_V;
+		}
+
+		/**
+		 * The roof of a building box at {@code top}: a flat roof with a cornice parapet, or for a masonry look at city or grand
+		 * scale a hipped roof of stairs inside the cornice, over an attic lit through its floor.
+		 */
+		private void roof(int top, int uS, int uP, int vS, int vE) {
+			final StylePalette.Building b = palette.building();
+			final String[] pitched = pitchedRoof();
+			for (int u = uS; u <= uP; u++) {
+				for (int v = vS; v <= vE; v++) {
+					final boolean edge = u == uS || u == uP || v == vS || v == vE;
+					if (pitched != null && !edge && Math.floorMod(u + v, 4) == 0) {
+						put(Role.LIGHT_PANEL, u, top, v, LocalDir.PLUS_V, b.light());
+					} else {
+						put(Role.BUILDING_ROOF, u, top, v, LocalDir.PLUS_V, b.roof());
+					}
+				}
+			}
+			for (int v = vS; v <= vE; v++) {
+				put(Role.BUILDING_ROOF, uS, top + 1, v, LocalDir.MINUS_U, b.cornice());
+				put(Role.BUILDING_ROOF, uP, top + 1, v, LocalDir.PLUS_U, b.cornice());
+			}
+			for (int u = uS; u <= uP; u++) {
+				put(Role.BUILDING_ROOF, u, top + 1, vS, LocalDir.MINUS_V, b.cornice());
+				put(Role.BUILDING_ROOF, u, top + 1, vE, LocalDir.PLUS_V, b.cornice());
+			}
+			if (pitched == null) {
+				return;
+			}
+			hipped(uS + 1, uP - 1, vS + 1, vE - 1, top + 1, pitched[0], pitched[1], Integer.MAX_VALUE);
+		}
+
+		/**
+		 * A hipped roof over u0..u1 x v0..v1 from {@code y}: rings of stairs stepping in one cell and up one each, every stair
+		 * rising towards the middle, at most {@code rings} rings, then a full-block top. Each ring above the first rests on a
+		 * full block, the roof's thickness, so every tile touches the one below it face to face.
+		 */
+		private void hipped(int u0, int u1, int v0, int v1, int y, String stair, String solid, int rings) {
+			for (int k = 0; ; k++) {
+				final int a0 = u0 + k;
+				final int a1 = u1 - k;
+				final int b0 = v0 + k;
+				final int b1 = v1 - k;
+				final int at = y + k;
+				if (a0 >= a1 || b0 >= b1 || k == rings) {
+					for (int u = a0; u <= a1; u++) {
+						for (int v = b0; v <= b1; v++) {
+							if (k > 0) {
+								put(Role.BUILDING_ROOF, u, at - 1, v, LocalDir.PLUS_V, solid);
+							}
+							put(Role.BUILDING_ROOF, u, at, v, LocalDir.PLUS_V, solid);
+						}
+					}
+					return;
+				}
+				for (int u = a0; u <= a1; u++) {
+					for (int v = b0; v <= b1; v++) {
+						if (u != a0 && u != a1 && v != b0 && v != b1) {
+							continue;
+						}
+						if (k > 0) {
+							put(Role.BUILDING_ROOF, u, at - 1, v, LocalDir.PLUS_V, solid);
+						}
+						final LocalDir up = v == b0 ? LocalDir.PLUS_V : v == b1 ? LocalDir.MINUS_V : u == a0 ? LocalDir.PLUS_U : LocalDir.MINUS_U;
+						put(Role.BUILDING_ROOF, u, at, v, up, stair, PITCH_STATE);
+					}
+				}
+			}
+		}
+
+		/** Stairs and the matching full block for a pitched roof, or null for a flat one (modern and concrete looks, compact). */
+		private String[] pitchedRoof() {
+			if (scale == StationScale.COMPACT) {
+				return null;
+			}
+			return switch (spec.building()) {
+				case AMSTERDAM, ANTWERP, BEAUX_ARTS -> new String[]{"minecraft:oxidized_cut_copper_stairs", "minecraft:oxidized_cut_copper"};
+				case GOTHIC_BRICK, SANDSTONE, CLINKER -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
+				case NONE, MODERN, CONCRETE -> null;
+			};
+		}
+
+		/**
+		 * A grand station's clock tower over the entrance, standing on the street wall: a hollow square shaft five cells across
+		 * rising {@link #TOWER_HEIGHT} above the roof, louvred openings, a clock face on its three outer sides, a cornice and a
+		 * pyramid cap with a finial. Planned before the roof so the roof leaves the tower open.
+		 */
+		private void clockTower(int top, int uS, int vC) {
+			final StylePalette.Building b = palette.building();
+			final int u0 = uS;
+			final int u1 = uS + 4;
+			final int v0 = vC - 2;
+			final int v1 = vC + 2;
+			final int crown = top + TOWER_HEIGHT;
+			for (int u = u0 + 1; u <= u1 - 1; u++) {
+				for (int v = v0 + 1; v <= v1 - 1; v++) {
+					// the roof under the tower is lit so the closed shaft stays dark-free; the rest of the shaft stays empty
+					if (u == u0 + 2 && v == vC) {
+						put(Role.LIGHT_PANEL, u, top, v, LocalDir.PLUS_V, b.light());
+					}
+					for (int y = top + 1; y <= crown; y++) {
+						keepClear(u, y, v);
+					}
+				}
+			}
+			for (int y = top + 1; y <= crown; y++) {
+				final boolean band = y == top + 1 || y == crown;
+				final boolean louvre = y >= top + 3 && y <= top + 5;
+				for (int u = u0; u <= u1; u++) {
+					for (int v = v0; v <= v1; v++) {
+						final boolean ring = u == u0 || u == u1 || v == v0 || v == v1;
+						if (!ring) {
+							continue;
+						}
+						final boolean corner = (u == u0 || u == u1) && (v == v0 || v == v1);
+						final boolean middle = u == u0 + 2 || v == vC;
+						final LocalDir front = outward(u, v, u0, u1, v0, v1);
+						if (band || corner) {
+							put(Role.WALL, u, y, v, front, b.trim());
+						} else if (louvre && middle) {
+							put(Role.WINDOW, u, y, v, front, b.window());
+						} else {
+							put(Role.WALL, u, y, v, front, b.wall());
+						}
+					}
+				}
+			}
+			// clock faces on the street side and both ends, one row under the cornice
+			final int clockY = crown - 2;
+			put(Role.FIXTURE, u0 - 1, clockY, vC, LocalDir.MINUS_U, ata("amsterdam_clock_face_panel"));
+			put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, LocalDir.MINUS_V, ata("amsterdam_clock_face_panel"));
+			put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, LocalDir.PLUS_V, ata("amsterdam_clock_face_panel"));
+			// the cap: a closed slab, then a pyramid of two rings and a point, then the finial
+			final String[] pitched = pitchedRoof();
+			final String stair = pitched != null ? pitched[0] : "minecraft:stone_brick_stairs";
+			final String solid = pitched != null ? pitched[1] : b.trim();
+			for (int u = u0 + 1; u <= u1 - 1; u++) {
+				for (int v = v0 + 1; v <= v1 - 1; v++) {
+					air.remove(new Cell(u, crown, v));
+					put(Role.BUILDING_ROOF, u, crown, v, LocalDir.PLUS_V, b.roof());
+				}
+			}
+			hipped(u0, u1, v0, v1, crown + 1, stair, solid, 2);
+			put(Role.BUILDING_ROOF, u0 + 2, crown + 4, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
+		}
+
+		/**
+		 * The wings of a city or grand station: lower blocks along the platform on both sides of the building block, whole bays
+		 * long, two storeys with the same cornice height as a compact building. Their ground floors are waiting rooms on the
+		 * paid side, opening onto platform 1 through a doorway in every bay, with benches along the street wall; the upper
+		 * storeys are closed. A grand station's wings end in pavilions a storey higher. The block's own end walls separate them.
+		 */
+		void wings() {
+			if (wingBays == 0) {
+				return;
+			}
+			final StylePalette.Building b = palette.building();
+			final int uS = StationLayout.streetWall();
+			final int uP = site.platformWall(layout);
+			final boolean pavilions = scale == StationScale.GRAND && wingBays >= 2;
+			for (final int side : new int[]{-1, 1}) {
+				final int inner = side < 0 ? site.vStart() : site.vEnd();
+				final int end = inner + side * wingBays * StationGeometry.BAY;
+				final int pavilionFrom = inner + side * (wingBays - 1) * StationGeometry.BAY;
+				for (int j = 0; j < wingBays; j++) {
+					final int centre = inner + side * (StationGeometry.BAY * j + 3);
+					for (int v = centre - 1; v <= centre + 1; v++) {
+						for (int y = 1; y <= 3; y++) {
+							keepClear(uP, y, v);
+						}
+						doorV.add(v);
+					}
+				}
+				final int lo = Math.min(inner + side, end);
+				final int hi = Math.max(inner + side, end);
+				// the wing's own end wall and, before a pavilion, the cross wall above the wing roof
+				final int pavilionRoof = StationGeometry.BUILDING_ROOF_Y + 4;
+				for (int u = uS + 1; u <= uP - 1; u++) {
+					for (int y = 1; y < (pavilions ? pavilionRoof : StationGeometry.BUILDING_ROOF_Y); y++) {
+						final boolean band = y == StationGeometry.UPPER_FLOOR_Y || y == StationGeometry.BUILDING_ROOF_Y;
+						final boolean window = !band && (y == 2 || y == 3 || y == StationGeometry.UPPER_WALK_Y + 1 || y == StationGeometry.BUILDING_ROOF_Y + 2)
+								&& u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0;
+						final String id = y == 1 ? b.plinth() : band || (u - uS) % 3 == 0 ? b.trim() : b.wall();
+						put(window ? Role.WINDOW : Role.WALL, u, y, end, side < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V, window ? b.window() : id);
+					}
+					if (pavilions) {
+						for (int y = StationGeometry.BUILDING_ROOF_Y + 1; y < pavilionRoof; y++) {
+							put(Role.WALL, u, y, pavilionFrom, side < 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V, b.wall());
+						}
+					}
+				}
+				for (int v = lo; v <= hi; v++) {
+					final int along = Math.abs(v - inner);
+					final boolean pilaster = along % StationGeometry.BAY == 0;
+					final boolean inPavilion = pavilions && along >= Math.abs(pavilionFrom - inner);
+					final int roofAt = inPavilion ? pavilionRoof : StationGeometry.BUILDING_ROOF_Y;
+					final boolean windowBay = !pilaster && Math.abs(along % StationGeometry.BAY - 3) <= 1;
+					for (int u = uS; u <= uP; u++) {
+						final boolean edge = u == uS || u == uP || v == end;
+						put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
+					}
+					for (final int u : new int[]{uS, uP}) {
+						final LocalDir front = u == uS ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+						for (int y = 1; y < roofAt; y++) {
+							final boolean band = y == StationGeometry.UPPER_FLOOR_Y || y == StationGeometry.BUILDING_ROOF_Y;
+							final boolean windowRow = y == 2 || y == 3 || y == StationGeometry.UPPER_WALK_Y + 1 || y == StationGeometry.BUILDING_ROOF_Y + 2;
+							if (windowBay && windowRow && !band) {
+								put(Role.WINDOW, u, y, v, front, b.window());
+							} else {
+								put(Role.WALL, u, y, v, front, band || pilaster ? b.trim() : y == 1 ? b.plinth() : b.wall());
+							}
+						}
+					}
+					for (int u = uS + 1; u <= uP - 1; u++) {
+						slabCell(u, StationGeometry.UPPER_FLOOR_Y, v);
+						if (inPavilion) {
+							slabCell(u, StationGeometry.BUILDING_ROOF_Y, v);
+						}
+					}
+					if (!inPavilion) {
+						for (int u = uS; u <= uP; u++) {
+							put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.roof());
+						}
+						put(Role.BUILDING_ROOF, uS, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.MINUS_U, b.cornice());
+						put(Role.BUILDING_ROOF, uP, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_U, b.cornice());
+					}
+					// benches against the street wall, either side of each bay's middle
+					if (!pilaster && Math.abs(along % StationGeometry.BAY - 3) == 1) {
+						put(Role.BENCH, uS + 1, StationGeometry.WALK_Y, v, LocalDir.PLUS_U, b.bench());
+					}
+				}
+				if (pavilions) {
+					roof(pavilionRoof, uS, uP, Math.min(pavilionFrom, end), Math.max(pavilionFrom, end));
+				} else {
+					for (int u = uS; u <= uP; u++) {
+						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, end, side < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V, b.cornice());
+					}
 				}
 			}
 		}
@@ -1094,6 +1426,9 @@ public final class StationPlanner {
 		 * and a building beside the tracks when the station has them.
 		 */
 		private int hallBeamY() {
+			if (scale == StationScale.GRAND) {
+				return StationGeometry.TALL_HALL_BEAM_Y + 3;
+			}
 			if (site.bridge() || spec.sideBuilding()) {
 				return StationGeometry.TALL_HALL_BEAM_Y;
 			}
@@ -1131,7 +1466,7 @@ public final class StationPlanner {
 			final List<Integer> rows = new ArrayList<>(hallRows());
 			// over a footbridge the frame also rests on the bridge roof: short piers under every girder line, a cross girder on them
 			final int bridgeRoof = StationGeometry.BUILDING_ROOF_Y;
-			final boolean onBridge = site.bridge() && beamY == bridgeRoof + 2;
+			final boolean onBridge = site.bridge() && beamY >= bridgeRoof + 2;
 			if (onBridge && !rows.contains(site.bridgeV())) {
 				rows.add(site.bridgeV());
 				rows.sort(Comparator.naturalOrder());
@@ -1176,7 +1511,9 @@ public final class StationPlanner {
 				for (int u = u0; u <= u1; u++) {
 					final PlannedBlock below = cells.get(new Cell(u, bridgeRoof, site.bridgeV()));
 					if (below != null && below.role() == Role.BUILDING_ROOF && (along.contains(u - u0) || lit[u])) {
-						put(Role.BRIDGE_PIER, u, bridgeRoof + 1, site.bridgeV(), LocalDir.PLUS_V, palette.building().pier());
+						for (int y = bridgeRoof + 1; y < beamY; y++) {
+							put(Role.BRIDGE_PIER, u, y, site.bridgeV(), LocalDir.PLUS_V, palette.building().pier());
+						}
 					}
 				}
 			}
@@ -1813,7 +2150,7 @@ public final class StationPlanner {
 				supports.add(new Box(headDoor() - 1, -1, layout.headEnd() + 1, headDoor() + 1, -1, layout.vMax()));
 			}
 			if (site.building()) {
-				supports.add(new Box(0, -1, site.vStart(), layout.buildingWidth() - 1, -1, site.vEnd()));
+				supports.add(new Box(0, -1, buildingFrom(), layout.buildingWidth() - 1, -1, buildingTo()));
 			}
 			supports.addAll(extraSupport);
 			return new StationPlan(spec, layout, blocks, envelopes, headroom, supports, palette.blockId(Role.FOUNDATION));

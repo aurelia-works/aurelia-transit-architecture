@@ -76,6 +76,13 @@ public final class StationDescriptionParser {
 	private static final Set<String> BUILDING_WORDS = Set.of("building", "buildings", "concourse", "interior", "interiors", "interiorized",
 			"interiorised", "furnished", "ticket", "tickets", "entrance", "centraal", "central", "centrale", "hauptbahnhof", "hbf", "terminal",
 			"terminus", "termini", "kopfbahnhof", "depot");
+	/** Words that ask for a grand station building (and so for a building at all). */
+	private static final Set<String> GRAND_WORDS = Set.of("grand", "monumental", "majestic", "palatial", "imposing", "magnificent",
+			"hauptbahnhof", "hbf");
+	/** Words that ask for a city-sized station building. */
+	private static final Set<String> CITY_WORDS = Set.of("city", "regional", "town");
+	/** Words that ask for a compact station building. */
+	private static final Set<String> COMPACT_WORDS = Set.of("compact", "halt", "village", "rural");
 	/** Words that make the tracks end at buffer stops in front of a head building. */
 	private static final Set<String> TERMINUS_WORDS = Set.of("terminus", "termini", "terminal", "kopfbahnhof");
 	private static final Set<String> FOOTBRIDGE_WORDS = Set.of("footbridge", "footbridges", "overbridge", "overpass", "bridge", "skywalk");
@@ -159,6 +166,10 @@ public final class StationDescriptionParser {
 		private final List<Look> looks = new ArrayList<>();
 		private boolean mixing;
 		private ShedShape shed;
+		private StationScale scale;
+		private int scaleAt = -1;
+		/** The scale came from a landmark's name (Grand Central), not from a size word. */
+		private boolean landmarkScale;
 
 		ParseResult run(String description) {
 			String text = description;
@@ -572,8 +583,16 @@ public final class StationDescriptionParser {
 			} else if (token.equals("narrow")) {
 				narrow = true;
 				note(i, "narrow platforms");
+			} else if (GRAND_WORDS.contains(token)) {
+				setScale(StationScale.GRAND, i);
+				askBuilding(i);
+			} else if (CITY_WORDS.contains(token)) {
+				setScale(StationScale.CITY, i);
+			} else if (COMPACT_WORDS.contains(token)) {
+				setScale(StationScale.COMPACT, i);
 			} else if (token.equals("small")) {
 				small = true;
+				setScale(StationScale.COMPACT, i);
 				note(i, "small station");
 			} else if (token.equals("large") || token.equals("big") || token.equals("major")) {
 				large = true;
@@ -590,6 +609,11 @@ public final class StationDescriptionParser {
 					|| token.equals("30th") && at(i + 1).equals("street")) {
 				setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
 				askBuilding(i);
+				if (scale == null) {
+					// the landmark's own size, not a size word: a terminus keeps its one head building without a warning
+					scale = StationScale.GRAND;
+					landmarkScale = true;
+				}
 				use(i, i + 1);
 				return true;
 			}
@@ -643,6 +667,9 @@ public final class StationDescriptionParser {
 			}
 			if (BUILDING_WORDS.contains(token)) {
 				askBuilding(i);
+				if (GRAND_WORDS.contains(token)) {
+					setScale(StationScale.GRAND, i);
+				}
 				if (TERMINUS_WORDS.contains(token) && !terminus) {
 					terminus = true;
 					terminusAt = i;
@@ -724,6 +751,16 @@ public final class StationDescriptionParser {
 
 		private static String title(String word) {
 			return word.length() <= 3 ? word.toUpperCase(Locale.ROOT) : Character.toUpperCase(word.charAt(0)) + word.substring(1);
+		}
+
+		/** The first size word wins; a later one is ignored. */
+		private void setScale(StationScale value, int i) {
+			if (scale == null) {
+				scale = value;
+				scaleAt = i;
+			} else if (scale != value) {
+				warn("the building size was given twice; using " + scale.label());
+			}
 		}
 
 		private void askBuilding(int i) {
@@ -1009,6 +1046,20 @@ public final class StationDescriptionParser {
 				note(buildingAt, "station building: " + look.label() + ", furnished");
 			} else if (lookOnlyWord != null) {
 				warn("\"" + lookOnlyWord + "\" only sets a station building's look; add \"station building\" to get one");
+			}
+			if (wantsBuilding && !terminus) {
+				final StationSpec sized = builder.build();
+				if (scale != null) {
+					builder.scale(scale);
+					note(Math.max(0, scaleAt), scale.label() + " station building");
+				} else {
+					final StationScale auto = StationScale.forSize(true, sized.trackCount(), sized.platformLength());
+					builder.scale(auto);
+					defaulted.add(auto.label() + " station building (default for " + sized.trackCount() + (sized.trackCount() == 1 ? " track, " : " tracks, ")
+							+ sized.platformLength() + " long)");
+				}
+			} else if (scale != null && scale != StationScale.COMPACT && terminus && !landmarkScale) {
+				warn("a terminus's head building has one size; \"" + tokens[scaleAt] + "\" only sizes a building beside the tracks");
 			}
 			if (terminus) {
 				builder.terminus(true);

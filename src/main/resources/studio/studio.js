@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "name"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";
@@ -82,6 +82,7 @@
 		fillSelect($("look"), options.looks);
 		fillSelect($("mix"), options.looks.filter(([v]) => v !== "AUTO"), ["", "Nothing"]);
 		fillSelect($("roof"), options.roofs);
+		fillSelect($("size"), options.sizes);
 		$("tracks").min = options.tracks[0];
 		$("tracks").max = options.tracks[1];
 		$("tracks").value = 2;
@@ -109,6 +110,7 @@
 				$("look").value = "AUTO";
 				$("mix").value = "";
 				$("roof").value = "AUTO";
+				$("size").value = "AUTO";
 				$("layout").value = "AUTO";
 				$("preset").value = "";
 				changed();
@@ -582,6 +584,7 @@
 			["Length", r.length + " blocks", b.length + " blocks on every face", r.length === b.length],
 			["Look", r.look, b.style.replace(/_/g, " ") + " platforms", null],
 			["Building", r.building ? "yes" : "no", b.building, r.building === (b.building !== "no building")],
+			["Building size", r.building ? r.size : "", b.scale, r.size.startsWith("Auto") || !r.building ? null : r.size.toLowerCase() === b.scale],
 			["Roof", r.roof, b.roof, null],
 			["Footbridge", "", b.footbridge ? "yes" : "no", null],
 			["Name", "", b.name || "(no name signs)", null],

@@ -15,10 +15,11 @@ import java.util.Objects;
  * @param footbridge     a footbridge over the tracks to every platform was asked for (a building adds one when a platform
  *                       needs it)
  * @param shed           the hall roof's cross-section; ignored unless {@code roof} is {@link RoofType#HALL}
+ * @param scale          how grand a side building is: storeys, wings, tower; ignored without a side building
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
-		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed) {
+		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, StationScale scale) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -42,6 +43,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(name, "name");
 		Objects.requireNonNull(building, "building");
 		Objects.requireNonNull(shed, "shed");
+		Objects.requireNonNull(scale, "scale");
 		check(trackCount, MIN_TRACKS, MAX_TRACKS, "trackCount");
 		check(platformLength, MIN_LENGTH, MAX_LENGTH, "platformLength");
 		check(platformWidth, MIN_WIDTH, MAX_WIDTH, "platformWidth");
@@ -77,7 +79,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public Builder toBuilder() {
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
-				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed);
+				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).scale(scale);
 	}
 
 	public boolean hasBuilding() {
@@ -87,6 +89,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	/** A station building beside the tracks (a through station's); a terminus has its head building across the track ends. */
 	public boolean sideBuilding() {
 		return hasBuilding() && !terminus;
+	}
+
+	/** The scale the side building is built at: {@link StationScale#COMPACT} without a side building. */
+	public StationScale buildingScale() {
+		return sideBuilding() ? scale : StationScale.COMPACT;
 	}
 
 	/** Mutable builder; starts at {@link #defaults()}. {@link #build()} applies the constructor's checks. */
@@ -109,6 +116,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean footbridge;
 		private boolean terminus;
 		private ShedShape shed = ShedShape.FLAT;
+		private StationScale scale = StationScale.COMPACT;
 
 		private Builder() {
 		}
@@ -198,9 +206,14 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder scale(StationScale value) {
+			scale = value;
+			return this;
+		}
+
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name, building, footbridge, terminus, shed);
+					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, scale);
 		}
 	}
 }

@@ -114,13 +114,15 @@ public class StationWrenchScreen extends Screen {
 				() -> recipe.withPlatforms(next(recipe.platforms()))));
 		y += ROW;
 		addDrawableChild(cycle(left, y, HALF, "length", Text.literal(Integer.toString(recipe.length())),
-				() -> recipe.withLength(recipe.length() >= 128 ? 32 : (recipe.length() / 32 + 1) * 32)));
+				() -> recipe.withLength(nextLength(recipe.length()))));
 		final ButtonWidget roof = cycle(left + HALF + 4, y, HALF, "roof", Text.literal(recipe.roof().label()), () -> recipe.withRoof(next(recipe.roof())));
 		roof.setTooltip(Tooltip.of(Text.translatable(KEY + "roof.tip")));
 		addDrawableChild(roof);
 		y += ROW;
-		final ButtonWidget building = cycle(left, y, HALF, "building", recipe.building() ? ScreenTexts.YES : ScreenTexts.NO,
-				() -> recipe.withBuilding(!recipe.building()));
+		final Text buildingLabel = !recipe.building() ? ScreenTexts.NO
+				: recipe.size() == StationRecipe.Size.AUTO || recipe.terminus() ? ScreenTexts.YES : Text.literal(recipe.size().label());
+		final ButtonWidget building = cycle(left, y, HALF, "building", buildingLabel, this::nextBuilding);
+		building.setTooltip(Tooltip.of(Text.translatable(KEY + "building.tip")));
 		if (recipe.terminus()) {
 			building.active = false;
 			building.setTooltip(Tooltip.of(Text.translatable(KEY + "building.terminus")));
@@ -174,6 +176,29 @@ public class StationWrenchScreen extends Screen {
 			index++;
 		}
 		return index < all.length ? all[index] : null;
+	}
+
+	/** Platform lengths the length button steps through, then back to the first. */
+	private static final int[] LENGTHS = {32, 48, 64, 96, 128, 160, 200, 250};
+
+	private static int nextLength(int length) {
+		for (final int option : LENGTHS) {
+			if (option > length) {
+				return option;
+			}
+		}
+		return LENGTHS[0];
+	}
+
+	/** No building, then a building sized by the station, then compact, city and grand, then no building again. */
+	private StationRecipe nextBuilding() {
+		if (!recipe.building()) {
+			return recipe.withBuilding(true).withSize(StationRecipe.Size.AUTO);
+		}
+		if (recipe.size() == StationRecipe.Size.GRAND) {
+			return recipe.withBuilding(false).withSize(StationRecipe.Size.AUTO);
+		}
+		return recipe.withSize(next(recipe.size()));
 	}
 
 	private static <E extends Enum<E>> E next(E value) {

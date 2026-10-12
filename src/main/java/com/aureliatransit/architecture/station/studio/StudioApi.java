@@ -52,6 +52,7 @@ public final class StudioApi {
 		recipe = recipe.withLength(number(q.get("length"), recipe.length()));
 		recipe = recipe.withRoof(value(StationRecipe.Roof.class, q.get("roof"), StationRecipe.Roof.AUTO));
 		recipe = recipe.withBuilding(!"0".equals(q.get("building")));
+		recipe = recipe.withSize(value(StationRecipe.Size.class, q.get("size"), StationRecipe.Size.AUTO));
 		return recipe.withName(q.getOrDefault("name", ""));
 	}
 
@@ -67,6 +68,7 @@ public final class StudioApi {
 		out.append("\"looks\":").append(labels(StationRecipe.Look.values()));
 		out.append(",\"layouts\":").append(labels(StationRecipe.Platforms.values()));
 		out.append(",\"roofs\":").append(labels(StationRecipe.Roof.values()));
+		out.append(",\"sizes\":").append(labels(StationRecipe.Size.values()));
 		out.append(",\"tracks\":[").append(StationRecipe.MIN_TRACKS).append(',').append(StationRecipe.MAX_TRACKS).append(']');
 		out.append(",\"length\":[").append(StationRecipe.MIN_LENGTH).append(',').append(StationRecipe.MAX_LENGTH).append(',')
 				.append(StationRecipe.DEFAULT_LENGTH).append(']');
@@ -128,13 +130,15 @@ public final class StudioApi {
 		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(recipe.platforms().label())).append(",\"tracks\":").append(recipe.tracks())
 				.append(",\"length\":").append(recipe.length()).append(",\"look\":").append(Json.quote(recipe.look().label()))
-				.append(",\"roof\":").append(Json.quote(recipe.roof().label())).append(",\"building\":").append(recipe.building()).append('}');
+				.append(",\"roof\":").append(Json.quote(recipe.roof().label())).append(",\"building\":").append(recipe.building())
+				.append(",\"size\":").append(Json.quote(recipe.size().label())).append('}');
 		out.append(",\"built\":{\"mode\":").append(Json.quote(spec.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(lower(spec.platformLayout().name()) + " platforms"))
 				.append(",\"tracks\":").append(spec.trackCount()).append(",\"platforms\":").append(layout.platforms().size())
 				.append(",\"faces\":").append(audit.faces().size()).append(",\"length\":").append(spec.platformLength())
 				.append(",\"platformWidth\":").append(spec.platformWidth()).append(",\"style\":").append(Json.quote(lower(spec.style().name())))
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
+				.append(",\"scale\":").append(Json.quote(spec.sideBuilding() ? spec.scale().label() : "-"))
 				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(spec.footbridge())
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")
@@ -280,7 +284,7 @@ public final class StudioApi {
 		final StringBuilder out = new StringBuilder("[");
 		for (final Enum<?> value : values) {
 			final String label = value instanceof StationRecipe.Look l ? l.label() : value instanceof StationRecipe.Platforms p ? p.label()
-					: value instanceof StationRecipe.Roof r ? r.label() : value.name();
+					: value instanceof StationRecipe.Roof r ? r.label() : value instanceof StationRecipe.Size z ? z.label() : value.name();
 			if (out.length() > 1) {
 				out.append(',');
 			}

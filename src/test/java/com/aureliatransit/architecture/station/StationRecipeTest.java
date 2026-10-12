@@ -37,7 +37,7 @@ class StationRecipeTest {
 						index++;
 						final int tracks = 1 + index % 4;
 						final StationRecipe recipe = new StationRecipe(look, mix, terminus, tracks, StationRecipe.Platforms.values()[index % 3],
-								LENGTHS[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "");
+								LENGTHS[index % 4], roof, index % 5 != 0, index % 2 == 0 ? "Alpha Centraal" : "", StationRecipe.Size.values()[index % 4]);
 						final ParseResult result = StationDescriptionParser.parse(recipe.description());
 						final String label = recipe.encode() + " -> " + recipe.description();
 						if (!result.warnings().isEmpty() || !result.ignored().isEmpty()) {
@@ -79,8 +79,9 @@ class StationRecipeTest {
 	@Test
 	void encodeRoundTripsAndBadInputFallsBack() {
 		final StationRecipe recipe = new StationRecipe(StationRecipe.Look.HAMBURG, StationRecipe.Look.UTRECHT, true, 4, StationRecipe.Platforms.ISLAND,
-				96, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf");
+				96, StationRecipe.Roof.ARCHED, true, "Hamburg Hbf", StationRecipe.Size.CITY);
 		assertEquals(recipe, StationRecipe.decode(recipe.encode()));
+		assertEquals(StationRecipe.Size.AUTO, StationRecipe.decode("MUNICH;;0;2;AUTO;64;AUTO;1;Name").size(), "wrenches saved before sizes");
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode(""));
 		assertEquals(StationRecipe.defaults(), StationRecipe.decode("nonsense"));
 		final StationRecipe partial = StationRecipe.decode("MUNICH;BOGUS;0;99");
