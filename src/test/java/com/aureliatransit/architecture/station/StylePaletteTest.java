@@ -211,4 +211,60 @@ class StylePaletteTest {
 		}
 		assertTrue(checked.size() > 20, "expected many building blocks, got " + checked.size());
 	}
+
+	/**
+	 * A building's solid surfaces (walls, trim bands, plinth, floors, roof, interior walls) are full cubes, so a facade reads
+	 * as one flush wall: no thin decorative panel in the wall line that leaves gaps you can see through.
+	 */
+	@Test
+	void buildingSurfacesAreFullCubes() {
+		for (final BuildingStyle style : BuildingStyle.values()) {
+			final StylePalette.Building building = StylePalette.Building.of(style);
+			for (final String id : new String[]{building.wall(), building.trim(), building.plinth(), building.floor(), building.upperFloor(),
+					building.roof(), building.interiorWall()}) {
+				if (id.startsWith(ATA)) {
+					assertTrue(fullCube(blockModel(id.substring(ATA.length()))), style + ": " + id + " is not a full cube");
+				}
+			}
+		}
+	}
+
+	private static String read(String path) {
+		try (InputStream in = StylePaletteTest.class.getResourceAsStream(path)) {
+			return in == null ? null : new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			return null;
+		}
+	}
+
+	/** The first model a block's blockstate names, without its namespace. */
+	private static String blockModel(String id) {
+		final String state = read("/assets/aurelia_transit_architecture/blockstates/" + id + ".json");
+		assertNotNull(state, id);
+		final java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"model\"\\s*:\\s*\"[^\"]*block/([^\"]+)\"").matcher(state);
+		assertTrue(m.find(), id);
+		return m.group(1);
+	}
+
+	/** True for a cube parent, or an element from 0,0,0 to 16,16,16. */
+	private static boolean fullCube(String model) {
+		final String json = read("/assets/aurelia_transit_architecture/models/block/" + model + ".json");
+		assertNotNull(json, model);
+		final com.google.gson.JsonObject root = com.google.gson.JsonParser.parseString(json).getAsJsonObject();
+		if (!root.has("elements")) {
+			final String parent = root.has("parent") ? root.get("parent").getAsString() : "";
+			if (parent.startsWith("aurelia_transit_architecture:block/")) {
+				return fullCube(parent.substring("aurelia_transit_architecture:block/".length()));
+			}
+			return parent.contains("cube");
+		}
+		for (final com.google.gson.JsonElement element : root.getAsJsonArray("elements")) {
+			final String from = element.getAsJsonObject().get("from").toString();
+			final String to = element.getAsJsonObject().get("to").toString();
+			if (from.equals("[0,0,0]") && to.equals("[16,16,16]")) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

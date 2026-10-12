@@ -57,12 +57,12 @@ final class MtrLifts {
 			Init.sendMessageC2S("generate_by_lift", new org.mtr.mapping.holder.MinecraftServer(world.getServer()),
 					new org.mtr.mapping.holder.World(world), lift, null, null);
 		}
-		// each call button calls the lift whose stop is at its level, beside it
+		// each call button calls the lift whose stop is at its level (the button sits at hand height, one above the stop), beside it
 		for (final BlockPos button : buttons) {
 			BlockPos nearest = null;
 			for (final MtrLiftContract.Shaft shaft : shafts) {
 				for (final BlockPos stop : shaft.stops()) {
-					if (stop.getY() == button.getY() && (nearest == null || stop.getSquaredDistance(button) < nearest.getSquaredDistance(button))) {
+					if ((stop.getY() == button.getY() || stop.getY() == button.getY() - 1) && (nearest == null || stop.getSquaredDistance(button) < nearest.getSquaredDistance(button))) {
 						nearest = stop;
 					}
 				}

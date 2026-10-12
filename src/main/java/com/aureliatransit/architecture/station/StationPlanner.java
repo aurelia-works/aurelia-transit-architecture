@@ -879,6 +879,12 @@ public final class StationPlanner {
 				for (int y = low; y <= low + 2; y++) {
 					keepClear(c, y, vD - o);
 				}
+				// MTR draws the car's floor level with the stop; a floor block there flickers through it, so the car rests in a pit
+				for (int v = vD + o; v != vBack; v += o) {
+					final Cell pit = new Cell(c, low - 1, v);
+					cells.remove(pit);
+					air.add(pit);
+				}
 			}
 			for (final int stop : new int[]{low, high}) {
 				for (int c = c0; c <= c1; c++) {
@@ -886,7 +892,8 @@ public final class StationPlanner {
 					put(Role.LIFT, c, stop, vD, in, StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
 					put(Role.LIFT, c, stop + 1, vD, in, StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
 				}
-				put(Role.LIFT, c0 - 1, stop, vD, in, StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
+				// at hand height, beside the door
+				put(Role.LIFT, c0 - 1, stop + 1, vD, in, StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
 			}
 			final int cMax = farWall ? c1 + 1 : c1;
 			for (int y = low; y < roof; y++) {
@@ -911,6 +918,11 @@ public final class StationPlanner {
 					}
 				}
 			}
+		}
+
+		/** True when the platform ends at a terminus head's gate line, which carries its big number. */
+		private boolean gateNumbered(TrackLayout.PlatformBand band) {
+			return layout.terminus() && band.uMax() > layout.headFrom() && band.uMin() < layout.headTo();
 		}
 
 		/** The u of a terminus head building's street entrance (the middle of the 3-wide doorway). */
@@ -1332,12 +1344,13 @@ public final class StationPlanner {
 				} else {
 					final int i = u - band.uMin();
 					final String kind = i == 0 || i == band.width() - 1 ? "kind=end" : i == band.width() / 2 ? "kind=wide" : "kind=gate";
-					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.MINUS_V, palette.blockId(Role.GATE), kind);
+					// the green "go" side faces the concourse, where people come in; the red X faces the platforms
+					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
 				}
 			}
 			// a big number under the lintel over each platform, in the middle of its gates
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (band.uMax() > u0 && band.uMin() < u1) {
+				if (gateNumbered(band)) {
 					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.CANOPY_Y, vL, LocalDir.PLUS_V);
 				}
 			}
@@ -1412,9 +1425,11 @@ public final class StationPlanner {
 					for (int y = 1; y <= 3; y++) {
 						keepClear(u, y, landing);
 					}
+					// two clear above every step, and a third: stepping up from it your head passes under the cell above it
 					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 						keepClear(u, y + 1, site.stairV(y));
 						keepClear(u, y + 2, site.stairV(y));
+						keepClear(u, y + 3, site.stairV(y));
 					}
 				}
 			}
@@ -1446,6 +1461,14 @@ public final class StationPlanner {
 					}
 					if (!(open && wallHi == stairWall)) {
 						put(Role.WINDOW, u, y, wallHi, LocalDir.PLUS_V, b.bridgeWall());
+					}
+				}
+			}
+			// glass across the corridor's open ends (the building closes its own end)
+			for (final int u : site.building() ? new int[]{to} : new int[]{from, to}) {
+				for (int v = wallLo + 1; v < wallHi; v++) {
+					for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
+						put(Role.WINDOW, u, y, v, u == to ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bridgeWall());
 					}
 				}
 			}
@@ -1483,9 +1506,10 @@ public final class StationPlanner {
 					put(Role.BRIDGE_PIER, uMid, y, vB, LocalDir.PLUS_V, b.pier());
 				}
 			}
-			// a big number under the deck beside each platform's pier, seen as you come off the stairs
+			// a big number under the deck beside each platform's pier, seen as you come off the stairs; a platform numbered over
+			// its gates at a terminus head gets no second one hanging over the platform
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (site.served().contains(band.number())) {
+				if (site.served().contains(band.number()) && !gateNumbered(band)) {
 					numberSign(band, (band.uMin() + band.uMax()) / 2, StationGeometry.CANOPY_Y, vB - site.stairSide(), LocalDir.PLUS_V);
 				}
 			}
@@ -2160,12 +2184,14 @@ public final class StationPlanner {
 						u = backColumn(band);
 						front = towardTrack(band);
 					}
-					if (u < 0 || isEdge(band, u)) {
+					// never by or under a stair flight; a two-seat bench (two benches side by side) with a bin beside it
+					if (u < 0 || isEdge(band, u) || nearStairs(band, v) || nearStairs(band, v + 1)
+							|| taken(u, StationGeometry.WALK_Y, v) || taken(u, StationGeometry.WALK_Y, v + 1)) {
 						continue;
 					}
-					if (put(Role.BENCH, u, StationGeometry.WALK_Y, v, front)) {
-						put(Role.BIN, u, StationGeometry.WALK_Y, v + 1, front);
-					}
+					put(Role.BENCH, u, StationGeometry.WALK_Y, v, front);
+					put(Role.BENCH, u, StationGeometry.WALK_Y, v + 1, front);
+					put(Role.BIN, u, StationGeometry.WALK_Y, v + 2, front);
 				}
 			}
 		}
@@ -2206,7 +2232,8 @@ public final class StationPlanner {
 			final String[] bank = {"kind=end", "kind=gate", "kind=wide", "kind=gate", "kind=end"};
 			for (int i = 0; i < bank.length; i++) {
 				final int v = vEntr - 2 + i;
-				put(Role.GATE, uGate, StationGeometry.WALK_Y, v, LocalDir.PLUS_U, palette.blockId(Role.GATE), bank[i]);
+				// green towards the street door, red towards the platforms
+				put(Role.GATE, uGate, StationGeometry.WALK_Y, v, LocalDir.MINUS_U, palette.blockId(Role.GATE), bank[i]);
 			}
 			for (int v = vS + 1; v <= vE - 1; v++) {
 				if (v >= vEntr - 2 && v <= vEntr + 2) {
@@ -2424,10 +2451,10 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Under a canopy, the part of a platform stair that rises through the canopy is enclosed: glass walls in the footbridge's
-		 * glazing on both flanks of the flight and across its far end, from just above the canopy up to the bridge roof, with a
-		 * roof over just that shaft. So the steps are not left standing in the open above the canopy. False if the flight has no
-		 * steps (nothing to enclose).
+		 * Under a canopy, a platform stair is enclosed in glass in the footbridge's glazing: both flanks of the whole flight from
+		 * the platform up to the bridge roof (glass balustrades, no metal rails; never on a boarding edge), across its far end
+		 * above the canopy, and a roof over just that shaft. So the steps are not left standing in the open above the canopy.
+		 * False if the flight has no steps (nothing to enclose).
 		 */
 		private boolean stairShaft(TrackLayout.PlatformBand band, StylePalette.Building b) {
 			final List<Integer> flight = StationLayout.stairColumns(band);
@@ -2442,13 +2469,22 @@ public final class StationPlanner {
 			final int end = lowest > 1 ? site.stairV(lowest - 1) : site.landingV();
 			final int side = Integer.signum(end - top);
 			final LocalDir out = side > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
-			for (int y = StationGeometry.CANOPY_Y + 1; y < StationGeometry.BUILDING_ROOF_Y; y++) {
-				for (int v = top; v != end + side; v += side) {
-					put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
-					put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+			final int foot = site.stairV(1);
+			for (int y = StationGeometry.WALK_Y; y < StationGeometry.BUILDING_ROOF_Y; y++) {
+				for (int v = top; v != foot + side; v += side) {
+					// below the canopy a flank on a boarding edge stays open
+					final boolean high = y > StationGeometry.CANOPY_Y;
+					if (high || !isEdge(band, left) && left >= band.uMin()) {
+						put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
+					}
+					if (high || !isEdge(band, right) && right <= band.uMax()) {
+						put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+					}
 				}
-				for (int u = left + 1; u < right; u++) {
-					put(Role.WINDOW, u, y, end, out, b.bridgeWall());
+				if (y > StationGeometry.CANOPY_Y) {
+					for (int u = left + 1; u < right; u++) {
+						put(Role.WINDOW, u, y, end, out, b.bridgeWall());
+					}
 				}
 			}
 			for (int u = left; u <= right; u++) {
@@ -2507,11 +2543,8 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (band.island()) {
-					final int centre = (band.uMin() + band.uMax()) / 2;
-					signRow(centre, LocalDir.MINUS_U);
-					if (band.width() >= 4) {
-						signRow(centre + 1, LocalDir.PLUS_U);
-					}
+					// one row down the middle: the signs are double-sided, so it reads from both tracks
+					signRow((band.uMin() + band.uMax()) / 2, LocalDir.MINUS_U);
 				} else {
 					signRow(backColumn(band), towardTrack(band));
 				}

@@ -211,7 +211,8 @@ class StationPlannerTest {
 		int expectedRows = 0;
 		if (!spec.name().isEmpty()) {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				expectedRows += band.island() && band.width() >= 4 ? 2 : 1;
+				// one row per platform: on an island one double-sided row down the middle
+				expectedRows++;
 			}
 		}
 		if (signs.size() != 3 * expectedRows) {
@@ -481,11 +482,11 @@ class StationPlannerTest {
 		expected.put(Role.ROOF, 170);
 		expected.put(Role.ROOF_EDGE, 192);
 		expected.put(Role.ROOF_LIGHT, 22);
-		expected.put(Role.BENCH, 6);
+		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
 		expected.put(Role.FIXTURE, 10); // per platform: two 2-wide hanging departure screens and a help point
 		assertEquals(expected, counts);
-		assertEquals(868, plan(spec).blocks().size());
+		assertEquals(874, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -575,18 +576,22 @@ class StationPlannerTest {
 				.roof(RoofType.NONE).build());
 		final List<PlannedBlock> benches = blocks(plan, Role.BENCH);
 		final List<PlannedBlock> bins = blocks(plan, Role.BIN);
-		// v = 8, 24, 40, 56 on the centre column
-		assertEquals(4, benches.size());
+		// two-seat benches at v = 8, 24, 40, 56 on the centre column, each with its bin after the second seat
+		assertEquals(8, benches.size());
 		assertEquals(4, bins.size());
-		for (int i = 0; i < benches.size(); i++) {
-			final PlannedBlock bench = benches.get(i);
+		for (int i = 0; i < bins.size(); i++) {
+			final PlannedBlock first = benches.get(2 * i);
+			final PlannedBlock second = benches.get(2 * i + 1);
 			final PlannedBlock bin = bins.get(i);
-			assertEquals(5, bench.u());
-			assertEquals(8 + 16 * i, bench.v());
-			assertEquals(i % 2 == 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U, bench.front());
-			assertEquals(bench.u(), bin.u());
-			assertEquals(bench.v() + 1, bin.v());
-			assertEquals(bench.front(), bin.front());
+			assertEquals(5, first.u());
+			assertEquals(8 + 16 * i, first.v());
+			assertEquals(first.v() + 1, second.v());
+			assertEquals(first.u(), second.u());
+			assertEquals(i % 2 == 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U, first.front());
+			assertEquals(first.front(), second.front());
+			assertEquals(first.u(), bin.u());
+			assertEquals(first.v() + 2, bin.v());
+			assertEquals(first.front(), bin.front());
 		}
 	}
 
@@ -669,10 +674,11 @@ class StationPlannerTest {
 		final StationPlan island = plan(StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformWidth(6).name("Alpha")
 				.roof(RoofType.NONE).furniture(false).platformLength(48).build());
 		final List<PlannedBlock> islandSigns = blocks(island, Role.NAME_SIGN);
-		assertEquals(6, islandSigns.size());
+		// one double-sided row down the middle of an island
+		assertEquals(3, islandSigns.size());
 		for (final PlannedBlock sign : islandSigns) {
-			assertEquals(sign.u() == 5 ? LocalDir.MINUS_U : LocalDir.PLUS_U, sign.front());
-			assertTrue(sign.u() == 5 || sign.u() == 6);
+			assertEquals(LocalDir.MINUS_U, sign.front());
+			assertEquals(5, sign.u());
 		}
 	}
 
@@ -688,14 +694,44 @@ class StationPlannerTest {
 		assertEquals(Set.of(27, 28, 29), signV);
 	}
 
+	/**
+	 * Climbing a stair your head clears every step: three empty cells above each step (the third is where your head passes as
+	 * you step up from it), and no bench under or beside a flight.
+	 */
+	@Test
+	void stairsHaveHeadroomAndNoBenchUnderThem() {
+		for (final String description : new String[]{"ten tracks island platforms canopies antwerp hub 101 long named Amsterdam Centraal",
+				"four track dutch station, island platforms, canopies, 96 long", "six track hamburg station, 120 long",
+				"two track station with station building, side platforms, canopies, 64 long"}) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			final Map<String, PlannedBlock> at = new HashMap<>();
+			for (final PlannedBlock b : plan.blocks()) {
+				at.put(b.u() + "," + b.y() + "," + b.v(), b);
+			}
+			for (final PlannedBlock step : blocks(plan, Role.STAIR)) {
+				for (int dy = 1; dy <= 3; dy++) {
+					final PlannedBlock above = at.get(step.u() + "," + (step.y() + dy) + "," + step.v());
+					assertTrue(above == null,
+							description + ": " + above + " over the step " + step);
+				}
+			}
+			for (final PlannedBlock bench : blocks(plan, Role.BENCH)) {
+				for (int dy = 1; dy <= 2; dy++) {
+					final PlannedBlock above = at.get(bench.u() + "," + (bench.y() + dy) + "," + bench.v());
+					assertTrue(above == null || above.role() != Role.STAIR, description + ": bench under the stair at " + bench);
+				}
+			}
+		}
+	}
+
 	@Test
 	void shortStationsStillGetTheirNameSigns() {
 		for (final PlatformLayout layout : PlatformLayout.values()) {
 			for (final RoofType roof : RoofType.values()) {
 				final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(layout).platformWidth(6).platformLength(16).roof(roof)
 						.name("Alpha").build();
-				// two side platforms, or one island with a row on each face
-				assertEquals(6, blocks(plan(spec), Role.NAME_SIGN).size(), layout + " " + roof);
+				// two side platforms, or one double-sided row on an island
+				assertEquals(layout == PlatformLayout.ISLAND ? 3 : 6, blocks(plan(spec), Role.NAME_SIGN).size(), layout + " " + roof);
 			}
 		}
 	}

@@ -76,24 +76,52 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return false;
 	}
 
-	/** First column of a terminus head building: the whole width, or a hub's first platform beside a bay track. */
+	/**
+	 * First column of a terminus head building: the whole width, or for a hub its side wall just outside the first bay track's
+	 * clearance (so every buffer stop is indoors), never on a through track's clearance; the first bay platform otherwise.
+	 */
 	public int headFrom() {
 		if (hub()) {
 			for (final PlatformBand band : platforms) {
 				if (bay(band)) {
-					return band.uMin();
+					int from = band.uMin();
+					for (final Track track : tracks) {
+						if (bay(track)) {
+							from = Math.min(from, track.u() - StationGeometry.ENVELOPE_HALF_WIDTH - 1);
+							break;
+						}
+					}
+					for (final Track track : tracks) {
+						if (!bay(track) && track.u() < band.uMin() && from <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH) {
+							return band.uMin();
+						}
+					}
+					return from;
 				}
 			}
 		}
 		return 0;
 	}
 
-	/** Last column of a terminus head building: the whole width, or a hub's last platform beside a bay track. */
+	/** Last column of a terminus head building: the whole width, or a hub's side wall just outside its last bay track. */
 	public int headTo() {
 		if (hub()) {
 			for (int i = platforms.size() - 1; i >= 0; i--) {
-				if (bay(platforms.get(i))) {
-					return platforms.get(i).uMax();
+				final PlatformBand band = platforms.get(i);
+				if (bay(band)) {
+					int to = band.uMax();
+					for (int t = tracks.size() - 1; t >= 0; t--) {
+						if (bay(tracks.get(t))) {
+							to = Math.max(to, tracks.get(t).u() + StationGeometry.ENVELOPE_HALF_WIDTH + 1);
+							break;
+						}
+					}
+					for (final Track track : tracks) {
+						if (!bay(track) && track.u() > band.uMax() && to >= track.u() - StationGeometry.ENVELOPE_HALF_WIDTH) {
+							return band.uMax();
+						}
+					}
+					return to;
 				}
 			}
 		}

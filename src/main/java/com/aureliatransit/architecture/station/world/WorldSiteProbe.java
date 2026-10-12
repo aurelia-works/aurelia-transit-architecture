@@ -5,25 +5,56 @@ import com.aureliatransit.architecture.station.SiteProbe;
 import com.aureliatransit.architecture.station.StylePalette;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
+import net.minecraft.server.world.ChunkTicketType;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Direction;
 
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
- * {@link SiteProbe} over a server world. Never loads a chunk: every read is guarded by a loaded check.
+ * {@link SiteProbe} over a server world. A plain probe never loads a chunk: every read is guarded by a loaded check. A
+ * {@link #loading} probe loads each chunk it is asked about and holds it with a ticket for a while, so a station longer than
+ * the render distance can be surveyed and built.
  */
 public final class WorldSiteProbe implements SiteProbe {
 
+	/** Holds a station's chunks loaded through a survey and its build; renewed whenever the build comes back to a chunk. */
+	private static final ChunkTicketType<ChunkPos> HOLD = ChunkTicketType.create("ata_station", Comparator.comparingLong(ChunkPos::toLong),
+			20 * 60 * 10);
+
 	private final ServerWorld world;
+	private final boolean load;
+	private final Set<Long> held = new HashSet<>();
 
 	public WorldSiteProbe(ServerWorld world) {
-		this.world = world;
+		this(world, false);
 	}
 
-	/** True when the chunk holding the column is loaded. */
+	private WorldSiteProbe(ServerWorld world, boolean load) {
+		this.world = world;
+		this.load = load;
+	}
+
+	/** A probe that loads (and generates if needed) every chunk it reads. */
+	public static WorldSiteProbe loading(ServerWorld world) {
+		return new WorldSiteProbe(world, true);
+	}
+
+	/** True when the chunk holding the column is loaded; a loading probe loads it first. */
 	public boolean loaded(int x, int z) {
-		return world.isChunkLoaded(ChunkSectionPos.getSectionCoord(x), ChunkSectionPos.getSectionCoord(z));
+		final int cx = ChunkSectionPos.getSectionCoord(x);
+		final int cz = ChunkSectionPos.getSectionCoord(z);
+		if (load && (held.add(ChunkPos.toLong(cx, cz)) || !world.isChunkLoaded(cx, cz))) {
+			final ChunkPos pos = new ChunkPos(cx, cz);
+			world.getChunkManager().addTicket(HOLD, pos, 1, pos);
+			world.getChunk(cx, cz);
+		}
+		return world.isChunkLoaded(cx, cz);
 	}
 
 	@Override

@@ -9,11 +9,12 @@ package com.aureliatransit.architecture.station;
  *
  * @param mix  the look mixed in (its train shed, or its platforms when the first look has none), or null
  * @param size how grand the station building is; {@link Size#AUTO} lets the parser choose from the tracks and length
- * @param hub  a terminus whose outer tracks run through (implies {@code terminus}): an even number of tracks, at least four, on
- *             island platforms
+ * @param hub   a terminus whose outer tracks run through (implies {@code terminus}): an even number of tracks, at least four, on
+ *              island platforms
+ * @param width every platform's width in blocks, {@link #MIN_WIDTH} to {@link #MAX_WIDTH}, or 0 to leave it to the parser
  */
 public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, Platforms platforms, int length, Roof roof, boolean building,
-		String name, Size size, boolean hub) {
+		String name, Size size, boolean hub, int width) {
 
 	/** A city look: its button label and the words the parser reads; {@link #AUTO} leaves the look to the typed description. */
 	public enum Look {
@@ -108,6 +109,8 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	public static final int MIN_LENGTH = StationSpec.MIN_LENGTH;
 	public static final int MAX_LENGTH = StationSpec.MAX_LENGTH;
 	public static final int DEFAULT_LENGTH = 64;
+	public static final int MIN_WIDTH = StationSpec.MIN_WIDTH;
+	public static final int MAX_WIDTH = StationSpec.MAX_WIDTH;
 	/** The lengths the old Short / Medium / Long / Huge buttons stood for, read back from wrenches saved before lengths were numbers. */
 	private static final java.util.Map<String, Integer> OLD_LENGTHS = java.util.Map.of("SHORT", 32, "MEDIUM", 64, "LONG", 96, "HUGE", 128);
 
@@ -140,6 +143,13 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		if (size == null) {
 			size = Size.AUTO;
 		}
+		width = width <= 0 ? 0 : Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, width));
+	}
+
+	/** The recipe of the old eleven fields, with the platform width left to the parser. */
+	public StationRecipe(Look look, Look mix, boolean terminus, int tracks, Platforms platforms, int length, Roof roof, boolean building,
+			String name, Size size, boolean hub) {
+		this(look, mix, terminus, tracks, platforms, length, roof, building, name, size, hub, 0);
 	}
 
 	public static StationRecipe defaults() {
@@ -175,6 +185,9 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 			text.append(", ").append(platforms == Platforms.ISLAND ? (tracks >= 4 ? "two island platforms" : "island platform") : "side platforms");
 		}
 		text.append(", ").append(length).append(" long");
+		if (width > 0) {
+			text.append(", ").append(width).append(" wide platforms");
+		}
 		if (!roof.words.isEmpty()) {
 			text.append(", ").append(roof.words);
 		}
@@ -205,7 +218,7 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	}
 
 	public StationRecipe withLook(Look value) {
-		return new StationRecipe(value, mix, terminus, tracks, platforms, length, roof, building, name, size, hub);
+		return new StationRecipe(value, mix, terminus, tracks, platforms, length, roof, building, name, size, hub, width);
 	}
 
 	/**
@@ -223,16 +236,16 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	}
 
 	public StationRecipe withMix(Look value) {
-		return new StationRecipe(look, value, terminus, tracks, platforms, length, roof, building, name, size, hub);
+		return new StationRecipe(look, value, terminus, tracks, platforms, length, roof, building, name, size, hub, width);
 	}
 
 	/** Through station, terminus or hub; the type button steps through them in that order. */
 	public StationRecipe withHub(boolean value) {
-		return new StationRecipe(look, mix, terminus || value, tracks, platforms, length, roof, building, name, size, value);
+		return new StationRecipe(look, mix, terminus || value, tracks, platforms, length, roof, building, name, size, value, width);
 	}
 
 	public StationRecipe withTerminus(boolean value) {
-		return new StationRecipe(look, mix, value, tracks, platforms, length, roof, building, name, size, value && hub);
+		return new StationRecipe(look, mix, value, tracks, platforms, length, roof, building, name, size, value && hub, width);
 	}
 
 	/** How far the track buttons move: a hub keeps an even number of tracks, so it goes up and down by two. */
@@ -241,37 +254,44 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	}
 
 	public StationRecipe withTracks(int value) {
-		return new StationRecipe(look, mix, terminus, value, platforms, length, roof, building, name, size, hub);
+		return new StationRecipe(look, mix, terminus, value, platforms, length, roof, building, name, size, hub, width);
 	}
 
 	public StationRecipe withPlatforms(Platforms value) {
-		return new StationRecipe(look, mix, terminus, tracks, value, length, roof, building, name, size, hub);
+		return new StationRecipe(look, mix, terminus, tracks, value, length, roof, building, name, size, hub, width);
 	}
 
 	public StationRecipe withLength(int value) {
-		return new StationRecipe(look, mix, terminus, tracks, platforms, value, roof, building, name, size, hub);
+		return new StationRecipe(look, mix, terminus, tracks, platforms, value, roof, building, name, size, hub, width);
 	}
 
 	public StationRecipe withRoof(Roof value) {
-		return new StationRecipe(look, mix, terminus, tracks, platforms, length, value, building, name, size, hub);
+		return new StationRecipe(look, mix, terminus, tracks, platforms, length, value, building, name, size, hub, width);
 	}
 
 	public StationRecipe withBuilding(boolean value) {
-		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, value, name, size, hub);
+		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, value, name, size, hub, width);
 	}
 
 	public StationRecipe withSize(Size value) {
-		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, building, name, value, hub);
+		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, building, name, value, hub, width);
+	}
+
+	public StationRecipe withWidth(int value) {
+		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, building, name, size, hub, value);
 	}
 
 	public StationRecipe withName(String value) {
-		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, building, value, size, hub);
+		return new StationRecipe(look, mix, terminus, tracks, platforms, length, roof, building, value, size, hub, width);
 	}
 
-	/** "look;mix;type;tracks;platforms;length;roof;building;name;size" (type 0 through, 1 terminus, 2 hub); read back by {@link #decode}. */
+	/**
+	 * "look;mix;type;tracks;platforms;length;roof;building;name;size;width" (type 0 through, 1 terminus, 2 hub; width 0 for auto);
+	 * read back by {@link #decode}.
+	 */
 	public String encode() {
 		return String.join(";", look.name(), mix == null ? "" : mix.name(), hub ? "2" : terminus ? "1" : "0", Integer.toString(tracks), platforms.name(),
-				Integer.toString(length), roof.name(), building ? "1" : "0", name, size.name());
+				Integer.toString(length), roof.name(), building ? "1" : "0", name, size.name(), Integer.toString(width));
 	}
 
 	/** Reads {@link #encode}'s form; anything unreadable falls back to the defaults, field by field. */
@@ -280,12 +300,13 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		if (text == null || text.isEmpty()) {
 			return d;
 		}
-		final String[] f = text.split(";", 10);
+		final String[] f = text.split(";", 11);
 		return new StationRecipe(
 				value(Look.class, f, 0, d.look), f.length > 1 && !f[1].isEmpty() ? value(Look.class, f, 1, null) : null,
 				f.length > 2 ? f[2].equals("1") || f[2].equals("2") : d.terminus, f.length > 3 ? number(f[3], d.tracks) : d.tracks,
 				value(Platforms.class, f, 4, d.platforms), f.length > 5 ? OLD_LENGTHS.getOrDefault(f[5], number(f[5], d.length)) : d.length, value(Roof.class, f, 6, d.roof),
-				f.length > 7 ? !f[7].equals("0") : d.building, f.length > 8 ? f[8] : "", value(Size.class, f, 9, d.size), f.length > 2 && f[2].equals("2"));
+				f.length > 7 ? !f[7].equals("0") : d.building, f.length > 8 ? f[8] : "", value(Size.class, f, 9, d.size), f.length > 2 && f[2].equals("2"),
+				f.length > 10 ? number(f[10], 0) : 0);
 	}
 
 	private static <E extends Enum<E>> E value(Class<E> type, String[] fields, int index, E fallback) {

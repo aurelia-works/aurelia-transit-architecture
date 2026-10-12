@@ -68,8 +68,14 @@ public final class PanelLayout {
 		final int textColor = style.textColor();
 
 		if (style.isNumberPlate()) {
-			placeRows(labels, new String[]{d.platform(), primary}, new float[]{2.2F, 0.75F}, new int[]{textColor, style.secondaryColor()},
-					TextAlignment.CENTER, left, right, top, bottom, 10, measure);
+			// the number alone fills the plate, centred; a caption, when there is one, goes under it
+			if (primary.isEmpty() || d.platform().isEmpty()) {
+				final String only = d.platform().isEmpty() ? primary : d.platform();
+				placeRows(labels, new String[]{only}, new float[]{2.2F}, new int[]{textColor}, TextAlignment.CENTER, left, right, top, bottom, 10, measure);
+			} else {
+				placeRows(labels, new String[]{d.platform(), primary}, new float[]{2.2F, 0.75F}, new int[]{textColor, style.secondaryColor()},
+						TextAlignment.CENTER, left, right, top, bottom, 10, measure);
+			}
 			return new Panel(rects, labels);
 		}
 

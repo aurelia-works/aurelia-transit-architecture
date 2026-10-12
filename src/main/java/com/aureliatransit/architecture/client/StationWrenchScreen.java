@@ -12,6 +12,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.gui.widget.SliderWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.screen.ScreenTexts;
@@ -183,7 +184,7 @@ public class StationWrenchScreen extends Screen {
 	// ---- simple page ----------------------------------------------------------------------------------------------
 
 	private static int simpleHeight() {
-		return 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 4 * ROW + SUMMARY + 26 + ROW + 20;
+		return 12 + lookRows() * GRID_ROW + ROW - GRID_ROW + 5 * ROW + SUMMARY + 26 + ROW + 20;
 	}
 
 	/** Rows of look buttons, four to a row. */
@@ -226,6 +227,10 @@ public class StationWrenchScreen extends Screen {
 		final ButtonWidget roof = cycle(left + HALF + 4, y, HALF, "roof", Text.literal(recipe.roof().label()), () -> recipe.withRoof(next(recipe.roof())));
 		roof.setTooltip(Tooltip.of(Text.translatable(KEY + "roof.tip")));
 		addDrawableChild(roof);
+		y += ROW;
+		final WidthSlider width = new WidthSlider(left, y, WIDTH);
+		width.setTooltip(Tooltip.of(Text.translatable(KEY + "width.tip")));
+		addDrawableChild(width);
 		y += ROW;
 		final Text buildingLabel = !recipe.building() ? ScreenTexts.NO
 				: recipe.size() == StationRecipe.Size.AUTO ? ScreenTexts.YES : Text.literal(recipe.size().label());
@@ -299,6 +304,45 @@ public class StationWrenchScreen extends Screen {
 	private void change(StationRecipe value) {
 		recipe = value;
 		clearAndInit();
+	}
+
+	/**
+	 * Platform width: Auto (the parser's default for the platform kind), then every width from {@link StationRecipe#MIN_WIDTH} to
+	 * {@link StationRecipe#MAX_WIDTH}. Dragging changes the choice without rebuilding the page, so the drag carries on; the
+	 * preview replans once the slider rests.
+	 */
+	private final class WidthSlider extends SliderWidget {
+
+		private static final int STEPS = StationRecipe.MAX_WIDTH - StationRecipe.MIN_WIDTH + 1;
+
+		WidthSlider(int x, int y, int w) {
+			super(x, y, w, 20, Text.empty(), position(recipe.width()));
+			updateMessage();
+		}
+
+		private static double position(int width) {
+			return width <= 0 ? 0 : (width - StationRecipe.MIN_WIDTH + 1) / (double) STEPS;
+		}
+
+		private int width() {
+			final int step = (int) Math.round(value * STEPS);
+			return step == 0 ? 0 : StationRecipe.MIN_WIDTH + step - 1;
+		}
+
+		@Override
+		protected void updateMessage() {
+			final int width = width();
+			setMessage(Text.translatable(KEY + "width").append(": ").append((width == 0 ? Text.translatable(KEY + "width.auto")
+					: Text.translatable(KEY + "width.blocks", width)).copy().formatted(Formatting.AQUA)));
+		}
+
+		@Override
+		protected void applyValue() {
+			if (width() != recipe.width()) {
+				recipe = recipe.withWidth(width());
+				editedAt = System.currentTimeMillis();
+			}
+		}
 	}
 
 	/** Platform lengths the length button steps through, then back to the first. */

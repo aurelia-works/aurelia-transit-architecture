@@ -75,8 +75,20 @@ class HubStationTest {
 			final TrackLayout layout = plan.layout();
 			final List<TrackLayout.PlatformBand> bays = layout.platforms().stream().filter(layout::bay).toList();
 			assertEquals(tracks >= 8 ? layout.platforms().size() - 2 : layout.platforms().size(), bays.size(), tracks + " tracks");
-			assertEquals(bays.get(0).uMin(), layout.headFrom(), tracks + " tracks");
-			assertEquals(bays.get(bays.size() - 1).uMax(), layout.headTo(), tracks + " tracks");
+			// the side walls stand just outside the outer bay tracks, so every buffer stop is indoors, and clear of the through tracks
+			assertTrue(layout.headFrom() <= bays.get(0).uMin() && layout.headTo() >= bays.get(bays.size() - 1).uMax(), tracks + " tracks");
+			for (final TrackLayout.Track track : layout.tracks()) {
+				final boolean inside = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH > layout.headFrom()
+						&& track.u() + StationGeometry.ENVELOPE_HALF_WIDTH < layout.headTo();
+				final boolean outside = track.u() + StationGeometry.ENVELOPE_HALF_WIDTH < layout.headFrom()
+						|| track.u() - StationGeometry.ENVELOPE_HALF_WIDTH > layout.headTo();
+				assertTrue(layout.bay(track) ? inside : outside, tracks + " tracks: track " + track.number() + " at u " + track.u());
+			}
+			for (final PlannedBlock stop : plan.blocks()) {
+				if (stop.role() == Role.BUFFER_STOP) {
+					assertTrue(stop.u() > layout.headFrom() && stop.u() < layout.headTo(), tracks + " tracks: buffer stop outside " + stop);
+				}
+			}
 			final boolean wider = plan.blocks().stream().anyMatch(b -> b.role() == Role.FLOOR && b.v() >= layout.platformLength()
 					&& b.v() <= layout.headEnd() && (b.u() < layout.headFrom() || b.u() > layout.headTo()));
 			assertFalse(wider, tracks + " tracks: head floor outside its platforms");

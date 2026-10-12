@@ -127,6 +127,21 @@ public class StationGameTests implements FabricGameTest {
 		context.complete();
 	}
 
+	/**
+	 * A station longer than the render distance: the survey and the build load the chunks they need (a plain probe sees them
+	 * as unloaded), so a 200-long station is not refused for "unloaded chunks".
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void loadingProbeLoadsFarChunks(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final BlockPos far = context.getAbsolutePos(new BlockPos(0, 1, 0)).add(3000, 0, 3000);
+		check(new WorldSiteProbe(world).kind(far.getX(), far.getY(), far.getZ()) == CellKind.UNLOADED, "the far chunk was already loaded");
+		final WorldSiteProbe loading = WorldSiteProbe.loading(world);
+		check(loading.kind(far.getX(), far.getY(), far.getZ()) != CellKind.UNLOADED, "the loading probe left the far chunk unloaded");
+		check(world.isChunkLoaded(far.getX() >> 4, far.getZ() >> 4), "the far chunk is not held loaded");
+		context.complete();
+	}
+
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
 	public void probeClassifiesCells(TestContext context) {
 		final WorldSiteProbe probe = new WorldSiteProbe(context.getWorld());
@@ -217,7 +232,7 @@ public class StationGameTests implements FabricGameTest {
 			for (final BlockPos button : buttons) {
 				final long[] linked = world.getBlockEntity(button).createNbt().getLongArray("track_floor_pos");
 				final BlockPos stop = linked.length == 1 ? BlockPos.fromLong(linked[0]) : null;
-				check(stop != null && stops.contains(stop) && stop.getY() == button.getY() && stop.getSquaredDistance(button) <= 9,
+				check(stop != null && stops.contains(stop) && stop.getY() == button.getY() - 1 && stop.getSquaredDistance(button) <= 9,
 						"button " + button + " linked to " + java.util.Arrays.toString(linked));
 			}
 		});

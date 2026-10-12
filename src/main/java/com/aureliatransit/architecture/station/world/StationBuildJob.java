@@ -91,7 +91,7 @@ public final class StationBuildJob {
 
 	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out) {
 		this.world = world;
-		this.probe = new WorldSiteProbe(world);
+		this.probe = WorldSiteProbe.loading(world);
 		this.owner = owner;
 		this.mode = mode;
 		this.ops = ops;
@@ -358,7 +358,10 @@ public final class StationBuildJob {
 			}
 			final BlockPos rowOwner = block.findRowOwner(world, pos, sign);
 			if (probe.loaded(rowOwner.getX(), rowOwner.getZ()) && owners.add(rowOwner) && world.getBlockEntity(rowOwner) instanceof TextSignBlockEntity entity) {
-				entity.setData(new SignData(signTexts.get(i), "", TextAlignment.CENTER, AccentPalette.NONE, SignArrow.NONE, "", false, List.of()));
+				// a number plate shows its text as the big number, not as the small caption under it
+				final boolean plate = block.getLayout().style().isNumberPlate();
+				entity.setData(new SignData(plate ? "" : signTexts.get(i), "", TextAlignment.CENTER, AccentPalette.NONE, SignArrow.NONE,
+						plate ? signTexts.get(i) : "", false, List.of()));
 			}
 		}
 	}

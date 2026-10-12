@@ -72,7 +72,7 @@ public final class StationCommand {
 		final StationAudit.Result audit = StationAudit.audit(plan);
 		final LocalFrame frame = place.apply(plan.layout());
 		final BlockStateResolver.Check check = BlockStateResolver.check(plan);
-		final SurveyReport report = SiteSurvey.survey(plan, frame, new WorldSiteProbe(world), false);
+		final SurveyReport report = SiteSurvey.survey(plan, frame, WorldSiteProbe.loading(world), false);
 		return new StationSessions.Pending(parse, parse.spec(), plan, frame, world.getRegistryKey(), violations, audit, report, check.railSkipped());
 	}
 
@@ -95,7 +95,7 @@ public final class StationCommand {
 			out.accept(Text.literal("Unknown blocks: " + String.join(", ", check.missing())).formatted(Formatting.RED));
 			return null;
 		}
-		final SurveyReport report = SiteSurvey.survey(pending.plan(), pending.frame(), new WorldSiteProbe(world), replaceTerrain);
+		final SurveyReport report = SiteSurvey.survey(pending.plan(), pending.frame(), WorldSiteProbe.loading(world), replaceTerrain);
 		if (!report.buildable()) {
 			out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
 			StationText.site(report, out);

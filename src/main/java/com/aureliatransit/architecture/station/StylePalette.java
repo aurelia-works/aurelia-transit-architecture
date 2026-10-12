@@ -58,8 +58,8 @@ public final class StylePalette {
 						ata("hamburg_clinker_brick"), ata("metro_recessed_light"), ata("station_stair"), ata("antwerp_marble_floor_tile"),
 						ata("wired_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
 						ata("hamburg_stone_trim"));
-				case ANTWERP -> new Building(ata("antwerp_ornate_limestone"), ata("antwerp_gilded_ornament_trim"), ata("frankfurt_sandstone_rusticated"),
-						ata("frankfurt_sandstone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"),
+				case ANTWERP -> new Building(ata("antwerp_ornate_limestone"), ata("roma_travertine"), ata("frankfurt_sandstone_rusticated"),
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"),
 						ata("antwerp_marble_floor_tile"), ata("antwerp_ornate_limestone"), ata("metro_recessed_light"), ata("station_stair"),
 						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
 						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
