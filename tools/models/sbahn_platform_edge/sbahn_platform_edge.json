@@ -1,0 +1,85 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "sbahn_platform_edge_face": "aurelia_transit_architecture:block/sbahn_platform_edge_face",
+    "top": "aurelia_transit_architecture:block/sbahn_platform_edge_top",
+    "particle": "aurelia_transit_architecture:block/sbahn_platform_slab",
+    "side": "aurelia_transit_architecture:block/sbahn_platform_slab"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0
+      ],
+      "to": [
+        16,
+        16,
+        16
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#sbahn_platform_edge_face",
+          "cullface": "north"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#sbahn_platform_edge_face",
+          "cullface": "east"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#sbahn_platform_edge_face",
+          "cullface": "west"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#side",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "steel_column_square_steel": "aurelia_transit_architecture:block/steel_column_square_steel",
+    "particle": "aurelia_transit_architecture:block/steel_column_square_steel"
+  },
+  "elements": [
+    {
+      "from": [
+        4,
+        0,
+        4
+      ],
+      "to": [
+        12,
+        16,
+        12
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "east": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "south": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "west": {
+          "uv": [
+            4,
+            0,
+            12,
+            16
+          ],
+          "texture": "#steel_column_square_steel"
+        },
+        "up": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#steel_column_square_steel",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            4,
+            4,
+            12,
+            12
+          ],
+          "texture": "#steel_column_square_steel",
+          "cullface": "down"
+        }
+      }
+    }
+  ]
+}

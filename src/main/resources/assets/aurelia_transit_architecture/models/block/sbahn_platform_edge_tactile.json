@@ -1,8 +1,9 @@
 {
   "parent": "block/block",
   "textures": {
-    "particle": "aurelia_transit_architecture:block/sbahn_platform_slab",
+    "sbahn_platform_edge_face": "aurelia_transit_architecture:block/sbahn_platform_edge_face",
     "top": "aurelia_transit_architecture:block/sbahn_platform_edge_tactile_top",
+    "particle": "aurelia_transit_architecture:block/sbahn_platform_slab",
     "side": "aurelia_transit_architecture:block/sbahn_platform_slab"
   },
   "elements": [
@@ -18,65 +19,65 @@
         16
       ],
       "faces": {
-        "down": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#side",
-          "cullface": "down"
-        },
-        "up": {
-          "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
-          ],
-          "texture": "#top",
-          "cullface": "up"
-        },
         "north": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
+            0,
+            0,
+            16,
+            16
           ],
-          "texture": "#side",
+          "texture": "#sbahn_platform_edge_face",
           "cullface": "north"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#sbahn_platform_edge_face",
+          "cullface": "east"
         },
         "south": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
+            0,
+            0,
+            16,
+            16
           ],
           "texture": "#side",
           "cullface": "south"
         },
         "west": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
+            0,
+            0,
+            16,
+            16
           ],
-          "texture": "#side",
+          "texture": "#sbahn_platform_edge_face",
           "cullface": "west"
         },
-        "east": {
+        "up": {
           "uv": [
-            0.0,
-            0.0,
-            16.0,
-            16.0
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#top",
+          "cullface": "up"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
           ],
           "texture": "#side",
-          "cullface": "east"
+          "cullface": "down"
         }
       }
     }

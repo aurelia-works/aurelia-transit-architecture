@@ -173,7 +173,7 @@ public final class ModBlocks {
 	public static final Block STEEL_COLUMN_ROUND = register("steel_column_round", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
 			new ShapedBlock(metal(), box(4.5, 0, 4.5, 11.5, 16, 11.5)));
 	public static final Block STRUCTURAL_BEAM = register("structural_beam", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
-			new AxisShapedBlock(metal(), box(0, 11, 5, 16, 16, 11)));
+			new AxisShapedBlock(metal(), union(box(0, 15, 5, 16, 16, 11), box(0, 12, 7.5, 16, 15, 8.5), box(0, 11, 5, 16, 12, 11)))); // I-beam: flanges and web
 	public static final Block ROOF_SUPPORT = register("roof_support", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
 			new AxisShapedBlock(metal(), union(box(5, 0, 5, 11, 6, 11), box(4, 6, 6, 12, 10, 10), box(0, 10, 6, 16, 16, 10))));
 	public static final Block GLASS_WALL = register("glass_wall", BlockFamily.ARCHITECTURE, RenderKind.TRANSLUCENT,
