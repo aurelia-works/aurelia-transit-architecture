@@ -67,6 +67,15 @@ class StationDescriptionParserTest {
 	}
 
 	@Test
+	void footbridgeSidePlatformsAreWideEnoughForLifts() {
+		assertEquals(StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH, spec("two side platforms with footbridge").platformWidth());
+		assertEquals(StationSpec.DEFAULT_ISLAND_WIDTH, spec("two track island platform with footbridge").platformWidth());
+		assertEquals(4, spec("two side platforms, 4 wide, with footbridge").platformWidth());
+		assertEquals(StationSpec.MIN_WIDTH, spec("narrow side platforms with footbridge").platformWidth());
+		assertEquals(StationSpec.DEFAULT_SIDE_WIDTH, spec("two track terminus with footbridge, station building").platformWidth());
+	}
+
+	@Test
 	void islandWithOneTrackBecomesSide() {
 		final ParseResult result = StationDescriptionParser.parse("1 track island station");
 		assertEquals(PlatformLayout.SIDE, result.spec().platformLayout());

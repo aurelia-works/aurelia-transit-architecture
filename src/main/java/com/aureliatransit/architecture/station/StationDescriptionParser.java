@@ -997,7 +997,10 @@ public final class StationDescriptionParser {
 			}
 
 			// width
-			final int defaultWidth = layout == PlatformLayout.ISLAND ? StationSpec.DEFAULT_ISLAND_WIDTH : StationSpec.DEFAULT_SIDE_WIDTH;
+			// a footbridge's side platforms need room for a two-column stair, or they get no lift and are not step-free
+			final boolean bridgeSide = layout != PlatformLayout.ISLAND && Boolean.TRUE.equals(footbridge) && !terminus;
+			final int defaultWidth = layout == PlatformLayout.ISLAND ? StationSpec.DEFAULT_ISLAND_WIDTH
+					: bridgeSide ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : StationSpec.DEFAULT_SIDE_WIDTH;
 			if (width != null) {
 				builder.platformWidth(clamp(width, StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH, "width"));
 			} else if (narrow) {
@@ -1008,7 +1011,7 @@ public final class StationDescriptionParser {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
 			} else {
 				builder.platformWidth(defaultWidth);
-				defaulted.add("width " + defaultWidth + " (default)");
+				defaulted.add("width " + defaultWidth + (bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
 			}
 
 			resolveLooks();

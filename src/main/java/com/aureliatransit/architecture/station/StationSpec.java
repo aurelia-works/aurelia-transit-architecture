@@ -33,6 +33,8 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 	public static final int DEFAULT_LENGTH = 48;
 	public static final int DEFAULT_SIDE_WIDTH = 4;
 	public static final int DEFAULT_ISLAND_WIDTH = 6;
+	/** Side platforms of a footbridge station: wide enough for a two-column stair, so each gets a lift. */
+	public static final int DEFAULT_FOOTBRIDGE_SIDE_WIDTH = 6;
 
 	public StationSpec {
 		Objects.requireNonNull(platformLayout, "platformLayout");

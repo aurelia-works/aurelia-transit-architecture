@@ -30,8 +30,8 @@ class StationPresetsTest {
 			final StationPlan plan = StationPlanner.plan(parse.spec());
 			assertTrue(LayoutValidator.validate(plan).isEmpty(), preset.key() + " violations: " + LayoutValidator.validate(plan));
 			final StationAudit.Result audit = StationAudit.audit(plan);
-			// platforms reached over the footbridge warn that stairs are not step-free when no lift fits; nothing else may warn
-			assertTrue(audit.buildable() && audit.problems().stream().allMatch(StationPresetsTest::stairsOnly), preset.key() + " checks: " + audit.problems());
+			// every platform is step-free, by a lift where the footbridge serves it; nothing may warn
+			assertTrue(audit.buildable() && audit.problems().isEmpty(), preset.key() + " checks: " + audit.problems());
 		}
 		for (final BuildingStyle look : BuildingStyle.values()) {
 			assertTrue(look == BuildingStyle.NONE || looks.contains(look), "no preset for " + look);
@@ -47,9 +47,5 @@ class StationPresetsTest {
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
 			assertTrue(lang.contains("\"screen.aurelia_transit_architecture.station_wrench.preset." + preset.key() + "\""), "no label for " + preset.key());
 		}
-	}
-
-	private static boolean stairsOnly(StationAudit.Check check) {
-		return check.topic() == StationAudit.Topic.ACCESS && check.status() == StationAudit.Status.WARN && check.message().contains("only reached by stairs");
 	}
 }

@@ -42,7 +42,7 @@ public final class StationGuide {
 					+ "particles outline it for 30 seconds.\n\nA plan that fails a check cannot be built."),
 			new Page("Terrain", "A normal build never changes terrain. Grass, water or gaps on the site are listed in the plan.\n\n"
 					+ "Clear and build (in chat) approves those changes."),
-			new Page("Tracks", "1 to 4 tracks, island or side platforms, 16 to 160 long, 3 to 8 wide.\n\n"
+			new Page("Tracks", "1 to 10 tracks, island or side platforms, 16 to 300 long, 3 to 8 wide.\n\n"
 					+ "Styles: modern, dutch, s-bahn, metro.\n"
 					+ "Roof: canopy, no roof, or a train shed: flat, arched, pointed arch or several arches."),
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
