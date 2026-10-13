@@ -207,12 +207,18 @@ def write_extra(assets, data, write_json):
                 variants[key] = entry
         write_json(assets / "blockstates" / f"{block_id}.json", {"variants": variants})
 
-    # Announcement chimes (original synthesised audio, see tools/make_live_sounds.py). Fragment sounds come from
-    # resource-pack voice packs, which ship their own sounds.json.
+    # Announcement chimes (original synthesised audio, see tools/make_live_sounds.py), and the built-in voice's fragments
+    # (Piper, voice cori, public domain; rendered by tools/make_voice.py into sounds/voice and aurelia_voice/builtin.json).
+    # Resource-pack voice packs ship their own sounds.json.
     sounds = {}
     for chime in CHIMES:
         sounds[f"live.chime.{chime}"] = {
             "sounds": [{"name": f"{MOD}:live/chime_{chime}", "stream": False}],
             "subtitle": f"subtitles.{MOD}.live.chime.{chime}",
         }
+    builtin = assets / "aurelia_voice" / "builtin.json"
+    if builtin.exists():
+        import json as _json
+        for key in sorted(_json.loads(builtin.read_text())["fragments"]):
+            sounds[f"voice.{key}"] = {"sounds": [{"name": f"{MOD}:voice/{key.replace('.', '_')}", "stream": False}]}
     write_json(assets / "sounds.json", sounds)

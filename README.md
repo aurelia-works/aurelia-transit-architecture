@@ -159,6 +159,7 @@ All textures and models are generated from code in `tools/generate_assets.py`, s
 
 - Minecraft Transit Railway by Jonathan Ho and contributors (MIT). This addon depends on MTR but doesn't include or copy any MTR code or assets.
 - Fabric Loader and Fabric API by the FabricMC team.
+- Announcement voice: generated offline with Piper (MIT, rhasspy/piper), English voice "cori" by Bryce Beattie, trained on public-domain LibriVox recordings.
 - The architectural inspiration comes from modern European transit design in general. No real station, operator identity or protected branding is reproduced.
 - All textures, models and code in this repository are original work by the Aurelia Transit Architecture contributors.
 

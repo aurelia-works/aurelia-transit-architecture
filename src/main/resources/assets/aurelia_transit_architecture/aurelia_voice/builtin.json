@@ -1,0 +1,517 @@
+{
+ "fragments": {
+  "number.0": {
+   "duration_ms": 852,
+   "sound": "aurelia_transit_architecture:voice.number.0"
+  },
+  "number.1": {
+   "duration_ms": 536,
+   "sound": "aurelia_transit_architecture:voice.number.1"
+  },
+  "number.10": {
+   "duration_ms": 622,
+   "sound": "aurelia_transit_architecture:voice.number.10"
+  },
+  "number.11": {
+   "duration_ms": 578,
+   "sound": "aurelia_transit_architecture:voice.number.11"
+  },
+  "number.12": {
+   "duration_ms": 595,
+   "sound": "aurelia_transit_architecture:voice.number.12"
+  },
+  "number.13": {
+   "duration_ms": 701,
+   "sound": "aurelia_transit_architecture:voice.number.13"
+  },
+  "number.14": {
+   "duration_ms": 634,
+   "sound": "aurelia_transit_architecture:voice.number.14"
+  },
+  "number.15": {
+   "duration_ms": 527,
+   "sound": "aurelia_transit_architecture:voice.number.15"
+  },
+  "number.16": {
+   "duration_ms": 740,
+   "sound": "aurelia_transit_architecture:voice.number.16"
+  },
+  "number.17": {
+   "duration_ms": 720,
+   "sound": "aurelia_transit_architecture:voice.number.17"
+  },
+  "number.18": {
+   "duration_ms": 641,
+   "sound": "aurelia_transit_architecture:voice.number.18"
+  },
+  "number.19": {
+   "duration_ms": 864,
+   "sound": "aurelia_transit_architecture:voice.number.19"
+  },
+  "number.2": {
+   "duration_ms": 531,
+   "sound": "aurelia_transit_architecture:voice.number.2"
+  },
+  "number.20": {
+   "duration_ms": 505,
+   "sound": "aurelia_transit_architecture:voice.number.20"
+  },
+  "number.21": {
+   "duration_ms": 671,
+   "sound": "aurelia_transit_architecture:voice.number.21"
+  },
+  "number.22": {
+   "duration_ms": 906,
+   "sound": "aurelia_transit_architecture:voice.number.22"
+  },
+  "number.23": {
+   "duration_ms": 852,
+   "sound": "aurelia_transit_architecture:voice.number.23"
+  },
+  "number.24": {
+   "duration_ms": 764,
+   "sound": "aurelia_transit_architecture:voice.number.24"
+  },
+  "number.25": {
+   "duration_ms": 1031,
+   "sound": "aurelia_transit_architecture:voice.number.25"
+  },
+  "number.26": {
+   "duration_ms": 972,
+   "sound": "aurelia_transit_architecture:voice.number.26"
+  },
+  "number.27": {
+   "duration_ms": 759,
+   "sound": "aurelia_transit_architecture:voice.number.27"
+  },
+  "number.28": {
+   "duration_ms": 913,
+   "sound": "aurelia_transit_architecture:voice.number.28"
+  },
+  "number.29": {
+   "duration_ms": 810,
+   "sound": "aurelia_transit_architecture:voice.number.29"
+  },
+  "number.3": {
+   "duration_ms": 567,
+   "sound": "aurelia_transit_architecture:voice.number.3"
+  },
+  "number.30": {
+   "duration_ms": 529,
+   "sound": "aurelia_transit_architecture:voice.number.30"
+  },
+  "number.31": {
+   "duration_ms": 805,
+   "sound": "aurelia_transit_architecture:voice.number.31"
+  },
+  "number.32": {
+   "duration_ms": 675,
+   "sound": "aurelia_transit_architecture:voice.number.32"
+  },
+  "number.33": {
+   "duration_ms": 715,
+   "sound": "aurelia_transit_architecture:voice.number.33"
+  },
+  "number.34": {
+   "duration_ms": 687,
+   "sound": "aurelia_transit_architecture:voice.number.34"
+  },
+  "number.35": {
+   "duration_ms": 875,
+   "sound": "aurelia_transit_architecture:voice.number.35"
+  },
+  "number.36": {
+   "duration_ms": 895,
+   "sound": "aurelia_transit_architecture:voice.number.36"
+  },
+  "number.37": {
+   "duration_ms": 776,
+   "sound": "aurelia_transit_architecture:voice.number.37"
+  },
+  "number.38": {
+   "duration_ms": 1225,
+   "sound": "aurelia_transit_architecture:voice.number.38"
+  },
+  "number.39": {
+   "duration_ms": 837,
+   "sound": "aurelia_transit_architecture:voice.number.39"
+  },
+  "number.4": {
+   "duration_ms": 519,
+   "sound": "aurelia_transit_architecture:voice.number.4"
+  },
+  "number.40": {
+   "duration_ms": 446,
+   "sound": "aurelia_transit_architecture:voice.number.40"
+  },
+  "number.41": {
+   "duration_ms": 814,
+   "sound": "aurelia_transit_architecture:voice.number.41"
+  },
+  "number.42": {
+   "duration_ms": 847,
+   "sound": "aurelia_transit_architecture:voice.number.42"
+  },
+  "number.43": {
+   "duration_ms": 716,
+   "sound": "aurelia_transit_architecture:voice.number.43"
+  },
+  "number.44": {
+   "duration_ms": 820,
+   "sound": "aurelia_transit_architecture:voice.number.44"
+  },
+  "number.45": {
+   "duration_ms": 930,
+   "sound": "aurelia_transit_architecture:voice.number.45"
+  },
+  "number.46": {
+   "duration_ms": 814,
+   "sound": "aurelia_transit_architecture:voice.number.46"
+  },
+  "number.47": {
+   "duration_ms": 794,
+   "sound": "aurelia_transit_architecture:voice.number.47"
+  },
+  "number.48": {
+   "duration_ms": 1027,
+   "sound": "aurelia_transit_architecture:voice.number.48"
+  },
+  "number.49": {
+   "duration_ms": 851,
+   "sound": "aurelia_transit_architecture:voice.number.49"
+  },
+  "number.5": {
+   "duration_ms": 627,
+   "sound": "aurelia_transit_architecture:voice.number.5"
+  },
+  "number.50": {
+   "duration_ms": 438,
+   "sound": "aurelia_transit_architecture:voice.number.50"
+  },
+  "number.51": {
+   "duration_ms": 785,
+   "sound": "aurelia_transit_architecture:voice.number.51"
+  },
+  "number.52": {
+   "duration_ms": 702,
+   "sound": "aurelia_transit_architecture:voice.number.52"
+  },
+  "number.53": {
+   "duration_ms": 1002,
+   "sound": "aurelia_transit_architecture:voice.number.53"
+  },
+  "number.54": {
+   "duration_ms": 736,
+   "sound": "aurelia_transit_architecture:voice.number.54"
+  },
+  "number.55": {
+   "duration_ms": 897,
+   "sound": "aurelia_transit_architecture:voice.number.55"
+  },
+  "number.56": {
+   "duration_ms": 835,
+   "sound": "aurelia_transit_architecture:voice.number.56"
+  },
+  "number.57": {
+   "duration_ms": 801,
+   "sound": "aurelia_transit_architecture:voice.number.57"
+  },
+  "number.58": {
+   "duration_ms": 832,
+   "sound": "aurelia_transit_architecture:voice.number.58"
+  },
+  "number.59": {
+   "duration_ms": 772,
+   "sound": "aurelia_transit_architecture:voice.number.59"
+  },
+  "number.6": {
+   "duration_ms": 545,
+   "sound": "aurelia_transit_architecture:voice.number.6"
+  },
+  "number.60": {
+   "duration_ms": 641,
+   "sound": "aurelia_transit_architecture:voice.number.60"
+  },
+  "number.61": {
+   "duration_ms": 830,
+   "sound": "aurelia_transit_architecture:voice.number.61"
+  },
+  "number.62": {
+   "duration_ms": 872,
+   "sound": "aurelia_transit_architecture:voice.number.62"
+  },
+  "number.63": {
+   "duration_ms": 777,
+   "sound": "aurelia_transit_architecture:voice.number.63"
+  },
+  "number.64": {
+   "duration_ms": 865,
+   "sound": "aurelia_transit_architecture:voice.number.64"
+  },
+  "number.65": {
+   "duration_ms": 1096,
+   "sound": "aurelia_transit_architecture:voice.number.65"
+  },
+  "number.66": {
+   "duration_ms": 901,
+   "sound": "aurelia_transit_architecture:voice.number.66"
+  },
+  "number.67": {
+   "duration_ms": 858,
+   "sound": "aurelia_transit_architecture:voice.number.67"
+  },
+  "number.68": {
+   "duration_ms": 803,
+   "sound": "aurelia_transit_architecture:voice.number.68"
+  },
+  "number.69": {
+   "duration_ms": 1035,
+   "sound": "aurelia_transit_architecture:voice.number.69"
+  },
+  "number.7": {
+   "duration_ms": 474,
+   "sound": "aurelia_transit_architecture:voice.number.7"
+  },
+  "number.70": {
+   "duration_ms": 733,
+   "sound": "aurelia_transit_architecture:voice.number.70"
+  },
+  "number.71": {
+   "duration_ms": 812,
+   "sound": "aurelia_transit_architecture:voice.number.71"
+  },
+  "number.72": {
+   "duration_ms": 978,
+   "sound": "aurelia_transit_architecture:voice.number.72"
+  },
+  "number.73": {
+   "duration_ms": 909,
+   "sound": "aurelia_transit_architecture:voice.number.73"
+  },
+  "number.74": {
+   "duration_ms": 1010,
+   "sound": "aurelia_transit_architecture:voice.number.74"
+  },
+  "number.75": {
+   "duration_ms": 1172,
+   "sound": "aurelia_transit_architecture:voice.number.75"
+  },
+  "number.76": {
+   "duration_ms": 1000,
+   "sound": "aurelia_transit_architecture:voice.number.76"
+  },
+  "number.77": {
+   "duration_ms": 847,
+   "sound": "aurelia_transit_architecture:voice.number.77"
+  },
+  "number.78": {
+   "duration_ms": 876,
+   "sound": "aurelia_transit_architecture:voice.number.78"
+  },
+  "number.79": {
+   "duration_ms": 923,
+   "sound": "aurelia_transit_architecture:voice.number.79"
+  },
+  "number.8": {
+   "duration_ms": 440,
+   "sound": "aurelia_transit_architecture:voice.number.8"
+  },
+  "number.80": {
+   "duration_ms": 557,
+   "sound": "aurelia_transit_architecture:voice.number.80"
+  },
+  "number.81": {
+   "duration_ms": 708,
+   "sound": "aurelia_transit_architecture:voice.number.81"
+  },
+  "number.82": {
+   "duration_ms": 854,
+   "sound": "aurelia_transit_architecture:voice.number.82"
+  },
+  "number.83": {
+   "duration_ms": 817,
+   "sound": "aurelia_transit_architecture:voice.number.83"
+  },
+  "number.84": {
+   "duration_ms": 733,
+   "sound": "aurelia_transit_architecture:voice.number.84"
+  },
+  "number.85": {
+   "duration_ms": 859,
+   "sound": "aurelia_transit_architecture:voice.number.85"
+  },
+  "number.86": {
+   "duration_ms": 838,
+   "sound": "aurelia_transit_architecture:voice.number.86"
+  },
+  "number.87": {
+   "duration_ms": 615,
+   "sound": "aurelia_transit_architecture:voice.number.87"
+  },
+  "number.88": {
+   "duration_ms": 898,
+   "sound": "aurelia_transit_architecture:voice.number.88"
+  },
+  "number.89": {
+   "duration_ms": 714,
+   "sound": "aurelia_transit_architecture:voice.number.89"
+  },
+  "number.9": {
+   "duration_ms": 727,
+   "sound": "aurelia_transit_architecture:voice.number.9"
+  },
+  "number.90": {
+   "duration_ms": 616,
+   "sound": "aurelia_transit_architecture:voice.number.90"
+  },
+  "number.91": {
+   "duration_ms": 815,
+   "sound": "aurelia_transit_architecture:voice.number.91"
+  },
+  "number.92": {
+   "duration_ms": 880,
+   "sound": "aurelia_transit_architecture:voice.number.92"
+  },
+  "number.93": {
+   "duration_ms": 927,
+   "sound": "aurelia_transit_architecture:voice.number.93"
+  },
+  "number.94": {
+   "duration_ms": 721,
+   "sound": "aurelia_transit_architecture:voice.number.94"
+  },
+  "number.95": {
+   "duration_ms": 1026,
+   "sound": "aurelia_transit_architecture:voice.number.95"
+  },
+  "number.96": {
+   "duration_ms": 927,
+   "sound": "aurelia_transit_architecture:voice.number.96"
+  },
+  "number.97": {
+   "duration_ms": 789,
+   "sound": "aurelia_transit_architecture:voice.number.97"
+  },
+  "number.98": {
+   "duration_ms": 843,
+   "sound": "aurelia_transit_architecture:voice.number.98"
+  },
+  "number.99": {
+   "duration_ms": 1042,
+   "sound": "aurelia_transit_architecture:voice.number.99"
+  },
+  "phrase.all_passengers_leave": {
+   "duration_ms": 1884,
+   "sound": "aurelia_transit_architecture:voice.phrase.all_passengers_leave"
+  },
+  "phrase.and": {
+   "duration_ms": 2543,
+   "sound": "aurelia_transit_architecture:voice.phrase.and"
+  },
+  "phrase.apologise": {
+   "duration_ms": 1698,
+   "sound": "aurelia_transit_architecture:voice.phrase.apologise"
+  },
+  "phrase.calling_at": {
+   "duration_ms": 633,
+   "sound": "aurelia_transit_architecture:voice.phrase.calling_at"
+  },
+  "phrase.is_delayed_by": {
+   "duration_ms": 1894,
+   "sound": "aurelia_transit_architecture:voice.phrase.is_delayed_by"
+  },
+  "phrase.is_the": {
+   "duration_ms": 655,
+   "sound": "aurelia_transit_architecture:voice.phrase.is_the"
+  },
+  "phrase.mind_the_gap": {
+   "duration_ms": 2746,
+   "sound": "aurelia_transit_architecture:voice.phrase.mind_the_gap"
+  },
+  "phrase.minute": {
+   "duration_ms": 711,
+   "sound": "aurelia_transit_architecture:voice.phrase.minute"
+  },
+  "phrase.minutes": {
+   "duration_ms": 563,
+   "sound": "aurelia_transit_architecture:voice.phrase.minutes"
+  },
+  "phrase.next_train_to_arrive_at_platform": {
+   "duration_ms": 2117,
+   "sound": "aurelia_transit_architecture:voice.phrase.next_train_to_arrive_at_platform"
+  },
+  "phrase.platform": {
+   "duration_ms": 731,
+   "sound": "aurelia_transit_architecture:voice.phrase.platform"
+  },
+  "phrase.please_board_now": {
+   "duration_ms": 1232,
+   "sound": "aurelia_transit_architecture:voice.phrase.please_board_now"
+  },
+  "phrase.service_to": {
+   "duration_ms": 913,
+   "sound": "aurelia_transit_architecture:voice.phrase.service_to"
+  },
+  "phrase.sorry_to_announce": {
+   "duration_ms": 1463,
+   "sound": "aurelia_transit_architecture:voice.phrase.sorry_to_announce"
+  },
+  "phrase.stand_clear": {
+   "duration_ms": 2281,
+   "sound": "aurelia_transit_architecture:voice.phrase.stand_clear"
+  },
+  "phrase.stand_well_back": {
+   "duration_ms": 2441,
+   "sound": "aurelia_transit_architecture:voice.phrase.stand_well_back"
+  },
+  "phrase.take_belongings": {
+   "duration_ms": 2337,
+   "sound": "aurelia_transit_architecture:voice.phrase.take_belongings"
+  },
+  "phrase.terminates_here": {
+   "duration_ms": 932,
+   "sound": "aurelia_transit_architecture:voice.phrase.terminates_here"
+  },
+  "phrase.the": {
+   "duration_ms": 1917,
+   "sound": "aurelia_transit_architecture:voice.phrase.the"
+  },
+  "phrase.this_is": {
+   "duration_ms": 621,
+   "sound": "aurelia_transit_architecture:voice.phrase.this_is"
+  },
+  "phrase.this_is_platform": {
+   "duration_ms": 989,
+   "sound": "aurelia_transit_architecture:voice.phrase.this_is_platform"
+  },
+  "phrase.train_approaching_platform": {
+   "duration_ms": 1464,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_approaching_platform"
+  },
+  "phrase.train_arriving_at_platform": {
+   "duration_ms": 1736,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_arriving_at_platform"
+  },
+  "phrase.train_at_platform": {
+   "duration_ms": 1430,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_at_platform"
+  },
+  "phrase.train_is_approaching_platform": {
+   "duration_ms": 2153,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_is_approaching_platform"
+  },
+  "phrase.train_now_arriving_at_platform": {
+   "duration_ms": 2053,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_now_arriving_at_platform"
+  },
+  "phrase.train_now_standing_at_platform": {
+   "duration_ms": 2159,
+   "sound": "aurelia_transit_architecture:voice.phrase.train_now_standing_at_platform"
+  },
+  "phrase.will_be_the": {
+   "duration_ms": 862,
+   "sound": "aurelia_transit_architecture:voice.phrase.will_be_the"
+  }
+ },
+ "priority": -100
+}

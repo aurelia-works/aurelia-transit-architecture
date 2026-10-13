@@ -195,4 +195,37 @@ class VoiceAndTextTest {
 		assertEquals(AnnouncementStyle.BRITISH, SpeakerConfig.DEFAULT.style(), "new speakers use the British wording");
 		assertEquals(AnnouncementStyle.STANDARD, AnnouncementStyle.byOrdinal(99));
 	}
+
+	@Test
+	void builtInVoiceSpeaksEveryPhraseAndNumberQuietlyUnderPacks() throws java.io.IOException {
+		final String base = "/assets/aurelia_transit_architecture/";
+		final JsonObject root;
+		final JsonObject sounds;
+		try (var in = VoiceAndTextTest.class.getResourceAsStream(base + "aurelia_voice/builtin.json");
+			 var events = VoiceAndTextTest.class.getResourceAsStream(base + "sounds.json")) {
+			assertNotNull(in, "built-in voice missing: run tools/make_voice.py");
+			root = JsonParser.parseReader(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+			sounds = JsonParser.parseReader(new java.io.InputStreamReader(events, java.nio.charset.StandardCharsets.UTF_8)).getAsJsonObject();
+		}
+		final VoicePack pack = VoicePack.parse("aurelia_transit_architecture:builtin", root);
+		assertTrue(pack.priority() < 0, "must sit under resource packs");
+		final List<String> keys = new ArrayList<>();
+		for (final AnnouncementText.Phrase phrase : AnnouncementText.Phrase.values()) {
+			keys.add(phrase.key());
+		}
+		for (int n = 0; n <= FragmentKeys.MAX_NUMBER; n++) {
+			keys.add(FragmentKeys.number(n));
+		}
+		for (final String key : keys) {
+			final VoicePack.FragmentSound sound = pack.get(key);
+			assertNotNull(sound, "no clip for " + key + ": re-run tools/make_voice.py");
+			final String event = sound.soundId().substring(sound.soundId().indexOf(':') + 1);
+			assertTrue(sounds.has(event), "sound event not registered: " + event);
+			final String file = sounds.getAsJsonObject(event).getAsJsonArray("sounds").get(0).getAsJsonObject().get("name").getAsString();
+			assertNotNull(VoiceAndTextTest.class.getResource(base + "sounds/" + file.substring(file.indexOf(':') + 1) + ".ogg"), "clip file missing for " + key);
+		}
+		final VoicePack.Stack stack = new VoicePack.Stack(List.of(pack, VoicePack.builtin("aurelia_transit_architecture")));
+		assertNotNull(stack.resolveAll(AnnouncementText.helpPoint("Central", "3", false, null).fragments(), null), "help point spoken out of the box");
+		assertNull(stack.resolveAll(AnnouncementText.helpPoint("Central", "3", true, null).fragments(), null), "no clip for a station name");
+	}
 }

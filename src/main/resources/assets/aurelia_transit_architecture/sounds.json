@@ -25,5 +25,1029 @@
       }
     ],
     "subtitle": "subtitles.aurelia_transit_architecture.live.chime.delay"
+  },
+  "voice.number.0": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_0",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.1": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_1",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.10": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_10",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.11": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_11",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.12": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_12",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.13": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_13",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.14": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_14",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.15": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_15",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.16": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_16",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.17": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_17",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.18": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_18",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.19": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_19",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.2": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_2",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.20": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_20",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.21": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_21",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.22": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_22",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.23": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_23",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.24": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_24",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.25": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_25",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.26": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_26",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.27": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_27",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.28": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_28",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.29": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_29",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.3": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_3",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.30": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_30",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.31": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_31",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.32": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_32",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.33": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_33",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.34": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_34",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.35": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_35",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.36": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_36",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.37": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_37",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.38": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_38",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.39": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_39",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.4": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_4",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.40": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_40",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.41": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_41",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.42": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_42",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.43": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_43",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.44": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_44",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.45": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_45",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.46": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_46",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.47": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_47",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.48": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_48",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.49": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_49",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.5": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_5",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.50": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_50",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.51": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_51",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.52": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_52",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.53": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_53",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.54": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_54",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.55": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_55",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.56": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_56",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.57": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_57",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.58": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_58",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.59": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_59",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.6": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_6",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.60": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_60",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.61": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_61",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.62": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_62",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.63": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_63",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.64": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_64",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.65": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_65",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.66": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_66",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.67": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_67",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.68": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_68",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.69": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_69",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.7": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_7",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.70": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_70",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.71": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_71",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.72": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_72",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.73": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_73",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.74": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_74",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.75": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_75",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.76": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_76",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.77": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_77",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.78": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_78",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.79": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_79",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.8": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_8",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.80": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_80",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.81": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_81",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.82": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_82",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.83": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_83",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.84": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_84",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.85": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_85",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.86": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_86",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.87": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_87",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.88": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_88",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.89": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_89",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.9": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_9",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.90": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_90",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.91": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_91",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.92": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_92",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.93": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_93",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.94": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_94",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.95": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_95",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.96": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_96",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.97": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_97",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.98": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_98",
+        "stream": false
+      }
+    ]
+  },
+  "voice.number.99": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/number_99",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.all_passengers_leave": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_all_passengers_leave",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.and": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_and",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.apologise": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_apologise",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.calling_at": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_calling_at",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.is_delayed_by": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_is_delayed_by",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.is_the": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_is_the",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.mind_the_gap": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_mind_the_gap",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.minute": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_minute",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.minutes": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_minutes",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.next_train_to_arrive_at_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_next_train_to_arrive_at_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.please_board_now": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_please_board_now",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.service_to": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_service_to",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.sorry_to_announce": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_sorry_to_announce",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.stand_clear": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_stand_clear",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.stand_well_back": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_stand_well_back",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.take_belongings": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_take_belongings",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.terminates_here": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_terminates_here",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.the": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_the",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.this_is": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_this_is",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.this_is_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_this_is_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_approaching_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_approaching_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_arriving_at_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_arriving_at_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_at_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_at_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_is_approaching_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_is_approaching_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_now_arriving_at_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_now_arriving_at_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.train_now_standing_at_platform": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_train_now_standing_at_platform",
+        "stream": false
+      }
+    ]
+  },
+  "voice.phrase.will_be_the": {
+    "sounds": [
+      {
+        "name": "aurelia_transit_architecture:voice/phrase_will_be_the",
+        "stream": false
+      }
+    ]
   }
 }

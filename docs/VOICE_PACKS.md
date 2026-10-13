@@ -2,7 +2,7 @@
 
 Station announcements are built from **fragments** (short phrases, numbers, station and route names). A voice pack maps fragment keys to sound events. Packs are ordinary resource-pack content: no code, no network, no text-to-speech at runtime.
 
-The mod ships only three original synthesised chimes (`chime.info`, `chime.alert`, `chime.delay`, made by `tools/make_live_sounds.py`). Without a voice pack an announcement is: chime, plus the sentence shown in the action bar. Announcements use the **Voice** sound category, so the player's Voice volume slider controls them.
+The mod ships three original synthesised chimes (`chime.info`, `chime.alert`, `chime.delay`, made by `tools/make_live_sounds.py`) and a **built-in English voice** for every phrase below and the numbers 0 to 99: Piper (MIT) with the voice "cori" (Bryce Beattie, trained on public-domain LibriVox recordings), rendered by `tools/make_voice.py`. It sits at priority -100, under every resource pack. It cannot know your station and route names, so sentences that name them (approaching, standing, delay) fall back to chime and text until a pack adds the names; help points ("This is platform 3."), safety and terminating announcements are spoken out of the box. `tools/make_voice.py --pack "<name>" --stations "A,B" --routes "Red Line"` builds such a names pack in the same voice, which you may share with your players. Announcements use the **Voice** sound category, so the player's Voice volume slider controls them.
 
 ## Adding a voice to a resource pack
 
@@ -111,4 +111,4 @@ The route part is skipped when a route has no name; "Calling at" lists at most 5
 - Keep fragments free of leading/trailing silence; `duration_ms` is the gap before the next fragment.
 - Do not reuse third-party or operator recordings you do not have the rights to.
 - Fragment keys and the `aurelia_voice` folder are the stable interface of the format; the English wording above is the contract for what each fragment should say.
-- Developers: `tools/make_test_voice.py` builds a local test pack with macOS `say` (every phrase, the numbers and any station or route names you pass) into `run/client/resourcepacks/`. Apple's licence does not allow sharing audio made with its voices, so that pack is for hearing your own build only; never commit or upload it.
+- After changing a phrase, re-run `tools/make_voice.py` (with a Python that has piper-tts) and `tools/generate_assets.py`; a unit test fails if the built-in voice misses a phrase.
