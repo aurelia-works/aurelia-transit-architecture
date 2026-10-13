@@ -44,7 +44,7 @@ public final class StationGuide {
 					+ "Clear and build (in chat) approves those changes."),
 			new Page("Tracks", "1 to 10 tracks, island or side platforms, 16 to 300 long, 3 to 8 wide.\n\n"
 					+ "Styles: modern, dutch, s-bahn, metro.\n"
-					+ "Roof: canopy, no roof, or a train shed: flat, arched, pointed arch or several arches."),
+					+ "Roof: canopy (wave, butterfly or gable), no roof, or a train shed (flat, arched, pointed or multi-arch)."),
 			new Page("Buildings", "Add \"station building\" for an entrance hall with gates, ticket office, machines and a kiosk.\n\n"
 					+ "Add \"footbridge\" for stairs up to every platform, with lifts where a platform has room."),
 			new Page("Looks", "utrecht, amsterdam, st pancras, antwerp, frankfurt, hamburg, munich, grand central, tokyo, zurich, "

@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station.world;
 
+import com.aureliatransit.architecture.station.CanopyShape;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.Role;
@@ -54,7 +55,7 @@ final class StationText {
 	static String headline(StationSpec spec) {
 		final String roof = switch (spec.roof()) {
 			case NONE -> "no roof";
-			case CANOPY -> "canopies";
+			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "canopies" : spec.canopy().label() + " canopies";
 			case HALL -> switch (spec.shed()) {
 				case FLAT -> "flat train shed";
 				case ARCH -> "arched train shed";

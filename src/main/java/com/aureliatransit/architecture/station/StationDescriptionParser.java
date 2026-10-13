@@ -125,6 +125,10 @@ public final class StationDescriptionParser {
 			Map.entry("barrel", ShedShape.ARCH), Map.entry("vault", ShedShape.ARCH), Map.entry("vaulted", ShedShape.ARCH), Map.entry("curved", ShedShape.ARCH),
 			Map.entry("pointed", ShedShape.POINTED), Map.entry("arches", ShedShape.MULTI_ARCH), Map.entry("vaults", ShedShape.MULTI_ARCH),
 			Map.entry("multispan", ShedShape.MULTI_ARCH));
+	/** Canopy shapes; each also asks for platform canopies (unless a roof was given). */
+	private static final Map<String, CanopyShape> CANOPY_SHAPE_WORDS = Map.ofEntries(Map.entry("wave", CanopyShape.WAVE), Map.entry("wavy", CanopyShape.WAVE),
+			Map.entry("undulating", CanopyShape.WAVE), Map.entry("butterfly", CanopyShape.BUTTERFLY), Map.entry("gable", CanopyShape.GABLE),
+			Map.entry("gabled", CanopyShape.GABLE), Map.entry("pitched", CanopyShape.GABLE), Map.entry("heritage", CanopyShape.GABLE));
 	/** Words that say several looks are mixed ("Utrecht and Hamburg combined"); read so they are not reported as ignored. */
 	private static final Set<String> MIX_WORDS = Set.of("combined", "combine", "combo", "mix", "mixed", "mixture", "hybrid", "fusion", "meets",
 			"cross", "crossed", "x", "blend", "blended", "inspired", "inspiration", "both", "between", "together", "merged", "merge");
@@ -207,6 +211,7 @@ public final class StationDescriptionParser {
 		private final List<Look> looks = new ArrayList<>();
 		private boolean mixing;
 		private ShedShape shed;
+		private CanopyShape canopy;
 		private StationScale scale;
 		private int scaleAt = -1;
 
@@ -550,6 +555,13 @@ public final class StationDescriptionParser {
 						return true;
 					}
 					return false;
+				case "v":
+					if (next.equals("roof") || next.equals("shaped") || next.equals("canopy") || next.equals("canopies")) {
+						setCanopyShape(CanopyShape.BUTTERFLY, i);
+						use(i, i + 1);
+						return true;
+					}
+					return false;
 				case "flat":
 					if (next.equals("roof") || HALL_WORDS.contains(next)) {
 						if (shed == null) {
@@ -830,6 +842,12 @@ public final class StationDescriptionParser {
 				use(i, i);
 				return true;
 			}
+			final CanopyShape canopyShape = CANOPY_SHAPE_WORDS.get(token);
+			if (canopyShape != null) {
+				setCanopyShape(canopyShape, i);
+				use(i, i);
+				return true;
+			}
 			if (BUILDING_WORDS.contains(token)) {
 				askBuilding(i);
 				if (GRAND_WORDS.contains(token)) {
@@ -1040,6 +1058,21 @@ public final class StationDescriptionParser {
 			}
 		}
 
+		/** The first canopy shape wins; it also asks for canopies when no roof was given. */
+		private void setCanopyShape(CanopyShape value, int i) {
+			if (canopy == null) {
+				canopy = value;
+				note(i, switch (value) {
+					case WAVE -> "wave canopies: the roof swells and falls along the platform";
+					case BUTTERFLY -> "butterfly canopies: a V roof, low over the columns and rising to both edges";
+					case GABLE -> "gable canopies: a pitched roof with its ridge over the columns";
+					case FLAT -> "flat canopies";
+				});
+			} else if (canopy != value) {
+				warn("canopy shape given twice; using " + canopy.label());
+			}
+		}
+
 		private void setRoofMaterial(RoofMaterial value, int i) {
 			if (roofMaterial == null) {
 				roofMaterial = value;
@@ -1239,6 +1272,10 @@ public final class StationDescriptionParser {
 				defaulted.add("width " + defaultWidth + (bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
 			}
 
+			// a canopy shape asks for canopies, unless the text chose a roof (or a look would give it a train shed)
+			if (canopy != null && roof == null && !roofNone) {
+				roof = RoofType.CANOPY;
+			}
 			resolveLooks();
 			if (style != null) {
 				builder.style(style);
@@ -1322,6 +1359,16 @@ public final class StationDescriptionParser {
 				warn("a terminus is reached from its concourse, so it gets no footbridge");
 			} else if (bridge) {
 				builder.footbridge(true);
+			}
+			if (roof != RoofType.HALL && !roofNone) {
+				final BuildingStyle look = wantsBuilding ? builder.build().building() : buildingStyle != null ? buildingStyle : BuildingStyle.NONE;
+				final CanopyShape shape = canopy != null ? canopy : CanopyShape.forLook(look, style != null ? style : StationStyle.MODERN);
+				builder.canopy(shape);
+				if (canopy == null && shape != CanopyShape.FLAT) {
+					defaulted.add(shape.label() + " canopies (default for this look)");
+				}
+			} else if (canopy != null) {
+				warn("a canopy shape was given but the station has " + (roofNone ? "no roof" : "a train shed"));
 			}
 			if (roof == RoofType.HALL && !roofNone) {
 				builder.shed(shed != null ? shed : ShedShape.forLook(wantsBuilding ? builder.build().building() : BuildingStyle.NONE,

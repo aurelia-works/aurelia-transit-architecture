@@ -20,7 +20,7 @@ Operators only (permission level 2), like `/ata_message`.
 
 The **Station Wrench** (Passenger Equipment tab, operators only) does the same without typing commands. Right-click the air to open its screen.
 
-**Simple page (buttons).** Pick a city look (Utrecht, Amsterdam, Hamburg, Munich, Frankfurt, St Pancras, Antwerp, New York, Tokyo, Zurich, Paris, Milan, Berlin, Hong Kong, Beijing; four to a row), optionally a second city to *mix with* (its train shed, or its platforms when the first city has no shed), through station, terminus or hub (switching a station still at the default size to a terminus or hub makes it 8 tracks, 160 long; a hub's track buttons step by two), 1-10 tracks, platforms (auto, side, island), length (32 to 300), roof (the city's own, canopies, flat, arched, pointed-arch or multi-arch train shed, or none), a station building and its size (Yes sizes it by the station; or Compact, City, Grand) and a name. Then **Place in front of me** shows the outline and chat offers **Build it** / **Cancel** / **Details**; **Build it!** builds the placed plan and **Undo last build** reverts it. **Clear** forgets what the wrench remembers (choices, typed text, a Studio design) and starts again from the defaults. The buttons only write a plain description (`StationRecipe`), so they go through exactly the same parser, design rules and checks as typed text; a unit test builds every look x mix x type x roof combination.
+**Simple page (buttons).** Pick a city look (Utrecht, Amsterdam, Hamburg, Munich, Frankfurt, St Pancras, Antwerp, New York, Tokyo, Zurich, Paris, Milan, Berlin, Hong Kong, Beijing; four to a row), optionally a second city to *mix with* (its train shed, or its platforms when the first city has no shed), through station, terminus or hub (switching a station still at the default size to a terminus or hub makes it 8 tracks, 160 long; a hub's track buttons step by two), 1-10 tracks, platforms (auto, side, island), length (32 to 300), roof (the city's own, canopies, wave, butterfly or gable canopies, flat, arched, pointed-arch or multi-arch train shed, or none), a station building and its size (Yes sizes it by the station; or Compact, City, Grand) and a name. Then **Place in front of me** shows the outline and chat offers **Build it** / **Cancel** / **Details**; **Build it!** builds the placed plan and **Undo last build** reverts it. **Clear** forgets what the wrench remembers (choices, typed text, a Studio design) and starts again from the defaults. The buttons only write a plain description (`StationRecipe`), so they go through exactly the same parser, design rules and checks as typed text; a unit test builds every look x mix x type x roof combination.
 
 **3D preview.** When the window has room, both pages show the station beside the buttons in 3D, drawn from the game's own block models and textures, and update it as you change a choice or stop typing: drag to turn it, scroll to zoom, right-drag to move it, R to reset the view. Under it, the block count, the size and whether it is ready to build. The preview plans on your own computer with the same parser, planner and checks as the server, so what it shows is what *Place in front of me* plans. On a small window or a large GUI scale it is left out; Station Studio has the bigger view.
 
@@ -58,6 +58,7 @@ Examples:
 | Width (3-20) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side (6 with a footbridge), 6 island |
 | Style | modern; dutch/utrecht/leidsche rijn; german/s-bahn/hamburg; metro/u-bahn | modern |
 | Roof | `no roof`/`open`; `canopy`/`covered`; `hall`/`train shed` | canopy |
+| Canopy shape | `flat`; `wave`/`wavy`; `butterfly`/`v roof`; `gable`/`gabled`/`heritage`/`pitched` (asks for canopies when no roof is given) | the building look's own (see **Canopies**) |
 | Train shed shape | `flat roof`; `arched`/`barrel`/`vault`/`curved`; `pointed`; `arches`/`vaults`/`multi span`/`several arches` (asks for a train shed) | the building look's own |
 | Roof material | `glass`, `timber`/`wooden roof`, `steel` | style's own |
 | Floor | `light/dark paving`, `concrete`, `terrazzo`, `granite` | style's own |
@@ -77,6 +78,19 @@ Examples:
 | Hub | `hub`, `interchange`: a terminus whose outer tracks run on past the head building (SCR-style): one a side up to 6 tracks, two a side from 8. Island platforms only, an even number of tracks, at least 4; an odd count is rounded up and side platforms become islands, both with a warning. | no |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
+
+## Canopies
+
+A platform canopy stands on one column line down the middle of the platform (more on a wide one), with girders at y = 4 above 4 blocks of headroom, and reaches one cell out over each boarding edge. Its roof comes in four shapes, chosen by the building look or by a shape word. Only the roof changes: the columns, girders and headroom are the same in every shape, and a hall roof ignores the shape.
+
+| Shape | Look | Roof |
+|---|---|---|
+| Flat | Beijing, or no look and Modern or Metro platforms | Level at y = 5. |
+| Wave | Utrecht, Hong Kong, Dutch platforms | Swells and falls along the platform: waves of about 14 cells, one block high. Each climb is two curved blocks (`canopy_wave_rise`, `canopy_wave_flat`), so the roof is smooth. It begins and ends low. |
+| Butterfly | Berlin, Munich, Frankfurt, Hamburg, S-Bahn platforms | A V across the platform: level over the columns, then rising a block over two cells (`canopy_slope_lower`, `canopy_slope_upper`) to both edges. |
+| Gable | St Pancras, Amsterdam, Antwerp, Paris, Grand Central, Tokyo, Zurich, Milan | A ridge over the columns, one block above the canopy (two on a roof 11 or more wide), falling the same way to the eaves, which stay at y = 5 clear of the trains. |
+
+A girder block under each ridge, butterfly fold and wave crest joins the raised roof to the sloping blocks beside it, so no part hangs by an edge (it also reads as a post). A canopy narrower than three cells from its columns to its edge stays level. Lamps sit at the same density as on a flat roof: beside the girder on a flat or wave roof (on a wave they move to the nearest level cell), in the valley or on the ridge for a butterfly or gable. Where a footbridge or stairwell passes through the canopy, a raised roof leaves that cell open, so nothing ever sits inside a corridor. The sloping blocks are the existing canopy blocks; the roof material option changes the flat parts only.
 
 ## Train sheds
 

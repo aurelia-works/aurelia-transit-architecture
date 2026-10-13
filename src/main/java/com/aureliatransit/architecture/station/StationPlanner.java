@@ -24,6 +24,11 @@ public final class StationPlanner {
 	private static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
+	/** The canopy's sloping blocks (the low end points the way the block faces): a half-block slope, and the wave's two curved ones. */
+	private static final String CANOPY_SLOPE_LOWER = "aurelia_transit_architecture:canopy_slope_lower";
+	private static final String CANOPY_SLOPE_UPPER = "aurelia_transit_architecture:canopy_slope_upper";
+	private static final String CANOPY_WAVE_RISE = "aurelia_transit_architecture:canopy_wave_rise";
+	private static final String CANOPY_WAVE_FLAT = "aurelia_transit_architecture:canopy_wave_flat";
 	/** One colour per platform at a terminus gate line, in turn: a stripe on the floor and over the arcade, to follow to the gates. */
 	private static final List<String> PLATFORM_COLOURS = List.of("aurelia_transit_architecture:metro_tile_blue",
 			"aurelia_transit_architecture:metro_tile_green", "aurelia_transit_architecture:metro_tile_orange",
@@ -2408,6 +2413,10 @@ public final class StationPlanner {
 				final int to = canopyTo(band);
 				final String girder = palette.blockId(Role.BEAM);
 				final String kind = "kind=" + palette.girderKind();
+				final CanopyShape shape = spec.canopy();
+				final RoofPiece[] across = acrossProfile(shape, lines, from, to);
+				final RoofPiece[] wave = shape == CanopyShape.WAVE ? waveAlong(band.length()) : null;
+				final int[] lamp = lampsAlong(band.length(), shape, wave);
 				// each line's arms reach towards the roof edge (or halfway to the next line), stopping a cell short of it
 				final int[] armLeft = new int[lines.size()];
 				final int[] armRight = new int[lines.size()];
@@ -2425,8 +2434,27 @@ public final class StationPlanner {
 						final int u = lines.get(i);
 						final PlannedBlock cap = cells.get(new Cell(u, y - 2, v));
 						if (cap != null && cap.role() == Role.COLUMN_CAP) {
-							for (int a = u - armLeft[i]; a <= u + armRight[i]; a++) {
-								put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_U, girder, kind);
+							// the arm runs out from the cap until something stands in its way (a stairwell, an escalator); past
+							// that, what a wall or pier can carry is framed into it and the edge girder runs on along the line
+							put(Role.BEAM, u, y - 1, v, LocalDir.PLUS_U, girder, kind);
+							for (final int step : new int[]{-1, 1}) {
+								final int reach = step < 0 ? armLeft[i] : armRight[i];
+								int a = u + step;
+								while (Math.abs(a - u) <= reach && !taken(a, y - 1, v)) {
+									put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_U, girder, kind);
+									a += step;
+								}
+								if (Math.abs(a - u) <= reach) {
+									final int lo = Math.min(a, u + step * reach);
+									final int hi = Math.max(a, u + step * reach);
+									final java.util.Set<Integer> framed = framedIntoPiers(lo, hi, y - 1, v, true);
+									for (final int f : framed) {
+										put(Role.BEAM, f, y - 1, v, LocalDir.PLUS_U, girder, kind);
+									}
+									if (reach > 0 && !framed.contains(u + step * reach)) {
+										put(Role.BEAM, u + step * reach, y - 1, v, LocalDir.PLUS_V, girder, kind);
+									}
+								}
 							}
 						} else {
 							// a footbridge or stair pier rising through the girders carries a cross beam framed into its sides,
@@ -2447,23 +2475,173 @@ public final class StationPlanner {
 							}
 						}
 					}
-					// lit every 4th cell along the platform, in the roof beside each girder (alternating sides)
+					// the roof row: its profile across the platform (butterfly, gable) or along it (wave) lifts some cells above y
 					final int along = v - band.vFrom();
-					final boolean light = along >= 2 && along % 4 == 2;
 					for (int u = from; u <= to; u++) {
-						final boolean lamp = light && (lines.contains(u - 1) && along % 8 == 2 || lines.contains(u + 1) && along % 8 == 6);
-						if (u == from) {
-							put(Role.ROOF_EDGE, u, y, v, LocalDir.MINUS_U);
-						} else if (u == to) {
-							put(Role.ROOF_EDGE, u, y, v, LocalDir.PLUS_U);
-						} else if (lamp) {
-							put(Role.ROOF_LIGHT, u, y, v, LocalDir.PLUS_V);
+						final RoofPiece piece = shape == CanopyShape.WAVE ? wave[along] : across[u - from];
+						final boolean edge = u == from || u == to;
+						final int rise = edge ? piece.edgeRise() : piece.rise();
+						// a roof lifted above the platform's level leaves the cells below it alone: a footbridge or stairwell there
+						// has its own cover
+						boolean clear = true;
+						for (int level = y; level < y + rise && clear; level++) {
+							clear = !taken(u, level, v);
+						}
+						if (!clear) {
+							continue;
+						}
+						// a girder under the raised roof, where it meets the sloping blocks (a wave: under its crest on each column line)
+						if (rise > 0 && (piece.braced() || shape == CanopyShape.WAVE && lines.contains(u))) {
+							for (int level = y; level < y + rise; level++) {
+								put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.RIB), kind);
+							}
+						}
+						if (edge) {
+							put(Role.ROOF_EDGE, u, y + rise, v, u == from ? LocalDir.MINUS_U : LocalDir.PLUS_U);
+						} else if (lamp[along] != NO_LAMP && piece.block() == null && onLamp(lines, u, lamp[along])) {
+							put(Role.ROOF_LIGHT, u, y + rise, v, LocalDir.PLUS_V);
+						} else if (piece.block() == null) {
+							put(Role.ROOF, u, y + rise, v, LocalDir.PLUS_V);
 						} else {
-							put(Role.ROOF, u, y, v, LocalDir.PLUS_V);
+							put(Role.ROOF, u, y + rise, v, piece.low(), piece.block(), "");
 						}
 					}
 				}
 			}
+		}
+
+		/** The lamp offset of a row with no lamp. */
+		private static final int NO_LAMP = 2;
+		/** Cells of a wave canopy from one crest to the next, about. */
+		private static final int WAVE_PERIOD = 14;
+		/** Cells from a column line to the roof edge (or the next line's half) below which a canopy stays level. */
+		private static final int MIN_SLOPE_REACH = 3;
+
+		/**
+		 * One cell of a canopy's roof: how many blocks it stands above the canopy level, the sloping block it is made of (null
+		 * for the style's flat roof block), the way that block's low end points, how high the edge cell of its row stands, and
+		 * whether a girder block is set under it. A raised roof touches the sloping block beside it only at an edge, so the
+		 * girder under a ridge, a fold or a crest is what joins it to the rest (and carries it, as a post).
+		 */
+		private record RoofPiece(int rise, String block, LocalDir low, int edgeRise, boolean braced) {
+
+			static RoofPiece level(int rise) {
+				return new RoofPiece(rise, null, null, rise, false);
+			}
+
+			static RoofPiece slope(int rise, String block, LocalDir low) {
+				return new RoofPiece(rise, block, low, rise, false);
+			}
+
+			RoofPiece withBrace() {
+				return new RoofPiece(rise, block, low, edgeRise, true);
+			}
+		}
+
+		/**
+		 * The roof's profile across a platform, one piece per u from {@code from} to {@code to}, for the shapes that have one
+		 * (butterfly, gable; the others are level). Each column line owns the cells up to halfway to the next line, or to the
+		 * roof edge. A butterfly is level over its line and rises one block over the next two cells, outwards; a gable stands
+		 * its ridge over the line, one block high (two on a wide roof), and falls the same way to the edge. A stretch of
+		 * fewer than three cells to either side is left level: there is no room for the slope.
+		 */
+		private RoofPiece[] acrossProfile(CanopyShape shape, List<Integer> lines, int from, int to) {
+			final RoofPiece[] pieces = new RoofPiece[to - from + 1];
+			java.util.Arrays.fill(pieces, RoofPiece.level(0));
+			if (shape != CanopyShape.BUTTERFLY && shape != CanopyShape.GABLE) {
+				return pieces;
+			}
+			for (int i = 0; i < lines.size(); i++) {
+				final int line = lines.get(i);
+				final int low = i == 0 ? from : lines.get(i - 1) + (line - lines.get(i - 1)) / 2 + 1;
+				final int high = i == lines.size() - 1 ? to : line + (lines.get(i + 1) - line) / 2;
+				final int reach = Math.min(line - low, high - line);
+				if (reach < MIN_SLOPE_REACH) {
+					continue;
+				}
+				// the gable's ridge height; the butterfly's rise is always one block
+				final int ridge = shape == CanopyShape.GABLE ? Math.min(2, (reach - 1) / 2) : 1;
+				for (int u = low; u <= high; u++) {
+					final int d = Math.abs(u - line);
+					final LocalDir outward = u < line ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+					if (shape == CanopyShape.GABLE) {
+						if (d == 0) {
+							pieces[u - from] = RoofPiece.level(ridge).withBrace();
+						} else if (d <= 2 * ridge) {
+							// counting from the eaves: the lowest half-block step first
+							final int step = 2 * ridge - d + 1;
+							pieces[u - from] = RoofPiece.slope((step - 1) / 2, step % 2 == 1 ? CANOPY_SLOPE_LOWER : CANOPY_SLOPE_UPPER, outward);
+						}
+					} else if (d >= 1 && d <= 2) {
+						pieces[u - from] = RoofPiece.slope(0, d == 1 ? CANOPY_SLOPE_LOWER : CANOPY_SLOPE_UPPER, outward.opposite());
+					} else if (d > 2) {
+						pieces[u - from] = d == 3 ? RoofPiece.level(1).withBrace() : RoofPiece.level(1);
+					}
+				}
+			}
+			return pieces;
+		}
+
+		/**
+		 * The wave along a platform of {@code length} cells, one piece per cell: waves of about {@link #WAVE_PERIOD} cells, each
+		 * low, then two cells up (a curved rise and the curved block that tops it off, so the climb is smooth), high for as long
+		 * as it was low, and two cells down. A platform is whole waves long, so it begins and ends low.
+		 */
+		private static RoofPiece[] waveAlong(int length) {
+			final RoofPiece[] pieces = new RoofPiece[length];
+			final int waves = Math.max(1, Math.round(length / (float) WAVE_PERIOD));
+			for (int w = 0; w < waves; w++) {
+				final int start = w * length / waves;
+				final int end = (w + 1) * length / waves;
+				final int high = (end - start - 4) / 2;
+				final int lead = (end - start - 4 - high) / 2;
+				for (int i = start; i < end; i++) {
+					final int at = i - start;
+					final int top = lead + 2 + high;
+					if (at < lead || at >= top + 2) {
+						pieces[i] = RoofPiece.level(0);
+					} else if (at == lead) {
+						pieces[i] = new RoofPiece(0, CANOPY_WAVE_RISE, LocalDir.MINUS_V, 0, false);
+					} else if (at == lead + 1) {
+						pieces[i] = new RoofPiece(0, CANOPY_WAVE_FLAT, LocalDir.MINUS_V, 1, false);
+					} else if (at < top) {
+						pieces[i] = RoofPiece.level(1);
+					} else if (at == top) {
+						pieces[i] = new RoofPiece(0, CANOPY_WAVE_FLAT, LocalDir.PLUS_V, 1, false);
+					} else {
+						pieces[i] = new RoofPiece(0, CANOPY_WAVE_RISE, LocalDir.PLUS_V, 0, false);
+					}
+				}
+			}
+			return pieces;
+		}
+
+		/**
+		 * Where the lamps of a canopy go along a platform, per cell along it: every 4th cell, beside each girder on alternating
+		 * sides (a butterfly or gable lights its line itself: the valley or the ridge). A lamp is a flat block, so on a wave it
+		 * moves to the nearest level cell. Each entry is -1 or 1 for the side of the line, 0 for on it, or {@link #NO_LAMP}.
+		 */
+		private static int[] lampsAlong(int length, CanopyShape shape, RoofPiece[] wave) {
+			final int[] lamps = new int[length];
+			java.util.Arrays.fill(lamps, NO_LAMP);
+			for (int along = 2; along < length; along += 4) {
+				int at = along;
+				if (shape == CanopyShape.WAVE) {
+					for (final int shift : new int[]{0, -1, 1, -2, 2}) {
+						if (along + shift >= 2 && along + shift < length && wave[along + shift].block() == null) {
+							at = along + shift;
+							break;
+						}
+					}
+				}
+				lamps[at] = shape == CanopyShape.BUTTERFLY || shape == CanopyShape.GABLE ? 0 : along % 8 == 2 ? 1 : -1;
+			}
+			return lamps;
+		}
+
+		/** True when the roof cell at {@code u} is lit by this row's lamp: beside a line on the lamp's side, or on the line. */
+		private static boolean onLamp(List<Integer> lines, int u, int lamp) {
+			return lines.contains(u - lamp);
 		}
 
 		/**

@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.station.studio;
 
 import com.aureliatransit.architecture.station.BuildingStyle;
+import com.aureliatransit.architecture.station.CanopyShape;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LayoutValidator;
 import com.aureliatransit.architecture.station.LocalFrame;
@@ -364,7 +365,7 @@ public final class StudioApi {
 	private static String roof(StationSpec spec) {
 		return switch (spec.roof()) {
 			case NONE -> "no roof";
-			case CANOPY -> "platform canopies";
+			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "platform canopies" : spec.canopy().label() + " platform canopies";
 			case HALL -> lower(spec.shed().name()).replace('_', ' ') + " train shed";
 		};
 	}
