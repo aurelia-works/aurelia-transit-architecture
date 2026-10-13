@@ -481,16 +481,22 @@ class StationPlannerTest {
 		expected.put(Role.RAMP_LOWER, 16);
 		expected.put(Role.RAMP_UPPER, 16);
 		expected.put(Role.RAIL_NODE, 4);
-		expected.put(Role.COLUMN, 28);
-		expected.put(Role.COLUMN_CAP, 14);
-		expected.put(Role.ROOF, 170);
+		// a canopy 5 wide (the platform and a cell out over its boarding edge) has one column line, so 5 columns (canopyPositions(48):
+		// 2, 12, 23, 34, 45) per platform, each a post and a cap
+		expected.put(Role.COLUMN, 20);
+		expected.put(Role.COLUMN_CAP, 10);
+		// per platform: an arm of 3 across each column row (5 * 3), and between them a girder along the line plus an edge girder
+		// at each arm's end (43 rows * 3)
+		expected.put(Role.BEAM, 288);
+		// 3 roof cells per row between the two roof edges (48 rows * 3 = 144 a platform), 12 of them lit
+		expected.put(Role.ROOF, 264);
 		expected.put(Role.ROOF_EDGE, 192);
-		expected.put(Role.ROOF_LIGHT, 22);
+		expected.put(Role.ROOF_LIGHT, 24);
 		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
 		expected.put(Role.FIXTURE, 14); // per platform: two 2-wide hanging departure screens, a help point and two speakers
 		assertEquals(expected, counts);
-		assertEquals(878, plan(spec).blocks().size());
+		assertEquals(1250, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -500,10 +506,12 @@ class StationPlannerTest {
 		final Set<Integer> columnV = new HashSet<>();
 		for (final PlannedBlock column : blocks(plan, Role.COLUMN_CAP)) {
 			columnV.add(column.v());
-			assertEquals(3, column.y());
-			assertTrue(column.u() == 1 || column.u() == 12, "column line at " + column.u());
+			assertEquals(StationGeometry.CANOPY_Y - 2, column.y());
+			// the one line of a 5 wide canopy (platform and a cell out over the boarding edge) is its middle: u 2 and 12
+			assertTrue(column.u() == 2 || column.u() == 12, "column line at " + column.u());
 		}
-		assertEquals(Set.of(2, 10, 18, 26, 34, 42, 45), columnV);
+		assertEquals(Set.copyOf(StationPlanner.canopyPositions(48)), columnV);
+		assertEquals(Set.of(2, 12, 23, 34, 45), columnV);
 		assertEquals(List.of(new Box(4, 0, -2, 6, 4, 49), new Box(8, 0, -2, 10, 4, 49)), plan.trackEnvelopes());
 		assertEquals(List.of(new Box(0, 1, 0, 3, 3, 47), new Box(11, 1, 0, 14, 3, 47)), plan.headroom());
 		assertEquals(List.of(new Box(0, -1, -2, 3, -1, 49), new Box(11, -1, -2, 14, -1, 49), new Box(5, -1, -2, 5, -1, 49), new Box(9, -1, -2, 9, -1, 49)),
@@ -519,6 +527,22 @@ class StationPlannerTest {
 		assertEquals(2, long160.get(0));
 		assertEquals(154, long160.get(long160.size() - 2));
 		assertEquals(157, long160.get(long160.size() - 1));
+	}
+
+	@Test
+	void canopyPositionsSpaceTheColumnsAsWideAsAGirderSpans() {
+		assertEquals(List.of(2, 13), StationPlanner.canopyPositions(16));
+		assertEquals(List.of(2, 13, 24, 35, 46), StationPlanner.canopyPositions(49));
+		for (int length = StationSpec.MIN_LENGTH; length <= StationSpec.MAX_LENGTH; length++) {
+			final List<Integer> positions = StationPlanner.canopyPositions(length);
+			assertEquals(2, positions.get(0), "length " + length);
+			assertEquals(length - 3, positions.get(positions.size() - 1), "length " + length);
+			for (int i = 1; i < positions.size(); i++) {
+				assertTrue(positions.get(i) - positions.get(i - 1) <= StationGeometry.MAX_BEAM_SPAN, "bay too wide at length " + length);
+			}
+			// as few columns as the span allows: at most one fewer would leave a bay over the limit
+			assertTrue(length - 5 > (positions.size() - 2) * StationGeometry.MAX_BEAM_SPAN, "more columns than needed at length " + length);
+		}
 	}
 
 	@Test
@@ -654,13 +678,47 @@ class StationPlannerTest {
 	@Test
 	void canopyHasOneCentreColumnLinePerPlatform() {
 		final StationPlan plan = plan(StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformWidth(8).roof(RoofType.CANOPY).build());
-		// island 3..10: centre (3 + 10) / 2 = 6
+		// island 3..10 and a cell of roof out over each boarding edge: 2..11, centre 2 + 9 / 2 = 6
 		assertEquals(Set.of(6), columnLines(plan));
 		for (final PlannedBlock roof : blocks(plan, Role.ROOF_EDGE)) {
 			assertEquals(StationGeometry.CANOPY_Y, roof.y());
-			assertTrue(roof.u() == 3 || roof.u() == 10);
-			assertEquals(roof.u() == 3 ? LocalDir.MINUS_U : LocalDir.PLUS_U, roof.front());
+			assertTrue(roof.u() == 2 || roof.u() == 11, "roof edge at " + roof.u());
+			assertEquals(roof.u() == 2 ? LocalDir.MINUS_U : LocalDir.PLUS_U, roof.front());
 		}
+		for (final PlannedBlock cap : blocks(plan, Role.COLUMN_CAP)) {
+			assertEquals(StationGeometry.CANOPY_Y - 2, cap.y());
+		}
+	}
+
+	/** One line per 17 cells of canopy (an arm and an edge girder carry 4 cells each way), never on a boarding edge. */
+	@Test
+	void canopyColumnLinesAreSparseAndNeverOnABoardingEdge() {
+		for (final PlatformLayout layout : PlatformLayout.values()) {
+			for (int width = StationSpec.MIN_WIDTH; width <= StationSpec.MAX_WIDTH; width++) {
+				final StationPlan plan = plan(StationSpec.builder().trackCount(2).platformLayout(layout).platformWidth(width).roof(RoofType.CANOPY).build());
+				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+					final List<Integer> lines = StationPlanner.columnLines(band, RoofType.CANOPY);
+					final int canopy = StationPlanner.canopyTo(band) - StationPlanner.canopyFrom(band) + 1;
+					final String where = layout + " width " + width + " platform " + band.number();
+					assertEquals((canopy + 16) / 17, lines.size(), where);
+					for (final int line : lines) {
+						assertTrue(line >= band.uMin() && line <= band.uMax(), "line off the platform: " + where);
+						assertFalse(band.trackLeft() && line == band.uMin() || band.trackRight() && line == band.uMax(), "line on a boarding edge: " + where);
+					}
+					assertEquals(new HashSet<>(lines), columnLines(plan, band), where);
+				}
+			}
+		}
+	}
+
+	private static Set<Integer> columnLines(StationPlan plan, TrackLayout.PlatformBand band) {
+		final Set<Integer> lines = new HashSet<>();
+		for (final PlannedBlock cap : blocks(plan, Role.COLUMN_CAP)) {
+			if (band.contains(cap.u(), cap.v())) {
+				lines.add(cap.u());
+			}
+		}
+		return lines;
 	}
 
 	@Test
@@ -688,14 +746,17 @@ class StationPlannerTest {
 
 	@Test
 	void nameSignsShiftAlongTheStationWhenFurnitureTakesTheirCells() {
-		// island 3 wide, canopy, 48 long: the bench and bin on the centre line at v = 24, 25 block 23..25, the bin also 25..27; 27..29 is free
+		// island 3 wide, canopy, 49 built long: the canopy column on the centre line at v = 24 (canopyPositions(49): 2, 13, 24, 35, 46) blocks
+		// 23..25, the first choice, and 25..27 is free
 		final StationPlan plan = plan(StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformWidth(3).name("Alpha")
 				.roof(RoofType.CANOPY).platformLength(48).build());
 		final Set<Integer> signV = new HashSet<>();
 		for (final PlannedBlock sign : blocks(plan, Role.NAME_SIGN)) {
 			signV.add(sign.v());
 		}
-		assertEquals(Set.of(27, 28, 29), signV);
+		assertEquals(Set.of(25, 26, 27), signV);
+		assertTrue(StationPlanner.canopyPositions(49).contains(24));
+		assertEquals(Set.of(4), blocks(plan, Role.COLUMN).stream().filter(c -> c.v() == 24).map(PlannedBlock::u).collect(java.util.stream.Collectors.toSet()));
 	}
 
 	/**
@@ -900,9 +961,14 @@ class StationPlannerTest {
 		assertEquals(8, screens.size(), "two 4-wide screens on a 64 long island");
 		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":platform_pids")), "no standing screens under a roof");
 		for (final PlannedBlock screen : screens) {
-			assertEquals(StationGeometry.CANOPY_Y - 1, screen.y(), "hangs right under the canopy: " + screen);
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == screen.u() && b.v() == screen.v() && b.y() == StationGeometry.CANOPY_Y && b.role().covers()),
-					"nothing to hang from: " + screen);
+			// the four cells of a screen hang from the lowest ceiling over them: the canopy's girders sit directly under its roof, so
+			// where one runs over the screen (the line down the middle, or an edge girder) it hangs a block lower than the roof
+			final List<PlannedBlock> span = screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front() && Math.abs(o.u() - screen.u()) <= 3)
+					.sorted(Comparator.comparingInt(PlannedBlock::u)).toList();
+			final int ceiling = plan.blocks().stream().filter(b -> b.v() == screen.v() && b.y() > StationGeometry.WALK_Y && b.role().covers()
+					&& span.stream().anyMatch(o -> o.u() == b.u())).mapToInt(PlannedBlock::y).min().orElse(-1);
+			assertEquals(ceiling - 1, screen.y(), "hangs under the lowest ceiling over its span: " + screen);
+			assertEquals(StationGeometry.CANOPY_Y - 2, screen.y(), "hangs under the girders: " + screen);
 			assertTrue(screen.front().alongTrack(), "faces along the platform: " + screen);
 			assertEquals(4, screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front() && Math.abs(o.u() - screen.u()) <= 3).count(),
 					"not four wide: " + screen);

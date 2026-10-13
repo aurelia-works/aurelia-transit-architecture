@@ -97,11 +97,18 @@ public final class StationPlanner {
 	static List<Integer> columnLines(TrackLayout.PlatformBand band, RoofType roof) {
 		final List<Integer> lines = new ArrayList<>();
 		if (roof == RoofType.CANOPY) {
-			// one line per stretch the roof can cantilever both ways from, each in the middle of its stretch
-			final int reach = 2 * StationGeometry.MAX_CANTILEVER + 1;
-			final int count = (band.width() + reach - 1) / reach;
+			// one line per stretch its arms and edge girders carry (an arm reaches MAX_CANTILEVER out, the edge girder on it the
+			// roof MAX_CANTILEVER further), each in the middle of its stretch; the stretch is the canopy's width, which reaches
+			// one cell out over each boarding edge
+			final int reach = 4 * StationGeometry.MAX_CANTILEVER + 1;
+			final int from = canopyFrom(band);
+			final int width = canopyTo(band) - from + 1;
+			final int count = (width + reach - 1) / reach;
+			// never on a boarding edge, where passengers step on and off
+			final int low = band.trackLeft() ? band.uMin() + 1 : band.uMin();
+			final int high = band.trackRight() ? band.uMax() - 1 : band.uMax();
 			for (int i = 0; i < count; i++) {
-				lines.add(band.uMin() + ((2 * i + 1) * band.width() - 1) / (2 * count));
+				lines.add(Math.max(low, Math.min(high, from + ((2 * i + 1) * width - 1) / (2 * count))));
 			}
 		} else if (roof == RoofType.HALL) {
 			if (band.island()) {
@@ -131,6 +138,45 @@ public final class StationPlanner {
 			}
 		}
 		return lines;
+	}
+
+	/** The u of the footbridge piers on a platform: one per stretch the deck can overhang both ways from, in its middle. */
+	static List<Integer> bridgePierLines(TrackLayout.PlatformBand band) {
+		final List<Integer> lines = new ArrayList<>();
+		final int reach = 2 * StationGeometry.MAX_CANTILEVER + 1;
+		final int count = (band.width() + reach - 1) / reach;
+		for (int i = 0; i < count; i++) {
+			lines.add(band.uMin() + ((2 * i + 1) * band.width() - 1) / (2 * count));
+		}
+		return lines;
+	}
+
+	/** First u of a platform's canopy: one cell out over a boarding edge on the low side (clear of the trains at its height). */
+	static int canopyFrom(TrackLayout.PlatformBand band) {
+		return band.trackLeft() ? band.uMin() - 1 : band.uMin();
+	}
+
+	/** Last u of a platform's canopy: one cell out over a boarding edge on the high side. */
+	static int canopyTo(TrackLayout.PlatformBand band) {
+		return band.trackRight() ? band.uMax() + 1 : band.uMax();
+	}
+
+	/**
+	 * The v of a canopy's columns along one line, from v = 2: as far apart as the girder along the line may span
+	 * ({@link StationGeometry#MAX_BEAM_SPAN}), so a canopy stands on a few posts rather than a forest of them.
+	 */
+	static List<Integer> canopyPositions(int platformLength) {
+		final List<Integer> positions = new ArrayList<>();
+		final int first = 2;
+		final int last = Math.max(first, platformLength - 3);
+		final int bays = Math.max(1, (last - first + StationGeometry.MAX_BEAM_SPAN - 1) / StationGeometry.MAX_BEAM_SPAN);
+		for (int i = 0; i <= bays; i++) {
+			final int p = first + (last - first) * i / bays;
+			if (positions.isEmpty() || positions.get(positions.size() - 1) != p) {
+				positions.add(p);
+			}
+		}
+		return positions;
 	}
 
 	private record Cell(int u, int y, int v) {
@@ -1461,7 +1507,7 @@ public final class StationPlanner {
 			// a big number under the lintel over each platform, in the middle of its gates
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (gateNumbered(band)) {
-					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.CANOPY_Y, vL, LocalDir.PLUS_V);
+					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.MIN_ROOF_Y, vL, LocalDir.PLUS_V);
 				}
 			}
 			// boards over the gate line, hung from the lintel, and the clock above them
@@ -1604,10 +1650,10 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// piers on every platform at the bridge line, up to the deck: down the middle, or on the canopy's column lines on a
-			// platform too wide for the deck to overhang one
+			// piers on every platform at the bridge line, up to the deck: down the middle, or evenly spaced on a platform too wide
+			// for the deck to overhang one
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				for (final int uPier : columnLines(band, RoofType.CANOPY)) {
+				for (final int uPier : bridgePierLines(band)) {
 					for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 						put(Role.BRIDGE_PIER, uPier, y, vB, LocalDir.PLUS_V, b.pier());
 					}
@@ -1617,7 +1663,7 @@ public final class StationPlanner {
 			// its gates at a terminus head gets no second one hanging over the platform
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (site.served().contains(band.number()) && !gateNumbered(band)) {
-					numberSign(band, (band.uMin() + band.uMax()) / 2, StationGeometry.CANOPY_Y, vB - site.stairSide(), LocalDir.PLUS_V);
+					numberSign(band, (band.uMin() + band.uMax()) / 2, roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y - 2 : StationGeometry.MIN_ROOF_Y, vB - site.stairSide(), LocalDir.PLUS_V);
 				}
 			}
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
@@ -1684,7 +1730,7 @@ public final class StationPlanner {
 			final List<Integer> supports = new ArrayList<>();
 			supports.add(from);
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				supports.addAll(columnLines(band, RoofType.CANOPY));
+				supports.addAll(bridgePierLines(band));
 			}
 			supports.add(to);
 			supports.sort(Comparator.naturalOrder());
@@ -1921,12 +1967,14 @@ public final class StationPlanner {
 			if (band.width() < (band.island() ? StationLayout.MIN_ESCALATOR_ISLAND : StationLayout.MIN_ESCALATOR_SIDE)) {
 				return -1;
 			}
-			final java.util.Set<Integer> lines = new java.util.HashSet<>(columnLines(band, roof(band)));
-			lines.addAll(columnLines(band, RoofType.CANOPY));
+			final java.util.Set<Integer> columns = new java.util.HashSet<>(columnLines(band, roof(band)));
+			final java.util.Set<Integer> lines = new java.util.HashSet<>(columns);
+			lines.addAll(bridgePierLines(band));
 			final double middle = (band.uMin() + band.uMax() - 1) / 2.0;
 			int best = -1;
 			for (int c = band.uMin() + 2; c + 1 <= band.uMax() - 2; c++) {
-				if (lines.contains(c) || lines.contains(c + 1) || lines.contains(c - 1) && lines.contains(c + 2)) {
+				// never on a line; and not squeezed between two column lines (a pier stands only at the footbridge)
+				if (lines.contains(c) || lines.contains(c + 1) || columns.contains(c - 1) && columns.contains(c + 2)) {
 					continue;
 				}
 				if (best < 0 || Math.abs(c - middle) < Math.abs(best - middle)) {
@@ -1972,10 +2020,12 @@ public final class StationPlanner {
 							}
 							put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
 						}
-						for (int y = StationGeometry.WALK_Y; y < top - 1; y++) {
+						// a canopy column's cap carries the girder along its line, which carries the roof
+						final int capY = roof(band) == RoofType.CANOPY ? top - 2 : top - 1;
+						for (int y = StationGeometry.WALK_Y; y < capY; y++) {
 							put(Role.COLUMN, u, y, v, LocalDir.PLUS_V);
 						}
-						put(Role.COLUMN_CAP, u, top - 1, v, LocalDir.PLUS_V);
+						put(Role.COLUMN_CAP, u, capY, v, LocalDir.PLUS_V);
 					}
 				}
 			}
@@ -2072,15 +2122,23 @@ public final class StationPlanner {
 		}
 
 		/** Column v for one column line: the platform's spacing minus cells where stairs, railings or piers stand, with gaps of at most 9. */
+		private List<Integer> canopyV(TrackLayout.PlatformBand band) {
+			final List<Integer> positions = new ArrayList<>();
+			for (final int v : canopyPositions(band.length())) {
+				positions.add(band.vFrom() + v);
+			}
+			return positions;
+		}
+
 		private List<Integer> columnVForLine(TrackLayout.PlatformBand band, int line) {
 			if (!site.bridge()) {
-				return columnV(band);
+				return canopyV(band);
 			}
 			// up to the roof cell over the cap: a sign or a stair there leaves the column carrying nothing
 			final int top = StationGeometry.CANOPY_Y;
 			final List<Integer> lines = List.of(line);
 			final List<Integer> kept = new ArrayList<>();
-			for (final int v : columnV(band)) {
+			for (final int v : canopyV(band)) {
 				boolean clash = false;
 				for (final int u : lines) {
 					for (int y = StationGeometry.WALK_Y; y <= top; y++) {
@@ -2101,12 +2159,12 @@ public final class StationPlanner {
 			final List<Integer> supports = new ArrayList<>(kept);
 			supports.add(site.bridgeV());
 			supports.sort(Comparator.naturalOrder());
-			// fill any remaining gap longer than 9 with a midpoint column that stands free
+			// fill any remaining gap longer than the girder spans with a midpoint column that stands free
 			final List<Integer> extra = new ArrayList<>();
 			for (int i = 0; i + 1 < supports.size(); i++) {
 				int a = supports.get(i);
 				int b = supports.get(i + 1);
-				while (b - a > 9) {
+				while (b - a > StationGeometry.MAX_BEAM_SPAN) {
 					int mid = (a + b) / 2;
 					if (mid <= a || mid >= b || !band.runs(mid)) {
 						break;
@@ -2132,7 +2190,36 @@ public final class StationPlanner {
 			}
 			kept.addAll(extra);
 			kept.sort(Comparator.naturalOrder());
+			// a column kept off a stair or an escalator's run-off can leave an end of the girders past their reach: stand one
+			// nearer that end, as near the usual spot (two cells in) as is free
+			final int reach = StationGeometry.MAX_CANTILEVER;
+			supports.addAll(extra);
+			supports.sort(Comparator.naturalOrder());
+			if (supports.get(supports.size() - 1) < band.vTo() - reach) {
+				endColumn(kept, band, line, top, new int[]{band.vTo() - 2, band.vTo() - 1, band.vTo() - 3, band.vTo() - 4, band.vTo()});
+			}
+			if (supports.get(0) > band.vFrom() + reach) {
+				endColumn(kept, band, line, top, new int[]{band.vFrom() + 2, band.vFrom() + 1, band.vFrom() + 3, band.vFrom() + 4, band.vFrom()});
+			}
 			return kept;
+		}
+
+		/** Adds the first of {@code candidates} where the column line is free from the walking surface to the roof. */
+		private void endColumn(List<Integer> kept, TrackLayout.PlatformBand band, int line, int top, int[] candidates) {
+			for (final int v : candidates) {
+				if (!band.runs(v) || kept.contains(v)) {
+					continue;
+				}
+				boolean clash = false;
+				for (int y = StationGeometry.WALK_Y; y <= top && !clash; y++) {
+					clash = taken(line, y, v);
+				}
+				if (!clash) {
+					kept.add(v);
+					kept.sort(Comparator.naturalOrder());
+					return;
+				}
+			}
 		}
 
 		/**
@@ -2317,17 +2404,59 @@ public final class StationPlanner {
 					continue;
 				}
 				final List<Integer> lines = columnLines(band, RoofType.CANOPY);
-				final List<Integer> posts = columnV(band);
+				final int from = canopyFrom(band);
+				final int to = canopyTo(band);
+				final String girder = palette.blockId(Role.BEAM);
+				final String kind = "kind=" + palette.girderKind();
+				// each line's arms reach towards the roof edge (or halfway to the next line), stopping a cell short of it
+				final int[] armLeft = new int[lines.size()];
+				final int[] armRight = new int[lines.size()];
+				for (int i = 0; i < lines.size(); i++) {
+					final int u = lines.get(i);
+					final int left = i == 0 ? u - from : (u - lines.get(i - 1)) / 2;
+					final int right = i == lines.size() - 1 ? to - u : (lines.get(i + 1) - u) / 2;
+					armLeft[i] = Math.max(0, Math.min(StationGeometry.MAX_CANTILEVER, left - 1));
+					armRight[i] = Math.max(0, Math.min(StationGeometry.MAX_CANTILEVER, right - 1));
+				}
 				for (int v = band.vFrom(); v <= band.vTo(); v++) {
-					// lit every 4th cell along the platform, except where a column stands
+					// on every column: an arm across the platform on its cap; between columns a girder along the line and an edge
+					// girder along each arm's end, resting on the arms
+					for (int i = 0; i < lines.size(); i++) {
+						final int u = lines.get(i);
+						final PlannedBlock cap = cells.get(new Cell(u, y - 2, v));
+						if (cap != null && cap.role() == Role.COLUMN_CAP) {
+							for (int a = u - armLeft[i]; a <= u + armRight[i]; a++) {
+								put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_U, girder, kind);
+							}
+						} else {
+							// a footbridge or stair pier rising through the girders carries a cross beam framed into its sides,
+							// as far as a cantilever reaches (on the footbridge line, right across the canopy); the girders run on
+							// past the rest of the row
+							final boolean bridgeRow = site.bridge() && v == site.bridgeV();
+							final int start = bridgeRow && i > 0 ? lines.get(i - 1) + armRight[i - 1] + 1 : u - armLeft[i];
+							final int end = u + armRight[i];
+							// where a stairwell or lift shaft wall stops the girder along the line, the cross beam frames into it
+							final java.util.Set<Integer> framed = framedIntoPiers(start, end, y - 1, v, taken(u, y - 1, v));
+							for (final int a : framed) {
+								put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_U, girder, kind);
+							}
+							for (final int a : new int[]{u, u - armLeft[i], u + armRight[i]}) {
+								if (!framed.contains(a)) {
+									put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_V, girder, kind);
+								}
+							}
+						}
+					}
+					// lit every 4th cell along the platform, in the roof beside each girder (alternating sides)
 					final int along = v - band.vFrom();
-					final boolean light = along >= 4 && along % 4 == 0 && !posts.contains(v);
-					for (int u = band.uMin(); u <= band.uMax(); u++) {
-						if (u == band.uMin()) {
+					final boolean light = along >= 2 && along % 4 == 2;
+					for (int u = from; u <= to; u++) {
+						final boolean lamp = light && (lines.contains(u - 1) && along % 8 == 2 || lines.contains(u + 1) && along % 8 == 6);
+						if (u == from) {
 							put(Role.ROOF_EDGE, u, y, v, LocalDir.MINUS_U);
-						} else if (u == band.uMax()) {
+						} else if (u == to) {
 							put(Role.ROOF_EDGE, u, y, v, LocalDir.PLUS_U);
-						} else if (lines.contains(u) && light) {
+						} else if (lamp) {
 							put(Role.ROOF_LIGHT, u, y, v, LocalDir.PLUS_V);
 						} else {
 							put(Role.ROOF, u, y, v, LocalDir.PLUS_V);
@@ -2335,6 +2464,27 @@ public final class StationPlanner {
 					}
 				}
 			}
+		}
+
+		/**
+		 * The free cells from u0 to u1 at height y in row v that a cross beam framed into a footbridge or stair pier can reach:
+		 * out from each pier (one just outside the range counts) through free cells, at most a cantilever's reach; with
+		 * {@code walls}, out from walls too.
+		 */
+		private java.util.Set<Integer> framedIntoPiers(int u0, int u1, int y, int v, boolean walls) {
+			final java.util.Set<Integer> framed = new java.util.TreeSet<>();
+			for (int p = u0 - 1; p <= u1 + 1; p++) {
+				final PlannedBlock block = cells.get(new Cell(p, y, v));
+				if (block == null || block.role() != Role.BRIDGE_PIER && !(walls && block.role() == Role.WALL)) {
+					continue;
+				}
+				for (final int step : new int[]{-1, 1}) {
+					for (int a = p + step; Math.abs(a - p) <= StationGeometry.MAX_CANTILEVER && a >= u0 && a <= u1 && !taken(a, y, v); a += step) {
+						framed.add(a);
+					}
+				}
+			}
+			return framed;
 		}
 
 		/**
@@ -3064,8 +3214,16 @@ public final class StationPlanner {
 			final int side = flight.side();
 			final LocalDir out = side > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
 			final int foot = flight.stepV(1);
+			final java.util.Set<Integer> shaftRows = new java.util.HashSet<>();
+			for (int v = top; v != end + side; v += side) {
+				shaftRows.add(v);
+			}
 			for (int y = StationGeometry.WALK_Y; y < StationGeometry.BUILDING_ROOF_Y; y++) {
 				for (int v = top; v != foot + side; v += side) {
+					// past the shaft the flight is under the canopy: its flanks stop below the roof, which covers them
+					if (!shaftRows.contains(v) && y >= StationGeometry.CANOPY_Y) {
+						continue;
+					}
 					// below the canopy a flank on a boarding edge stays open
 					final boolean high = y > StationGeometry.CANOPY_Y;
 					if (high || !isEdge(band, left) && left >= band.uMin()) {

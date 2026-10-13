@@ -971,16 +971,11 @@ def blockstate(block_id, kind, variant_names):
 
 
 def icon():
-    img = Image.new("RGBA", (128, 128), SIGN_BLUE + (255,))
-    d = ImageDraw.Draw(img)
-    # wave canopy
-    points = [(x, 52 - 18 * math.sin(math.pi * (x - 14) / 100) ** 2) for x in range(14, 115)]
-    d.line(points, fill=WHITE + (255,), width=7)
-    for x in (30, 64, 98):
-        d.rectangle((x - 3, 50, x + 3, 100), fill=STEEL + (255,))
-    d.rectangle((10, 100, 118, 108), fill=PAVING_LIGHT + (255,))
-    d.rectangle((10, 108, 118, 112), fill=TACTILE + (255,))
-    return img
+    """The mod icon: the wave-canopy pixel-art logo (tools/make_logo.py), 32x32 scaled up without smoothing."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import make_logo
+    return make_logo.wave_canopy().resize((128, 128), Image.NEAREST)
 
 
 EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_metro", "assets_car_stops", "assets_station_wrench", "assets_station_structure", "assets_platform_slabs", "assets_blockbench")

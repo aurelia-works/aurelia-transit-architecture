@@ -252,10 +252,10 @@ public final class LayoutValidator {
 		List<Violation> headroom() {
 			final List<Violation> found = new ArrayList<>();
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role().roofPart() && block.y() < StationGeometry.CANOPY_Y
+				if (block.role().roofPart() && block.y() < StationGeometry.MIN_ROOF_Y
 						&& isPlatformFloor(block.u(), StationGeometry.PLATFORM_Y, block.v())) {
 					found.add(at(Violation.Kind.HEADROOM, block,
-							where(block) + " is below the headroom limit y=" + StationGeometry.CANOPY_Y + " over a platform"));
+							where(block) + " is below the headroom limit y=" + StationGeometry.MIN_ROOF_Y + " over a platform"));
 				}
 			}
 			return found;
@@ -485,10 +485,17 @@ public final class LayoutValidator {
 			final int y = first.y();
 			final int v = first.v();
 			final List<Integer> caps = new ArrayList<>();
+			// a beam framed into the side of a pier or a wall it meets rests on it
+			if (has(uStart - 1, y, v, Role.BRIDGE_PIER) || has(uStart - 1, y, v, Role.WALL)) {
+				caps.add(uStart - 1);
+			}
 			for (int u = uStart; u <= uEnd; u++) {
 				if (has(u, y - 1, v, Role.COLUMN_CAP) || has(u, y - 1, v, Role.BRIDGE_PIER)) {
 					caps.add(u);
 				}
+			}
+			if (has(uEnd + 1, y, v, Role.BRIDGE_PIER) || has(uEnd + 1, y, v, Role.WALL)) {
+				caps.add(uEnd + 1);
 			}
 			if (caps.isEmpty()) {
 				found.add(new Violation(Violation.Kind.ROOF_SPAN, uStart, y, v, "beam at v=" + v + " u=" + uStart + ".." + uEnd + " has no column under it"));
@@ -561,6 +568,11 @@ public final class LayoutValidator {
 			final int v = first.v();
 			final List<Integer> piers = new ArrayList<>();
 			for (int u = uStart; u <= uEnd; u++) {
+				// a wall standing under the slab (a stairwell's side) carries it where it stands
+				if (has(u, y - 1, v, Role.WALL)) {
+					piers.add(u);
+					continue;
+				}
 				// a pier carries the whole corridor slab across it: its own row and up to two rows either side
 				for (int dv = -2; dv <= 2; dv++) {
 					if (has(u, y - 1, v + dv, Role.BRIDGE_PIER)) {

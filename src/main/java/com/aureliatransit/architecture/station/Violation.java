@@ -12,7 +12,7 @@ public record Violation(Kind kind, int u, int y, int v, String message) {
 		PLATFORM_OFFSET,
 		/** Two neighbouring tracks without a platform between them closer than {@link StationGeometry#TRACK_SPACING}. */
 		TRACK_SPACING,
-		/** A roof part over a platform lower than {@link StationGeometry#CANOPY_Y}. */
+		/** A roof part over a platform lower than {@link StationGeometry#MIN_ROOF_Y}. */
 		HEADROOM,
 		/** Something standing on a platform edge cell, where passengers board. */
 		EDGE_CLEARWAY,

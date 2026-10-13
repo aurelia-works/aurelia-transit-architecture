@@ -21,7 +21,7 @@ class LayoutValidatorTest {
 
 	private static final String ATA = "aurelia_transit_architecture:";
 
-	// two side platforms 0..3 and 11..14, tracks at u = 5 and 9, canopy columns on u = 1 and 12
+	// two side platforms 0..3 and 11..14, tracks at u = 5 and 9, canopy columns on u = 2 and 12, at v = 2, 12, 23, 34 and 45
 	private static StationPlan canopy() {
 		return StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).furniture(true).platformLength(47).build()); // built 48 long
 	}
@@ -125,25 +125,25 @@ class LayoutValidatorTest {
 	}
 
 	@Test
-	void canopyAtHeightThreeLeavesTooLittleHeadroom() {
+	void canopyGirdersAtHeightThreeLeaveTooLittleHeadroom() {
 		final StationPlan plan = canopy();
 		final List<PlannedBlock> blocks = new ArrayList<>();
 		for (final PlannedBlock block : plan.blocks()) {
-			// the screens and speakers hanging from the canopy come down with it; here they would only overlap the lowered roof
+			// the screens and speakers hanging from the girders come down with them; here they would only overlap
 			if (block.role() == Role.COLUMN && block.y() == 2 || block.blockId().endsWith(":hanging_platform_pids") || block.blockId().endsWith(":ceiling_speaker")) {
 				continue;
 			}
 			if (block.role() == Role.COLUMN_CAP) {
-				blocks.add(moved(block, block.u(), 2, block.v()));
-			} else if (block.role().roofPart()) {
-				blocks.add(moved(block, block.u(), 3, block.v()));
+				blocks.add(moved(block, block.u(), StationGeometry.MIN_ROOF_Y - 2, block.v()));
+			} else if (block.role() == Role.BEAM) {
+				blocks.add(moved(block, block.u(), StationGeometry.MIN_ROOF_Y - 1, block.v()));
 			} else {
 				blocks.add(block);
 			}
 		}
 		final StationPlan broken = with(plan, blocks);
 		assertEquals(EnumSet.of(Violation.Kind.HEADROOM), kinds(broken));
-		assertEquals(2 * 48 * 4, count(broken, Violation.Kind.HEADROOM));
+		assertEquals(plan.blocks().stream().filter(b -> b.role() == Role.BEAM).count(), count(broken, Violation.Kind.HEADROOM));
 	}
 
 	@Test
@@ -230,7 +230,7 @@ class LayoutValidatorTest {
 	@Test
 	void columnWithAMissingMiddleCellIsUnsupported() {
 		final StationPlan plan = canopy();
-		final StationPlan broken = with(plan, without(plan, find(plan, 1, 2, 18)));
+		final StationPlan broken = with(plan, without(plan, find(plan, 2, 2, 23)));
 		assertEquals(EnumSet.of(Violation.Kind.UNSUPPORTED_COLUMN), kinds(broken));
 		assertEquals(1, count(broken, Violation.Kind.UNSUPPORTED_COLUMN));
 	}
@@ -238,42 +238,50 @@ class LayoutValidatorTest {
 	@Test
 	void columnWithoutACapOrRoofOrFloorIsUnsupported() {
 		final StationPlan plan = canopy();
-		// no roof above the cap
-		final PlannedBlock roof = find(plan, 1, 4, 18);
+		// no girder above the cap
+		final PlannedBlock roof = find(plan, 2, 4, 23);
 		assertTrue(kinds(with(plan, without(plan, roof))).contains(Violation.Kind.UNSUPPORTED_COLUMN));
 		// a plain column where the cap should be
-		final PlannedBlock cap = find(plan, 1, 3, 18);
+		final PlannedBlock cap = find(plan, 2, 3, 23);
 		final List<PlannedBlock> blocks = new ArrayList<>(plan.blocks());
-		blocks.set(blocks.indexOf(cap), new PlannedBlock(1, 3, 18, Role.COLUMN, cap.blockId(), cap.front(), ""));
+		blocks.set(blocks.indexOf(cap), new PlannedBlock(2, 3, 23, Role.COLUMN, cap.blockId(), cap.front(), ""));
 		assertTrue(kinds(with(plan, blocks)).contains(Violation.Kind.UNSUPPORTED_COLUMN));
 		// standing on nothing
 		final List<PlannedBlock> floating = new ArrayList<>(plan.blocks());
-		floating.remove(find(plan, 1, 0, 18));
+		floating.remove(find(plan, 2, 0, 23));
 		assertEquals(EnumSet.of(Violation.Kind.UNSUPPORTED_COLUMN), kinds(with(plan, floating)));
 	}
 
 	@Test
-	void roofCellSixAwayFromAnySupportIsUnsupported() {
-		// built 47 long: the last column is at v = 42, so a roof cell at v = 48 (over the ramp) is 6 away from it
-		final StationPlan plan = StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).platformLength(46).build());
+	void roofCellFiveAwayFromAnyColumnTopOrGirderIsUnsupported() {
+		// a platform with no roof but one post with a girder on it at v = 20: a roof cell reaches 4 cells from it, not 5
+		final StationPlan plan = StationPlanner.plan(StationSpec.builder().roof(RoofType.NONE).furniture(false).platformLength(46).build());
 		final List<PlannedBlock> blocks = new ArrayList<>(plan.blocks());
-		blocks.add(block(1, 4, 48, Role.ROOF, LocalDir.PLUS_V));
+		blocks.add(block(2, 1, 20, Role.COLUMN, LocalDir.PLUS_V));
+		blocks.add(block(2, 2, 20, Role.COLUMN, LocalDir.PLUS_V));
+		blocks.add(block(2, 3, 20, Role.COLUMN_CAP, LocalDir.PLUS_V));
+		blocks.add(block(2, 4, 20, Role.BEAM, LocalDir.PLUS_U));
+		blocks.add(block(2, StationGeometry.CANOPY_Y, 24, Role.ROOF, LocalDir.PLUS_V));
+		assertEquals(Set.of(), kinds(with(plan, blocks)));
+		blocks.add(block(2, StationGeometry.CANOPY_Y, 25, Role.ROOF, LocalDir.PLUS_V));
 		final StationPlan broken = with(plan, blocks);
 		assertEquals(EnumSet.of(Violation.Kind.ROOF_UNSUPPORTED), kinds(broken));
 		assertEquals(1, count(broken, Violation.Kind.ROOF_UNSUPPORTED));
 	}
 
 	@Test
-	void removingAWholeColumnLeavesTheRoofUnsupported() {
+	void removingAWholeColumnLeavesItsArmWithoutASupport() {
 		final StationPlan plan = canopy();
 		final List<PlannedBlock> blocks = new ArrayList<>();
 		for (final PlannedBlock block : plan.blocks()) {
-			if (!((block.role() == Role.COLUMN || block.role() == Role.COLUMN_CAP) && block.v() == 26 && block.u() == 1)) {
+			if (!((block.role() == Role.COLUMN || block.role() == Role.COLUMN_CAP) && block.v() == 23 && block.u() == 2)) {
 				blocks.add(block);
 			}
 		}
 		final StationPlan broken = with(plan, blocks);
-		assertEquals(EnumSet.of(Violation.Kind.ROOF_UNSUPPORTED), kinds(broken));
+		// the girders along the line and the neighbouring arms still carry the roof, but the arm that stood on the column does not
+		assertEquals(EnumSet.of(Violation.Kind.ROOF_SPAN), kinds(broken));
+		assertEquals(1, count(broken, Violation.Kind.ROOF_SPAN));
 	}
 
 	@Test

@@ -26,8 +26,15 @@ public final class StationGeometry {
 	public static final int TRACK_SPACING = 4;
 	/** Clear cells above the walking surface under any roof (y = 1..3). */
 	public static final int HEADROOM = 3;
-	/** Platform canopies sit directly above the headroom. */
-	public static final int CANOPY_Y = WALK_Y + HEADROOM;
+	/** The lowest a roof part (girder, rib, roof) may hang over a platform: three clear cells above the walking surface. */
+	public static final int MIN_ROOF_Y = WALK_Y + HEADROOM;
+	/**
+	 * Clear cells under a platform canopy (y = 1..4): a block more than the minimum, as real canopies stand tall, and so the
+	 * roof clears the trains' envelope and can reach out over the boarding edge.
+	 */
+	public static final int CANOPY_HEADROOM = HEADROOM + 1;
+	/** Platform canopies sit directly above their headroom, level with the footbridge deck. */
+	public static final int CANOPY_Y = WALK_Y + CANOPY_HEADROOM;
 	/** Hall beams sit directly above the track envelopes ... */
 	public static final int HALL_BEAM_Y = ENVELOPE_HEIGHT;
 	/** ... and the hall roof on top of them. */
