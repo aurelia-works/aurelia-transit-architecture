@@ -108,7 +108,7 @@ class StationAuditTest {
 		assertEquals(2, result.faces().size());
 		for (final StationAudit.Face face : result.faces()) {
 			assertEquals(0, face.vStart());
-			assertEquals(64, face.length());
+			assertEquals(65, face.length(), "64 picked: 65 blocks, 64 between the rail nodes");
 		}
 		assertEquals(1, result.faces().get(0).platform());
 		assertEquals(2, result.faces().get(1).platform());
@@ -242,7 +242,7 @@ class StationAuditTest {
 	@Test
 	void sizeIsMeasured() {
 		final StationAudit.Result result = StationAudit.audit(plan(StationSpec.builder().platformLength(48).roof(RoofType.CANOPY)));
-		assertEquals(48 + 2 * StationGeometry.RAMP_LENGTH, result.length());
+		assertEquals(StationGeometry.builtLength(48) + 2 * StationGeometry.RAMP_LENGTH, result.length());
 		assertEquals(StationGeometry.CANOPY_Y + 1, result.height());
 	}
 

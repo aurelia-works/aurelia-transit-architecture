@@ -76,8 +76,8 @@ class PlatformListTest {
 		assertEquals(200, through.platformLength(), "the station grows to its longest platform");
 		final TrackLayout layout = StationGeometry.layout(through);
 		final TrackLayout.PlatformBand first = layout.platforms().get(0);
-		assertEquals(40, first.length());
-		assertEquals(200, layout.platforms().get(1).length());
+		assertEquals(41, first.length(), "40 between its rail nodes");
+		assertEquals(201, layout.platforms().get(1).length());
 		final int line = StationLayout.entranceV(false, 200);
 		assertTrue(first.runs(line - StationGeometry.BRIDGE_REACH) && first.runs(line + StationGeometry.BRIDGE_REACH), "reaches the footbridge");
 		final StationPlan plan = StationPlanner.plan(through);
@@ -87,7 +87,7 @@ class PlatformListTest {
 				&& !first.runs(b.v())), "no edge past the short platform");
 
 		final TrackLayout terminus = StationGeometry.layout(parse("terminus 100 long; platform 1: island 30 long; platform 2: island").spec());
-		assertEquals(99, terminus.platforms().get(0).vTo(), "a terminus platform ends at the head");
+		assertEquals(100, terminus.platforms().get(0).vTo(), "a terminus platform ends at the head");
 		assertEquals(70, terminus.platforms().get(0).vFrom());
 	}
 
@@ -108,7 +108,7 @@ class PlatformListTest {
 		assertTrue(StationAudit.audit(plan).buildable());
 		// a full-length bay stops a row short, so its buffer stops stay inside the station
 		final TrackLayout full = StationGeometry.layout(parse("no ramps 60 long; platform 1: side bay; platform 2: side").spec());
-		assertEquals(58, full.platforms().get(0).vTo());
+		assertEquals(59, full.platforms().get(0).vTo());
 		// in a terminus every track already ends at the head
 		assertFalse(StationGeometry.layout(parse("terminus; platform 1: island bay; platform 2: island").spec()).platforms().get(0).deadEnd());
 	}

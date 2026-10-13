@@ -232,7 +232,10 @@ public class StationGameTests implements FabricGameTest {
 			for (final BlockPos button : buttons) {
 				final long[] linked = world.getBlockEntity(button).createNbt().getLongArray("track_floor_pos");
 				final BlockPos stop = linked.length == 1 ? BlockPos.fromLong(linked[0]) : null;
-				check(stop != null && stops.contains(stop) && stop.getY() == button.getY() - 1 && stop.getSquaredDistance(button) <= 9,
+				// its own lift's stop on its floor: the nearest one (it stands on the landing, a row out from the shaft's wall)
+				final BlockPos nearest = stops.stream().filter(other -> other.getY() == button.getY() - 1)
+						.min(java.util.Comparator.comparingDouble(other -> other.getSquaredDistance(button))).orElse(null);
+				check(stop != null && stop.equals(nearest) && stop.getSquaredDistance(button) <= 16,
 						"button " + button + " linked to " + java.util.Arrays.toString(linked));
 			}
 		});

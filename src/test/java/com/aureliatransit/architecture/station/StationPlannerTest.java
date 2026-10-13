@@ -106,7 +106,7 @@ class StationPlannerTest {
 
 	private static void check(Scan scan, StationSpec spec, StationPlan plan, boolean checkDeterminism) {
 		final TrackLayout layout = plan.layout();
-		final int length = spec.platformLength();
+		final int length = StationGeometry.builtLength(spec.platformLength());
 		final StylePalette palette = StylePalette.of(spec);
 
 		// violations: none, except a side-platform hall over three or more tracks, which cannot be spanned
@@ -468,8 +468,8 @@ class StationPlannerTest {
 
 	@Test
 	void knownSpecHasExactRoleCounts() {
-		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.SIDE).platformLength(48).platformWidth(4)
-				.roof(RoofType.CANOPY).style(StationStyle.MODERN).build();
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.SIDE).platformLength(47).platformWidth(4)
+				.roof(RoofType.CANOPY).style(StationStyle.MODERN).build(); // built 48 long
 		final Map<Role, Integer> counts = plan(spec).countByRole();
 		final Map<Role, Integer> expected = new EnumMap<>(Role.class);
 		expected.put(Role.PLATFORM_SURFACE, 288);
@@ -491,7 +491,7 @@ class StationPlannerTest {
 
 	@Test
 	void knownSpecHasTheExpectedColumnPositionsAndEnvelopes() {
-		final StationSpec spec = StationSpec.defaults();
+		final StationSpec spec = StationSpec.builder().platformLength(47).build(); // built 48 long
 		final StationPlan plan = plan(spec);
 		final Set<Integer> columnV = new HashSet<>();
 		for (final PlannedBlock column : blocks(plan, Role.COLUMN_CAP)) {
@@ -525,7 +525,7 @@ class StationPlannerTest {
 			assertEquals(edge.u() == band.uMin() ? LocalDir.MINUS_U : LocalDir.PLUS_U, edge.front());
 			assertTrue(edge.u() == band.uMin() || edge.u() == band.uMax());
 		}
-		assertEquals(2 * island.spec().platformLength(), blocks(island, Role.PLATFORM_EDGE).size());
+		assertEquals(2 * StationGeometry.builtLength(island.spec().platformLength()), blocks(island, Role.PLATFORM_EDGE).size());
 
 		final StationPlan side = plan(StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.SIDE).platformWidth(4).build());
 		for (final PlannedBlock edge : blocks(side, Role.PLATFORM_EDGE)) {
@@ -549,7 +549,7 @@ class StationPlannerTest {
 		assertTrue(blocks(plan, Role.RAMP_UPPER).isEmpty());
 		assertTrue(blocks(plan, Role.RAIL_NODE).isEmpty());
 		assertEquals(0, plan.layout().vMin());
-		assertEquals(47, plan.layout().vMax());
+		assertEquals(48, plan.layout().vMax(), "48 picked, 49 built");
 	}
 
 	@Test
@@ -600,7 +600,7 @@ class StationPlannerTest {
 		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformWidth(6).roof(RoofType.HALL).build();
 		final StationPlan plan = plan(spec);
 		final int width = plan.layout().width();
-		final List<Integer> positions = StationPlanner.columnPositions(spec.platformLength());
+		final List<Integer> positions = StationPlanner.columnPositions(StationGeometry.builtLength(spec.platformLength()));
 		final List<PlannedBlock> across = blocks(plan, Role.BEAM).stream().filter(b -> b.front() == LocalDir.PLUS_U).toList();
 		assertEquals(positions.size() * width, across.size());
 		for (final PlannedBlock beam : across) {
@@ -608,7 +608,7 @@ class StationPlannerTest {
 		}
 		// girders along both eaves and both column lines of the island, between the cross girders
 		final List<PlannedBlock> along = blocks(plan, Role.BEAM).stream().filter(b -> b.front() == LocalDir.PLUS_V).toList();
-		assertEquals(4 * (spec.platformLength() - positions.size()), along.size());
+		assertEquals(4 * (StationGeometry.builtLength(spec.platformLength()) - positions.size()), along.size());
 		for (final PlannedBlock beam : blocks(plan, Role.BEAM)) {
 			assertEquals(StationGeometry.HALL_BEAM_Y, beam.y());
 			assertEquals(ATA + "station_girder", beam.blockId());
@@ -619,8 +619,8 @@ class StationPlannerTest {
 			assertTrue(blocks(plan, Role.BEAM).stream().anyMatch(b -> b.u() == cap.u() && b.v() == cap.v() && b.y() == cap.y() + 1), cap.toString());
 		}
 		final int roofCells = blocks(plan, Role.ROOF).size() + blocks(plan, Role.ROOF_EDGE).size() + blocks(plan, Role.ROOF_LIGHT).size();
-		assertEquals(width * spec.platformLength(), roofCells);
-		assertEquals(2 * spec.platformLength(), blocks(plan, Role.ROOF_EDGE).size());
+		assertEquals(width * StationGeometry.builtLength(spec.platformLength()), roofCells);
+		assertEquals(2 * StationGeometry.builtLength(spec.platformLength()), blocks(plan, Role.ROOF_EDGE).size());
 		for (final PlannedBlock edge : blocks(plan, Role.ROOF_EDGE)) {
 			assertEquals(StationGeometry.HALL_ROOF_Y, edge.y());
 			assertEquals(edge.u() == 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U, edge.front());

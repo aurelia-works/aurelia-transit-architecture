@@ -110,7 +110,7 @@ class StationGeometryTest {
 			final TrackLayout.PlatformBand lastPlatform = layout.platforms().get(layout.platforms().size() - 1);
 			final int expected = lastPlatform.uMax() > lastTrack.u() ? lastPlatform.uMax() + 1 : lastTrack.u() + StationGeometry.ENVELOPE_HALF_WIDTH + 1;
 			assertEquals(expected, layout.width(), label(spec));
-			assertEquals(spec.platformLength(), layout.platformLength(), label(spec));
+			assertEquals(StationGeometry.builtLength(spec.platformLength()), layout.platformLength(), label(spec));
 		}
 	}
 
@@ -208,7 +208,7 @@ class StationGeometryTest {
 			assertEquals(StationGeometry.RAMP_LENGTH, stepFree.rampLength(), label(spec));
 			assertEquals(0, stepped.rampLength(), label(spec));
 			assertEquals(-StationGeometry.RAMP_LENGTH, stepFree.vMin(), label(spec));
-			assertEquals(spec.platformLength() - 1 + StationGeometry.RAMP_LENGTH, stepFree.vMax(), label(spec));
+			assertEquals(StationGeometry.builtLength(spec.platformLength()) - 1 + StationGeometry.RAMP_LENGTH, stepFree.vMax(), label(spec));
 			assertEquals(0, stepped.vMin(), label(spec));
 			assertEquals(stepFree.width(), stepped.width(), label(spec));
 		}

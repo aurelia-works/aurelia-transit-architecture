@@ -116,7 +116,7 @@ public final class StationGeometry {
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
 		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : 0;
 		if (shift == 0) {
-			return new TrackLayout(railWidth, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
+			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
 					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, hubThrough(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
@@ -128,7 +128,7 @@ public final class StationGeometry {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight(),
 					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
-		return new TrackLayout(railWidth + shift, spec.platformLength(), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
+		return new TrackLayout(railWidth + shift, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
 	}
 
 	/**
@@ -144,6 +144,14 @@ public final class StationGeometry {
 		return spec.trackCount() >= 8 && outer >= MIN_LIFT_ISLAND_WIDTH ? 2 : 1;
 	}
 
+	/**
+	 * Blocks a platform of {@code picked} blocks is built at: one more, because MTR measures a platform between the rail nodes on
+	 * its first and last block, one less than the blocks it spans. So MTR reports the length the player picked.
+	 */
+	public static int builtLength(int picked) {
+		return picked + 1;
+	}
+
 	/** Rows a footbridge's stairs, landings and lifts take on either side of its line, which every platform must reach. */
 	static final int BRIDGE_REACH = 12;
 
@@ -153,10 +161,11 @@ public final class StationGeometry {
 	 * platform a footbridge may serve (a through station's, a hub's) still reaches {@link #BRIDGE_REACH} rows past that line.
 	 */
 	public static int[] platformRun(StationSpec spec, int index) {
-		final int length = spec.platformLength();
+		final int length = builtLength(spec.platformLength());
 		// a through station's bay platform stops a row short of the end, so its buffer stops stand inside the station
 		final boolean bay = spec.listed() && !spec.terminus() && spec.platforms().get(index).bay();
-		final int own = spec.listed() ? Math.min(spec.platforms().get(index).lengthIn(length), bay ? length - 1 : length) : length;
+		final int own = spec.listed() ? Math.min(builtLength(spec.platforms().get(index).lengthIn(spec.platformLength())), bay ? length - 1 : length)
+				: length;
 		if (own >= length) {
 			return new int[]{0, length - 1};
 		}

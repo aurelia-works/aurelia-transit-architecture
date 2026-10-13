@@ -63,6 +63,7 @@ public final class StationPlanner {
 		planning.headInterior();
 		planning.platformEquipment();
 		planning.nameSigns();
+		planning.liftButtons();
 		return planning.finish();
 	}
 
@@ -138,6 +139,12 @@ public final class StationPlanner {
 		private final Map<Cell, PlannedBlock> cells = new HashMap<>();
 		/** Cells that must stay empty: doorways, stair headroom, landings, the space in front of entrances. */
 		private final Set<Cell> air = new HashSet<>();
+		/** Lift call buttons, placed once everything else has its cells. */
+		private final List<LiftButton> buttons = new ArrayList<>();
+
+		/** A call button beside a lift door: in the shaft's front wall at {@code (u, y, v)}, with the landing on the -o side. */
+		private record LiftButton(int u, int y, int v, int o, LocalDir in) {
+		}
 		private final List<Integer> columnV;
 		private final List<Box> extraSupport = new ArrayList<>();
 		private final StationLayout site;
@@ -899,6 +906,24 @@ public final class StationPlanner {
 		}
 
 		/**
+		 * Lift call buttons, at hand height beside each door. MTR's button is a thin plate on its block's front side, meant to
+		 * stand in front of a wall; in the shaft's own wall it would sit flush with the car, which clips it. So it stands on the
+		 * landing against the wall, unless that cell is taken (a corridor's glass wall), where it stays in the shaft wall.
+		 */
+		void liftButtons() {
+			for (final LiftButton button : buttons) {
+				final int landing = button.v() - button.o();
+				if (!taken(button.u(), button.y(), landing)) {
+					put(Role.LIFT, button.u(), button.y(), landing, button.in(), StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
+				} else {
+					final Cell wall = new Cell(button.u(), button.y(), button.v());
+					cells.put(wall, new PlannedBlock(button.u(), button.y(), button.v(), Role.LIFT, StylePalette.MTR_LIFT_BUTTONS, button.in(), "",
+							"unlocked=true"));
+				}
+			}
+		}
+
+		/**
 		 * One shaft: a track column against the back wall with a stop at the walk level and at the upper walk level, a pair of
 		 * landing doors at each stop with a call button beside them, walls, and a roof unless {@code roofId} is null. The car
 		 * space stays empty from the walk level to the roof.
@@ -941,8 +966,7 @@ public final class StationPlanner {
 					put(Role.LIFT, c, stop, vD, in, StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
 					put(Role.LIFT, c, stop + 1, vD, in, StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
 				}
-				// at hand height, beside the door
-				put(Role.LIFT, c0 - 1, stop + 1, vD, in, StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
+				buttons.add(new LiftButton(c0 - 1, stop + 1, vD, o, in));
 			}
 			final int cMax = farWall ? c1 + 1 : c1;
 			for (int y = low; y < roof; y++) {
@@ -1418,12 +1442,14 @@ public final class StationPlanner {
 						put(Role.WALL, u, y, o1 + 1, LocalDir.PLUS_V, b.interiorWall());
 					}
 				}
-				put(Role.FIXTURE, u0 + 3, 1, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
-				put(Role.WALL, u0 + 3, 2, o0, LocalDir.PLUS_U, b.interiorWall());
+				// the counter at chest height, wall below it
+				put(Role.WALL, u0 + 3, 1, o0, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.FIXTURE, u0 + 3, 2, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
 				put(Role.WALL, u0 + 3, 1, o1, LocalDir.PLUS_U, b.interiorWall());
 				put(Role.WALL, u0 + 3, 2, o1, LocalDir.PLUS_U, b.interiorWall());
 			} else { // too narrow for an office: a ticket window in the side wall's corner by the entrance
-				put(Role.FIXTURE, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+				put(Role.WALL, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.FIXTURE, u0 + 1, 2, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
 			}
 			// ticket machines and the kiosk against the far wall
 			for (int i = 0; i < 2; i++) {
@@ -2390,7 +2416,8 @@ public final class StationPlanner {
 				}
 				put(Role.WALL, officeU0 - 1, 1, officeV0, LocalDir.MINUS_U, b.interiorWall());
 				put(Role.WALL, officeU0 - 1, 2, officeV0, LocalDir.MINUS_U, b.interiorWall());
-				put(Role.FIXTURE, officeU0, 1, officeV0, LocalDir.PLUS_V, "aurelia_transit_architecture:booth_window");
+				put(Role.WALL, officeU0, 1, officeV0, LocalDir.PLUS_V, b.interiorWall());
+				put(Role.FIXTURE, officeU0, 2, officeV0, LocalDir.PLUS_V, "aurelia_transit_architecture:booth_window");
 				put(Role.WALL, officeU0 - 1, 1, officeV1, LocalDir.MINUS_U, b.interiorWall());
 				put(Role.WALL, officeU0 - 1, 2, officeV1, LocalDir.MINUS_U, b.interiorWall());
 				for (int u = officeU0; u <= officeU1; u++) {

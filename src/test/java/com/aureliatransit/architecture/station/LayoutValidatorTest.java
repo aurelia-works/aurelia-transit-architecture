@@ -23,7 +23,7 @@ class LayoutValidatorTest {
 
 	// two side platforms 0..3 and 11..14, tracks at u = 5 and 9, canopy columns on u = 1 and 12
 	private static StationPlan canopy() {
-		return StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).furniture(true).build());
+		return StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).furniture(true).platformLength(47).build()); // built 48 long
 	}
 
 	private static StationPlan hall() {
@@ -254,8 +254,8 @@ class LayoutValidatorTest {
 
 	@Test
 	void roofCellSixAwayFromAnySupportIsUnsupported() {
-		// 47 long: the last column is at v = 42, so a roof cell at v = 48 (over the ramp) is 6 away from it
-		final StationPlan plan = StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).platformLength(47).build());
+		// built 47 long: the last column is at v = 42, so a roof cell at v = 48 (over the ramp) is 6 away from it
+		final StationPlan plan = StationPlanner.plan(StationSpec.builder().roof(RoofType.CANOPY).platformLength(46).build());
 		final List<PlannedBlock> blocks = new ArrayList<>(plan.blocks());
 		blocks.add(block(1, 4, 48, Role.ROOF, LocalDir.PLUS_V));
 		final StationPlan broken = with(plan, blocks);
