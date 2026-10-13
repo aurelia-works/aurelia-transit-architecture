@@ -3419,10 +3419,22 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (band.island()) {
-					// one row down the middle: the signs are double-sided, so it reads from both tracks
-					signRow(band, (band.uMin() + band.uMax()) / 2, LocalDir.MINUS_U);
+					// one row down the middle: the signs are double-sided, so it reads from both tracks; where stairs, a lift or
+					// a walkway fill the middle column, the one beside it
+					final int middle = (band.uMin() + band.uMax()) / 2;
+					for (final int u : new int[]{middle, middle + 1, middle - 1}) {
+						if (!isEdge(band, u) && u >= band.uMin() && u <= band.uMax() && signRow(band, u, LocalDir.MINUS_U)) {
+							break;
+						}
+					}
 				} else if (!signBeside(band)) {
-					signRow(band, backColumn(band), towardTrack(band));
+					// against the back, else a column further in where the back is walled (an underpass stair, a building)
+					final int step = towardTrack(band) == LocalDir.PLUS_U ? 1 : -1;
+					for (int u = backColumn(band), k = 0; k < 3 && !isEdge(band, u) && u >= band.uMin() && u <= band.uMax(); u += step, k++) {
+						if (signRow(band, u, towardTrack(band))) {
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -3445,21 +3457,22 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Three signs side by side along v, centred on the platform's middle; shifted by 2 along v until the cells are free.
-		 * Shifts run towards the platform end first and, if the end is reached, back towards its start.
+		 * Three signs side by side along v, centred on the platform's middle; shifted along v until the cells are free. Shifts
+		 * run towards the platform end first and, if the end is reached, back towards its start. False if there is no room.
 		 */
-		private void signRow(TrackLayout.PlatformBand band, int u, LocalDir front) {
+		private boolean signRow(TrackLayout.PlatformBand band, int u, LocalDir front) {
 			final int start = band.vFrom() + band.length() / 2 - 1;
-			for (int v = start; v + 2 <= band.vTo(); v += 2) {
+			for (int v = start; v + 2 <= band.vTo(); v++) {
 				if (placeRow(band, u, v, front)) {
-					return;
+					return true;
 				}
 			}
-			for (int v = start - 2; v >= band.vFrom(); v -= 2) {
+			for (int v = start - 1; v >= band.vFrom(); v--) {
 				if (placeRow(band, u, v, front)) {
-					return;
+					return true;
 				}
 			}
+			return false;
 		}
 
 		private boolean placeRow(TrackLayout.PlatformBand band, int u, int v, LocalDir front) {

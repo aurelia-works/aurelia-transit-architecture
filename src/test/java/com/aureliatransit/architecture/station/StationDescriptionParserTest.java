@@ -6,6 +6,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -526,5 +527,16 @@ class StationDescriptionParserTest {
 		assertEquals(StationScale.GRAND, spec("four track grand central terminus, two island platforms, 96 long").scale());
 		assertTrue(StationDescriptionParser.parse("four track grand central terminus").warnings().isEmpty());
 		assertTrue(warned(StationDescriptionParser.parse("grand city station"), "given twice"));
+	}
+
+	@Test
+	void aTerminusAskedForWithNoBuildingKeepsItsHeadBuilding() {
+		for (final String text : new String[]{"terminus, no building", "1 tracks, hub, 120 long, no building", "8 tracks hub, without building, named X"}) {
+			final ParseResult result = StationDescriptionParser.parse(text);
+			assertTrue(result.spec().terminus(), text);
+			assertNotEquals(BuildingStyle.NONE, result.spec().building(), text);
+			assertTrue(result.warnings().stream().anyMatch(w -> w.contains("head building")), text + ": " + result.warnings());
+			StationPlanner.plan(result.spec());
+		}
 	}
 }

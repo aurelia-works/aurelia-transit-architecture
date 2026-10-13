@@ -323,54 +323,103 @@ public final class LayoutValidator {
 		}
 
 		List<Violation> unsupportedRoof() {
-			// For every (u, v) within the cantilever of a support point: the lowest carrier (cap, beam or bridge pier) y that reaches it.
-			final Map<Long, Integer> reach = new HashMap<>();
 			final int reachLimit = StationGeometry.MAX_CANTILEVER;
+			// a grid over every block plus the reach on each side: per cell the lowest carrier (cap, beam or bridge pier) y
+			// standing there, then spread to every cell within the cantilever by a min filter along u and then along v
+			int uLo = Integer.MAX_VALUE, uHi = Integer.MIN_VALUE, vLo = Integer.MAX_VALUE, vHi = Integer.MIN_VALUE;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role() != Role.COLUMN_CAP && block.role() != Role.BEAM && block.role() != Role.RIB && block.role() != Role.BRIDGE_PIER) {
-					continue;
-				}
-				for (int du = -reachLimit; du <= reachLimit; du++) {
-					for (int dv = -reachLimit; dv <= reachLimit; dv++) {
-						reach.merge(key(block.u() + du, block.v() + dv), block.y(), Math::min);
-					}
+				uLo = Math.min(uLo, block.u());
+				uHi = Math.max(uHi, block.u());
+				vLo = Math.min(vLo, block.v());
+				vHi = Math.max(vHi, block.v());
+			}
+			if (uLo > uHi) {
+				return new ArrayList<>();
+			}
+			final Grid grid = new Grid(uLo - reachLimit, vLo - reachLimit, uHi - uLo + 1 + 2 * reachLimit, vHi - vLo + 1 + 2 * reachLimit);
+			final int[] carrier = grid.filled(Integer.MAX_VALUE);
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.COLUMN_CAP || block.role() == Role.BEAM || block.role() == Role.RIB || block.role() == Role.BRIDGE_PIER) {
+					final int i = grid.index(block.u(), block.v());
+					carrier[i] = Math.min(carrier[i], block.y());
 				}
 			}
+			final int[] reach = grid.spread(carrier, reachLimit, true);
 			// a wall standing from the walk level up to a roof's level carries it too (a canopy fixed to a building or a lift
 			// shaft): any roof cell within reach and no more than one above the wall's top
-			final Map<Long, Integer> wallReach = new HashMap<>();
-			final Map<Long, Integer> wallTop = new HashMap<>();
+			final int[] top = grid.filled(Integer.MIN_VALUE);
 			for (final PlannedBlock block : plan.blocks()) {
 				if (block.role() == Role.WALL) {
-					wallTop.merge(key(block.u(), block.v()), block.y(), Math::max);
+					final int i = grid.index(block.u(), block.v());
+					top[i] = Math.max(top[i], block.y());
 				}
 			}
-			for (final Map.Entry<Long, Integer> wall : wallTop.entrySet()) {
-				final int u = (int) (wall.getKey() >> 32);
-				final int v = (int) (long) wall.getKey();
-				if (!wallFromFloor(u, v, wall.getValue())) {
-					continue;
-				}
-				for (int du = -reachLimit; du <= reachLimit; du++) {
-					for (int dv = -reachLimit; dv <= reachLimit; dv++) {
-						wallReach.merge(key(u + du, v + dv), wall.getValue(), Math::max);
-					}
+			for (int i = 0; i < top.length; i++) {
+				if (top[i] != Integer.MIN_VALUE && !wallFromFloor(grid.u(i), grid.v(i), top[i])) {
+					top[i] = Integer.MIN_VALUE;
 				}
 			}
+			final int[] wallReach = grid.spread(top, reachLimit, false);
 			final List<Violation> found = new ArrayList<>();
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
 				if (role != Role.ROOF && role != Role.ROOF_EDGE && role != Role.ROOF_LIGHT) {
 					continue;
 				}
-				final Integer carrierY = reach.get(key(block.u(), block.v()));
-				final Integer wallY = wallReach.get(key(block.u(), block.v()));
-				if ((carrierY == null || carrierY >= block.y()) && (wallY == null || wallY < block.y() - 1)) {
+				final int i = grid.index(block.u(), block.v());
+				if (reach[i] >= block.y() && wallReach[i] < block.y() - 1) {
 					found.add(at(Violation.Kind.ROOF_UNSUPPORTED, block,
 							where(block) + " is more than " + reachLimit + " cells from any column top or beam"));
 				}
 			}
 			return found;
+		}
+
+		/** A dense u × v grid from (u0, v0), row by row along u. */
+		private record Grid(int u0, int v0, int width, int length) {
+
+			int index(int u, int v) {
+				return (v - v0) * width + (u - u0);
+			}
+
+			int u(int i) {
+				return u0 + i % width;
+			}
+
+			int v(int i) {
+				return v0 + i / width;
+			}
+
+			int[] filled(int value) {
+				final int[] cells = new int[width * length];
+				java.util.Arrays.fill(cells, value);
+				return cells;
+			}
+
+			/** Each cell's minimum (or maximum) over the square of the given radius round it, as two one-way passes. */
+			int[] spread(int[] cells, int radius, boolean min) {
+				final int[] along = new int[cells.length];
+				for (int v = 0; v < length; v++) {
+					for (int u = 0; u < width; u++) {
+						int best = cells[v * width + u];
+						for (int d = Math.max(0, u - radius); d <= Math.min(width - 1, u + radius); d++) {
+							best = min ? Math.min(best, cells[v * width + d]) : Math.max(best, cells[v * width + d]);
+						}
+						along[v * width + u] = best;
+					}
+				}
+				final int[] out = new int[cells.length];
+				for (int v = 0; v < length; v++) {
+					for (int u = 0; u < width; u++) {
+						int best = along[v * width + u];
+						for (int d = Math.max(0, v - radius); d <= Math.min(length - 1, v + radius); d++) {
+							best = min ? Math.min(best, along[d * width + u]) : Math.max(best, along[d * width + u]);
+						}
+						out[v * width + u] = best;
+					}
+				}
+				return out;
+			}
 		}
 
 		/** True when the wall cells at (u, v) run unbroken from the walk level up to {@code top}. */

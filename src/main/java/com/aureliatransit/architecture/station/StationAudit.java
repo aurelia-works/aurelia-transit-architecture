@@ -969,6 +969,13 @@ public final class StationAudit {
 				if (band != null) {
 					perPlatform.merge(band.number(), 1, Integer::sum);
 				}
+				// back-to-back side platforms share one double-sided row, so it signs the platform behind it too
+				for (final TrackLayout.PlatformBand other : layout.platforms()) {
+					if (other != band && !other.island() && band != null && !band.island() && block.v() >= other.vFrom() && block.v() <= other.vTo()
+							&& block.u() >= other.uMin() - 2 && block.u() <= other.uMax() + 2) {
+						perPlatform.merge(other.number(), 1, Integer::sum);
+					}
+				}
 			}
 			if (spec.name().isEmpty()) {
 				if (total == 0) {
@@ -997,43 +1004,72 @@ public final class StationAudit {
 
 		/** Every block must be joined, through faces or edges, to a block standing on the station's support layer. */
 		private void grounded() {
-			final Set<Long> support = new HashSet<>();
+			// a dense grid over the plan's bounds: 0 empty, 1 a block, 2 a block joined to the ground
+			int uLo = Integer.MAX_VALUE, uHi = Integer.MIN_VALUE, yLo = Integer.MAX_VALUE, yHi = Integer.MIN_VALUE, vLo = Integer.MAX_VALUE, vHi = Integer.MIN_VALUE;
+			for (final PlannedBlock block : plan.blocks()) {
+				uLo = Math.min(uLo, block.u());
+				uHi = Math.max(uHi, block.u());
+				yLo = Math.min(yLo, block.y());
+				yHi = Math.max(yHi, block.y());
+				vLo = Math.min(vLo, block.v());
+				vHi = Math.max(vHi, block.v());
+			}
+			if (uLo > uHi) {
+				pass(Topic.GROUNDED, "No floating parts: all 0 blocks are joined to the ground");
+				return;
+			}
+			// one empty cell of margin on every side, so neighbours never fall off the grid
+			final int u0 = uLo - 1, y0 = yLo - 1, v0 = vLo - 1;
+			final int nu = uHi - uLo + 3, ny = yHi - yLo + 3, nv = vHi - vLo + 3;
+			final byte[] state = new byte[nu * ny * nv];
+			for (final PlannedBlock block : plan.blocks()) {
+				state[((block.v() - v0) * ny + (block.y() - y0)) * nu + (block.u() - u0)] = 1;
+			}
+			final int[] queue = new int[plan.blocks().size()];
+			int head = 0;
+			int tail = 0;
 			for (final Box area : plan.supportAreas()) {
-				for (int u = area.uMin(); u <= area.uMax(); u++) {
-					for (int v = area.vMin(); v <= area.vMax(); v++) {
-						support.add(key(u, 0, v));
+				final int y = StationGeometry.PLATFORM_Y;
+				if (y < yLo || y > yHi) {
+					continue;
+				}
+				for (int u = Math.max(area.uMin(), uLo); u <= Math.min(area.uMax(), uHi); u++) {
+					for (int v = Math.max(area.vMin(), vLo); v <= Math.min(area.vMax(), vHi); v++) {
+						final int i = ((v - v0) * ny + (y - y0)) * nu + (u - u0);
+						if (state[i] == 1) {
+							state[i] = 2;
+							queue[tail++] = i;
+						}
 					}
 				}
 			}
-			final Set<Long> joined = new HashSet<>();
-			final ArrayDeque<PlannedBlock> queue = new ArrayDeque<>();
-			for (final PlannedBlock block : plan.blocks()) {
-				if (block.y() == StationGeometry.PLATFORM_Y && support.contains(key(block.u(), 0, block.v()))
-						&& joined.add(key(block.u(), block.y(), block.v()))) {
-					queue.add(block);
+			// faces and edges join, corners do not: the 18 neighbours with one or two axes moved
+			final int[] steps = new int[18];
+			int n = 0;
+			for (int du = -1; du <= 1; du++) {
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dv = -1; dv <= 1; dv++) {
+						final int moved = Math.abs(du) + Math.abs(dy) + Math.abs(dv);
+						if (moved != 0 && moved != 3) {
+							steps[n++] = (dv * ny + dy) * nu + du;
+						}
+					}
 				}
 			}
-			while (!queue.isEmpty()) {
-				final PlannedBlock block = queue.poll();
-				for (int du = -1; du <= 1; du++) {
-					for (int dy = -1; dy <= 1; dy++) {
-						for (int dv = -1; dv <= 1; dv++) {
-							final int moved = Math.abs(du) + Math.abs(dy) + Math.abs(dv);
-							if (moved == 0 || moved == 3) {
-								continue;
-							}
-							final PlannedBlock next = at(block.u() + du, block.y() + dy, block.v() + dv);
-							if (next != null && joined.add(key(next.u(), next.y(), next.v()))) {
-								queue.add(next);
-							}
-						}
+			while (head < tail) {
+				final int i = queue[head++];
+				for (final int step : steps) {
+					final int next = i + step;
+					if (state[next] == 1) {
+						state[next] = 2;
+						queue[tail++] = next;
 					}
 				}
 			}
 			int floating = 0;
 			PlannedBlock example = null;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (!joined.contains(key(block.u(), block.y(), block.v()))) {
+				if (state[((block.v() - v0) * ny + (block.y() - y0)) * nu + (block.u() - u0)] != 2) {
 					floating++;
 					if (example == null) {
 						example = block;

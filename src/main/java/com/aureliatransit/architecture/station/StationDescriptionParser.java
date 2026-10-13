@@ -1333,6 +1333,11 @@ public final class StationDescriptionParser {
 			} else {
 				defaulted.add("rail nodes at platform ends (default)");
 			}
+			if (terminus && Boolean.FALSE.equals(building)) {
+				// the tracks end at the head building's buffer stops and gate line; without it there is no way off the platforms
+				warn("a " + (hub ? "hub" : "terminus") + " needs its head building, so it keeps one");
+				building = true;
+			}
 			final boolean wantsBuilding = Boolean.TRUE.equals(building);
 			if (wantsBuilding) {
 				final BuildingStyle look = buildingStyle != null ? buildingStyle : BuildingStyle.forStyle(style != null ? style : StationStyle.MODERN);
