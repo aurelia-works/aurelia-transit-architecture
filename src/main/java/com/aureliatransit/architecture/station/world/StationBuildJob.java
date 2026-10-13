@@ -42,7 +42,7 @@ import java.util.function.Consumer;
  */
 public final class StationBuildJob {
 
-	/** Ops one job may run in a tick. */
+	/** Ops one job runs in a batch; the sessions run batches until the tick's time budget is used. */
 	public static final int OPS_PER_TICK = 64;
 	/** Consecutive ticks a job may wait for a chunk before it gives up. */
 	public static final int MAX_PAUSED_TICKS = 200;

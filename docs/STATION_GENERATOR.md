@@ -10,7 +10,7 @@ Operators only (permission level 2), like `/ata_message`.
 |---|---|
 | `/ata_station plan <description>` | Plans a station in front of you (rail level = your feet, tracks run the way you face, the footprint starts 2 blocks ahead and is centred on you). Prints a summary and shows a 30 s particle outline. Nothing is placed. |
 | `/ata_station preview` | Shows the outline again. |
-| `/ata_station confirm` | Builds the pending plan where it was planned, 64 blocks per tick. Refuses if any terrain would change. |
+| `/ata_station confirm` | Builds the pending plan where it was planned, as fast as a fifth of each server tick allows (about a thousand blocks a tick). Refuses if any terrain would change. |
 | `/ata_station confirm replace_terrain` | Builds and approves the terrain changes the summary listed. This literal token is the **only** way to approve them. The description never can. |
 | `/ata_station cancel` | Stops a running build (what is built stays) or discards the pending plan. |
 | `/ata_station undo` | Reverts your last build, batched. Cells changed since the build are left alone. |
@@ -144,7 +144,7 @@ A building stands on the street side, 9 deep, over the middle of the platforms: 
    - These are refused even with approval: block entities (chests, signs), unbreakable blocks, chunks that cannot be loaded (the survey and the build load and hold the chunks they need, so a station may be longer than the render distance), the world height limit, gaps deeper than 4, and an existing MTR rail node anywhere other than a planned rail node cell or a track's clearance.
    - An existing MTR rail node is never replaced or removed. One already in a planned rail node cell is kept, and one in a track's clearance is left alone, so a station can be planned onto a line that is already connected.
 7. **Build** (`StationBuildJob`):
-   - At most 64 changes per job per tick, and 256 per tick across all jobs.
+   - Jobs run in batches of 64 changes, taking turns, until 10 ms of the tick is used (at most 4096 changes per tick across all jobs). A placement costs about 10 µs, so a 6000-block station builds in well under a second; a job waiting for a chunk is asked once per tick.
    - Order: clears top-down, fills bottom-up, then floors, edges, ramps, rail nodes, columns, roof, fixtures, and signs last.
    - Every cell is re-checked just before it is written. A cell that changed since the survey stops the job, and nothing more is placed.
    - A chunk that unloads pauses the job (chunks are never loaded on purpose); after 10 s the job stops.

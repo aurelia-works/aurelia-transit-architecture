@@ -28,8 +28,14 @@ import java.util.function.Consumer;
  */
 public final class StationSessions {
 
-	/** Ops all jobs together may run in a tick. */
-	public static final int OPS_PER_TICK = 256;
+	/**
+	 * Server time all jobs together may use in a tick: a fifth of the 50 ms tick. A placement costs about 10 µs, so this is
+	 * roughly a thousand blocks a tick; pacing by count alone (64 a tick) kept a 6000-block station waiting 5 s on an idle
+	 * server.
+	 */
+	public static final long NANOS_PER_TICK = 10_000_000L;
+	/** Ops all jobs together may run in a tick, however fast they go. */
+	public static final int OPS_PER_TICK = 4096;
 
 	/**
 	 * A plan waiting for confirmation. The frame is fixed at planning time; confirm never takes it from the player's position.
@@ -174,28 +180,44 @@ public final class StationSessions {
 	}
 
 	private static void tickJobs() {
-		int budget = OPS_PER_TICK;
-		final List<StationBuildJob> served = new ArrayList<>();
-		boolean starved = false;
-		for (final StationBuildJob job : new ArrayList<>(JOBS.values())) {
-			if (budget <= 0) {
-				starved = true;
-				break;
-			}
-			budget -= job.step(Math.min(StationBuildJob.OPS_PER_TICK, budget));
-			served.add(job);
-		}
+		final List<StationBuildJob> served = new ArrayList<>(JOBS.values());
+		final boolean starved = runBatches(served, NANOS_PER_TICK, OPS_PER_TICK);
 		for (final StationBuildJob job : served) {
 			reap(job);
 		}
-		if (starved) {
-			// the jobs that ran go to the back of the queue so the others get the next tick
-			for (final StationBuildJob job : served) {
-				if (JOBS.get(job.owner()) == job) {
-					JOBS.remove(job.owner());
-					JOBS.put(job.owner(), job);
+		if (starved && served.size() > 1) {
+			// the first job goes to the back of the queue so the others start the next tick
+			final StationBuildJob first = served.get(0);
+			if (JOBS.get(first.owner()) == first) {
+				JOBS.remove(first.owner());
+				JOBS.put(first.owner(), first);
+			}
+		}
+	}
+
+	/**
+	 * One tick's work: runs the jobs in batches, taking turns, until {@code nanos} of server time or {@code ops} ops are used. A
+	 * job that did less than a full batch (finished, stopped or waiting for a chunk) is not asked again, so a wait still counts
+	 * once per tick. True if the budget ran out with work left. Public for the game tests.
+	 */
+	public static boolean runBatches(List<StationBuildJob> jobs, long nanos, int ops) {
+		final long deadline = System.nanoTime() + nanos;
+		int budget = ops;
+		final List<StationBuildJob> active = new ArrayList<>(jobs);
+		while (!active.isEmpty()) {
+			for (final java.util.Iterator<StationBuildJob> it = active.iterator(); it.hasNext(); ) {
+				if (budget <= 0 || System.nanoTime() >= deadline) {
+					return true;
+				}
+				final StationBuildJob job = it.next();
+				final int ask = Math.min(StationBuildJob.OPS_PER_TICK, budget);
+				final int used = job.step(ask);
+				budget -= used;
+				if (used < ask) {
+					it.remove();
 				}
 			}
 		}
+		return false;
 	}
 }

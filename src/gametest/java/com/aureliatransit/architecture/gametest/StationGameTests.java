@@ -371,6 +371,34 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * Builds are paced by server time, not a fixed count: one tick's budget runs batch after batch (the old pacing stopped at
+	 * 64 a tick), and a job that is done is not asked again.
+	 */
+	@GameTest(templateName = SITE_LARGE)
+	public void oneTickRunsManyBatchesOfABuild(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final StationSessions.Pending pending = StationCommand.prepare(world, ESCALATORS, context.getAbsolutePos(FEET_LARGE), Heading.SOUTH);
+		final StationBuildJob job = StationBuildJob.build(world, new UUID(0, 40), pending.report().ops(), false, text -> {
+		});
+		check(job.total() > 1000, "station too small: " + job.total());
+		check(StationSessions.runBatches(List.of(job), 20_000_000L, 256), "a 256-op budget must run out on " + job.total() + " ops");
+		check(job.done() == 256, "ran " + job.done() + " ops for a 256-op budget");
+		StationSessions.runBatches(List.of(job), 20_000_000L, 1_000_000);
+		check(job.done() > 256 + StationBuildJob.OPS_PER_TICK, "one 20 ms tick ran only " + (job.done() - 256) + " ops");
+		while (!job.finished()) {
+			StationSessions.runBatches(List.of(job), 50_000_000L, 1_000_000);
+		}
+		check(job.state() == StationBuildJob.State.DONE, "job " + job.state());
+		check(!StationSessions.runBatches(List.of(job), 20_000_000L, 1_000_000), "a finished job has nothing left to run");
+		final StationBuildJob undo = StationBuildJob.undo(world, new UUID(0, 40), job.undoLog(), text -> {
+		});
+		while (!undo.finished()) {
+			undo.step(StationBuildJob.OPS_PER_TICK);
+		}
+		context.complete();
+	}
+
 	@GameTest(templateName = SITE_Z, tickLimit = 200)
 	public void builtStationIsAnMtrStationUntilUndone(TestContext context) {
 		final ServerWorld world = context.getWorld();
@@ -378,8 +406,8 @@ public class StationGameTests implements FabricGameTest {
 				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
 		final StationZone zone = StationZone.of(pending.spec().name(), pending.report().ops());
 		check(zone != null && zone.name().equals("Zone Test Halt"), "zone " + zone);
-		final StationBuildJob job = StationBuildJob.build(world, new UUID(0, 11), BlockStateResolver.resolve(pending.report().ops()), false, text -> {
-		}, zone);
+		final List<Text> said = new ArrayList<>();
+		final StationBuildJob job = StationBuildJob.build(world, new UUID(0, 11), BlockStateResolver.resolve(pending.report().ops()), false, said::add, zone);
 		while (!job.finished()) {
 			job.step(StationBuildJob.OPS_PER_TICK);
 		}
@@ -387,7 +415,7 @@ public class StationGameTests implements FabricGameTest {
 		final BlockPos centre = new BlockPos(zone.centerX(), zone.centerY(), zone.centerZ());
 		final List<List<String>> found = new ArrayList<>();
 		context.waitAndRun(40, () -> {
-			check(job.undoLog().stations() == 1, "MTR has not added the station: " + job.undoLog().stations());
+			check(job.undoLog().stations() == 1, "MTR has not added the station: " + said.stream().map(Text::getString).toList());
 			MtrStationContract.namesNear(world, centre, 2, found::add);
 			context.waitAndRun(20, () -> {
 				check(found.size() == 1 && found.get(0).contains("Zone Test Halt"), "MTR stations at the build: " + found);
