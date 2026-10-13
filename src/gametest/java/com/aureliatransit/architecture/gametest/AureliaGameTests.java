@@ -617,6 +617,40 @@ public class AureliaGameTests implements FabricGameTest {
 		context.complete();
 	}
 
+	/** A seated player can move straight to another seat, as vanilla lets you hop between boats; the old seat goes away. */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void aSeatedPlayerCanSwitchSeats(TestContext context) {
+		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);
+		final Block bench = Fixtures.block("steel_bench").block();
+		final BlockPos first = new BlockPos(5, 2, 5);
+		final BlockPos second = new BlockPos(7, 2, 5);
+		context.setBlockState(first, bench.getDefaultState());
+		context.setBlockState(second, bench.getDefaultState());
+		final net.minecraft.server.world.ServerWorld world = context.getWorld();
+		final BlockPos a = context.getAbsolutePos(first);
+		final BlockPos b = context.getAbsolutePos(second);
+		if (!com.aureliatransit.architecture.interactive.SeatManager.trySit(world, a, world.getBlockState(a), (com.aureliatransit.architecture.block.SeatBlock) bench,
+				player, net.minecraft.util.math.Vec3d.ofCenter(a))) {
+			throw new net.minecraft.test.GameTestException("could not sit on the first bench");
+		}
+		final net.minecraft.entity.Entity old = player.getVehicle();
+		if (!com.aureliatransit.architecture.interactive.SeatManager.trySit(world, b, world.getBlockState(b), (com.aureliatransit.architecture.block.SeatBlock) bench,
+				player, net.minecraft.util.math.Vec3d.ofCenter(b))) {
+			throw new net.minecraft.test.GameTestException("a seated player could not move to the second bench");
+		}
+		final net.minecraft.entity.Entity now = player.getVehicle();
+		if (now == null || now == old || now.getBlockPos().getX() != b.getX()) {
+			throw new net.minecraft.test.GameTestException("not riding the second bench's seat: " + now);
+		}
+		context.runAtTick(5, () -> {
+			if (old.isAlive() && old.hasPassengers()) {
+				throw new net.minecraft.test.GameTestException("the first seat still holds a passenger");
+			}
+			Fixtures.removePlayer(context, player);
+			context.complete();
+		});
+	}
+
 	/** Sign poles join the three regional signs and the free-standing car stop boards, from below and above, but not wall-mounted boards. */
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
 	public void signPolesJoinSignsAndFreestandingBoardsOnly(TestContext context) {

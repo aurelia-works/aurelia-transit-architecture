@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.interactive;
 
 import com.aureliatransit.architecture.block.SeatBlock;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
@@ -34,7 +35,7 @@ public final class SeatManager {
 	 * Tries to seat the player on the block, preferring the slot nearest to the click.
 	 */
 	public static boolean trySit(ServerWorld world, BlockPos pos, BlockState state, SeatBlock block, ServerPlayerEntity player, Vec3d hit) {
-		if (player.hasVehicle() || player.isSpectator() || !player.isAlive() || player.isSneaking()
+		if (ridingOther(player) || player.isSpectator() || !player.isAlive() || player.isSneaking()
 				|| player.squaredDistanceTo(Vec3d.ofCenter(pos)) > MAX_SIT_DISTANCE_SQ) {
 			return false;
 		}
@@ -69,6 +70,14 @@ public final class SeatManager {
 			return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Riding something other than a seat (a train, a minecart, a horse). A seated player may move straight to another seat, as
+	 * vanilla lets you hop from boat to boat; {@code startRiding} leaves the old seat, which then goes away.
+	 */
+	public static boolean ridingOther(PlayerEntity player) {
+		return player.hasVehicle() && !(player.getVehicle() instanceof SeatEntity);
 	}
 
 	/**

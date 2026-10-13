@@ -56,7 +56,7 @@ public class SeatBlock extends FacingShapedBlock {
 
 	@Override
 	public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-		if (hand != Hand.MAIN_HAND || player.getStackInHand(hand).getItem() instanceof BlockItem || player.isSneaking() || player.hasVehicle() || player.isSpectator()) {
+		if (hand != Hand.MAIN_HAND || player.getStackInHand(hand).getItem() instanceof BlockItem || player.isSneaking() || SeatManager.ridingOther(player) || player.isSpectator()) {
 			return ActionResult.PASS;
 		}
 		if (world instanceof ServerWorld serverWorld && player instanceof ServerPlayerEntity serverPlayer) {
