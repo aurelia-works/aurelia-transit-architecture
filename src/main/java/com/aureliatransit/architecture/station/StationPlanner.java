@@ -46,6 +46,7 @@ public final class StationPlanner {
 	public static StationPlan plan(StationSpec spec) {
 		final Planning planning = new Planning(spec);
 		planning.escalators();
+		planning.travelators();
 		planning.floors();
 		planning.ramps();
 		planning.railNodes();
@@ -1774,6 +1775,165 @@ public final class StationPlanner {
 					}
 				}
 			}
+		}
+
+		/** Shortest travelator run, landings included; and the longest platform stretch before a gap to cross. */
+		private static final int MIN_TRAVELATOR = 8;
+		private static final int MAX_PLATFORM_TRAVELATOR = 16;
+		/** Platforms at least this long get travelators along them. */
+		static final int TRAVELATOR_PLATFORM = 72;
+
+		/**
+		 * MTR escalators laid flat as moving walkways, planned before the floors and the deck so those leave them their cells.
+		 * On the footbridge: two wide in the corridor's two rows on the lift side, broken at every lift and second-stair exit,
+		 * so the stair-side row stays free to walk and every exit opens onto it; they carry passengers towards the station
+		 * building (or the corridor's start). Along a platform at least {@link #TRAVELATOR_PLATFORM} long: two wide in a lane
+		 * clear of the column lines, away from the stairs and platform ends, in stretches of at most
+		 * {@link #MAX_PLATFORM_TRAVELATOR} with a gap to cross between, each carrying passengers towards the footbridge or the
+		 * terminus head (outwards to the platform ends without either).
+		 */
+		void travelators() {
+			if (!spec.travelators()) {
+				return;
+			}
+			if (site.bridge()) {
+				bridgeTravelators();
+			}
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (band.length() >= TRAVELATOR_PLATFORM) {
+					platformTravelators(band);
+				}
+			}
+		}
+
+		private void bridgeTravelators() {
+			final int s = site.stairSide();
+			final int[] rows = {site.bridgeV(), site.bridgeV() - s};
+			final int from = site.building() ? site.platformWall(layout) : site.deckFrom();
+			final int to = site.deckTo();
+			final java.util.Set<Integer> blocked = new java.util.HashSet<>();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final StationLayout.Lift lift = site.platformLift(band, layout);
+				if (lift != null) {
+					for (int u = lift.c0() - 1; u <= lift.c0() + 2; u++) {
+						blocked.add(u);
+					}
+				}
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					if (flight.side() != s) {
+						for (int u = flight.columns().get(0) - 1; u <= flight.columns().get(flight.columns().size() - 1) + 1; u++) {
+							blocked.add(u);
+						}
+					}
+				}
+			}
+			int start = -1;
+			for (int u = from + 2; u <= to - 1; u++) {
+				final boolean free = u <= to - 2 && !blocked.contains(u);
+				if (free && start < 0) {
+					start = u;
+				} else if (!free && start >= 0) {
+					if (u - start >= MIN_TRAVELATOR) {
+						// towards the building (or the corridor's start): facing -U, so MTR's right half is the higher-v row
+						final int hi = Math.max(rows[0], rows[1]);
+						for (int x = start; x < u; x++) {
+							for (final int v : rows) {
+								travelatorStep(x, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.MINUS_U, v == hi ? "right" : "left");
+							}
+						}
+					}
+					start = -1;
+				}
+			}
+		}
+
+		private void platformTravelators(TrackLayout.PlatformBand band) {
+			final int c = travelatorLane(band);
+			if (c < 0) {
+				return;
+			}
+			// rows kept for the stairs, escalators, lifts and the bridge's own piers
+			final java.util.Set<Integer> blocked = new java.util.HashSet<>();
+			for (final StationLayout.Flight flight : site.flights(band)) {
+				final int a = Math.min(flight.wallV(), flight.landingV());
+				final int z = Math.max(flight.wallV(), flight.landingV());
+				for (int v = a - 3; v <= z + 3; v++) {
+					blocked.add(v);
+				}
+			}
+			if (site.hasEscalator(band)) {
+				for (int v = site.escalatorFootV() - 3; v <= site.escalatorFootV() + 3; v++) {
+					blocked.add(v);
+				}
+			}
+			final StationLayout.Lift lift = site.platformLift(band, layout);
+			if (lift != null) {
+				for (int v = lift.vMin() - 2; v <= lift.vMax() + 2; v++) {
+					blocked.add(v);
+				}
+			}
+			if (site.bridge()) {
+				for (int v = site.bridgeV() - 3; v <= site.bridgeV() + 3; v++) {
+					blocked.add(v);
+				}
+			}
+			final int target = site.bridge() ? site.bridgeV() : layout.terminus() ? layout.platformLength() : -1;
+			final int first = band.vFrom() + 6;
+			final int last = band.vTo() - 6;
+			int v = first;
+			while (v <= last) {
+				if (blocked.contains(v)) {
+					v++;
+					continue;
+				}
+				int end = v;
+				while (end + 1 <= last && !blocked.contains(end + 1) && end + 1 - v + 1 <= MAX_PLATFORM_TRAVELATOR) {
+					end++;
+				}
+				if (end - v + 1 >= MIN_TRAVELATOR) {
+					final int middle = (v + end) / 2;
+					final boolean plus = target >= 0 ? target > middle : middle > (band.vFrom() + band.vTo()) / 2;
+					final LocalDir way = plus ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+					for (int w = v; w <= end; w++) {
+						// MTR's right half is on the right looking along the way it moves; +U is right of +V
+						travelatorStep(c, StationGeometry.PLATFORM_Y, w, way, plus ? "left" : "right");
+						travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, way, plus ? "right" : "left");
+					}
+				}
+				// a gap of three to cross before the next stretch
+				v = end + 4;
+			}
+		}
+
+		/**
+		 * The travelator's two columns on a platform (the first returned): off the column lines and the bridge pier lines, a
+		 * walkway beside both, nearest the platform's middle; -1 if the platform has no room.
+		 */
+		private int travelatorLane(TrackLayout.PlatformBand band) {
+			if (band.width() < (band.island() ? StationLayout.MIN_ESCALATOR_ISLAND : StationLayout.MIN_ESCALATOR_SIDE)) {
+				return -1;
+			}
+			final java.util.Set<Integer> lines = new java.util.HashSet<>(columnLines(band, roof(band)));
+			lines.addAll(columnLines(band, RoofType.CANOPY));
+			final double middle = (band.uMin() + band.uMax() - 1) / 2.0;
+			int best = -1;
+			for (int c = band.uMin() + 2; c + 1 <= band.uMax() - 2; c++) {
+				if (lines.contains(c) || lines.contains(c + 1) || lines.contains(c - 1) && lines.contains(c + 2)) {
+					continue;
+				}
+				if (best < 0 || Math.abs(c - middle) < Math.abs(best - middle)) {
+					best = c;
+				}
+			}
+			return best;
+		}
+
+		/** One flat escalator step running {@code way}, with its handrail block above and headroom over that. */
+		private void travelatorStep(int u, int y, int v, LocalDir way, String side) {
+			put(Role.ESCALATOR, u, y, v, way, StylePalette.MTR_ESCALATOR_STEP, "side=" + side + ",direction=true,status=true");
+			put(Role.ESCALATOR, u, y + 1, v, way, StylePalette.MTR_ESCALATOR_SIDE, "side=" + side);
+			keepClear(u, y + 2, v);
+			keepClear(u, y + 3, v);
 		}
 
 		/** The columns a flight opens out of the corridor: the main stair's include the escalator beside it. */

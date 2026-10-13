@@ -95,7 +95,7 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
 	/** The smallest footbridge station with lifts: platforms six wide take a two-column stair and a lift beside it. */
 	private static final String LIFTS = "two track station, side platforms, length 24, width 6, footbridge, named Test";
-	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, named Test";
+	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, travelators, named Test";
 	/**
 	 * Feet of the imaginary planning player in each site: rail level, on the template's two stone layers. Test-relative y is one
 	 * below template y (the structure sits one above the test origin), so template y = 2 is relative y = 3.
@@ -271,6 +271,22 @@ public class StationGameTests implements FabricGameTest {
 				}
 			}
 			check(steps == 16, "expected one escalator of two columns of eight steps, found " + steps);
+			// the footbridge travelator: flat between a landing at each end, running along the corridor
+			final Map<Integer, List<BlockPos>> rows = new HashMap<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP) && !block.front().alongTrack()) {
+					rows.computeIfAbsent(block.v(), v -> new ArrayList<>()).add(cellPos(pending, block));
+				}
+			}
+			check(rows.size() == 2, "expected a two-wide travelator on the footbridge, found rows " + rows.keySet());
+			for (final List<BlockPos> row : rows.values()) {
+				row.sort(java.util.Comparator.comparingInt(pos -> pos.getX() * 100000 + pos.getZ()));
+				for (int i = 0; i < row.size(); i++) {
+					final String shape = value(world.getBlockState(row.get(i)), "orientation");
+					final boolean end = i == 0 || i == row.size() - 1;
+					check(end ? shape.startsWith("landing") : shape.equals("flat"), "travelator step " + i + " of " + row.size() + " is " + shape);
+				}
+			}
 		});
 	}
 
