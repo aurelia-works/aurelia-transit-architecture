@@ -24,6 +24,11 @@ public enum Role {
 	WINDOW,
 	/** One step of a stair flight; front points the way the flight climbs. */
 	STAIR,
+	/**
+	 * Part of an MTR escalator: a step (front the way it climbs) or the handrail block above it. The cell above a step is
+	 * walked through.
+	 */
+	ESCALATOR,
 	/** Footbridge support, from the ground or a platform floor up to the deck. */
 	BRIDGE_PIER,
 	/** Footbridge floor over the tracks, a full block passengers walk on. */

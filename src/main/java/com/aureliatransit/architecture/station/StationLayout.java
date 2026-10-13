@@ -21,9 +21,14 @@ import java.util.List;
  * @param stairSide     +1 when platform stairs leave the footbridge towards higher v, -1 towards lower v; 0 when there is no
  *                      room on either side
  * @param served        platforms reached by footbridge stairs (platform numbers)
+ * @param escalators    an up escalator beside each platform stair where the platform is wide enough
  */
 public record StationLayout(boolean building, int bays, int vStart, int vEnd, int entranceV, int innerStairSide, boolean bridge, int bridgeV,
-		int deckFrom, int deckTo, int stairSide, List<Integer> served) {
+		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators) {
+
+	/** Narrowest island and side platform that take an escalator beside the stair and keep a walkway past both. */
+	public static final int MIN_ESCALATOR_ISLAND = 11;
+	public static final int MIN_ESCALATOR_SIDE = 9;
 
 	public StationLayout {
 		served = List.copyOf(served);
@@ -82,7 +87,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			bridge = false;
 		}
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
-				bridge ? served : List.of());
+				bridge ? served : List.of(), spec.escalators());
 	}
 
 	/** Facade bays of a station building beside platforms this long. */
@@ -132,7 +137,61 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return stairSide > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
 	}
 
-	/** Columns of a platform's stair; empty if the platform is too narrow to keep a walkway beside it. */
+	/** True when this platform's stair has an up escalator beside it. */
+	public boolean hasEscalator(TrackLayout.PlatformBand band) {
+		return escalators && bridge && served.contains(band.number())
+				&& band.width() >= (band.island() ? MIN_ESCALATOR_ISLAND : MIN_ESCALATOR_SIDE) && band.runs(escalatorFootV());
+	}
+
+	/**
+	 * Columns of a platform's stair. Beside an escalator the stair, a rail column and the escalator form one group: centred
+	 * on an island with the escalator on the right, and on a side platform with the stair against the back as without one.
+	 */
+	public List<Integer> stairs(TrackLayout.PlatformBand band) {
+		if (!hasEscalator(band)) {
+			return stairColumns(band);
+		}
+		final int s = band.island() ? band.uMin() + (band.width() - 5) / 2 : band.trackLeft() ? band.uMax() - 2 : band.uMin() + 1;
+		return List.of(s, s + 1);
+	}
+
+	/** The escalator's two columns, ascending; empty without one. */
+	public List<Integer> escalator(TrackLayout.PlatformBand band) {
+		if (!hasEscalator(band)) {
+			return List.of();
+		}
+		final int e = band.island() ? band.uMin() + (band.width() - 5) / 2 + 3 : band.trackLeft() ? band.uMax() - 5 : band.uMin() + 4;
+		return List.of(e, e + 1);
+	}
+
+	/** Stair and escalator columns together: every column that opens out of the corridor and is kept clear down to the platform. */
+	public List<Integer> flightColumns(TrackLayout.PlatformBand band) {
+		final List<Integer> all = new ArrayList<>(stairs(band));
+		all.addAll(escalator(band));
+		all.sort(null);
+		return all;
+	}
+
+	/**
+	 * v of the escalator's step at height y (0..{@link StationGeometry#STAIR_STEPS}), counting from the top: the top landing
+	 * is in the corridor wall row at deck level, the bottom landing two rows past the stair's foot, at platform floor level.
+	 * Index 0 is the bottom landing, 7 the top landing.
+	 */
+	public int escalatorV(int index) {
+		return stairWallV() + stairSide * (7 - index);
+	}
+
+	/** Height of the escalator step at index 0..7: two at the floor, the slope, two at the deck. */
+	public static int escalatorY(int index) {
+		return Math.max(0, Math.min(StationGeometry.UPPER_FLOOR_Y, index - 1));
+	}
+
+	/** v of the clear landing at the escalator's foot. */
+	public int escalatorFootV() {
+		return stairWallV() + stairSide * 8;
+	}
+
+	/** Columns of a platform's stair without an escalator; empty if the platform is too narrow to keep a walkway beside it. */
 	public static List<Integer> stairColumns(TrackLayout.PlatformBand band) {
 		final List<Integer> columns = new ArrayList<>();
 		final int width = band.width();
@@ -204,7 +263,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		if (!bridge || !served.contains(band.number())) {
 			return null;
 		}
-		final List<Integer> columns = stairColumns(band);
+		final List<Integer> columns = stairs(band);
 		if (columns.size() != 2) {
 			return null;
 		}

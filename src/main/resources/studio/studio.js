@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";

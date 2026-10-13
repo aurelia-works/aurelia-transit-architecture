@@ -95,6 +95,7 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
 	/** The smallest footbridge station with lifts: platforms six wide take a two-column stair and a lift beside it. */
 	private static final String LIFTS = "two track station, side platforms, length 24, width 6, footbridge, named Test";
+	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, named Test";
 	/**
 	 * Feet of the imaginary planning player in each site: rail level, on the template's two stone layers. Test-relative y is one
 	 * below template y (the structure sits one above the test origin), so template y = 2 is relative y = 3.
@@ -239,6 +240,47 @@ public class StationGameTests implements FabricGameTest {
 						"button " + button + " linked to " + java.util.Arrays.toString(linked));
 			}
 		});
+	}
+
+	/**
+	 * A footbridge station's up escalators: MTR works out each step's shape from its neighbours, so a planned run of two flat
+	 * landing steps, four slope steps and two flat top steps must come out as MTR's landing, transition and slope pieces, all
+	 * facing up the flight and running upwards.
+	 */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void footbridgeEscalatorsRunUpwards(TestContext context) {
+		buildsEveryPlannedBlock(context, ESCALATORS, new UUID(0, 14), (pending, job) -> {
+			final ServerWorld world = context.getWorld();
+			final com.aureliatransit.architecture.station.StationLayout site = com.aureliatransit.architecture.station.StationLayout.of(pending.spec(),
+					StationGeometry.layout(pending.spec()));
+			final String[] shapes = {"landing_bottom", "transition_bottom", "slope", "slope", "slope", "slope", "transition_top", "landing_top"};
+			final Direction up = BlockStateResolver.direction(pending.frame().heading(site.stairFront()));
+			int steps = 0;
+			for (final TrackLayout.PlatformBand band : StationGeometry.layout(pending.spec()).platforms()) {
+				for (final int u : site.escalator(band)) {
+					for (int i = 0; i <= 7; i++) {
+						final BlockPos pos = pos(pending.frame(), u, com.aureliatransit.architecture.station.StationLayout.escalatorY(i), site.escalatorV(i));
+						final BlockState state = world.getBlockState(pos);
+						check(state.getProperties().stream().anyMatch(p -> p.getName().equals("orientation")), "no escalator step at " + pos + ": " + state);
+						final String shape = value(state, "orientation");
+						check(shape.equals(shapes[i]), "step " + i + " at " + pos + " is " + shape + ", expected " + shapes[i]);
+						check(state.get(Properties.HORIZONTAL_FACING) == up, "step " + i + " faces " + state.get(Properties.HORIZONTAL_FACING) + ", not " + up);
+						check(value(state, "direction").equals("true") && value(state, "status").equals("true"), "step " + i + " is not running up: " + state);
+						steps++;
+					}
+				}
+			}
+			check(steps == 16, "expected one escalator of two columns of eight steps, found " + steps);
+		});
+	}
+
+	private static String value(BlockState state, String name) {
+		for (final Property<?> property : state.getProperties()) {
+			if (property.getName().equals(name)) {
+				return String.valueOf(state.get(property)).toLowerCase(java.util.Locale.ROOT);
+			}
+		}
+		return "";
 	}
 
 	/** The cells of a planned station and one around them (neighbouring test plots are cleared with drops of their own). */

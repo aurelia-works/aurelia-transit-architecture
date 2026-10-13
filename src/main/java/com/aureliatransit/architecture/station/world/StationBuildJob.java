@@ -15,6 +15,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SpreadableBlock;
 import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.state.property.Properties;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.property.Property;
@@ -77,6 +78,8 @@ public final class StationBuildJob {
 	/** What each cell will hold, so a block is checked against the neighbours it is planned to have (a lower half its upper). */
 	private final Map<BlockPos, BlockState> planned = new HashMap<>();
 	private final List<BlockPos> signCells = new ArrayList<>();
+	/** MTR escalator cells placed, shaped against the finished station when the build is done. */
+	private final List<BlockPos> escalatorCells = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
 
 	private State state = State.RUNNING;
@@ -287,6 +290,9 @@ public final class StationBuildJob {
 			stop("Stopped at " + op.x() + " " + op.y() + " " + op.z() + ": " + op.blockId() + " was removed again by a neighbour update; nothing more was placed. ", true);
 			return Step.STOP;
 		}
+		if (escalator(wanted)) {
+			escalatorCells.add(pos);
+		}
 		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof TextSignBlock) {
 			signCells.add(pos);
 			signTexts.add(op.text());
@@ -300,6 +306,11 @@ public final class StationBuildJob {
 	 * is placed.
 	 */
 	private BlockState postProcessAsPlanned(BlockState state, BlockPos pos) {
+		// MTR's escalator reads its step or handrail partner from the world, not the neighbour it is given; it is shaped once
+		// the station is finished (escalators())
+		if (escalator(state)) {
+			return state;
+		}
 		BlockState result = state;
 		for (final Direction direction : Direction.values()) {
 			final BlockPos neighbour = pos.offset(direction);
@@ -334,6 +345,7 @@ public final class StationBuildJob {
 		state = State.DONE;
 		paused = false;
 		if (mode == Mode.BUILD) {
+			escalators();
 			nameSigns();
 			lifts();
 			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
@@ -346,6 +358,22 @@ public final class StationBuildJob {
 	}
 
 	/** Name text goes to the block entity of each joined row's owner, once, after the whole row exists. */
+	private static boolean escalator(BlockState state) {
+		final Identifier id = Registries.BLOCK.getId(state.getBlock());
+		return id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_");
+	}
+
+	/** Each escalator step takes its landing, transition or slope shape from the finished flight around it. */
+	private void escalators() {
+		for (final BlockPos pos : escalatorCells) {
+			final BlockState state = world.getBlockState(pos);
+			final BlockState shaped = escalator(state) ? Block.postProcessState(state, world, pos) : state;
+			if (shaped != state && escalator(shaped)) {
+				world.setBlockState(pos, shaped, Block.NOTIFY_LISTENERS);
+			}
+		}
+	}
+
 	private void nameSigns() {
 		final Set<BlockPos> owners = new HashSet<>();
 		for (int i = 0; i < signCells.size(); i++) {

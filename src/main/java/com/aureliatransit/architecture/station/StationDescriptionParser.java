@@ -183,6 +183,7 @@ public final class StationDescriptionParser {
 		private Boolean stepFree;
 		private Boolean tactile;
 		private TrackBed trackBed;
+		private boolean escalators;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -658,6 +659,12 @@ public final class StationDescriptionParser {
 				setSurface(SurfaceMaterial.GRANITE, i);
 			} else if (token.equals("accessible") || token.equals("wheelchair") || token.equals("ramp") || token.equals("ramps")) {
 				setStepFree(true, i);
+			} else if (token.equals("escalator") || token.equals("escalators")) {
+				if (!escalators) {
+					escalators = true;
+					note(i, "up escalators beside the footbridge stairs on platforms wide enough (islands " + StationLayout.MIN_ESCALATOR_ISLAND
+							+ ", side platforms " + StationLayout.MIN_ESCALATOR_SIDE + ")");
+				}
 			} else if (token.equals("gravel") || token.equals("ballast") || token.equals("andesite")) {
 				final TrackBed bed = token.equals("andesite") ? TrackBed.ANDESITE : TrackBed.GRAVEL;
 				if (trackBed == null) {
@@ -1210,6 +1217,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
+			builder.escalators(escalators);
 			if (tactile != null) {
 				builder.tactile(tactile);
 			} else {

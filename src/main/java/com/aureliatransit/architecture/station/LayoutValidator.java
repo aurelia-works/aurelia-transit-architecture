@@ -529,7 +529,9 @@ public final class LayoutValidator {
 		List<Violation> deckSpans() {
 			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role() == Role.BRIDGE_DECK) {
+				// an escalator's top landing lies in the corridor's wall row and carries on its deck
+				if (block.role() == Role.BRIDGE_DECK || block.role() == Role.ESCALATOR && block.y() == StationGeometry.UPPER_FLOOR_Y
+						&& block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP)) {
 					lines.computeIfAbsent(((long) block.y() << 32) ^ (block.v() & 0xFFFFFFFFL), k -> new TreeMap<>()).put(block.u(), block);
 				}
 			}

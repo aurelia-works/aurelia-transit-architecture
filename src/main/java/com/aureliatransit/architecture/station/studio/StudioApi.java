@@ -78,6 +78,9 @@ public final class StudioApi {
 		if (bed.equals("gravel") || bed.equals("andesite")) {
 			text = bed + " track bed " + text;
 		}
+		if (q.getOrDefault("esc", "").equals("1")) {
+			text = "escalators " + text;
+		}
 		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}

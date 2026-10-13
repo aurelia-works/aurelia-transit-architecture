@@ -45,6 +45,7 @@ public final class StationPlanner {
 
 	public static StationPlan plan(StationSpec spec) {
 		final Planning planning = new Planning(spec);
+		planning.escalators();
 		planning.floors();
 		planning.ramps();
 		planning.railNodes();
@@ -1522,7 +1523,7 @@ public final class StationPlanner {
 				if (!site.served().contains(band.number())) {
 					continue;
 				}
-				for (final int u : StationLayout.stairColumns(band)) {
+				for (final int u : site.stairs(band)) {
 					for (int y = 1; y <= 3; y++) {
 						keepClear(u, y, landing);
 					}
@@ -1550,7 +1551,7 @@ public final class StationPlanner {
 				boolean exit = false;
 				for (final TrackLayout.PlatformBand band : layout.platforms()) {
 					if (u >= band.uMin() && u <= band.uMax() && site.served().contains(band.number())
-							&& StationLayout.stairColumns(band).contains(u)) {
+							&& site.flightColumns(band).contains(u)) {
 						exit = true;
 						break;
 					}
@@ -1623,10 +1624,10 @@ public final class StationPlanner {
 					continue;
 				}
 				final int flankTop = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
-				for (final int su : StationLayout.stairColumns(band)) {
+				for (final int su : site.flightColumns(band)) {
 					for (final int du : new int[]{-1, 1}) {
 						final int u = su + du;
-						if (u < band.uMin() || u > band.uMax() || isEdge(band, u) || StationLayout.stairColumns(band).contains(u)) {
+						if (u < band.uMin() || u > band.uMax() || isEdge(band, u) || site.flightColumns(band).contains(u)) {
 							continue;
 						}
 						boolean free = true;
@@ -1650,7 +1651,7 @@ public final class StationPlanner {
 				if (!site.served().contains(band.number())) {
 					continue;
 				}
-				final List<Integer> flight = StationLayout.stairColumns(band);
+				final List<Integer> flight = site.stairs(band);
 				for (final int u : flight) {
 					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 						put(Role.STAIR, u, y, site.stairV(y), site.stairFront(), b.stair());
@@ -1743,6 +1744,44 @@ public final class StationPlanner {
 				}
 			}
 			return -1;
+		}
+
+		/**
+		 * MTR up escalators beside the platform stairs, planned first so the platform floor and the deck leave their landings
+		 * to them. The slope runs level with the stair beside it; a flat landing step at each end lies in the platform floor
+		 * and in the corridor wall row. Each step has its handrail block above it, and a casing fills under the slope.
+		 */
+		void escalators() {
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final List<Integer> columns = site.escalator(band);
+				if (columns.isEmpty()) {
+					continue;
+				}
+				final LocalDir up = site.stairFront();
+				// MTR's left half is on the left looking up the escalator; +U is to the right of +V
+				final int left = up == LocalDir.PLUS_V ? columns.get(0) : columns.get(1);
+				for (int i = 0; i <= 7; i++) {
+					final int v = site.escalatorV(i);
+					final int y = StationLayout.escalatorY(i);
+					for (final int u : columns) {
+						final String side = u == left ? "left" : "right";
+						put(Role.ESCALATOR, u, y, v, up, StylePalette.MTR_ESCALATOR_STEP, "side=" + side + ",direction=true,status=true");
+						put(Role.ESCALATOR, u, y + 1, v, up, StylePalette.MTR_ESCALATOR_SIDE, "side=" + side);
+						for (int below = StationGeometry.WALK_Y; below < y; below++) {
+							put(Role.BRIDGE_PIER, u, below, v, up, palette.building().pier());
+						}
+						if (i < 7) {
+							keepClear(u, y + 2, v);
+							keepClear(u, y + 3, v);
+						}
+					}
+				}
+				for (final int u : columns) {
+					for (int y = StationGeometry.WALK_Y; y <= 3; y++) {
+						keepClear(u, y, site.escalatorFootV());
+					}
+				}
+			}
 		}
 
 		/** Bands with a stair flight down from the footbridge: served and wide enough for steps. */
@@ -2775,7 +2814,7 @@ public final class StationPlanner {
 		 * False if the flight has no steps (nothing to enclose).
 		 */
 		private boolean stairShaft(TrackLayout.PlatformBand band, StylePalette.Building b) {
-			final List<Integer> flight = StationLayout.stairColumns(band);
+			final List<Integer> flight = site.flightColumns(band);
 			if (flight.isEmpty()) {
 				return false;
 			}
@@ -2818,7 +2857,7 @@ public final class StationPlanner {
 		 * up to a roof over the flight alone, open at the bottom step. A flank on a boarding edge stays open.
 		 */
 		private boolean stairHood(TrackLayout.PlatformBand band, StylePalette.Building b) {
-			final List<Integer> flight = StationLayout.stairColumns(band);
+			final List<Integer> flight = site.flightColumns(band);
 			if (flight.isEmpty()) {
 				return false;
 			}

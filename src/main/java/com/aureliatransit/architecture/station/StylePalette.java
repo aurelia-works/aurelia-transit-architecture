@@ -14,6 +14,9 @@ public final class StylePalette {
 	public static final String MTR_LIFT_FLOOR = "mtr:lift_track_floor_1";
 	public static final String MTR_LIFT_DOOR = "mtr:lift_door_1";
 	public static final String MTR_LIFT_BUTTONS = "mtr:lift_buttons_1";
+	/** MTR's escalator: a step, with its handrail block in the cell above. */
+	public static final String MTR_ESCALATOR_STEP = "mtr:escalator_step";
+	public static final String MTR_ESCALATOR_SIDE = "mtr:escalator_side";
 
 	private static final String FOUNDATION = "minecraft:stone_bricks";
 	private static final String ATA = "aurelia_transit_architecture:";
@@ -223,6 +226,7 @@ public final class StylePalette {
 			case BUFFER_STOP -> ata("structural_beam");
 			case FIXTURE -> ata("help_point");
 			case LIFT -> MTR_LIFT_TRACK;
+			case ESCALATOR -> MTR_ESCALATOR_STEP;
 		};
 	}
 
