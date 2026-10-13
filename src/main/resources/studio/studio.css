@@ -65,7 +65,8 @@ h1 em { font-family: var(--serif); font-style: italic; font-weight: 500; color: 
 .look { display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 6px; border-radius: 9px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; text-align: left; }
 .look:hover { border-color: var(--line-strong); }
 .look .sw { height: 34px; border-radius: 5px; background-size: 32px 32px; image-rendering: pixelated; background-color: var(--panel-3); }
-.look .sw.custom { background: repeating-linear-gradient(45deg, var(--panel-3) 0 6px, var(--panel-2) 6px 12px); display: grid; place-items: center; font-size: 15px; color: var(--muted); }
+.look .sw.pic { height: 52px; background-size: cover, 32px 32px; background-position: center 30%, 0 0; image-rendering: auto; }
+.look .sw.custom { height: 52px; background: repeating-linear-gradient(45deg, var(--panel-3) 0 6px, var(--panel-2) 6px 12px); display: grid; place-items: center; font-size: 15px; color: var(--muted); }
 .look span { font-size: 12.5px; font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .look[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
 .look[aria-pressed="true"] span { color: #fff; }

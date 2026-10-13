@@ -127,6 +127,8 @@ public final class StudioServer {
 				reply(exchange, 200, "application/json", api.plan(form(body(exchange))));
 			} else if (path.equals("/api/send") && method.equals("POST")) {
 				send(exchange);
+			} else if (path.matches("/thumbs/[A-Z_]{1,32}\\.jpg")) {
+				thumbnail(exchange, path.substring(1));
 			} else if (path.startsWith("/tex/") && path.endsWith(".png")) {
 				texture(exchange, path.substring("/tex/".length(), path.length() - 4));
 			} else {
@@ -188,6 +190,18 @@ public final class StudioServer {
 			}
 		}
 		return Long.toHexString(hash);
+	}
+
+	/** A city look's picture for its button: its terminus front, rendered by the studio itself. */
+	private void thumbnail(HttpExchange exchange, String name) throws IOException {
+		try (InputStream in = StudioServer.class.getResourceAsStream("/studio/" + name)) {
+			if (in == null) {
+				reply(exchange, 404, "text/plain", "Not found");
+				return;
+			}
+			exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
+			reply(exchange, 200, "image/jpeg", in.readAllBytes());
+		}
 	}
 
 	private static String resource(String name) throws IOException {

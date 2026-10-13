@@ -77,7 +77,7 @@
 
 	// ---- buttons over the hidden selects: the selects stay the single source of what is sent --------------------------
 
-	// one real block texture per city (ATA's unless a namespace is given), so a tile shows what the station is built from
+	// one real block texture per city (ATA's unless a namespace is given), shown behind the city's picture while it loads
 	const LOOK_TEXTURES = {
 		UTRECHT: "nlbe_wave_top_x", AMSTERDAM: "nlbe_brick", HAMBURG: "hamburg_clinker_brick", MUNICH: "munich_exposed_concrete",
 		FRANKFURT: "frankfurt_sandstone_ashlar", ST_PANCRAS: "nlbe_brick_band_side", ANTWERP: "nlbe_limestone", NEW_YORK: "roma_travertine",
@@ -124,8 +124,10 @@
 			const sw = document.createElement("i");
 			sw.className = "sw";
 			if (LOOK_TEXTURES[value]) {
+				// the city's own terminus front, rendered by the studio; its main block texture until the picture loads
 				const tex = LOOK_TEXTURES[value];
-				sw.style.backgroundImage = "url('tex/" + (tex.includes("/") ? tex : "aurelia_transit_architecture/block/" + tex) + ".png')";
+				sw.classList.add("pic");
+				sw.style.backgroundImage = "url('thumbs/" + value + ".jpg'), url('tex/" + (tex.includes("/") ? tex : "aurelia_transit_architecture/block/" + tex) + ".png')";
 			} else {
 				sw.classList.add("custom");
 				sw.textContent = "✎";
