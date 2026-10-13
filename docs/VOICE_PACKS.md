@@ -100,6 +100,8 @@ Each speaker has a **Wording** setting. The table above is *Standard*. *British*
 | Delay | We are sorry to announce that the **route** service to **destination** is delayed by approximately **N** minutes. |
 | Safety | A train is approaching platform **N**. Please stand well back from the platform edge. |
 
+**With Aurelia Transit Utilities:** ATU announces on the train you ride; ATA announces on the platforms. While you ride an MTR train with ATU's Announcer on, the station speakers hold off (their announcements expire unplayed), so nothing is said twice. Without ATU, or with its Announcer off, speakers play as always.
+
 **Help points:** right-click one with an empty hand and it says "This is **station**, platform **N**." (MTR's nearest platform to the help point). If the voice packs have no clip for the station it says "This is platform **N**." instead; the full sentence is always shown in the action bar. Away from any station it shows its plain help message.
 
 The route part is skipped when a route has no name; "Calling at" lists at most 5 stops and always ends on the final stop. Priority when several are waiting: safety, delay, terminating, approaching, standing.

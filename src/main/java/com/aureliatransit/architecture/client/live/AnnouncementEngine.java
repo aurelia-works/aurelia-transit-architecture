@@ -148,7 +148,8 @@ final class AnnouncementEngine {
 			}
 		}
 
-		if (!player.busy(now)) {
+		// riding with ATU's on-train announcer: it speaks for the train, so the platform speakers hold off (events expire)
+		if (!player.busy(now) && !(provider != StationDataProvider.NONE && AtuCompat.onTrainAnnouncerActive())) {
 			playNext(client, at, now);
 		}
 	}
