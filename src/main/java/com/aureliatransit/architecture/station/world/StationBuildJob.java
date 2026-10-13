@@ -78,6 +78,9 @@ public final class StationBuildJob {
 	/** What each cell will hold, so a block is checked against the neighbours it is planned to have (a lower half its upper). */
 	private final Map<BlockPos, BlockState> planned = new HashMap<>();
 	private final List<BlockPos> signCells = new ArrayList<>();
+	/** Departure screens placed with the display style they are set to, applied to each screen's owner when the build is done. */
+	private final List<BlockPos> screenCells = new ArrayList<>();
+	private final List<String> screenStyles = new ArrayList<>();
 	/** MTR escalator cells placed, shaped against the finished station when the build is done. */
 	private final List<BlockPos> escalatorCells = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
@@ -293,6 +296,10 @@ public final class StationBuildJob {
 		if (escalator(wanted)) {
 			escalatorCells.add(pos);
 		}
+		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock) {
+			screenCells.add(pos);
+			screenStyles.add(op.text());
+		}
 		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof TextSignBlock) {
 			signCells.add(pos);
 			signTexts.add(op.text());
@@ -346,6 +353,7 @@ public final class StationBuildJob {
 		paused = false;
 		if (mode == Mode.BUILD) {
 			escalators();
+			screens();
 			nameSigns();
 			lifts();
 			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
@@ -357,7 +365,6 @@ public final class StationBuildJob {
 		}
 	}
 
-	/** Name text goes to the block entity of each joined row's owner, once, after the whole row exists. */
 	private static boolean escalator(BlockState state) {
 		final Identifier id = Registries.BLOCK.getId(state.getBlock());
 		return id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_");
@@ -374,6 +381,23 @@ public final class StationBuildJob {
 		}
 	}
 
+	/** Each built screen's owner (the top-left block of a joined screen) takes the planned display style. */
+	private void screens() {
+		for (int i = 0; i < screenCells.size(); i++) {
+			final BlockPos pos = screenCells.get(i);
+			final BlockState state = world.getBlockState(pos);
+			final com.aureliatransit.architecture.live.DisplayStyle style = com.aureliatransit.architecture.live.DisplayConfig.styleById(screenStyles.get(i));
+			if (style == null || !(state.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock block)) {
+				continue;
+			}
+			if (world.getBlockEntity(block.findOwner(world, pos, state)) instanceof com.aureliatransit.architecture.live.PidsBlockEntity screen
+					&& screen.config().style() != style) {
+				screen.setConfig(screen.config().withStyle(style));
+			}
+		}
+	}
+
+	/** Name text goes to the block entity of each joined row's owner, once, after the whole row exists. */
 	private void nameSigns() {
 		final Set<BlockPos> owners = new HashSet<>();
 		for (int i = 0; i < signCells.size(); i++) {

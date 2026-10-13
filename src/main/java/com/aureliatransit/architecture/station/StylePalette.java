@@ -182,6 +182,28 @@ public final class StylePalette {
 		};
 	}
 
+	/**
+	 * The style the station's departure screens are set to: the feel of the boards where the building look comes from, or of
+	 * the platform style without a building.
+	 */
+	public com.aureliatransit.architecture.live.DisplayStyle screenStyle() {
+		return switch (buildingStyle) {
+			case MODERN, AMSTERDAM -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_MODERN;
+			case GOTHIC_BRICK -> com.aureliatransit.architecture.live.DisplayStyle.UK_LCD;
+			case SANDSTONE, CONCRETE, BERLIN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_MAINLINE;
+			case CLINKER -> com.aureliatransit.architecture.live.DisplayStyle.HAMBURG_METRO;
+			case BEAUX_ARTS -> com.aureliatransit.architecture.live.DisplayStyle.PHILADELPHIA_FLAP;
+			case ANTWERP, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_LIGHT;
+			case TOKYO, HONG_KONG, BEIJING -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_MODERN;
+			case NONE -> switch (style) {
+				case MODERN -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_MODERN;
+				case DUTCH -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_MODERN;
+				case GERMAN_SBAHN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_MAINLINE;
+				case METRO -> com.aureliatransit.architecture.live.DisplayStyle.HAMBURG_METRO;
+			};
+		};
+	}
+
 	/** The spec asked for a glass roof. */
 	public boolean roofMaterialGlass() {
 		return roofMaterial == RoofMaterial.GLASS;

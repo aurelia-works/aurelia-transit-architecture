@@ -4,7 +4,7 @@
 
 Platform CIS board, hanging platform CIS board, platform PIDS, hanging platform PIDS, concourse departure board, wall speaker, ceiling speaker.
 
-Displays with the same facing that touch each other **join into one bigger screen** (like joined signs); the top-left block (from the viewer's side) owns the configuration and draws the whole screen. Right-click any block of it to configure: style (European Amber, European Modern, Dutch Modern), rows, clock, calling-at lines, page time, and the station (Automatic, or pick a station and platforms; no platform ticked = all platforms).
+Displays with the same facing that touch each other **join into one bigger screen** (like joined signs); the top-left block (from the viewer's side) owns the configuration and draws the whole screen. A new display starts with the clock on, and a platform display with its calling points and their times. Right-click any block of it to configure: style (European Amber, European Modern, Dutch Modern, UK Dot Matrix, UK Screen, County Commuter, German Main Line, Hamburg Metro, European Light, Philadelphia Split-Flap, New York Countdown; each takes only the general feel of such boards, never an operator's name, logo or typeface), rows, clock, calling-at lines, page time, and the station (Automatic, or pick a station and platforms; no platform ticked = all platforms).
 
 Suggested sizes: CIS 4-6 wide x 1 high, PIDS 6 wide x 1-2 high, concourse board 6-8 wide x 3-4 high. Text scales to the screen and squeezes or scrolls long destinations.
 

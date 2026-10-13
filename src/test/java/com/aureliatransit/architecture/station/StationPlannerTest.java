@@ -130,7 +130,9 @@ class StationPlannerTest {
 			if (block.role() != Role.FIXTURE && !block.blockId().equals(palette.blockId(block.role()))) {
 				scan.fail("palette ids", spec, "wrong id on " + block);
 			}
-			if (!(block.role() == Role.NAME_SIGN ? spec.name() : "").equals(block.text())) {
+			// name signs carry the name, departure screens the display style they are set to, nothing else carries text
+			final boolean screen = block.blockId().endsWith("platform_pids") || block.blockId().endsWith(":concourse_board");
+			if (!(block.role() == Role.NAME_SIGN ? spec.name() : screen ? palette.screenStyle().id() : "").equals(block.text())) {
 				scan.fail("sign text", spec, "wrong text on " + block);
 			}
 		}
@@ -889,21 +891,21 @@ class StationPlannerTest {
 	}
 
 	@Test
-	void screensHangFromTheCanopyTwoWideClearOfTheStairs() {
-		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).roof(RoofType.CANOPY)
-				.footbridge(true).build();
+	void screensHangFromTheCanopyFourWideClearOfTheStairs() {
+		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).platformWidth(6)
+				.roof(RoofType.CANOPY).footbridge(true).build();
 		final StationPlan plan = plan(spec);
 		final StationLayout site = StationLayout.of(spec, plan.layout());
 		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":hanging_platform_pids")).toList();
-		assertEquals(4, screens.size(), "two 2-wide screens on a 64 long island");
+		assertEquals(8, screens.size(), "two 4-wide screens on a 64 long island");
 		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":platform_pids")), "no standing screens under a roof");
 		for (final PlannedBlock screen : screens) {
 			assertEquals(StationGeometry.CANOPY_Y - 1, screen.y(), "hangs right under the canopy: " + screen);
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == screen.u() && b.v() == screen.v() && b.y() == StationGeometry.CANOPY_Y && b.role().covers()),
 					"nothing to hang from: " + screen);
 			assertTrue(screen.front().alongTrack(), "faces along the platform: " + screen);
-			assertTrue(screens.stream().anyMatch(o -> Math.abs(o.u() - screen.u()) == 1 && o.v() == screen.v() && o.front() == screen.front()),
-					"not two wide: " + screen);
+			assertEquals(4, screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front() && Math.abs(o.u() - screen.u()) <= 3).count(),
+					"not four wide: " + screen);
 			final int lo = Math.min(site.stairWallV(), site.landingV()) - 2;
 			final int hi = Math.max(site.stairWallV(), site.landingV()) + 2;
 			assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);

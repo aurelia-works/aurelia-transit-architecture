@@ -107,7 +107,7 @@ final class BoardBuilder {
 				m.text(indicator, right - iw, y0 + (headerH - 7.2F) / 2, 0.9F, 1, style.dim());
 				right -= iw + 4;
 			}
-			fit(m, tr, title, MARGIN, y0 + (headerH - 7.2F) / 2, 0.9F, right - MARGIN - 2, style.text(), now);
+			fit(m, tr, style.cased(title), MARGIN, y0 + (headerH - 7.2F) / 2, 0.9F, right - MARGIN - 2, style.text(), now);
 		}
 
 		final float rowsTop = y0 + headerH + columnsH;
@@ -132,7 +132,7 @@ final class BoardBuilder {
 		long firstPlatform = services.get(from).platformId();
 		for (int i = from; i < to; i++) {
 			final ServiceSnapshot s = services.get(i);
-			statusWidth = Math.max(statusWidth, tr.getWidth(DepartureText.status(s, now)) * k);
+			statusWidth = Math.max(statusWidth, tr.getWidth(style.cased(DepartureText.status(s, now))) * k);
 			platformWidth = Math.max(platformWidth, tr.getWidth(s.platformName()) * k * 0.9F);
 			multiplePlatforms |= s.platformId() != firstPlatform;
 		}
@@ -158,7 +158,7 @@ final class BoardBuilder {
 		for (int i = from; i < to; i++) {
 			final ServiceSnapshot s = services.get(i);
 			final float top = rowsTop + (i - from) * rowH;
-			if (rows > 1 && ((i - from) & 1) == 0) {
+			if (style.banded() && rows > 1 && ((i - from) & 1) == 0) {
 				m.rect(0, top, vw, rowH, style.rowBand(), BoardModel.LAYER_BAND);
 			}
 			final float textY = top + (mainH - 8 * k) / 2 + 0.3F;
@@ -188,7 +188,9 @@ final class BoardBuilder {
 
 			// no origin from MTR: the From cell stays empty rather than showing something else under that heading
 			final String place = arrivals ? s.origin() : s.destination();
-			fit(m, tr, ClientStationSuffixes.apply(place, SuffixContext.DISPLAYS), destX, textY, k, destEnd - destX, style.text(), now);
+			// platform screens of a numbered style count their trains: 1st, 2nd ... or 1, 2 ...
+			final String number = concourse ? "" : style.numbering().prefix(i + 1);
+			fit(m, tr, number + style.cased(ClientStationSuffixes.apply(place, SuffixContext.DISPLAYS)), destX, textY, k, destEnd - destX, style.text(), now);
 
 			if (platW > 0) {
 				final float chipH = 9 * k;
@@ -199,7 +201,7 @@ final class BoardBuilder {
 				m.text(s.platformName(), px + (platW - pw) / 2, top + (mainH - 8 * pk) / 2 + 0.3F, pk, 1, style.text());
 			}
 
-			final String status = DepartureText.status(s, now);
+			final String status = style.cased(DepartureText.status(s, now));
 			final int statusColor = delay > 0 ? style.delay() : style.accent();
 			m.text(status, right - tr.getWidth(status) * k, textY, k, 1, statusColor);
 

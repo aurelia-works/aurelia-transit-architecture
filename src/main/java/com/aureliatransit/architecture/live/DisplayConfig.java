@@ -46,8 +46,28 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		this(association, style, rows, clock, callingAt, pageSeconds, BoardAlignment.TOP, "");
 	}
 
+	/**
+	 * A new display: the clock on every kind, and on platform screens the calling points with their times (1.6; before, only
+	 * the concourse board had the clock and only the CIS the calling points, without times).
+	 */
 	public static DisplayConfig defaults(DisplayKind kind) {
-		return new DisplayConfig(StationAssociation.AUTO, DisplayStyle.EUROPEAN_MODERN, kind.defaultRows(), kind == DisplayKind.CONCOURSE, kind == DisplayKind.CIS, DEFAULT_PAGE_SECONDS);
+		final boolean platform = kind != DisplayKind.CONCOURSE;
+		return new DisplayConfig(StationAssociation.AUTO, DisplayStyle.EUROPEAN_MODERN, kind.defaultRows(), true, platform, DEFAULT_PAGE_SECONDS,
+				BoardAlignment.TOP, "", platform, false, false);
+	}
+
+	public DisplayConfig withStyle(DisplayStyle newStyle) {
+		return new DisplayConfig(association, newStyle, rows, clock, callingAt, pageSeconds, alignment, message, callingTimes, arrivals, summary);
+	}
+
+	/** The style whose {@link DisplayStyle#id()} is {@code id}, or null. */
+	public static DisplayStyle styleById(String id) {
+		for (final DisplayStyle style : DisplayStyle.values()) {
+			if (style.id().equals(id)) {
+				return style;
+			}
+		}
+		return null;
 	}
 
 	/**

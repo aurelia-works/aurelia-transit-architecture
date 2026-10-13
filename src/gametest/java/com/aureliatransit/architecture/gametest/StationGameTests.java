@@ -278,6 +278,14 @@ public class StationGameTests implements FabricGameTest {
 					rows.computeIfAbsent(block.v(), v -> new ArrayList<>()).add(cellPos(pending, block));
 				}
 			}
+			// every built screen's owner shows the station's display style
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.blockId().endsWith("platform_pids") && world.getBlockState(cellPos(pending, block)).getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock screen) {
+					final BlockPos owner = screen.findOwner(world, cellPos(pending, block), world.getBlockState(cellPos(pending, block)));
+					final var entity = (com.aureliatransit.architecture.live.PidsBlockEntity) world.getBlockEntity(owner);
+					check(entity.config().style().id().equals(block.text()), "screen at " + owner + " has style " + entity.config().style().id() + ", planned " + block.text());
+				}
+			}
 			check(rows.size() == 2, "expected a two-wide travelator on the footbridge, found rows " + rows.keySet());
 			for (final List<BlockPos> row : rows.values()) {
 				row.sort(java.util.Comparator.comparingInt(pos -> pos.getX() * 100000 + pos.getZ()));

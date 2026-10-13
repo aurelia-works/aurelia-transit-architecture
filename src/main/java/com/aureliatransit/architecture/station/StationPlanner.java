@@ -203,9 +203,14 @@ public final class StationPlanner {
 			if (cells.containsKey(cell) || air.contains(cell)) {
 				return false;
 			}
-			final String text = role == Role.NAME_SIGN ? spec.name() : "";
+			// a screen carries the display style it is set to when built
+			final String text = role == Role.NAME_SIGN ? spec.name() : screen(blockId) ? palette.screenStyle().id() : "";
 			cells.put(cell, new PlannedBlock(u, y, v, role, blockId, front, text, state));
 			return true;
+		}
+
+		private static boolean screen(String blockId) {
+			return blockId.equals(PIDS) || blockId.equals(HANGING_PIDS) || blockId.equals("aurelia_transit_architecture:concourse_board");
 		}
 
 		/** A two-high fixture (MTR's ticket machine, the kiosk): both halves or neither, the lower one at {@code y}. */
@@ -2867,7 +2872,8 @@ public final class StationPlanner {
 		/**
 		 * Departure screens on every platform of a furnished station: one screen point on platforms shorter than 48, two (at a
 		 * quarter and three quarters of the length) on longer ones. Under a roof the screen hangs from the ceiling, double-sided
-		 * and facing along the platform, two blocks wide where the platform has room (never over an edge cell); on an open
+		 * and facing along the platform, four blocks wide where the platform and the ceiling have room, else two (never over an
+		 * edge cell); on an open
 		 * platform a standing screen is fixed to the back of a lamp post. Points keep clear of footbridge stairs and their
 		 * landings. Each platform also gets one help point, a wall unit, fixed to the post nearest its first screen.
 		 */
@@ -2888,30 +2894,58 @@ public final class StationPlanner {
 			}
 		}
 
-		/** The columns a hanging screen spans: the middle (and the next one) of an island, the back two of a side platform. */
-		private static List<Integer> screenColumns(TrackLayout.PlatformBand band) {
+		/**
+		 * The column spans a hanging screen may take, widest first: four across the middle of an island or from the back of a
+		 * side platform, then two (the middle and the next of an island, the back two of a side platform), each clear of the
+		 * boarding edges.
+		 */
+		private static List<List<Integer>> screenSpans(TrackLayout.PlatformBand band) {
+			final List<List<Integer>> spans = new ArrayList<>();
+			final int step = band.island() || band.trackRight() ? 1 : -1;
+			final int wide = band.island() ? (band.uMin() + band.uMax()) / 2 - 1 : backColumn(band);
+			final List<Integer> four = new ArrayList<>();
+			for (int i = 0; i < 4; i++) {
+				four.add(wide + i * step);
+			}
+			if (four.stream().allMatch(u -> u >= band.uMin() && u <= band.uMax() && !isEdge(band, u))) {
+				four.sort(null);
+				spans.add(four);
+			}
 			final List<Integer> columns = new ArrayList<>();
 			final int first = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
-			final int step = band.island() || band.trackRight() ? 1 : -1;
 			columns.add(first);
 			if (band.width() >= 4 && !isEdge(band, first + step)) {
 				columns.add(first + step);
 			}
-			return columns;
+			spans.add(columns);
+			return spans;
 		}
 
-		/** Hangs a screen under the ceiling at the free v nearest {@code target} (searching 0, +2, -2 ... up to 12); true if hung. */
+		/**
+		 * Hangs a screen under the ceiling at the free v nearest {@code target} (searching 0, +2, -2 ... up to 12), as wide as
+		 * it fits there; true if hung.
+		 */
 		private boolean hangScreen(TrackLayout.PlatformBand band, int target) {
-			final List<Integer> columns = screenColumns(band);
+			for (final List<Integer> columns : screenSpans(band)) {
+				if (hangScreen(band, target, columns)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private boolean hangScreen(TrackLayout.PlatformBand band, int target, List<Integer> columns) {
 			for (int d = 0; d <= 12; d += 2) {
 				for (final int v : d == 0 ? new int[]{target} : new int[]{target + d, target - d}) {
 					if (v < band.vFrom() + 1 || v > band.vTo() - 1 || nearStairs(band, v)) {
 						continue;
 					}
-					final int ceiling = ceiling(columns.get(0), v);
+					// it hangs from the lowest ceiling over its columns; every column has one close above (a hall's girder line
+					// may sit a block below the roof beside it)
+					final int ceiling = columns.stream().mapToInt(u -> ceiling(u, v)).min().orElse(-1);
 					final int y = ceiling - 1;
 					if (ceiling < 0 || y < StationGeometry.WALK_Y + 2 || y > StationGeometry.WALK_Y + 4
-							|| columns.stream().anyMatch(u -> ceiling(u, v) != ceiling || taken(u, y, v) || isEdge(band, u))) {
+							|| columns.stream().anyMatch(u -> ceiling(u, v) < 0 || ceiling(u, v) > ceiling + 1 || taken(u, y, v) || isEdge(band, u))) {
 						continue;
 					}
 					for (final int u : columns) {
