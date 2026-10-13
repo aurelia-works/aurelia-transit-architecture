@@ -101,7 +101,8 @@ public final class StationCommand {
 			StationText.site(report, out);
 			return null;
 		}
-		final StationBuildJob job = StationBuildJob.build(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out);
+		final StationBuildJob job = StationBuildJob.build(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
+				StationZone.of(pending.spec().name(), report.ops()));
 		if (!StationSessions.start(job)) {
 			out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
 			return null;

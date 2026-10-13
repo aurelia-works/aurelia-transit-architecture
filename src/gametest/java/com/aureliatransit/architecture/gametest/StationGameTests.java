@@ -35,6 +35,8 @@ import com.aureliatransit.architecture.station.world.StationBuildJob;
 import com.aureliatransit.architecture.station.world.StationCommand;
 import com.aureliatransit.architecture.station.world.StationPreview;
 import com.aureliatransit.architecture.station.world.StationSessions;
+import com.aureliatransit.architecture.station.world.StationZone;
+import com.aureliatransit.architecture.station.world.MtrStationContract;
 import com.aureliatransit.architecture.station.world.WorldSiteProbe;
 import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
 import net.minecraft.block.Block;
@@ -366,6 +368,44 @@ public class StationGameTests implements FabricGameTest {
 				check(world.getBlockState(cellPos(pending, block)).isAir(), "not restored to air at " + block);
 			}
 			context.complete();
+		});
+	}
+
+	@GameTest(templateName = SITE_Z, tickLimit = 200)
+	public void builtStationIsAnMtrStationUntilUndone(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final StationSessions.Pending pending = StationCommand.prepare(world, "1 track, length 16, width 3, canopy, named Zone Test Halt",
+				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationZone zone = StationZone.of(pending.spec().name(), pending.report().ops());
+		check(zone != null && zone.name().equals("Zone Test Halt"), "zone " + zone);
+		final StationBuildJob job = StationBuildJob.build(world, new UUID(0, 11), BlockStateResolver.resolve(pending.report().ops()), false, text -> {
+		}, zone);
+		while (!job.finished()) {
+			job.step(StationBuildJob.OPS_PER_TICK);
+		}
+		check(job.state() == StationBuildJob.State.DONE, "build " + job.state());
+		final BlockPos centre = new BlockPos(zone.centerX(), zone.centerY(), zone.centerZ());
+		final List<List<String>> found = new ArrayList<>();
+		context.waitAndRun(40, () -> {
+			check(job.undoLog().stations() == 1, "MTR has not added the station: " + job.undoLog().stations());
+			MtrStationContract.namesNear(world, centre, 2, found::add);
+			context.waitAndRun(20, () -> {
+				check(found.size() == 1 && found.get(0).contains("Zone Test Halt"), "MTR stations at the build: " + found);
+				final StationBuildJob undo = StationBuildJob.undo(world, new UUID(0, 11), job.undoLog(), text -> {
+				});
+				while (!undo.finished()) {
+					undo.step(StationBuildJob.OPS_PER_TICK);
+				}
+				check(job.undoLog().stations() == 0, "undo kept the station id");
+				found.clear();
+				context.waitAndRun(20, () -> {
+					MtrStationContract.namesNear(world, centre, 2, found::add);
+					context.waitAndRun(20, () -> {
+						check(found.size() == 1 && !found.get(0).contains("Zone Test Halt"), "undo left the MTR station: " + found);
+						context.complete();
+					});
+				});
+			});
 		});
 	}
 

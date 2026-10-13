@@ -29,6 +29,8 @@ public final class UndoLog {
 	private final Map<BlockPos, BlockState> coveredSoil = new HashMap<>();
 	/** One stop of each MTR lift the build formed; undo deletes those lifts before the blocks. */
 	private final List<BlockPos> lifts = new ArrayList<>();
+	/** Ids of the MTR stations the build added; undo deletes them. */
+	private final List<Long> stations = new ArrayList<>();
 
 	public UndoLog(RegistryKey<World> dimension) {
 		this.dimension = dimension;
@@ -73,6 +75,22 @@ public final class UndoLog {
 	List<BlockPos> takeLifts() {
 		final List<BlockPos> taken = List.copyOf(lifts);
 		lifts.clear();
+		return taken;
+	}
+
+	void addStation(long id) {
+		stations.add(id);
+	}
+
+	/** How many MTR stations the build added (and undo will delete). */
+	public int stations() {
+		return stations.size();
+	}
+
+	/** The added MTR stations' ids, once: undo deletes them and forgets them. */
+	List<Long> takeStations() {
+		final List<Long> taken = List.copyOf(stations);
+		stations.clear();
 		return taken;
 	}
 

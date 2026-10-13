@@ -74,6 +74,8 @@ public final class StationBuildJob {
 	private final List<Prepared> ops;
 	private final boolean approved;
 	private final UndoLog log;
+	/** The MTR station area to register when the build finishes; null for none (undo, or plain op lists). */
+	private final StationZone zone;
 	private final int total;
 	/** What each cell will hold, so a block is checked against the neighbours it is planned to have (a lower half its upper). */
 	private final Map<BlockPos, BlockState> planned = new HashMap<>();
@@ -96,8 +98,10 @@ public final class StationBuildJob {
 	private int keptNodes;
 	private String stopReason = "";
 
-	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out) {
+	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out,
+							StationZone zone) {
 		this.world = world;
+		this.zone = zone;
 		this.probe = WorldSiteProbe.loading(world);
 		this.owner = owner;
 		this.mode = mode;
@@ -119,21 +123,28 @@ public final class StationBuildJob {
 		if (!resolution.ok()) {
 			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
 		}
-		return build(world, owner, resolution, approved, out);
+		return build(world, owner, resolution, approved, out, null);
 	}
 
 	public static StationBuildJob build(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out) {
+		return build(world, owner, resolution, approved, out, null);
+	}
+
+	/** @param zone the MTR station area to register once built, or null */
+	public static StationBuildJob build(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out,
+										StationZone zone) {
 		if (!resolution.ok()) {
 			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
 		}
-		return new StationBuildJob(world, owner, Mode.BUILD, resolution.ops(), approved, new UndoLog(world.getRegistryKey()), resolution.ops().size(), out);
+		return new StationBuildJob(world, owner, Mode.BUILD, resolution.ops(), approved, new UndoLog(world.getRegistryKey()), resolution.ops().size(), out, zone);
 	}
 
 	/** Undoes the log's entries from the newest back; the log shrinks as cells are handled. */
 	public static StationBuildJob undo(ServerWorld world, UUID owner, UndoLog log, Consumer<Text> out) {
 		// MTR keeps lifts in its own data; a plain block reset would leave the lift behind
 		MtrLiftContract.remove(world, log.takeLifts());
-		return new StationBuildJob(world, owner, Mode.UNDO, List.of(), true, log, log.size(), out);
+		MtrStationContract.remove(world, log.takeStations());
+		return new StationBuildJob(world, owner, Mode.UNDO, List.of(), true, log, log.size(), out, null);
 	}
 
 	public UUID owner() {
@@ -356,6 +367,7 @@ public final class StationBuildJob {
 			screens();
 			nameSigns();
 			lifts();
+			MtrStationContract.register(world, zone, log, out);
 			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
 					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
 		} else {
