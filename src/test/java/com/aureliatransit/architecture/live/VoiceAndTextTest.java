@@ -2,12 +2,17 @@ package com.aureliatransit.architecture.live;
 
 import com.aureliatransit.architecture.live.announce.AnnouncementCategory;
 import com.aureliatransit.architecture.live.announce.AnnouncementEvent;
+import com.aureliatransit.architecture.live.announce.AnnouncementStyle;
 import com.aureliatransit.architecture.live.announce.AnnouncementText;
 import com.aureliatransit.architecture.live.announce.FragmentKeys;
 import com.aureliatransit.architecture.live.announce.SpeakerPicker;
 import com.aureliatransit.architecture.live.announce.VoicePack;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.aureliatransit.architecture.transit.StationAssociation;
+import io.netty.buffer.Unpooled;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.network.PacketByteBuf;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -129,5 +134,65 @@ class VoiceAndTextTest {
 		assertSame(near, SpeakerPicker.closest(all, 0, 0, 0, AnnouncementCategory.DELAY));
 		assertNull(SpeakerPicker.closest(all, 100, 0, 0, AnnouncementCategory.APPROACHING), "player out of range of every speaker");
 		assertNull(SpeakerPicker.closest(List.of(), 0, 0, 0, AnnouncementCategory.SAFETY));
+	}
+
+	@Test
+	void britishWordingFollowsThePlatformPattern() {
+		final AnnouncementText.Announcement next = AnnouncementText.build(event(AnnouncementCategory.APPROACHING, List.of("Alpha", "Zürich Hbf")), AnnouncementStyle.BRITISH, null);
+		assertEquals("The next train to arrive at platform 3 will be the Red Line service to Zürich Hbf. Calling at Alpha and Zürich Hbf.", next.subtitle());
+		assertEquals("phrase.next_train_to_arrive_at_platform", next.fragments().get(0).key());
+		final AnnouncementText.Announcement standing = AnnouncementText.build(event(AnnouncementCategory.STANDING, List.of()), AnnouncementStyle.BRITISH, null);
+		assertEquals("The train now standing at platform 3 is the Red Line service to Zürich Hbf. Please mind the gap between the train and the platform.", standing.subtitle());
+		final AnnouncementText.Announcement delay = AnnouncementText.build(event(AnnouncementCategory.DELAY, List.of()), AnnouncementStyle.BRITISH, null);
+		assertEquals("We are sorry to announce that the Red Line service to Zürich Hbf is delayed by approximately 4 minutes.", delay.subtitle());
+		final AnnouncementText.Announcement safety = AnnouncementText.build(event(AnnouncementCategory.SAFETY, List.of()), AnnouncementStyle.BRITISH, null);
+		assertEquals("A train is approaching platform 3. Please stand well back from the platform edge.", safety.subtitle());
+		for (final AnnouncementCategory category : AnnouncementCategory.values()) {
+			final AnnouncementText.Announcement a = AnnouncementText.build(event(category, List.of("Alpha")), AnnouncementStyle.BRITISH, null);
+			assertTrue(a.fragments().stream().allMatch(f -> !f.key().startsWith("phrase.") || isPhrase(f.key())), category.name());
+		}
+	}
+
+	private static boolean isPhrase(String key) {
+		for (final AnnouncementText.Phrase phrase : AnnouncementText.Phrase.values()) {
+			if (phrase.key().equals(key)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Test
+	void standardSentencesCloseBeforeANewOne() {
+		final AnnouncementText.Announcement standing = AnnouncementText.build(event(AnnouncementCategory.STANDING, List.of()));
+		assertEquals("The train at platform 3 is the Red Line service to Zürich Hbf. Please board now.", standing.subtitle());
+	}
+
+	@Test
+	void helpPointSaysTheStationAndPlatform() {
+		final AnnouncementText.Announcement full = AnnouncementText.helpPoint("Central", "3", true, null);
+		assertEquals("This is Central, platform 3.", full.subtitle());
+		assertEquals(List.of("phrase.this_is", "station.central", "phrase.platform", "number.3"), full.fragments().stream().map(AnnouncementText.Fragment::key).toList());
+		final AnnouncementText.Announcement shortForm = AnnouncementText.helpPoint("Central", "3", false, null);
+		assertEquals("This is platform 3.", shortForm.subtitle());
+		assertEquals(List.of("phrase.this_is_platform", "number.3"), shortForm.fragments().stream().map(AnnouncementText.Fragment::key).toList());
+		assertEquals("This is platform 2a.", AnnouncementText.helpPoint("", "2a", true, null).subtitle());
+		assertEquals("This is Central.", AnnouncementText.helpPoint("Central", "", true, null).subtitle());
+		assertNull(AnnouncementText.helpPoint("", " ", true, null));
+	}
+
+	@Test
+	void speakerStyleSurvivesSavingAndOldSpeakersKeepStandardWording() {
+		final SpeakerConfig british = new SpeakerConfig(StationAssociation.AUTO, 16, 80, AnnouncementCategory.ALL_MASK, AnnouncementStyle.BRITISH);
+		final NbtCompound nbt = new NbtCompound();
+		british.writeNbt(nbt);
+		assertEquals(british, SpeakerConfig.readNbt(nbt));
+		nbt.remove("Style");
+		assertEquals(AnnouncementStyle.STANDARD, SpeakerConfig.readNbt(nbt).style(), "saved before styles existed");
+		final PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+		british.write(buf);
+		assertEquals(british, SpeakerConfig.read(buf));
+		assertEquals(AnnouncementStyle.BRITISH, SpeakerConfig.DEFAULT.style(), "new speakers use the British wording");
+		assertEquals(AnnouncementStyle.STANDARD, AnnouncementStyle.byOrdinal(99));
 	}
 }

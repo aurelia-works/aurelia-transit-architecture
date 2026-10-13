@@ -488,9 +488,9 @@ class StationPlannerTest {
 		expected.put(Role.ROOF_LIGHT, 22);
 		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
-		expected.put(Role.FIXTURE, 10); // per platform: two 2-wide hanging departure screens and a help point
+		expected.put(Role.FIXTURE, 14); // per platform: two 2-wide hanging departure screens, a help point and two speakers
 		assertEquals(expected, counts);
-		assertEquals(874, plan(spec).blocks().size());
+		assertEquals(878, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -927,6 +927,31 @@ class StationPlannerTest {
 					final int behind = unit.v() + (unit.front() == LocalDir.PLUS_V ? -1 : 1);
 					assertTrue(unit.front().alongTrack() && plan.blocks().stream().anyMatch(b -> b.u() == unit.u() && b.v() == behind
 							&& b.y() == StationGeometry.WALK_Y && (b.role() == Role.COLUMN || b.role() == Role.LAMP)), "nothing behind " + unit + " in " + describe(spec));
+				}
+			}
+		}
+	}
+
+	@Test
+	void everyPlatformGetsASpeakerUnderTheRoofOrOnAPost() {
+		for (final RoofType roof : RoofType.values()) {
+			for (final PlatformLayout layout : PlatformLayout.values()) {
+				final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(layout).platformLength(48).roof(roof).build();
+				final StationPlan plan = plan(spec);
+				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+					final List<PlannedBlock> speakers = plan.blocks().stream().filter(b -> b.blockId().endsWith("_speaker") && band.contains(b.u(), b.v())).toList();
+					assertEquals(2, speakers.size(), "a speaker by each screen of a 48 long platform: " + describe(spec));
+					for (final PlannedBlock speaker : speakers) {
+						if (speaker.blockId().endsWith(":ceiling_speaker")) {
+							assertTrue(speaker.y() >= StationGeometry.WALK_Y + 2, "over head height: " + speaker + " in " + describe(spec));
+							assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == speaker.u() && b.v() == speaker.v() && b.y() == speaker.y() + 1 && b.role().covers()),
+									"nothing to hang from: " + speaker + " in " + describe(spec));
+						} else {
+							final int behind = speaker.v() + (speaker.front() == LocalDir.PLUS_V ? -1 : 1);
+							assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == speaker.u() && b.v() == behind && b.y() == speaker.y()
+									&& (b.role() == Role.COLUMN || b.role() == Role.LAMP)), "nothing behind " + speaker + " in " + describe(spec));
+						}
+					}
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.live;
 
 import com.aureliatransit.architecture.live.announce.AnnouncementCategory;
+import com.aureliatransit.architecture.live.announce.AnnouncementStyle;
 import com.aureliatransit.architecture.transit.StationAssociation;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -12,16 +13,18 @@ import net.minecraft.network.PacketByteBuf;
  * @param radius     hearing radius in blocks
  * @param volume     percent, 10..100
  * @param categories bit mask of enabled {@link AnnouncementCategory}s
+ * @param style      how announcements are worded
  */
-public record SpeakerConfig(StationAssociation association, int radius, int volume, int categories) {
+public record SpeakerConfig(StationAssociation association, int radius, int volume, int categories, AnnouncementStyle style) {
 
 	public static final int MIN_RADIUS = 4;
 	public static final int MAX_RADIUS = 32;
 	public static final int MIN_VOLUME = 10;
 	public static final int MAX_VOLUME = 100;
-	public static final SpeakerConfig DEFAULT = new SpeakerConfig(StationAssociation.AUTO, 16, 80, AnnouncementCategory.ALL_MASK);
+	public static final SpeakerConfig DEFAULT = new SpeakerConfig(StationAssociation.AUTO, 16, 80, AnnouncementCategory.ALL_MASK, AnnouncementStyle.BRITISH);
 
 	public SpeakerConfig {
+		style = style == null ? AnnouncementStyle.STANDARD : style;
 		association = association == null ? StationAssociation.AUTO : association;
 		radius = Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius));
 		volume = Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, volume));
@@ -29,7 +32,7 @@ public record SpeakerConfig(StationAssociation association, int radius, int volu
 	}
 
 	public SpeakerConfig withCategoryToggled(AnnouncementCategory category) {
-		return new SpeakerConfig(association, radius, volume, categories ^ category.bit());
+		return new SpeakerConfig(association, radius, volume, categories ^ category.bit(), style);
 	}
 
 	public void writeNbt(NbtCompound nbt) {
@@ -37,13 +40,16 @@ public record SpeakerConfig(StationAssociation association, int radius, int volu
 		nbt.putInt("Radius", radius);
 		nbt.putInt("Volume", volume);
 		nbt.putInt("Categories", categories);
+		nbt.putString("Style", style.id());
 	}
 
 	public static SpeakerConfig readNbt(NbtCompound nbt) {
 		if (!nbt.contains("Radius", NbtElement.INT_TYPE)) {
 			return DEFAULT;
 		}
-		return new SpeakerConfig(StationAssociation.readNbt(nbt, "Association"), nbt.getInt("Radius"), nbt.getInt("Volume"), nbt.getInt("Categories"));
+		// a speaker saved before styles existed has no Style and keeps the standard wording
+		return new SpeakerConfig(StationAssociation.readNbt(nbt, "Association"), nbt.getInt("Radius"), nbt.getInt("Volume"), nbt.getInt("Categories"),
+				AnnouncementStyle.byId(nbt.getString("Style")));
 	}
 
 	public void write(PacketByteBuf buf) {
@@ -51,12 +57,13 @@ public record SpeakerConfig(StationAssociation association, int radius, int volu
 		buf.writeVarInt(radius);
 		buf.writeVarInt(volume);
 		buf.writeVarInt(categories);
+		buf.writeVarInt(style.ordinal());
 	}
 
 	/**
 	 * Reads from an untrusted packet; all values are clamped by the constructor.
 	 */
 	public static SpeakerConfig read(PacketByteBuf buf) {
-		return new SpeakerConfig(StationAssociation.read(buf), buf.readVarInt(), buf.readVarInt(), buf.readVarInt());
+		return new SpeakerConfig(StationAssociation.read(buf), buf.readVarInt(), buf.readVarInt(), buf.readVarInt(), AnnouncementStyle.byOrdinal(buf.readVarInt()));
 	}
 }

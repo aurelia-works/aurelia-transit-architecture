@@ -1,6 +1,8 @@
 package com.aureliatransit.architecture.client.live;
 
+import com.aureliatransit.architecture.block.wayfinding.HelpPointBlock;
 import com.aureliatransit.architecture.live.LiveDebug;
+import com.aureliatransit.architecture.live.NearestPlatformProvider;
 import com.aureliatransit.architecture.live.SpeakerBlockEntity;
 import com.aureliatransit.architecture.live.SpeakerConfig;
 import com.aureliatransit.architecture.live.announce.AnnouncementCategory;
@@ -11,13 +13,16 @@ import com.aureliatransit.architecture.live.announce.AnnouncementText;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
 import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import com.aureliatransit.architecture.live.announce.SpeakerPicker;
+import com.aureliatransit.architecture.transit.PlatformReference;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
+import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationDataProvider;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.world.ClientWorld;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -180,7 +185,7 @@ final class AnnouncementEngine {
 				continue;
 			}
 			final float volume = volumeFor(config);
-			player.start(client, AnnouncementText.build(event, name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), point.x(), point.y(), point.z(), volume, now);
+			player.start(client, AnnouncementText.build(event, config.style(), name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), point.x(), point.y(), point.z(), volume, now);
 			queue.markPlayed(event, now);
 			return;
 		}
@@ -193,7 +198,7 @@ final class AnnouncementEngine {
 	/**
 	 * Plays a synthetic announcement of {@code category} at the player's position (used by {@code /aurelia_live test}).
 	 */
-	void playTest(MinecraftClient client, AnnouncementCategory category) {
+	void playTest(MinecraftClient client, AnnouncementCategory category, com.aureliatransit.architecture.live.announce.AnnouncementStyle style) {
 		if (client.player == null) {
 			return;
 		}
@@ -201,7 +206,40 @@ final class AnnouncementEngine {
 		final AnnouncementEvent event = new AnnouncementEvent(category, 0, "Test Central", 3, "3", 1, "Test Line", "T1", "Test Junction", 0,
 				now + 30_000, 4, List.of("Alpha Street", "Beta Park", "Test Junction"), now, now + 60_000);
 		final Vec3d pos = client.player.getEyePos();
-		player.start(client, AnnouncementText.build(event, name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), pos.x, pos.y, pos.z, 1F, now);
+		player.start(client, AnnouncementText.build(event, style, name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS)), voicePacks.stack(), pos.x, pos.y, pos.z, 1F, now);
+	}
+
+	/**
+	 * A help point was used at {@code pos}: say the station and MTR's nearest platform there, at the help point. The station
+	 * name is only spoken when the voice packs have it; otherwise the voice says just the platform. The full sentence is
+	 * always shown, since the player asked. Away from any station the help point's plain message is shown.
+	 */
+	void playHelpPoint(MinecraftClient client, BlockPos pos) {
+		if (client.player == null) {
+			return;
+		}
+		final StationDataProvider provider = StationData.provider();
+		final StationSnapshot snapshot = provider.resolve(pos, StationAssociation.AUTO, false);
+		final long nearest = provider instanceof NearestPlatformProvider platforms ? platforms.nearestPlatformId(pos, StationAssociation.AUTO) : 0;
+		String platformName = "";
+		for (final PlatformReference platform : snapshot.platforms()) {
+			if (platform.id() == nearest) {
+				platformName = platform.name();
+			}
+		}
+		final String stationName = snapshot.station() == null ? "" : snapshot.station().displayName();
+		final java.util.function.UnaryOperator<String> named = name -> ClientStationSuffixes.apply(name, SuffixContext.ANNOUNCEMENTS);
+		final AnnouncementText.Announcement full = AnnouncementText.helpPoint(stationName, platformName, true, named);
+		if (full == null) {
+			client.player.sendMessage(Text.translatable(HelpPointBlock.MESSAGE), true);
+			return;
+		}
+		final AnnouncementText.Announcement spoken = voicePacks.stack().resolveAll(full.fragments(), null) != null ? full
+				: java.util.Objects.requireNonNullElse(AnnouncementText.helpPoint(stationName, platformName, false, named), full);
+		final long now = System.currentTimeMillis();
+		// keeps the idle reset (no speakers loaded) from cutting the sentence off
+		lastActive = now;
+		player.start(client, spoken, voicePacks.stack(), pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 1F, now, full.subtitle());
 	}
 
 	String describe() {

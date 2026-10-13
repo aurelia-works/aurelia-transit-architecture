@@ -1,12 +1,14 @@
 package com.aureliatransit.architecture.client.live;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
+import com.aureliatransit.architecture.block.wayfinding.HelpPointBlock;
 import com.aureliatransit.architecture.live.LiveDebug;
 import com.aureliatransit.architecture.live.PidsBlock;
 import com.aureliatransit.architecture.live.PidsBlockEntity;
 import com.aureliatransit.architecture.live.SpeakerBlock;
 import com.aureliatransit.architecture.live.SpeakerBlockEntity;
 import com.aureliatransit.architecture.live.announce.AnnouncementCategory;
+import com.aureliatransit.architecture.live.announce.AnnouncementStyle;
 import com.aureliatransit.architecture.live.announce.VoicePack;
 import com.aureliatransit.architecture.registry.LiveBlocks;
 import com.aureliatransit.architecture.transit.StationData;
@@ -63,6 +65,7 @@ public final class LiveClient {
 			}
 		};
 
+		HelpPointBlock.speak = pos -> ENGINE.playHelpPoint(MinecraftClient.getInstance(), pos);
 		VOICE_PACKS.register();
 		ClientBlockEntityEvents.BLOCK_ENTITY_LOAD.register((entity, world) -> {
 			if (entity instanceof SpeakerBlockEntity speaker) {
@@ -134,15 +137,25 @@ public final class LiveClient {
 									}
 									return builder.buildFuture();
 								})
-								.executes(context -> {
-									final AnnouncementCategory category = AnnouncementCategory.byId(StringArgumentType.getString(context, "category"));
-									if (category == null) {
-										context.getSource().sendFeedback(Text.literal("Unknown category"));
-										return 0;
-									}
-									ENGINE.playTest(MinecraftClient.getInstance(), category);
-									return 1;
-								})))));
+								.executes(context -> playTest(context, AnnouncementStyle.STANDARD))
+								.then(ClientCommandManager.argument("wording", StringArgumentType.word())
+										.suggests((context, builder) -> {
+											for (final AnnouncementStyle style : AnnouncementStyle.values()) {
+												builder.suggest(style.id());
+											}
+											return builder.buildFuture();
+										})
+										.executes(context -> playTest(context, AnnouncementStyle.byId(StringArgumentType.getString(context, "wording")))))))));
+	}
+
+	private static int playTest(com.mojang.brigadier.context.CommandContext<net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource> context, AnnouncementStyle style) {
+		final AnnouncementCategory category = AnnouncementCategory.byId(StringArgumentType.getString(context, "category"));
+		if (category == null) {
+			context.getSource().sendFeedback(Text.literal("Unknown category"));
+			return 0;
+		}
+		ENGINE.playTest(MinecraftClient.getInstance(), category, style);
+		return 1;
 	}
 
 	/**

@@ -14,13 +14,14 @@ Suggested sizes: CIS 4-6 wide x 1 high, PIDS 6 wide x 1-2 high, concourse board 
 2. Place a platform PIDS on the wall or a hanging PIDS above the platform (wide enough), leave the station on Automatic. It should list the next trains of the platform next to it. A station-wide concourse board lists all platforms and pages through them every few seconds when it has more trains than rows.
 3. With no trains: "Welcome to <station>" / "No departures currently available". With no station nearby: "No station linked".
 4. Place a speaker within ~16 blocks of the platform. When a train is about 40 s away you hear the chime and see the announcement text in the action bar (no voice pack loaded). `/aurelia_live test approaching` plays a sample immediately wherever you stand.
-5. Walk out of range of the speaker: nothing plays. Two speakers at the same station: only one plays each announcement (the closest in range).
+5. Open the speaker (right-click) and set *Wording* to British or Standard; the next announcement uses it. Right-click a help point on the platform with an empty hand: it says (or shows) "This is <station>, platform <n>." Away from any station it shows its plain message.
+6. Walk out of range of the speaker: nothing plays. Two speakers at the same station: only one plays each announcement (the closest in range).
 
 ## Client commands
 
 - `/aurelia_live stats` prints provider cache sizes, engine queue and the debug counters.
 - `/aurelia_live debug true|false` turns the counters on or off (also `-Daurelia.live.debug=true`).
-- `/aurelia_live test <safety|delay|terminating|approaching|standing>` plays a sample announcement at your position.
+- `/aurelia_live test <safety|delay|terminating|approaching|standing> [standard|british]` plays a sample announcement at your position, in that wording (Standard if left out).
 - `/aurelia_live voices` lists loaded voice packs.
 - `/aurelia_live edge` (1.4): for the block under the crosshair, what a drop-barrier / boarding-step edge sees (station, nearest platform, its trains, standing now).
 - `/aurelia_live routes` (1.4) lists MTR's simplified routes and the arrivals MTR reports for their platforms (route, departure index, platform, seconds to arrival): the data calling-point times are matched from. It adds those platforms to MTR's poll only when run.

@@ -51,6 +51,14 @@ final class AnnouncementPlayer {
 	 * @param volume sound volume; values above 1 also widen the distance the sound can be heard from
 	 */
 	void start(MinecraftClient client, AnnouncementText.Announcement announcement, VoicePack.Stack stack, double x, double y, double z, float volume, long now) {
+		start(client, announcement, stack, x, y, z, volume, now, null);
+	}
+
+	/**
+	 * @param subtitle text to show in the action bar even when the voice speaks it (null: only when it cannot)
+	 */
+	void start(MinecraftClient client, AnnouncementText.Announcement announcement, VoicePack.Stack stack, double x, double y, double z, float volume, long now,
+			   String subtitle) {
 		stop();
 		this.x = x;
 		this.y = y;
@@ -66,7 +74,9 @@ final class AnnouncementPlayer {
 		} else {
 			LiveDebug.count(LiveDebug.Counter.ANNOUNCEMENTS_FALLBACK);
 		}
-		if ((spoken == null || ALWAYS_SUBTITLE) && client.inGameHud != null) {
+		if (subtitle != null && client.inGameHud != null) {
+			client.inGameHud.setOverlayMessage(Text.literal(subtitle), false);
+		} else if ((spoken == null || ALWAYS_SUBTITLE) && client.inGameHud != null) {
 			client.inGameHud.setOverlayMessage(Text.literal(announcement.subtitle()), false);
 		}
 		LiveDebug.count(LiveDebug.Counter.ANNOUNCEMENTS_PLAYED);

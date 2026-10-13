@@ -4,13 +4,14 @@ import com.aureliatransit.architecture.live.LiveSystems;
 import com.aureliatransit.architecture.live.SpeakerBlockEntity;
 import com.aureliatransit.architecture.live.SpeakerConfig;
 import com.aureliatransit.architecture.live.announce.AnnouncementCategory;
+import com.aureliatransit.architecture.live.announce.AnnouncementStyle;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 
 /**
- * Configuration screen of a speaker: hearing radius, volume, announcement categories and the station picker.
+ * Configuration screen of a speaker: hearing radius, volume, wording style, announcement categories and the station picker.
  */
 final class SpeakerScreen extends LiveConfigScreen {
 
@@ -21,6 +22,7 @@ final class SpeakerScreen extends LiveConfigScreen {
 	private int radius;
 	private int volume;
 	private int categories;
+	private AnnouncementStyle style;
 
 	SpeakerScreen(BlockPos pos, SpeakerBlockEntity speaker) {
 		super(tr("live_speaker_title"), pos, speaker.config().association());
@@ -28,6 +30,7 @@ final class SpeakerScreen extends LiveConfigScreen {
 		this.radius = speaker.config().radius();
 		this.volume = speaker.config().volume();
 		this.categories = speaker.config().categories();
+		this.style = speaker.config().style();
 	}
 
 	@Override
@@ -44,6 +47,11 @@ final class SpeakerScreen extends LiveConfigScreen {
 			button.setMessage(tr("live_volume", volume));
 		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
 		y += 24;
+		add(ButtonWidget.builder(styleText(), button -> {
+			style = style.next();
+			button.setMessage(styleText());
+		}).dimensions(x, y, COLUMN_WIDTH, 20).build());
+		y += 24;
 		for (final AnnouncementCategory category : AnnouncementCategory.values()) {
 			add(ButtonWidget.builder(categoryText(category), button -> {
 				categories ^= category.bit();
@@ -53,6 +61,10 @@ final class SpeakerScreen extends LiveConfigScreen {
 		}
 		buildAssociationWidgets();
 		addDone();
+	}
+
+	private Text styleText() {
+		return tr("live_announce_style", Text.translatable("screen.aurelia_transit_architecture." + style.translationKey()));
 	}
 
 	private Text categoryText(AnnouncementCategory category) {
@@ -76,7 +88,7 @@ final class SpeakerScreen extends LiveConfigScreen {
 
 	@Override
 	protected void save() {
-		final SpeakerConfig config = new SpeakerConfig(association(), radius, volume, categories);
+		final SpeakerConfig config = new SpeakerConfig(association(), radius, volume, categories, style);
 		if (!config.equals(speaker.config())) {
 			ClientPlayNetworking.send(LiveSystems.UPDATE_SPEAKER, LiveSystems.writeSpeakerUpdate(pos, config));
 		}

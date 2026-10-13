@@ -32,7 +32,7 @@ The mod ships only three original synthesised chimes (`chime.info`, `chime.alert
 
 All packs are stacked: highest `priority` first, then pack id. A key is looked up in each pack in turn, and the built-in chimes are always at the bottom. So a small pack with only station names can sit on top of a fuller one.
 
-An announcement is spoken **only if every fragment of the sentence has a sound**. A half-spoken sentence never plays: if anything is missing, the chime plays and the full sentence is shown as an action-bar message instead. Start with the phrases and numbers, then add station and route names; `/aurelia_live test <category>` plays a sample sentence at your position ("Test Central", platform 3, "Test Line", destination "Test Junction", stops "Alpha Street", "Beta Park", "Test Junction", 4 minute delay) so you can hear what your pack covers. Use `-Daurelia.live.subtitles=true` to always show the text too.
+An announcement is spoken **only if every fragment of the sentence has a sound**. A half-spoken sentence never plays: if anything is missing, the chime plays and the full sentence is shown as an action-bar message instead. Start with the phrases and numbers, then add station and route names; `/aurelia_live test <category> [standard|british]` plays a sample sentence at your position ("Test Central", platform 3, "Test Line", destination "Test Junction", stops "Alpha Street", "Beta Park", "Test Junction", 4 minute delay) so you can hear what your pack covers. Use `-Daurelia.live.subtitles=true` to always show the text too.
 
 ## Fragment keys
 
@@ -60,6 +60,17 @@ An announcement is spoken **only if every fragment of the sentence has a sound**
 | `phrase.apologise` | We apologise for the delay. |
 | `phrase.stand_clear` | Please stand clear of the platform edge. |
 | `phrase.train_is_approaching_platform` | A train is approaching platform |
+| `phrase.next_train_to_arrive_at_platform` | The next train to arrive at platform |
+| `phrase.will_be_the` | will be the |
+| `phrase.train_now_standing_at_platform` | The train now standing at platform |
+| `phrase.mind_the_gap` | Please mind the gap between the train and the platform. |
+| `phrase.train_now_arriving_at_platform` | The train now arriving at platform |
+| `phrase.take_belongings` | Please take all of your belongings with you. |
+| `phrase.sorry_to_announce` | We are sorry to announce that the |
+| `phrase.stand_well_back` | Please stand well back from the platform edge. |
+| `phrase.this_is` | This is |
+| `phrase.platform` | platform |
+| `phrase.this_is_platform` | This is platform |
 
 ### Numbers
 
@@ -79,6 +90,18 @@ An announcement is spoken **only if every fragment of the sentence has a sound**
 | Delay | realtime lateness of 2+ minutes (again only if 3 more minutes late) | The **route** service to **destination** is delayed by approximately **N** minutes. We apologise for the delay. |
 | Safety | about 12 s before arrival | Please stand clear of the platform edge. A train is approaching platform **N**. |
 
+Each speaker has a **Wording** setting. The table above is *Standard*. *British* (the default for new speakers) uses:
+
+| Category | Sentence |
+|---|---|
+| Approaching | The next train to arrive at platform **N** will be the **route** service to **destination**. Calling at ... |
+| Standing | The train now standing at platform **N** is the **route** service to **destination**. Calling at ... Please mind the gap between the train and the platform. |
+| Terminating | The train now arriving at platform **N** terminates here. Please take all of your belongings with you. |
+| Delay | We are sorry to announce that the **route** service to **destination** is delayed by approximately **N** minutes. |
+| Safety | A train is approaching platform **N**. Please stand well back from the platform edge. |
+
+**Help points:** right-click one with an empty hand and it says "This is **station**, platform **N**." (MTR's nearest platform to the help point). If the voice packs have no clip for the station it says "This is platform **N**." instead; the full sentence is always shown in the action bar. Away from any station it shows its plain help message.
+
 The route part is skipped when a route has no name; "Calling at" lists at most 5 stops and always ends on the final stop. Priority when several are waiting: safety, delay, terminating, approaching, standing.
 
 ## Notes for pack authors
@@ -86,3 +109,4 @@ The route part is skipped when a route has no name; "Calling at" lists at most 5
 - Keep fragments free of leading/trailing silence; `duration_ms` is the gap before the next fragment.
 - Do not reuse third-party or operator recordings you do not have the rights to.
 - Fragment keys and the `aurelia_voice` folder are the stable interface of the format; the English wording above is the contract for what each fragment should say.
+- Developers: `tools/make_test_voice.py` builds a local test pack with macOS `say` (every phrase, the numbers and any station or route names you pass) into `run/client/resourcepacks/`. Apple's licence does not allow sharing audio made with its voices, so that pack is for hearing your own build only; never commit or upload it.

@@ -20,6 +20,8 @@ public final class StationPlanner {
 	private static final String PIDS = "aurelia_transit_architecture:platform_pids";
 	private static final String HANGING_PIDS = "aurelia_transit_architecture:hanging_platform_pids";
 	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
+	private static final String CEILING_SPEAKER = "aurelia_transit_architecture:ceiling_speaker";
+	private static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
 	/** One colour per platform at a terminus gate line, in turn: a stripe on the floor and over the arcade, to follow to the gates. */
@@ -66,6 +68,7 @@ public final class StationPlanner {
 		planning.headInterior();
 		planning.platformEquipment();
 		planning.nameSigns();
+		planning.speakers();
 		planning.liftButtons();
 		return planning.finish();
 	}
@@ -2887,11 +2890,54 @@ public final class StationPlanner {
 				final List<Integer> targets = run >= 48 ? List.of(from + run / 4, from + run * 3 / 4) : List.of(from + run / 2);
 				for (final int target : targets) {
 					if (!hangScreen(band, target)) {
-						onPost(band, target, PIDS);
+						onPost(band, target, StationGeometry.WALK_Y, PIDS);
 					}
 				}
-				onPost(band, targets.get(0), HELP_POINT);
+				onPost(band, targets.get(0), StationGeometry.WALK_Y, HELP_POINT);
 			}
+		}
+
+		/**
+		 * An announcement speaker near each departure screen: under the roof, or on a post where the platform is open. Planned
+		 * after the name signs, so it only takes a cell nothing else wanted.
+		 */
+		void speakers() {
+			if (!spec.furniture()) {
+				return;
+			}
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final int run = band.length();
+				final int from = band.vFrom();
+				for (final int target : run >= 48 ? List.of(from + run / 4 + 3, from + run * 3 / 4 + 3) : List.of(from + run / 2 + 3)) {
+					if (!hangSpeaker(band, target)) {
+						onPost(band, target, StationGeometry.WALK_Y, WALL_SPEAKER);
+					}
+				}
+			}
+		}
+
+		/**
+		 * Hangs a ceiling speaker under the roof over the middle of an island (the back of a side platform) at the free v
+		 * nearest {@code target}; true if hung.
+		 */
+		private boolean hangSpeaker(TrackLayout.PlatformBand band, int target) {
+			final int u = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
+			if (isEdge(band, u)) {
+				return false;
+			}
+			for (int d = 0; d <= 12; d++) {
+				for (final int v : d == 0 ? new int[]{target} : new int[]{target + d, target - d}) {
+					if (v < band.vFrom() + 1 || v > band.vTo() - 1 || nearStairs(band, v)) {
+						continue;
+					}
+					final int y = ceiling(u, v) - 1;
+					if (y >= StationGeometry.WALK_Y + 2 && y <= StationGeometry.WALK_Y + 5 && !taken(u, y, v)) {
+						put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, CEILING_SPEAKER);
+						return true;
+					}
+				}
+			}
+			return false;
 		}
 
 		/**
@@ -2969,10 +3015,10 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Fixes a wall unit to the back of a column or lamp post on this platform, in the free cell along the platform next to
-		 * the post nearest {@code target}, facing away from it. True if placed.
+		 * Fixes a wall unit to the back of a column or lamp post on this platform, at height {@code y}, in the free cell along
+		 * the platform next to the post nearest {@code target}, facing away from it. True if placed.
 		 */
-		private boolean onPost(TrackLayout.PlatformBand band, int target, String blockId) {
+		private boolean onPost(TrackLayout.PlatformBand band, int target, int y, String blockId) {
 			final List<Cell> posts = new ArrayList<>();
 			for (final PlannedBlock block : cells.values()) {
 				if ((block.role() == Role.COLUMN || block.role() == Role.LAMP) && block.y() == StationGeometry.WALK_Y
@@ -2984,8 +3030,8 @@ public final class StationPlanner {
 			for (final Cell post : posts) {
 				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
 					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
-					if (band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
-							&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, blockId)) {
+					if (band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), y, v)
+							&& put(Role.FIXTURE, post.u(), y, v, side, blockId)) {
 						return true;
 					}
 				}
