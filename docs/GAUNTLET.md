@@ -49,3 +49,16 @@ States: OPEN, FIXED (commit), CHECKED (seen fixed), WONTFIX (why).
 | 23 | Name signs given up on 16-long platforms full of stairs and lifts (29) | no free run of three cells | FIXED: two, else one sign; none left in the sweep |
 | 24 | 16-long stations with a building are not step-free (67 of 2,000) | a two-bay building has no room for its lift | WONTFIX: shortest stations only; the audit says so before building |
 
+## Studio in a browser (13 Oct evening)
+
+1,000 random combinations of every Studio control planned through the page's own `/api/plan`, all 15 presets clicked, every view opened (Playwright).
+
+| # | Finding | Evidence | State |
+|---|---|---|---|
+| 25 | "andesite track bed" left "bed" under *Not understood* on most Studio and wrench plans | the Studio writes "andesite track bed"; the parser took the material only | FIXED: the nouns belong to the bed; parser test |
+| 26 | Side platforms back to back between two tracks (a platform list) were reached only across a track, or by stairs without a lift | the island rule checked true islands only; listed platforms default to 4 wide | FIXED: any platform with a track on both sides counts; it is widened for its lift when step-free; IslandAccessTest |
+| 27 | Studio said "Footbridge: no" for every building station | it reported the footbridge asked for, not the one built | FIXED: reports the footbridge built; StudioTest |
+| 28 | Studio marked tracks and layout red with a platform list of more than 10 tracks | the slider stops at 10; the list sets both | FIXED: not compared when the list is on; a longer listed platform is not a mismatch |
+| 29 | Street view of a terminus showed only the edge of the platforms | no side building to look at | FIXED: a terminus shows Head instead of Street |
+| 30 | Page errors, failed requests | 1,000 plans, 15 presets, 6 views | CHECKED: none |
+

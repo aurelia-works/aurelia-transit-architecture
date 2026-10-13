@@ -542,4 +542,15 @@ class StationDescriptionParserTest {
 			StationPlanner.plan(result.spec());
 		}
 	}
+
+	@Test
+	void trackBedNounsAreUnderstood() {
+		for (final String text : new String[]{"andesite track bed 2 tracks", "2 tracks, gravel bed", "2 tracks with a ballast bed"}) {
+			final ParseResult parsed = StationDescriptionParser.parse(text);
+			assertTrue(parsed.ignored().isEmpty(), text + ": " + parsed.ignored());
+			assertEquals(text.contains("andesite") ? TrackBed.ANDESITE : TrackBed.GRAVEL, parsed.spec().trackBed(), text);
+		}
+		// "track" without "bed" after it is still the track count's noun
+		assertEquals(4, StationDescriptionParser.parse("gravel 4 track station").spec().trackCount());
+	}
 }

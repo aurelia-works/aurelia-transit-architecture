@@ -682,9 +682,14 @@
 			setView(currentView);
 			showPlan.framed = reach;
 		}
+		// a terminus faces the street with its head building: the Head view replaces the side-on Street view, which would
+		// only show the edge of the platforms
 		$("headView").hidden = !plan.head;
+		document.querySelector('[data-view="street"]').hidden = !!plan.head;
 		if (!plan.head && currentView === "head") {
 			setView("overview");
+		} else if (plan.head && currentView === "street") {
+			setView("head");
 		}
 		updateCut();
 		draw();
@@ -973,12 +978,15 @@
 	function report(plan) {
 		const r = plan.requested;
 		const b = plan.built;
+		// with platforms one by one the list sets the layout and the tracks (up to 20, past the slider's 10), and a listed
+		// platform longer than the slider makes the station that long
+		const listed = $("listOn") && $("listOn").checked;
 		// the third value says whether the request was met (true / false), or null where there is nothing to compare
 		const rows = [
 			["Station mode", r.mode, b.mode, r.mode === b.mode],
-			["Layout", r.layout, b.layout + " (" + b.platforms + ")", r.layout === "Auto" || b.layout.startsWith(r.layout.toLowerCase())],
-			["Tracks", r.tracks, b.tracks + " tracks, " + b.faces + " boarding faces", r.tracks === b.tracks],
-			["Length", r.length + " blocks", b.length + " blocks on every face", r.length === b.length],
+			["Layout", r.layout, b.layout + " (" + b.platforms + ")", listed ? null : r.layout === "Auto" || b.layout.startsWith(r.layout.toLowerCase())],
+			["Tracks", r.tracks, b.tracks + " tracks, " + b.faces + " boarding faces", listed ? null : r.tracks === b.tracks],
+			["Length", r.length + " blocks", b.length + " blocks on every face", r.length === b.length || (listed && b.length > r.length ? null : false)],
 			["Look", r.look, b.style.replace(/_/g, " ") + " platforms", null],
 			["Building", r.building ? "yes" : "no", b.building, r.building === (b.building !== "no building")],
 			["Building size", r.building ? r.size : "", b.scale, r.size.startsWith("Auto") || !r.building ? null : r.size.toLowerCase() === b.scale],

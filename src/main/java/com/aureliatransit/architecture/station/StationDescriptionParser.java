@@ -743,6 +743,11 @@ public final class StationDescriptionParser {
 				} else if (trackBed != bed) {
 					warn("two track beds given; the first (" + trackBed.name().toLowerCase(java.util.Locale.ROOT) + ") is used");
 				}
+				// "gravel bed", "andesite track bed": the nouns belong to it (the Studio and the wrench write the second)
+				final int noun = at(i + 1).equals("track") ? i + 2 : i + 1;
+				if (at(noun).equals("bed") || at(noun).equals("beds")) {
+					use(i + 1, noun);
+				}
 			} else if (token.equals("tactile")) {
 				if (tactile == null) {
 					tactile = true;
@@ -1259,7 +1264,9 @@ public final class StationDescriptionParser {
 			// island platforms need a way in that does not cross a track: a building's footbridge, or a footbridge of their own,
 			// reached from a side platform on the edge or, with tracks along both edges, from a street entrance beside the first
 			final TrackLayout bands = StationGeometry.layout(builder.build());
-			final boolean islands = !terminus && bands.platforms().stream().anyMatch(TrackLayout.PlatformBand::island);
+			// an island, or side platforms back to back between two tracks: a track on either side of it somewhere
+			final boolean islands = !terminus && bands.platforms().stream().anyMatch(b -> bands.tracks().stream().anyMatch(t -> t.u() < b.uMin())
+					&& bands.tracks().stream().anyMatch(t -> t.u() > b.uMax()));
 			final boolean sideEdge = !bands.platforms().isEmpty()
 					&& (!bands.platforms().get(0).trackLeft() || !bands.platforms().get(bands.platforms().size() - 1).trackRight());
 			// a look word asks for a building later, in resolveLooks
@@ -1267,9 +1274,9 @@ public final class StationDescriptionParser {
 			if (islands && !buildingComing) {
 				if (footbridge == null) {
 					footbridge = true;
-					defaulted.add(sideEdge ? "footbridge (the island platforms need one)" : "footbridge with a street entrance (the island platforms need a way in)");
+					defaulted.add(sideEdge ? "footbridge (the platforms between the tracks need one)" : "footbridge with a street entrance (the platforms between the tracks need a way in)");
 				} else if (!footbridge) {
-					warn("with no footbridge the island platforms are reached by walking across a track");
+					warn("with no footbridge the platforms between the tracks are reached by walking across a track");
 				}
 			}
 
@@ -1299,30 +1306,48 @@ public final class StationDescriptionParser {
 						: bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
 			}
 
-			// an island under a footbridge needs room for its stair and a walkway past it, and for a lift when step-free
-			if (islands && !(sideEdge && Boolean.FALSE.equals(footbridge)) || terminus && hub) {
+			// a platform between two tracks is reached only by the footbridge: an island needs room for its stair and a walkway
+			// past it, and every such platform room for a lift when step-free
+			final boolean bridgeComing = !terminus && (Boolean.TRUE.equals(footbridge) || buildingComing);
+			if (islands && bridgeComing || terminus && hub) {
 				final boolean lift = !Boolean.FALSE.equals(stepFree);
-				final int need = lift ? StationGeometry.MIN_LIFT_ISLAND_WIDTH : StationLayout.MIN_STAIR_ISLAND;
-				final String why = "island platforms need to be " + need + " wide for a footbridge stair" + (lift ? " and lift" : "") + "; using " + need;
+				final int islandNeed = lift ? StationGeometry.MIN_LIFT_ISLAND_WIDTH : StationLayout.MIN_STAIR_ISLAND;
 				final int narrowest = builder.build().platformWidth();
-				if (list.isEmpty() && layout == PlatformLayout.ISLAND && narrowest < need) {
-					warn(why);
-					builder.platformWidth(need);
-				} else if (!list.isEmpty()) {
+				if (list.isEmpty()) {
+					if (layout == PlatformLayout.ISLAND && narrowest < islandNeed) {
+						warn("island platforms need to be " + islandNeed + " wide for a footbridge stair" + (lift ? " and lift" : "") + "; using " + islandNeed);
+						builder.platformWidth(islandNeed);
+					}
+				} else {
 					final List<PlatformSpec> widened = new ArrayList<>();
-					boolean changed = false;
-					for (final PlatformSpec p : list) {
-						if (p.kind() == PlatformSpec.Kind.ISLAND && p.widthIn(narrowest) < need) {
+					final List<String> given = new ArrayList<>();
+					boolean quiet = false;
+					for (int k = 0; k < list.size(); k++) {
+						final PlatformSpec p = list.get(k);
+						final TrackLayout.PlatformBand band = bands.platforms().get(k);
+						final boolean inner = p.kind() == PlatformSpec.Kind.ISLAND || !terminus && bands.tracks().stream().anyMatch(t -> t.u() < band.uMin())
+								&& bands.tracks().stream().anyMatch(t -> t.u() > band.uMax());
+						final int need = !inner ? 0 : p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed : lift ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : 0;
+						if (p.widthIn(narrowest) < need) {
 							widened.add(new PlatformSpec(p.kind(), need, p.length(), p.roof(), p.bay()));
-							changed = true;
+							if (p.width() != 0) {
+								given.add(String.valueOf(k + 1));
+							} else {
+								quiet = true;
+							}
 						} else {
 							widened.add(p);
 						}
 					}
-					if (changed) {
-						warn(why + " for the narrower ones");
-						builder.platforms(widened);
+					if (!given.isEmpty()) {
+						warn("platform" + (given.size() == 1 ? " " : "s ") + String.join(", ", given) + " between the tracks need" + (given.size() == 1 ? "s" : "")
+								+ " room for a footbridge stair"
+								+ (lift ? " and lift" : "") + "; widened to fit");
 					}
+					if (quiet) {
+						defaulted.add("platforms between the tracks widened so their footbridge stair" + (lift ? " and lift" : "") + " fit");
+					}
+					builder.platforms(widened);
 				}
 			}
 

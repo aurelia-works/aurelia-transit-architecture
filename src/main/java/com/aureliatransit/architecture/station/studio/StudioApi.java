@@ -10,6 +10,7 @@ import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.Role;
 import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationLayout;
 import com.aureliatransit.architecture.station.StationGeometry;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
@@ -212,7 +213,7 @@ public final class StudioApi {
 				.append(",\"platformWidth\":").append(spec.platformWidth()).append(",\"style\":").append(Json.quote(lower(spec.style().name())))
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
 				.append(",\"scale\":").append(Json.quote(spec.hasBuilding() ? spec.buildingScale().label() : "-"))
-				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(spec.footbridge())
+				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(StationLayout.of(spec, layout).bridge())
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")
 				.append(audit.height()).append(",\"blocks\":").append(plan.blocks().size()).append('}');

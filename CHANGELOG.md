@@ -44,6 +44,8 @@
 - Islands too narrow for a footbridge stair (under 5) or lift (under 6) are widened to fit, with a warning, instead of being left without a way up.
 - "Grand Central, city" builds a city-size building: a size word now beats the landmark's own size.
 - Short platforms crowded by stairs and a lift get a shorter name sign row instead of none.
+- "Gravel bed" and "andesite track bed" are fully understood (the Studio no longer lists "bed" as not understood).
+- Station Studio reports the footbridge a building brings, and no longer marks a platform list's own track count or layout as a mismatch.
 
 ## 1.5.0
 

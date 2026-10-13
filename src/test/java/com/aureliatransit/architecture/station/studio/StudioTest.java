@@ -103,6 +103,14 @@ class StudioTest {
 	}
 
 	@Test
+	void aBuildingsFootbridgeIsReported() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> built = Json.object(Json.object(Json.parse(api.plan(Map.of("look", "UTRECHT", "tracks", "4", "length", "96",
+				"building", "1")))).get("built"));
+		assertEquals(Boolean.TRUE, built.get("footbridge"), "the building brings a footbridge although none was asked for");
+	}
+
+	@Test
 	void controlsWinAndTypedWordsAreKept() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
 		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "text", "4 tracks, 100 long, brick"))));

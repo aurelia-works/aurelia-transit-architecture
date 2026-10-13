@@ -56,6 +56,19 @@ class IslandAccessTest {
 	}
 
 	@Test
+	void sidePlatformsBackToBackBetweenTracksGetAFootbridgeAndLifts() {
+		for (final String text : new String[]{"platform 1: side; platform 2: side; platform 3: side; platform 4: side; no building, named Halt",
+				"platform 1: side; platform 2: side; platform 3: side; platform 4: side; station building, named Halt",
+				"platform 1: island; platform 2: side; platform 3: side; city building, flat roof, 200 long, named Halt"}) {
+			final StationSpec spec = StationDescriptionParser.parse(text).spec();
+			final StationAudit.Result audit = StationAudit.audit(StationPlanner.plan(spec));
+			for (final StationAudit.Access access : audit.access()) {
+				assertEquals(StationAudit.Access.STEP_FREE, access, text + ": " + audit.checks());
+			}
+		}
+	}
+
+	@Test
 	void noFootbridgeIsKeptAndWarned() {
 		final ParseResult parsed = StationDescriptionParser.parse("4 tracks island, no footbridge, no building, named Halt");
 		assertFalse(parsed.spec().footbridge());
