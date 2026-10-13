@@ -1690,8 +1690,14 @@ public final class StationPlanner {
 				int a = supports.get(i);
 				int b2 = supports.get(i + 1);
 				while (b2 - a > 12) {
-					final int mid = (a + b2) / 2;
-					final int pierU = nearestFreeColumn(mid);
+					// the farthest free column within 12 of the last support, so no span is left longer (halving a span over 24
+					// would leave both halves too long)
+					int pierU = -1;
+					for (int u = Math.min(a + 12, b2 - 1); u > a && pierU < 0; u--) {
+						if (nearestFreeColumn(u) == u) {
+							pierU = u;
+						}
+					}
 					if (pierU < 0) {
 						break;
 					}
@@ -1774,6 +1780,84 @@ public final class StationPlanner {
 					}
 				}
 			}
+			trackColumns();
+		}
+
+		/** A short pier on the footbridge roof at u, up to the hall frame. */
+		private void bridgePier(int u, int bridgeRoof, int beamY) {
+			for (int y = bridgeRoof + 1; y < beamY; y++) {
+				put(Role.BRIDGE_PIER, u, y, site.bridgeV(), LocalDir.PLUS_V, palette.building().pier());
+			}
+		}
+
+		/**
+		 * Columns between tracks, where a hall's cross girders would otherwise span further than
+		 * {@link StationGeometry#MAX_BEAM_SPAN} between two platforms' column lines (several tracks side by side with no platform
+		 * between them). Each stands on a plinth in the free cell between two tracks' clearances, at every hall row.
+		 */
+		private void trackColumns() {
+			// a single vault spans the tracks by itself, with no tie girders across them for a column to carry
+			if (spec.roof() != RoofType.HALL || spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED) {
+				return;
+			}
+			final java.util.TreeSet<Integer> lines = new java.util.TreeSet<>();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				lines.addAll(columnLines(band, RoofType.HALL));
+			}
+			final java.util.TreeSet<Integer> free = new java.util.TreeSet<>();
+			for (int u = layout.buildingWidth(); u < layout.width(); u++) {
+				if (betweenTracks(u)) {
+					free.add(u);
+				}
+			}
+			final List<Integer> added = new ArrayList<>();
+			Integer previous = null;
+			for (final int line : List.copyOf(lines)) {
+				int from = previous == null ? line : previous;
+				while (previous != null && line - from > StationGeometry.MAX_BEAM_SPAN) {
+					final Integer pick = free.floor(from + StationGeometry.MAX_BEAM_SPAN);
+					if (pick == null || pick <= from) {
+						break;
+					}
+					added.add(pick);
+					from = pick;
+				}
+				previous = line;
+			}
+			final int top = hallBeamY();
+			for (final int u : added) {
+				for (final int v : hallRows()) {
+					if (standsOn(u, v, top) >= StationGeometry.WALK_Y || taken(u, StationGeometry.PLATFORM_Y, v)) {
+						continue;
+					}
+					// on a plinth of platform floor, level with the platforms
+					put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
+					for (int y = StationGeometry.WALK_Y; y < top - 1; y++) {
+						put(Role.COLUMN, u, y, v, LocalDir.PLUS_V);
+					}
+					put(Role.COLUMN_CAP, u, top - 1, v, LocalDir.PLUS_V);
+					extraSupport.add(new Box(u, -1, v, u, -1, v));
+				}
+			}
+		}
+
+		/** Outside every track's clearance and every platform: the strip between two tracks. */
+		private boolean betweenTracks(int u) {
+			boolean left = false;
+			boolean right = false;
+			for (final TrackLayout.Track track : layout.tracks()) {
+				if (Math.abs(u - track.u()) <= StationGeometry.ENVELOPE_HALF_WIDTH) {
+					return false;
+				}
+				left |= track.u() < u;
+				right |= track.u() > u;
+			}
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (u >= band.uMin() && u <= band.uMax()) {
+					return false;
+				}
+			}
+			return left && right;
 		}
 
 		/** Column v along one platform: the station's spacing, or the same spacing along a shorter platform's own run. */
@@ -1883,6 +1967,12 @@ public final class StationPlanner {
 					rows.add(found);
 				}
 			}
+			// over a footbridge the frame also rests on the bridge roof (see hallRoof): that row carries the girders too, so the
+			// gaps either side of it are measured from it and no extra row of columns is squeezed in beside the stairs
+			final boolean bridgeRow = site.bridge() && top >= StationGeometry.BUILDING_ROOF_Y + 2 && !rows.contains(site.bridgeV());
+			if (bridgeRow) {
+				rows.add(site.bridgeV());
+			}
 			rows.sort(Comparator.naturalOrder());
 			// a row kept off a doorway or a stair can leave two rows further apart than a girder spans: add one between them,
 			// nearest the middle, clear of doorways if possible
@@ -1909,6 +1999,9 @@ public final class StationPlanner {
 			}
 			if (!rows.isEmpty() && rows.get(0) > reach) {
 				endRow(rows, 0, reach, top);
+			}
+			if (bridgeRow) {
+				rows.remove(Integer.valueOf(site.bridgeV()));
 			}
 			rows.sort(Comparator.naturalOrder());
 			hallRows = rows;
@@ -2093,8 +2186,8 @@ public final class StationPlanner {
 			final boolean onBridge = site.bridge() && beamY >= bridgeRoof + 2;
 			if (onBridge && !rows.contains(site.bridgeV())) {
 				rows.add(site.bridgeV());
-				rows.sort(Comparator.naturalOrder());
 			}
+			rows.sort(Comparator.naturalOrder());
 			// a single vault is its own arch: no tie girders across the tracks, only brackets over the platforms and eaves (the
 			// bridge row still crosses on its piers); several vaults keep full ties, which carry their valley gutters
 			final boolean freeArch = spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED;
@@ -2131,14 +2224,49 @@ public final class StationPlanner {
 					put(Role.BEAM, u0 + i, beamY, v, LocalDir.PLUS_V, girder, kind);
 				}
 			}
+			// an end frame across each end of the shed, joined to the girders along v so they finish on it instead of stopping
+			// short; it hangs from them (a rib, not a beam on columns)
+			for (final int end : new int[]{0, length - 1}) {
+				for (int u = u0 + along.first(); u <= u0 + along.last(); u++) {
+					if (!untied[u]) {
+						put(Role.RIB, u, beamY, end, LocalDir.PLUS_U, girder, kind);
+					}
+				}
+			}
 			if (onBridge) {
 				for (int u = u0; u <= u1; u++) {
 					final PlannedBlock below = cells.get(new Cell(u, bridgeRoof, site.bridgeV()));
 					if (below != null && below.role() == Role.BUILDING_ROOF && (along.contains(u - u0) || lit[u])) {
-						for (int y = bridgeRoof + 1; y < beamY; y++) {
-							put(Role.BRIDGE_PIER, u, y, site.bridgeV(), LocalDir.PLUS_V, palette.building().pier());
-						}
+						bridgePier(u, bridgeRoof, beamY);
 					}
+				}
+				// where the cross girder would still span more than a girder may (a vault's tie over several tracks), more piers
+				// on the bridge roof, each as far along as the span allows
+				final java.util.TreeSet<Integer> carried = new java.util.TreeSet<>();
+				for (int u = u0; u <= u1; u++) {
+					final PlannedBlock under = cells.get(new Cell(u, beamY - 1, site.bridgeV()));
+					if (under != null && (under.role() == Role.BRIDGE_PIER || under.role() == Role.COLUMN_CAP)) {
+						carried.add(u);
+					}
+				}
+				Integer previous = null;
+				for (final int u : List.copyOf(carried)) {
+					int from = previous == null ? u : previous;
+					while (previous != null && u - from > StationGeometry.MAX_BEAM_SPAN) {
+						int pick = -1;
+						for (int c = from + StationGeometry.MAX_BEAM_SPAN; c > from && pick < 0; c--) {
+							final PlannedBlock roofBelow = cells.get(new Cell(c, bridgeRoof, site.bridgeV()));
+							if (roofBelow != null && roofBelow.role() == Role.BUILDING_ROOF && !taken(c, bridgeRoof + 1, site.bridgeV())) {
+								pick = c;
+							}
+						}
+						if (pick < 0) {
+							break;
+						}
+						bridgePier(pick, bridgeRoof, beamY);
+						from = pick;
+					}
+					previous = u;
 				}
 			}
 			final int roofY = beamY + 1;
@@ -2252,6 +2380,8 @@ public final class StationPlanner {
 
 		/** Height of a round vault over its span. */
 		private static final double ARCH_RISE = 0.4;
+		/** Highest a vault rises over its frame: the widest single vault (100 blocks) would otherwise top the station's height limit. */
+		private static final int MAX_VAULT_RISE = 40;
 
 		/**
 		 * Rise of the vault above the eaves at each u0 + i: 0 for a flat roof; half an ellipse (barrel vault), a pointed arch, or
@@ -2299,7 +2429,7 @@ public final class StationPlanner {
 			final int span = b - a + 1;
 			final double half = (b - a) / 2.0;
 			final double centre = (a + b) / 2.0;
-			final int height = pointed ? Math.max(3, (int) Math.round(span * 0.42)) : Math.max(2, (int) Math.round(span * ratio));
+			final int height = Math.min(MAX_VAULT_RISE, pointed ? Math.max(3, (int) Math.round(span * 0.42)) : Math.max(2, (int) Math.round(span * ratio)));
 			for (int u = a; u <= b; u++) {
 				final double x = Math.min(1, Math.abs(u - centre) / half);
 				// pointed: two arcs centred half a span outside and below the crown's opposite side, meeting at the crown at an

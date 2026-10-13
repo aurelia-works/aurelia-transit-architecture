@@ -109,13 +109,12 @@ class StationPlannerTest {
 		final int length = StationGeometry.builtLength(spec.platformLength());
 		final StylePalette palette = StylePalette.of(spec);
 
-		// violations: none, except a side-platform hall over three or more tracks, which cannot be spanned
+		// violations: none (a side-platform hall over three or more tracks stands columns between the tracks)
 		final Set<Violation.Kind> kinds = EnumSet.noneOf(Violation.Kind.class);
 		for (final Violation violation : LayoutValidator.validate(plan)) {
 			kinds.add(violation.kind());
 		}
-		final boolean unspannable = spec.platformLayout() == PlatformLayout.SIDE && spec.roof() == RoofType.HALL && spec.trackCount() >= 3;
-		final Set<Violation.Kind> expected = unspannable ? EnumSet.of(Violation.Kind.ROOF_SPAN) : EnumSet.noneOf(Violation.Kind.class);
+		final Set<Violation.Kind> expected = EnumSet.noneOf(Violation.Kind.class);
 		if (!kinds.equals(expected)) {
 			scan.fail("violations", spec, "expected " + expected + " but got " + kinds);
 		}
@@ -172,7 +171,10 @@ class StationPlannerTest {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			floorColumns += band.width();
 		}
-		if (list(byRole, Role.PLATFORM_EDGE).size() + list(byRole, Role.PLATFORM_SURFACE).size() != floorColumns * length) {
+		// platform floor inside the platforms (a column between tracks stands on a plinth of it outside them)
+		final long surface = list(byRole, Role.PLATFORM_SURFACE).stream()
+				.filter(b -> layout.platforms().stream().anyMatch(p -> b.u() >= p.uMin() && b.u() <= p.uMax())).count();
+		if (list(byRole, Role.PLATFORM_EDGE).size() + surface != floorColumns * length) {
 			scan.fail("floors", spec, "floor cell count wrong");
 		}
 
@@ -369,7 +371,7 @@ class StationPlannerTest {
 	// ---------------------------------------------------------------- matrix tests
 
 	@Test
-	void matrixHasNoViolationsExceptUnspannableSideHalls() {
+	void matrixHasNoViolations() {
 		scan().assertNone("violations");
 	}
 
@@ -762,8 +764,7 @@ class StationPlannerTest {
 							for (final Violation violation : LayoutValidator.validate(plan(spec))) {
 								kinds.add(violation.kind());
 							}
-							final boolean unspannable = layout == PlatformLayout.SIDE && roof == RoofType.HALL && tracks >= 3;
-							assertEquals(unspannable ? Set.of(Violation.Kind.ROOF_SPAN) : Set.of(), kinds, describe(spec));
+							assertEquals(Set.of(), kinds, describe(spec));
 							assertFalse(blocks(plan(spec), Role.NAME_SIGN).isEmpty(), describe(spec));
 						}
 					}
@@ -945,9 +946,7 @@ class StationPlannerTest {
 										.platformWidth(width).roof(roof).stepFree(stepFree).building(BuildingStyle.GOTHIC_BRICK).terminus(true).build();
 								final StationPlan plan = plan(spec);
 								final List<Violation> violations = LayoutValidator.validate(plan);
-								// side platforms with 3-4 tracks cannot carry a hall roof, as at a through station
-								final boolean longSpan = roof == RoofType.HALL && layout == PlatformLayout.SIDE && tracks >= 3;
-								if (longSpan ? violations.stream().anyMatch(v -> v.kind() != Violation.Kind.ROOF_SPAN) : !violations.isEmpty()) {
+								if (!violations.isEmpty()) {
 									problems.add(describe(spec) + " violations " + violations.subList(0, Math.min(3, violations.size())));
 								}
 								final StationAudit.Result audit = StationAudit.audit(plan);

@@ -286,11 +286,13 @@ class LayoutValidatorTest {
 	}
 
 	@Test
-	void sideHallOverThreeTracksCannotBeSpanned() {
+	void sideHallOverThreeTracksIsSpannedByColumnsBetweenTheTracks() {
 		final StationPlan plan = StationPlanner.plan(StationSpec.builder().roof(RoofType.HALL).trackCount(3).build());
-		assertEquals(EnumSet.of(Violation.Kind.ROOF_SPAN), kinds(plan));
-		// one violation for each of the beam lines
-		assertEquals(StationPlanner.columnPositions(48).size(), count(plan, Violation.Kind.ROOF_SPAN));
+		assertEquals(EnumSet.noneOf(Violation.Kind.class), kinds(plan));
+		// without the columns between the tracks, every beam line spans too far
+		final StationPlan bare = with(plan, plan.blocks().stream().filter(b -> !((b.role() == Role.COLUMN || b.role() == Role.COLUMN_CAP)
+				&& plan.layout().platforms().stream().noneMatch(p -> b.u() >= p.uMin() && b.u() <= p.uMax()))).toList());
+		assertTrue(kinds(bare).contains(Violation.Kind.ROOF_SPAN));
 	}
 
 	@Test

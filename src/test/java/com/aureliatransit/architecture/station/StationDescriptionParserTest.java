@@ -393,10 +393,7 @@ class StationDescriptionParserTest {
 		for (final String text : texts) {
 			final StationSpec spec = spec(text);
 			final List<Violation> violations = LayoutValidator.validate(StationPlanner.plan(spec));
-			// a 3-4 track station with side platforms cannot carry a hall roof: the validator says so instead of building it
-			if (spec.platformLayout() == PlatformLayout.SIDE && spec.trackCount() >= 3 && spec.roof() == RoofType.HALL) {
-				assertTrue(violations.stream().allMatch(v -> v.kind() == Violation.Kind.ROOF_SPAN) && !violations.isEmpty(), text);
-			} else {
+			{
 				assertTrue(violations.isEmpty(), text + ": " + violations);
 			}
 		}
