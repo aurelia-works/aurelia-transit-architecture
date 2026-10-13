@@ -324,6 +324,16 @@ public final class StationPlanner {
 		}
 
 		void floors() {
+			final TrackLayout.PlatformBand street = site.street();
+			if (street != null) {
+				// the street entrance: paved like the platforms, railed off along the track, which nobody boards from here
+				for (int v = street.vFrom(); v <= street.vTo(); v++) {
+					for (int u = street.uMin(); u <= street.uMax(); u++) {
+						put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
+					}
+					put(Role.RAILING, street.uMax(), StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
+				}
+			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				for (int v = band.vFrom(); v <= band.vTo(); v++) {
 					for (int u = band.uMin(); u <= band.uMax(); u++) {
@@ -343,7 +353,7 @@ public final class StationPlanner {
 			if (layout.rampLength() == 0) {
 				return;
 			}
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.street() != null ? site.bridgeBands(layout) : layout.platforms()) {
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
 					put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 2, LocalDir.MINUS_V);
 					put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 1, LocalDir.MINUS_V);
@@ -996,6 +1006,12 @@ public final class StationPlanner {
 					shaft(lift, b.bridgeWall(), true, b.bridgeRoof(), band.runs(lift.doorV() + 4 * lift.out()));
 				}
 			}
+			if (site.street() != null) {
+				final StationLayout.Lift street = site.platformLift(site.street(), layout);
+				if (street != null) {
+					shaft(street, b.bridgeWall(), true, b.bridgeRoof(), site.street().runs(street.doorV() + 4 * street.out()));
+				}
+			}
 			final StationLayout.Lift hall = site.buildingLift(layout);
 			if (hall != null) {
 				// the building's own platform wall closes the shaft's far side, and its roof covers it
@@ -1604,7 +1620,7 @@ public final class StationPlanner {
 			final int wallLo = vB - 2;
 			final int wallHi = vB + 2;
 			// keep the stair corridors and landings clear before the deck and walls go up
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
 					for (final int u : flight.columns()) {
 						for (int y = 1; y <= 3; y++) {
@@ -1636,7 +1652,7 @@ public final class StationPlanner {
 			for (int u = from; u <= to; u++) {
 				boolean exitLo = false;
 				boolean exitHi = false;
-				for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 					if (u < band.uMin() || u > band.uMax()) {
 						continue;
 					}
@@ -1676,7 +1692,7 @@ public final class StationPlanner {
 				}
 			}
 			// each flight glazed (or walled) and roofed like the corridor it leaves
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
 					if (roof(band) == RoofType.CANOPY) {
 						stairShaft(band, flight, b);
@@ -1687,7 +1703,7 @@ public final class StationPlanner {
 			}
 			// piers on every platform at the bridge line, up to the deck: down the middle, or evenly spaced on a platform too wide
 			// for the deck to overhang one
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final int uPier : bridgePierLines(band)) {
 					for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 						put(Role.BRIDGE_PIER, uPier, y, vB, LocalDir.PLUS_V, b.pier());
@@ -1696,14 +1712,14 @@ public final class StationPlanner {
 			}
 			// a big number under the deck beside each platform's pier, seen as you come off the stairs; a platform numbered over
 			// its gates at a terminus head gets no second one hanging over the platform
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				if (site.served().contains(band.number()) && !gateNumbered(band)) {
 					numberSign(band, (band.uMin() + band.uMax()) / 2, roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y - 2 : StationGeometry.MIN_ROOF_Y, vB - site.stairSide(), LocalDir.PLUS_V);
 				}
 			}
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
 			// they stop below it, so the canopy runs over them
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				final int flankTop = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
 				for (final StationLayout.Flight flight : site.flights(band)) {
 					final List<Integer> open = opening(band, flight);
@@ -1732,7 +1748,7 @@ public final class StationPlanner {
 				}
 			}
 			// platform stairs with landings kept clear
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
 					final List<Integer> columns = flight.columns();
 					for (final int u : columns) {
@@ -1764,7 +1780,7 @@ public final class StationPlanner {
 			// six-foot piers where the deck span between supports exceeds 12
 			final List<Integer> supports = new ArrayList<>();
 			supports.add(from);
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				supports.addAll(bridgePierLines(band));
 			}
 			supports.add(to);
@@ -2374,7 +2390,8 @@ public final class StationPlanner {
 
 		/** The roof over this platform (see {@link StationGeometry#roof}). */
 		private RoofType roof(TrackLayout.PlatformBand band) {
-			return StationGeometry.roof(spec, band.number());
+			// the street entrance (number 0) is open to the sky, under a train shed too: the shed starts at the first track
+			return band.number() == 0 ? RoofType.NONE : StationGeometry.roof(spec, band.number());
 		}
 
 		private boolean isColumnV(int v) {
@@ -2634,7 +2651,7 @@ public final class StationPlanner {
 			final String girder = palette.blockId(Role.BEAM);
 			final String kind = "kind=" + palette.girderKind();
 			final int beamY = hallBeamY();
-			final int u0 = layout.buildingWidth();
+			final int u0 = site.street() != null ? StationGeometry.STREET_WIDTH : layout.buildingWidth();
 			final int u1 = layout.width() - 1;
 			final int n = u1 - u0 + 1;
 			final int[] rise = shedRise(u0, n);
@@ -3427,22 +3444,28 @@ public final class StationPlanner {
 				return;
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (band.island()) {
-					// one row down the middle: the signs are double-sided, so it reads from both tracks; where stairs, a lift or
-					// a walkway fill the middle column, the one beside it
-					final int middle = (band.uMin() + band.uMax()) / 2;
-					for (final int u : new int[]{middle, middle + 1, middle - 1}) {
-						if (!isEdge(band, u) && u >= band.uMin() && u <= band.uMax() && signRow(band, u, LocalDir.MINUS_U)) {
-							break;
+				// a row of three where one fits in any column; on a short platform full of stairs and a lift, two, else one
+				rows:
+				for (int n = 3; n >= 1; n--) {
+					if (band.island()) {
+						// one row down the middle: the signs are double-sided, so it reads from both tracks; where stairs, a lift
+						// or a walkway fill the middle column, the one beside it
+						final int middle = (band.uMin() + band.uMax()) / 2;
+						for (final int u : new int[]{middle, middle + 1, middle - 1}) {
+							if (!isEdge(band, u) && u >= band.uMin() && u <= band.uMax() && signRow(band, u, LocalDir.MINUS_U, n)) {
+								break rows;
+							}
 						}
-					}
-				} else if (!signBeside(band)) {
-					// against the back, else a column further in where the back is walled (an underpass stair, a building)
-					final int step = towardTrack(band) == LocalDir.PLUS_U ? 1 : -1;
-					for (int u = backColumn(band), k = 0; k < 3 && !isEdge(band, u) && u >= band.uMin() && u <= band.uMax(); u += step, k++) {
-						if (signRow(band, u, towardTrack(band))) {
-							break;
+					} else if (!signBeside(band)) {
+						// against the back, else a column further in where the back is walled (an underpass stair, a building)
+						final int step = towardTrack(band) == LocalDir.PLUS_U ? 1 : -1;
+						for (int u = backColumn(band), k = 0; k < 3 && !isEdge(band, u) && u >= band.uMin() && u <= band.uMax(); u += step, k++) {
+							if (signRow(band, u, towardTrack(band), n)) {
+								break rows;
+							}
 						}
+					} else {
+						break;
 					}
 				}
 			}
@@ -3469,29 +3492,29 @@ public final class StationPlanner {
 		 * Three signs side by side along v, centred on the platform's middle; shifted along v until the cells are free. Shifts
 		 * run towards the platform end first and, if the end is reached, back towards its start. False if there is no room.
 		 */
-		private boolean signRow(TrackLayout.PlatformBand band, int u, LocalDir front) {
-			final int start = band.vFrom() + band.length() / 2 - 1;
-			for (int v = start; v + 2 <= band.vTo(); v++) {
-				if (placeRow(band, u, v, front)) {
+		private boolean signRow(TrackLayout.PlatformBand band, int u, LocalDir front, int n) {
+			final int start = band.vFrom() + band.length() / 2 - n / 2;
+			for (int v = start; v + n - 1 <= band.vTo(); v++) {
+				if (placeRow(band, u, v, front, n)) {
 					return true;
 				}
 			}
 			for (int v = start - 1; v >= band.vFrom(); v--) {
-				if (placeRow(band, u, v, front)) {
+				if (placeRow(band, u, v, front, n)) {
 					return true;
 				}
 			}
 			return false;
 		}
 
-		private boolean placeRow(TrackLayout.PlatformBand band, int u, int v, LocalDir front) {
-			for (int i = 0; i < 3; i++) {
+		private boolean placeRow(TrackLayout.PlatformBand band, int u, int v, LocalDir front, int n) {
+			for (int i = 0; i < n; i++) {
 				// never across the foot of a stair: a sign there walled in whoever came down it
 				if (taken(u, StationGeometry.WALK_Y, v + i) || atStairFoot(band, u, v + i)) {
 					return false;
 				}
 			}
-			for (int i = 0; i < 3; i++) {
+			for (int i = 0; i < n; i++) {
 				put(Role.NAME_SIGN, u, StationGeometry.WALK_Y, v + i, front);
 			}
 			return true;

@@ -11,7 +11,7 @@
 - **Station buildings:** ticket hall with gates, office, MTR ticket machines, kiosk, clock and boards, in compact, city (three storeys with wings) and grand (four storeys, pavilions, clock tower, hipped roofs) sizes. Larger buildings get an upstairs waiting room.
 - **Termini, hubs and train sheds:** tracks end at buffer stops in front of a head building with a gate line, and every platform is step-free from the concourse. A hub ends its middle tracks and runs the outer ones through. City and grand termini get a front modelled on real stations: brick with clock towers, giant arched windows, Beaux-Arts stone, or glass. Train sheds come flat, arched, pointed or as several arches, framed in the new **station girder** block (four colours).
 - **Canopies by look:** a **butterfly** (V) roof for the German looks, a **gable** for the heritage looks, flat for the rest. Say `flat`, `butterfly` or `gable` to pick one. Canopies stand 4 high on fewer columns.
-- **Footbridges, lifts and more:** a footbridge with stairs to every platform, glazed where it rises through a canopy. Platforms with room get a working MTR lift, which undo removes; at the platform it opens both ways, under the bridge and onto the platform behind it. Options for up escalators, stairs both ways, enclosed stairwells, travelators along long platforms and a gravel or andesite track bed.
+- **Footbridges, lifts and more:** a footbridge with stairs to every platform, glazed where it rises through a canopy. Platforms with room get a working MTR lift, which undo removes; at the platform it opens both ways, under the bridge and onto the platform behind it. Options for up escalators, stairs both ways, enclosed stairwells, travelators along long platforms and a gravel or andesite track bed. Island platforms are never left to be reached across a track: without a building they get a footbridge, and with tracks along both edges a street entrance beside the first track with its own stair and lift.
 - **Platforms one by one:** give each platform its own type, width (3-20), length and roof, as plain words (`platform 2: island 12 wide 120 long open;`).
 - **Fitted out:** departure screens hang from the canopy, centred on the platform on a cross beam (back to back on wide islands), with help points, benches, ceiling speakers and platform numbers. Each platform has its own colour stripe at the gates.
 - **Registered in MTR:** a built station adds itself as an MTR station with its name and area, so screens and announcements work at once. An MTR station already there is left alone; undo removes the one it added.
@@ -41,6 +41,9 @@
 - Joined signs and screens no longer keep invisible hit boxes in the middle of the row.
 - A seated player can move straight to another seat, as you can hop between boats.
 - Service messages can be up to 256 characters, and longer ones are refused instead of being cut off mid-word.
+- Islands too narrow for a footbridge stair (under 5) or lift (under 6) are widened to fit, with a warning, instead of being left without a way up.
+- "Grand Central, city" builds a city-size building: a size word now beats the landmark's own size.
+- Short platforms crowded by stairs and a lift get a shorter name sign row instead of none.
 
 ## 1.5.0
 

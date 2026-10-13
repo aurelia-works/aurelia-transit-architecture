@@ -212,6 +212,8 @@ public final class StationDescriptionParser {
 		private ShedShape shed;
 		private CanopyShape canopy;
 		private StationScale scale;
+		/** The size came from a landmark (Grand Central is grand), so a size word said after it still wins. */
+		private boolean scaleFromLandmark;
 		private int scaleAt = -1;
 
 		ParseResult run(String description) {
@@ -792,9 +794,10 @@ public final class StationDescriptionParser {
 				setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
 				askBuilding(i);
 				if (scale == null) {
-					// the landmark's own size; a size word said before it wins without a warning
+					// the landmark's own size; a size word said before or after it wins without a warning
 					scale = StationScale.GRAND;
 					scaleAt = i;
+					scaleFromLandmark = true;
 				}
 				use(i, i + 1);
 				return true;
@@ -966,7 +969,8 @@ public final class StationDescriptionParser {
 		}
 
 		private void setScale(StationScale value, int i) {
-			if (scale == null) {
+			if (scale == null || scaleFromLandmark) {
+				scaleFromLandmark = false;
 				scale = value;
 				scaleAt = i;
 			} else if (scale != value) {
@@ -1252,6 +1256,23 @@ public final class StationDescriptionParser {
 				}
 			}
 
+			// island platforms need a way in that does not cross a track: a building's footbridge, or a footbridge of their own,
+			// reached from a side platform on the edge or, with tracks along both edges, from a street entrance beside the first
+			final TrackLayout bands = StationGeometry.layout(builder.build());
+			final boolean islands = !terminus && bands.platforms().stream().anyMatch(TrackLayout.PlatformBand::island);
+			final boolean sideEdge = !bands.platforms().isEmpty()
+					&& (!bands.platforms().get(0).trackLeft() || !bands.platforms().get(bands.platforms().size() - 1).trackRight());
+			// a look word asks for a building later, in resolveLooks
+			final boolean buildingComing = Boolean.TRUE.equals(building) || building == null && !looks.isEmpty();
+			if (islands && !buildingComing) {
+				if (footbridge == null) {
+					footbridge = true;
+					defaulted.add(sideEdge ? "footbridge (the island platforms need one)" : "footbridge with a street entrance (the island platforms need a way in)");
+				} else if (!footbridge) {
+					warn("with no footbridge the island platforms are reached by walking across a track");
+				}
+			}
+
 			// width
 			// a footbridge's side platforms need room for a two-column stair, or they get no lift and are not step-free
 			final boolean bridgeSide = layout != PlatformLayout.ISLAND && Boolean.TRUE.equals(footbridge) && !terminus;
@@ -1276,6 +1297,33 @@ public final class StationDescriptionParser {
 				builder.platformWidth(defaultWidth);
 				defaulted.add("width " + defaultWidth + (stairGroup ? " (so the " + (bothWays ? "second stair" : "escalator") + " fits beside the lift)"
 						: bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
+			}
+
+			// an island under a footbridge needs room for its stair and a walkway past it, and for a lift when step-free
+			if (islands && !(sideEdge && Boolean.FALSE.equals(footbridge)) || terminus && hub) {
+				final boolean lift = !Boolean.FALSE.equals(stepFree);
+				final int need = lift ? StationGeometry.MIN_LIFT_ISLAND_WIDTH : StationLayout.MIN_STAIR_ISLAND;
+				final String why = "island platforms need to be " + need + " wide for a footbridge stair" + (lift ? " and lift" : "") + "; using " + need;
+				final int narrowest = builder.build().platformWidth();
+				if (list.isEmpty() && layout == PlatformLayout.ISLAND && narrowest < need) {
+					warn(why);
+					builder.platformWidth(need);
+				} else if (!list.isEmpty()) {
+					final List<PlatformSpec> widened = new ArrayList<>();
+					boolean changed = false;
+					for (final PlatformSpec p : list) {
+						if (p.kind() == PlatformSpec.Kind.ISLAND && p.widthIn(narrowest) < need) {
+							widened.add(new PlatformSpec(p.kind(), need, p.length(), p.roof(), p.bay()));
+							changed = true;
+						} else {
+							widened.add(p);
+						}
+					}
+					if (changed) {
+						warn(why + " for the narrower ones");
+						builder.platforms(widened);
+					}
+				}
 			}
 
 			// a canopy shape asks for canopies, unless the text chose a roof (or a look would give it a train shed)

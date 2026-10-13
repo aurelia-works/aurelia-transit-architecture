@@ -121,7 +121,7 @@ public final class StationGeometry {
 			previousTrack = track;
 		}
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
-		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : 0;
+		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : streetEntrance(spec) ? STREET_WIDTH : 0;
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
 					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, hubThrough(spec));
@@ -135,7 +135,23 @@ public final class StationGeometry {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight(),
 					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
-		return new TrackLayout(railWidth + shift, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms, shift, 0);
+		return new TrackLayout(railWidth + shift, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms,
+				spec.sideBuilding() ? shift : 0, 0);
+	}
+
+	/** Columns of the street entrance beside the first track: a side platform's width, so its stair and lift fit as on one. */
+	public static final int STREET_WIDTH = 6;
+
+	/**
+	 * A through station with a footbridge but no building, whose outermost bands are both tracks (island platforms), gets a
+	 * street entrance beside its first track: otherwise nobody could reach the footbridge without walking across a track.
+	 */
+	public static boolean streetEntrance(StationSpec spec) {
+		if (spec.sideBuilding() || spec.terminus() || !spec.footbridge()) {
+			return false;
+		}
+		final String bands = bandPattern(spec);
+		return bands.startsWith("T") && bands.endsWith("T");
 	}
 
 	/**

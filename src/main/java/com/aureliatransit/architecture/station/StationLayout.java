@@ -23,9 +23,11 @@ import java.util.List;
  * @param served        platforms reached by footbridge stairs (platform numbers)
  * @param escalators    an up escalator beside each platform stair where the platform is wide enough
  * @param bothWays      a second stair down to each platform wide enough, from the corridor's other side, facing the other way
+ * @param street        the street entrance beside the first track, with a stair and a lift up to the footbridge, laid out like
+ *                      a side platform with no track of its own (number 0); null without one
  */
 public record StationLayout(boolean building, int bays, int vStart, int vEnd, int entranceV, int innerStairSide, boolean bridge, int bridgeV,
-		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays) {
+		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays, TrackLayout.PlatformBand street) {
 
 	/**
 	 * One stair flight down from the footbridge corridor to a platform.
@@ -56,6 +58,8 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		}
 	}
 
+	/** The narrowest island that takes a footbridge stair with a walkway past it. */
+	public static final int MIN_STAIR_ISLAND = 5;
 	/** Narrowest island and side platform that take an escalator or second stair beside the stair and keep a walkway past both. */
 	public static final int MIN_ESCALATOR_ISLAND = 11;
 	public static final int MIN_ESCALATOR_SIDE = 9;
@@ -99,7 +103,9 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			}
 		}
 		// a big hub's outer islands have through tracks on both sides, so a footbridge links them to the bay platforms
-		boolean bridge = (spec.footbridge() || building || outerIslands(layout)) && !served.isEmpty() && (building || layout.platforms().size() >= 2);
+		final boolean street = StationGeometry.streetEntrance(spec);
+		boolean bridge = (spec.footbridge() || building || outerIslands(layout)) && !served.isEmpty()
+				&& (building || street || layout.platforms().size() >= 2);
 		final int bridgeV = entranceV;
 		int stairSide = 0;
 		if (bridgeV + 1 + 7 <= length - 1) {
@@ -110,14 +116,19 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		int deckFrom = 0;
 		int deckTo = 0;
 		if (bridge) {
-			deckFrom = building ? layout.buildingWidth() : layout.platforms().get(0).uMin();
+			deckFrom = building ? layout.buildingWidth() : street ? 0 : layout.platforms().get(0).uMin();
 			deckTo = layout.platforms().get(layout.platforms().size() - 1).uMax();
 		}
 		if (stairSide == 0) {
 			bridge = false;
 		}
+		// the street entrance runs along the first track as far as the footbridge's stairs and lift reach
+		final TrackLayout.PlatformBand streetBand = bridge && street
+				? new TrackLayout.PlatformBand(0, 0, StationGeometry.STREET_WIDTH - 1, false, true, Math.max(0, bridgeV - StationGeometry.BRIDGE_REACH),
+						Math.min(length - 1, bridgeV + StationGeometry.BRIDGE_REACH), false)
+				: null;
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
-				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays());
+				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays(), streetBand);
 	}
 
 	/** Facade bays of a station building beside platforms this long. */
@@ -167,9 +178,24 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return stairSide > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
 	}
 
+	/** A platform the footbridge's stairs come down to, or the street entrance. */
+	private boolean reaches(TrackLayout.PlatformBand band) {
+		return served.contains(band.number()) || band.equals(street);
+	}
+
+	/** The platforms, then the street entrance when there is one: every band a footbridge stair comes down to. */
+	public List<TrackLayout.PlatformBand> bridgeBands(TrackLayout layout) {
+		if (street == null) {
+			return layout.platforms();
+		}
+		final List<TrackLayout.PlatformBand> all = new ArrayList<>(layout.platforms());
+		all.add(street);
+		return all;
+	}
+
 	/** A served platform wide enough for a stair, a rail column and a second pair of columns side by side. */
 	private boolean wideFlight(TrackLayout.PlatformBand band) {
-		return bridge && served.contains(band.number()) && band.width() >= (band.island() ? MIN_ESCALATOR_ISLAND : MIN_ESCALATOR_SIDE);
+		return bridge && reaches(band) && band.width() >= (band.island() ? MIN_ESCALATOR_ISLAND : MIN_ESCALATOR_SIDE);
 	}
 
 	/** True when this platform's stair has an up escalator beside it. */
@@ -216,7 +242,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	 */
 	public List<Flight> flights(TrackLayout.PlatformBand band) {
 		final List<Integer> stairs = stairs(band);
-		if (!bridge || !served.contains(band.number()) || stairs.isEmpty()) {
+		if (!bridge || !reaches(band) || stairs.isEmpty()) {
 			return List.of();
 		}
 		final Flight main = new Flight(stairs, stairSide, stairWallV());
@@ -259,7 +285,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		final List<Integer> columns = new ArrayList<>();
 		final int width = band.width();
 		if (band.island()) {
-			if (width < 5) {
+			if (width < MIN_STAIR_ISLAND) {
 				return columns;
 			}
 			final int steps = Math.min(2, width - 4);
@@ -323,7 +349,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	 * walkway beside it) or the shaft would run off the platform end.
 	 */
 	public Lift platformLift(TrackLayout.PlatformBand band, TrackLayout layout) {
-		if (!bridge || !served.contains(band.number())) {
+		if (!bridge || !reaches(band)) {
 			return null;
 		}
 		final List<Integer> columns = stairs(band);

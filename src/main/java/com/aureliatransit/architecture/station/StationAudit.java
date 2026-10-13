@@ -315,6 +315,10 @@ public final class StationAudit {
 			for (final PlannedBlock block : plan.blocks()) {
 				if (block.role().platformFloor()) {
 					final TrackLayout.PlatformBand band = bandAt(block.u());
+					// the street entrance's paving is not a platform: no roof was asked for over it
+					if (band == null && block.u() < StationGeometry.STREET_WIDTH && StationGeometry.streetEntrance(spec)) {
+						continue;
+					}
 					final RoofType roof = band == null ? spec.roof() : StationGeometry.roof(spec, band.number());
 					final long key = key(block.u(), 0, block.v());
 					if (roof == RoofType.NONE) {
@@ -621,8 +625,8 @@ public final class StationAudit {
 				}
 			}
 			if (site.bridge()) {
-				for (final TrackLayout.PlatformBand band : layout.platforms()) {
-					if (!site.served().contains(band.number())) {
+				for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+					if (!site.served().contains(band.number()) && !band.equals(site.street())) {
 						continue;
 					}
 					for (final StationLayout.Flight flight : site.flights(band)) {

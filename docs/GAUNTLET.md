@@ -36,3 +36,16 @@ States: OPEN, FIXED (commit), CHECKED (seen fixed), WONTFIX (why).
 | 17 | Planning a 20-track, 300-long station stalled the server for over a second | plan, validate and audit all ran on the server thread | FIXED: above 2,000 track-blocks the plan is worked out on a planner thread; confirm waits for it; game test |
 | 18 | Any web page could make the Studio plan stations in a loop | `/api/plan` took a POST without the page token | FIXED: token required, as for `/api/send` |
 | 19 | Parser robustness | 20,000 fuzzed inputs (word soup, numeric extremes, control characters, 5,000-character input) | CHECKED: nothing throws; StationDescriptionFuzzTest keeps 3,000 |
+
+## Second sweep (13 Oct evening)
+
+2,000 random descriptions with every audit warning and parser warning tallied, not only failures.
+
+| # | Finding | Evidence | State |
+|---|---|---|---|
+| 20 | Island platforms of a station without a building were reached only across a track (291 of 2,000) | audit ACCESS warnings; no footbridge unless asked, and a building-less footbridge stopped at the outer platforms, glazed shut at both ends | FIXED: islands get a footbridge; with tracks on both edges a street entrance with stair and lift beside the first track; IslandAccessTest, CHECKED in a render |
+| 21 | Islands 3-4 wide under a footbridge got no stair at all, with no warning | `stairColumns` needs 5; 103 stations | FIXED: widened to 6 for the lift (5 without ramps), with a warning |
+| 22 | "grand central, city" built a grand building and warned "size given twice" | the landmark's implied size counted as said | FIXED: a size word beats the landmark's own size |
+| 23 | Name signs given up on 16-long platforms full of stairs and lifts (29) | no free run of three cells | FIXED: two, else one sign; none left in the sweep |
+| 24 | 16-long stations with a building are not step-free (67 of 2,000) | a two-bay building has no room for its lift | WONTFIX: shortest stations only; the audit says so before building |
+

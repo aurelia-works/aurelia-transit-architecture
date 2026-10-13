@@ -362,6 +362,9 @@ class StationDescriptionParserTest {
 		assertEquals(RoofMaterial.GLASS, d.roofMaterial());
 		assertEquals("Leidsche Rijn", d.name());
 		assertTrue(dutch.ignored().isEmpty(), dutch.ignored().toString());
+		// no building, so the island is reached by a footbridge from a street entrance beside the first track
+		assertTrue(d.footbridge());
+		assertTrue(StationGeometry.streetEntrance(d));
 		assertEquals(List.of("name \"Leidsche Rijn\"", "2 tracks", "Dutch style", "island platforms", "length 64", "glass roof", "canopy"),
 				dutch.understood());
 
