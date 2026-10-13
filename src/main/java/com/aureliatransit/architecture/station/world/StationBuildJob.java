@@ -142,8 +142,16 @@ public final class StationBuildJob {
 	/** Undoes the log's entries from the newest back; the log shrinks as cells are handled. */
 	public static StationBuildJob undo(ServerWorld world, UUID owner, UndoLog log, Consumer<Text> out) {
 		// MTR keeps lifts in its own data; a plain block reset would leave the lift behind
-		MtrLiftContract.remove(world, log.takeLifts());
-		MtrStationContract.remove(world, log.takeStations());
+		final List<BlockPos> lifts = log.takeLifts();
+		final List<Long> stations = log.takeStations();
+		MtrLiftContract.remove(world, lifts);
+		MtrStationContract.remove(world, stations);
+		// the build said what it added to MTR; undo says what it took away
+		if (!lifts.isEmpty() || !stations.isEmpty()) {
+			out.accept(Text.literal("Removed from MTR: " + (lifts.isEmpty() ? "" : lifts.size() + (lifts.size() == 1 ? " lift" : " lifts"))
+					+ (!lifts.isEmpty() && !stations.isEmpty() ? " and " : "") + (stations.isEmpty() ? "" : "the station this build added") + ".")
+					.formatted(Formatting.GRAY));
+		}
 		return new StationBuildJob(world, owner, Mode.UNDO, List.of(), true, log, log.size(), out, null);
 	}
 
