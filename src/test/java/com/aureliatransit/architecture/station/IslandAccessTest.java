@@ -116,4 +116,35 @@ class IslandAccessTest {
 		}
 		assertEquals(StationScale.GRAND, StationDescriptionParser.parse("grand central, named Halt").spec().scale());
 	}
+
+	@Test
+	void aNarrowEdgePlatformIsWidenedWhenItIsTheOnlyWayIn() {
+		// platform 4 has no track behind it but tracks further out on both sides, so it is no way in from beside the station
+		final String text = "platform 1: side 5 wide; platform 2: side; platform 3: island 8 wide; platform 4: side 15 wide; platform 5: island 16 wide;"
+				+ " platform 6: island 14 wide; 120 long, no building, named Halt";
+		final StationSpec spec = StationDescriptionParser.parse(text).spec();
+		assertEquals(StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH, spec.platforms().get(0).width());
+		for (final StationAudit.Access access : StationAudit.audit(StationPlanner.plan(spec)).access()) {
+			assertEquals(StationAudit.Access.STEP_FREE, access, text);
+		}
+	}
+
+	@Test
+	void aShortStationKeepsItsBuildingLift() {
+		for (final String text : new String[]{"12 tracks island, 16 long, 13 wide, beijing, arched shed, escalators, named Halt",
+				"platform 1: side 9 wide; platform 2: side; platform 3: side; platform 4: side; platform 5: side; platform 6: island bay 3 wide open;"
+						+ " 16 long, 15 wide, antwerp, open, city, escalators, step-free, named Halt",
+				"2 tracks island, 16 long, station building, named Halt"}) {
+			final ParseResult parsed = StationDescriptionParser.parse(text);
+			assertEquals(StationDescriptionParser.BUILDING_LIFT_LENGTH, parsed.spec().platformLength(), text);
+			assertTrue(parsed.warnings().stream().anyMatch(w -> w.contains("for its lift")), text);
+			final StationPlan plan = StationPlanner.plan(parsed.spec());
+			assertNotNull(StationLayout.of(parsed.spec(), plan.layout()).buildingLift(plan.layout()), text);
+			for (final StationAudit.Access access : StationAudit.audit(plan).access()) {
+				assertEquals(StationAudit.Access.STEP_FREE, access, text);
+			}
+		}
+		// without step-free there is no lift to make room for
+		assertEquals(16, StationDescriptionParser.parse("2 tracks island, 16 long, station building, stairs only, named Halt").spec().platformLength());
+	}
 }

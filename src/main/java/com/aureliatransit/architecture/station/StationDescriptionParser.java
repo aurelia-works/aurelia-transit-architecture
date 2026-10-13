@@ -32,6 +32,8 @@ public final class StationDescriptionParser {
 	static final int TERMINUS_LENGTH = 160;
 	/** A "large" or "big" terminus without a number. */
 	static final int LARGE_TERMINUS_TRACKS = 10;
+	/** Shortest platforms whose station building has room for a lift beside its stair. */
+	static final int BUILDING_LIFT_LENGTH = 18;
 	static final int LARGE_TERMINUS_LENGTH = 200;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
@@ -1280,6 +1282,13 @@ public final class StationDescriptionParser {
 				}
 			}
 
+			// a two-bay building (under 18 long) has no room for its lift beside the stair up to the footbridge
+			if (buildingComing && !terminus && !Boolean.FALSE.equals(stepFree) && (islands || bands.platforms().size() >= 2)
+					&& builder.build().platformLength() < BUILDING_LIFT_LENGTH) {
+				warn("a station building needs platforms " + BUILDING_LIFT_LENGTH + " long for its lift up to the footbridge; using " + BUILDING_LIFT_LENGTH);
+				builder.platformLength(BUILDING_LIFT_LENGTH);
+			}
+
 			// width
 			// a footbridge's side platforms need room for a two-column stair, or they get no lift and are not step-free
 			final boolean bridgeSide = layout != PlatformLayout.ISLAND && Boolean.TRUE.equals(footbridge) && !terminus;
@@ -1323,17 +1332,18 @@ public final class StationDescriptionParser {
 					final List<String> given = new ArrayList<>();
 					boolean quiet = false;
 					// one side platform on an edge wide enough for its lift is a step-free way up; else every edge one gets room
+					// a side platform with tracks further out on both sides is between the tracks, not on the edge, even with no track behind it
+					final boolean[] innerAt = new boolean[list.size()];
 					boolean liftedEntry = false;
 					for (int k = 0; k < list.size(); k++) {
 						final TrackLayout.PlatformBand band = bands.platforms().get(k);
-						liftedEntry |= list.get(k).kind() == PlatformSpec.Kind.SIDE && (!band.trackLeft() || !band.trackRight())
-								&& list.get(k).widthIn(narrowest) >= StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH;
+						innerAt[k] = list.get(k).kind() == PlatformSpec.Kind.ISLAND || !terminus && bands.tracks().stream().anyMatch(t -> t.u() < band.uMin())
+								&& bands.tracks().stream().anyMatch(t -> t.u() > band.uMax());
+						liftedEntry |= !innerAt[k] && list.get(k).widthIn(narrowest) >= StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH;
 					}
 					for (int k = 0; k < list.size(); k++) {
 						final PlatformSpec p = list.get(k);
-						final TrackLayout.PlatformBand band = bands.platforms().get(k);
-						final boolean inner = p.kind() == PlatformSpec.Kind.ISLAND || !terminus && bands.tracks().stream().anyMatch(t -> t.u() < band.uMin())
-								&& bands.tracks().stream().anyMatch(t -> t.u() > band.uMax());
+						final boolean inner = innerAt[k];
 						// without a building a side platform on the edge is the way up to the footbridge, so it needs the lift too
 						final boolean entry = !inner && !buildingComing && !liftedEntry;
 						final int need = p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed
