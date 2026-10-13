@@ -837,11 +837,11 @@ public final class StationPlanner {
 				if (!clock || side == inward) {
 					continue;
 				}
-				switch (side) {
-					case MINUS_U -> put(Role.FIXTURE, u0 - 1, clockY, vC, side, clockFace);
-					case PLUS_U -> put(Role.FIXTURE, u1 + 1, clockY, vC, side, clockFace);
-					case MINUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v0 - 1, side, clockFace);
-					case PLUS_V -> put(Role.FIXTURE, u0 + 2, clockY, v1 + 1, side, clockFace);
+				final int cu = side == LocalDir.MINUS_U ? u0 - 1 : side == LocalDir.PLUS_U ? u1 + 1 : u0 + 2;
+				final int cv = side == LocalDir.MINUS_V ? v0 - 1 : side == LocalDir.PLUS_V ? v1 + 1 : vC;
+				// on a head building as narrow as the tower a side face would hang outside the station's footprint
+				if (cu >= 0 && cu < layout.width() && cv >= layout.vMin() && cv <= layout.vMax()) {
+					put(Role.FIXTURE, cu, clockY, cv, side, clockFace);
 				}
 			}
 			// the cap: a closed slab, then a pyramid of two rings and a point, then the finial
@@ -2349,6 +2349,10 @@ public final class StationPlanner {
 		private boolean rowCarried(int v, int top) {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				for (final int u : columnLines(band, RoofType.HALL)) {
+					// past a shorter platform's end a column needs its footing cell (columns() skips one on a ramp)
+					if (!band.runs(v) && taken(u, StationGeometry.PLATFORM_Y, v) && standsOn(u, v, top) < StationGeometry.WALK_Y) {
+						return false;
+					}
 					for (int y = top - 1; y >= StationGeometry.WALK_Y; y--) {
 						final PlannedBlock below = cells.get(new Cell(u, y, v));
 						if (air.contains(new Cell(u, y, v)) && below == null) {

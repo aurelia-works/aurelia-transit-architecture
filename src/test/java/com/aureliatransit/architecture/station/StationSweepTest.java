@@ -97,6 +97,24 @@ class StationSweepTest {
 		assertEquals(List.of(), out.stream().limit(20).toList());
 	}
 
+	/** Stations the wider sweeps once found broken: short train sheds over bay platforms, a tower on a narrow head building. */
+	@Test
+	void onceBrokenStationsPlanCleanly() {
+		final List<String> out = new ArrayList<>();
+		for (final String text : new String[]{
+				"platform 1: island 5 wide; platform 2: island bay; platform 3: island; 16 long, 11 wide, frankfurt, pointed shed, compact, named A",
+				"platform 1: island 11 wide; platform 2: side 12 wide canopy; platform 3: island bay 6 wide; platform 4: side canopy; platform 5: side bay; "
+						+ "platform 6: island bay; platform 7: side 6 wide; platform 8: side 17 wide; platform 9: side; 16 long, utrecht, train shed, compact, "
+						+ "footbridge, escalators, stairs both ways, named B",
+				"1 tracks, terminus, 16 long, 3 wide, tokyo, hall roof, grand, footbridge, travelators, named C",
+				"platform 1: island bay; platform 2: island; 16 long, tokyo, hall roof, city, travelators, named D",
+				"platform 1: island 19 wide; platform 2: side 4 wide; platform 3: side; platform 4: side 3 wide open; platform 5: side bay 7 wide; "
+						+ "platform 6: island bay 18 wide; platform 7: side bay 8 wide; 16 long, tokyo, hall roof, city, named E"}) {
+			run(text, out);
+		}
+		assertEquals(List.of(), out);
+	}
+
 	private static void run(String text, List<String> out) {
 		try {
 			final ParseResult parsed = StationDescriptionParser.parse(text);

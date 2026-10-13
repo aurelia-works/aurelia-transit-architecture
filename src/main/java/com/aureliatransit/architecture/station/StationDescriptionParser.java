@@ -1322,12 +1322,22 @@ public final class StationDescriptionParser {
 					final List<PlatformSpec> widened = new ArrayList<>();
 					final List<String> given = new ArrayList<>();
 					boolean quiet = false;
+					// one side platform on an edge wide enough for its lift is a step-free way up; else every edge one gets room
+					boolean liftedEntry = false;
+					for (int k = 0; k < list.size(); k++) {
+						final TrackLayout.PlatformBand band = bands.platforms().get(k);
+						liftedEntry |= list.get(k).kind() == PlatformSpec.Kind.SIDE && (!band.trackLeft() || !band.trackRight())
+								&& list.get(k).widthIn(narrowest) >= StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH;
+					}
 					for (int k = 0; k < list.size(); k++) {
 						final PlatformSpec p = list.get(k);
 						final TrackLayout.PlatformBand band = bands.platforms().get(k);
 						final boolean inner = p.kind() == PlatformSpec.Kind.ISLAND || !terminus && bands.tracks().stream().anyMatch(t -> t.u() < band.uMin())
 								&& bands.tracks().stream().anyMatch(t -> t.u() > band.uMax());
-						final int need = !inner ? 0 : p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed : lift ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : 0;
+						// without a building a side platform on the edge is the way up to the footbridge, so it needs the lift too
+						final boolean entry = !inner && !buildingComing && !liftedEntry;
+						final int need = p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed
+								: (inner || entry) && lift ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : 0;
 						if (p.widthIn(narrowest) < need) {
 							widened.add(new PlatformSpec(p.kind(), need, p.length(), p.roof(), p.bay()));
 							if (p.width() != 0) {
@@ -1340,12 +1350,12 @@ public final class StationDescriptionParser {
 						}
 					}
 					if (!given.isEmpty()) {
-						warn("platform" + (given.size() == 1 ? " " : "s ") + String.join(", ", given) + " between the tracks need" + (given.size() == 1 ? "s" : "")
-								+ " room for a footbridge stair"
+						warn("platform" + (given.size() == 1 ? " " : "s ") + String.join(", ", given) + " on the way to the footbridge need" + (given.size() == 1 ? "s" : "")
+								+ " room for a stair"
 								+ (lift ? " and lift" : "") + "; widened to fit");
 					}
 					if (quiet) {
-						defaulted.add("platforms between the tracks widened so their footbridge stair" + (lift ? " and lift" : "") + " fit");
+						defaulted.add("platforms on the way to the footbridge widened so their stair" + (lift ? " and lift" : "") + " fit");
 					}
 					builder.platforms(widened);
 				}

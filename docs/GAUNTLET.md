@@ -62,3 +62,14 @@ States: OPEN, FIXED (commit), CHECKED (seen fixed), WONTFIX (why).
 | 29 | Street view of a terminus showed only the edge of the platforms | no side building to look at | FIXED: a terminus shows Head instead of Street |
 | 30 | Page errors, failed requests | 1,000 plans, 15 presets, 6 views | CHECKED: none |
 
+## Wider sweep (13 Oct evening)
+
+8,000 random descriptions and platform lists, every warning and violation tallied.
+
+| # | Finding | Evidence | State |
+|---|---|---|---|
+| 31 | Short train sheds over bay platforms refused to build (girder with no column at the last row) | `endRow` fell back to a row whose column stood on a bay's end ramp, which `columns()` then skipped; 9 of 8,000 | FIXED: that fallback also needs the footing; StationSweepTest |
+| 32 | A grand Tokyo terminus with one track refused to build (clock face outside the footprint) | the tower's side clock hung past a head building as narrow as the tower | FIXED: faces that would hang outside are left off |
+| 33 | Without a building, a narrow side platform on the edge left the whole station stairs-only | it is the way up and had no room for its lift (about 70 of 8,000) | FIXED: widened for its lift unless another edge platform already has one; IslandAccessTest |
+| 34 | A 16-long bay island under a canopy, with its lift, pier and stair filling the middle line, has no column near its far end | 2 of 8,000 | OPEN: rare; refused cleanly before building |
+

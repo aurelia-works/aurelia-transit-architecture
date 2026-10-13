@@ -69,6 +69,18 @@ class IslandAccessTest {
 	}
 
 	@Test
+	void withoutABuildingTheEdgePlatformIsTheWayUpAndGetsALift() {
+		for (final String text : new String[]{"platform 1: side 4 wide; platform 2: island; platform 3: island; no building, named Halt",
+				"platform 1: island; platform 2: island 263 long; platform 3: side 4 wide 27 long; 120 long, no building, named Halt"}) {
+			final StationSpec spec = StationDescriptionParser.parse(text).spec();
+			final StationAudit.Result audit = StationAudit.audit(StationPlanner.plan(spec));
+			for (final StationAudit.Access access : audit.access()) {
+				assertEquals(StationAudit.Access.STEP_FREE, access, text + ": " + audit.checks());
+			}
+		}
+	}
+
+	@Test
 	void noFootbridgeIsKeptAndWarned() {
 		final ParseResult parsed = StationDescriptionParser.parse("4 tracks island, no footbridge, no building, named Halt");
 		assertFalse(parsed.spec().footbridge());
