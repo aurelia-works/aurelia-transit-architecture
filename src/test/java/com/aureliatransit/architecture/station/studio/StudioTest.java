@@ -178,8 +178,9 @@ class StudioTest {
 			final HttpResponse<String> ok = http.send(send.header("X-Studio-Token", token).build(), HttpResponse.BodyHandlers.ofString());
 			assertEquals(200, ok.statusCode());
 			assertEquals("ok plan", ok.body());
-			final HttpResponse<String> plan = http.send(HttpRequest.newBuilder(URI.create(base + "api/plan"))
-					.POST(HttpRequest.BodyPublishers.ofString("tracks=1&length=20")).build(), HttpResponse.BodyHandlers.ofString());
+			final HttpRequest.Builder planning = HttpRequest.newBuilder(URI.create(base + "api/plan")).POST(HttpRequest.BodyPublishers.ofString("tracks=1&length=20"));
+			assertEquals(403, http.send(planning.build(), HttpResponse.BodyHandlers.ofString()).statusCode(), "no token, no plan");
+			final HttpResponse<String> plan = http.send(planning.header("X-Studio-Token", token).build(), HttpResponse.BodyHandlers.ofString());
 			assertTrue(plan.body().contains("\"cells\""));
 			assertEquals(404, http.send(HttpRequest.newBuilder(URI.create(base + "tex/../../secret.png")).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
 		} finally {

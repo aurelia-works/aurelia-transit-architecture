@@ -66,14 +66,26 @@ public final class StationCommand {
 
 	/** Parses, plans, validates, audits and surveys (without approval) a station placed by {@code place}. */
 	public static StationSessions.Pending prepare(ServerWorld world, String description, Function<TrackLayout, LocalFrame> place) {
-		final ParseResult parse = StationDescriptionParser.parse(description);
+		return place(world, design(StationDescriptionParser.parse(description)), place);
+	}
+
+	/** A parsed, planned, validated and audited station, not yet placed in a world. */
+	public record Design(ParseResult parse, StationPlan plan, List<Violation> violations, StationAudit.Result audit, BlockStateResolver.Check check) {
+	}
+
+	/** Plans, validates and audits a parsed station. Touches no world, so it may run off the server thread. */
+	public static Design design(ParseResult parse) {
 		final StationPlan plan = StationPlanner.plan(parse.spec());
-		final List<Violation> violations = LayoutValidator.validate(plan);
-		final StationAudit.Result audit = StationAudit.audit(plan);
+		return new Design(parse, plan, LayoutValidator.validate(plan), StationAudit.audit(plan), BlockStateResolver.check(plan));
+	}
+
+	/** Places a design with {@code place} and surveys its site (without approval). On the server thread. */
+	public static StationSessions.Pending place(ServerWorld world, Design design, Function<TrackLayout, LocalFrame> place) {
+		final StationPlan plan = design.plan();
 		final LocalFrame frame = place.apply(plan.layout());
-		final BlockStateResolver.Check check = BlockStateResolver.check(plan);
 		final SurveyReport report = SiteSurvey.survey(plan, frame, WorldSiteProbe.loading(world), false);
-		return new StationSessions.Pending(parse, parse.spec(), plan, frame, world.getRegistryKey(), violations, audit, report, check.railSkipped());
+		return new StationSessions.Pending(design.parse(), design.parse().spec(), plan, frame, world.getRegistryKey(), design.violations(), design.audit(),
+				report, design.check().railSkipped());
 	}
 
 	/**

@@ -446,7 +446,7 @@
 		const mine = ++request;
 		$("busy").hidden = false;
 		try {
-			const r = await fetch("api/plan", { method: "POST", body: new URLSearchParams(values()) });
+			const r = await fetch("api/plan", { method: "POST", body: new URLSearchParams(values()), headers: { "X-Studio-Token": TOKEN } });
 			if (!r.ok) {
 				throw new Error(await r.text());
 			}

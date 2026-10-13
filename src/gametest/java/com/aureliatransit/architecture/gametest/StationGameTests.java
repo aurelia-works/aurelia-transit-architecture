@@ -712,6 +712,34 @@ public class StationGameTests implements FabricGameTest {
 		context.complete();
 	}
 
+	/**
+	 * A big station is planned on the planner thread: the plan is not there at once, a confirm meanwhile is refused, and the plan
+	 * arrives a few ticks later, placed where the player stood when asking.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 200)
+	public void bigStationsArePlannedOffTheServerThread(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+		final BlockPos feet = context.getAbsolutePos(FEET_Z);
+		player.refreshPositionAndAngles(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, Direction.SOUTH.asRotation(), 0.0F);
+		final UUID id = player.getUuid();
+		final String big = "10 tracks island, 300 long, named Big";
+		check(StationDescriptionParser.parse(big).spec().trackCount() * StationDescriptionParser.parse(big).spec().platformLength() > 2000,
+				"the test station is not big enough to leave the server thread");
+		check(StationActions.plan(player, big, null), "the plan was not accepted");
+		check(StationSessions.pending(id) == null, "a big plan was made on the server thread");
+		check(!StationActions.confirm(player, false), "a confirm went through while the plan was still being worked out");
+		final LocalFrame expected = StationCommand.prepare(world, big, feet, Heading.SOUTH).frame();
+		context.waitAndRun(100, () -> {
+			final StationSessions.Pending pending = StationSessions.pending(id);
+			check(pending != null && pending.spec().platformLength() == 300, "the big plan never arrived");
+			check(pending.frame().equals(expected), "planned at " + pending.frame() + ", expected " + expected);
+			StationSessions.forgetPlayer(id);
+			Fixtures.removePlayer(context, player);
+			context.complete();
+		});
+	}
+
 	// ---- station wrench --------------------------------------------------------------------------------------------
 
 	/**

@@ -124,6 +124,12 @@ public final class StudioServer {
 			} else if (path.equals("/api/options")) {
 				reply(exchange, 200, "application/json", api.options());
 			} else if (path.equals("/api/plan") && method.equals("POST")) {
+				// the token keeps another web page from making the game plan stations in a loop (it could send the request,
+				// though not read the answer)
+				if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token"))) {
+					reply(exchange, 403, "text/plain", "Reload the studio page.");
+					return;
+				}
 				reply(exchange, 200, "application/json", api.plan(form(body(exchange))));
 			} else if (path.equals("/api/send") && method.equals("POST")) {
 				send(exchange);

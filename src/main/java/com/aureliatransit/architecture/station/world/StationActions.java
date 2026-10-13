@@ -1,7 +1,12 @@
 package com.aureliatransit.architecture.station.world;
 
+import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalFrame;
+import com.aureliatransit.architecture.station.ParseResult;
+import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.TrackLayout;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
@@ -9,9 +14,16 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * What a player can do with the station generator, shared by {@code /ata_station}, the station wrench's clicks and its screen.
@@ -23,6 +35,22 @@ public final class StationActions {
 
 	/** Operator level needed for every action, the same as the {@code /ata_station} command. */
 	public static final int PERMISSION_LEVEL = 2;
+
+	/**
+	 * Track count times platform length up to which a station is planned at once on the server thread (well under a tenth of
+	 * a second); bigger ones go to the planner thread.
+	 */
+	static final int PLAN_HERE_UP_TO = 2000;
+
+	private static final ExecutorService PLANNER = Executors.newSingleThreadExecutor(task -> {
+		final Thread thread = new Thread(task, "ATA station planner");
+		thread.setDaemon(true);
+		return thread;
+	});
+	/** Each player's latest plan request; an older one that finishes late is dropped. */
+	private static final Map<UUID, Long> REQUESTS = new ConcurrentHashMap<>();
+	/** Players whose big plan is on the planner thread. Server thread only. */
+	private static final Set<UUID> PLANNING = new HashSet<>();
 
 	private StationActions() {
 	}
@@ -41,22 +69,90 @@ public final class StationActions {
 	 * feet (the command and the wrench screen). Either way it faces the way the player looks. Replaces any pending plan.
 	 */
 	public static boolean plan(ServerPlayerEntity player, String description, @Nullable BlockPos clicked) {
-		final Consumer<Text> out = message(player);
+		final UUID id = player.getUuid();
 		final ServerWorld world = player.getServerWorld();
 		final Heading facing = BlockStateResolver.heading(player.getHorizontalFacing());
+		final BlockPos feet = player.getBlockPos();
+		final Function<TrackLayout, LocalFrame> place = clicked == null
+				? layout -> LocalFrame.inFrontOf(feet.getX(), feet.getY(), feet.getZ(), facing, layout)
+				: layout -> LocalFrame.onBlock(clicked.getX(), clicked.getY(), clicked.getZ(), facing, layout);
+		final long request = REQUESTS.merge(id, 1L, Long::sum);
+		final ParseResult parse = StationDescriptionParser.parse(description);
+		if (parse.spec().trackCount() * parse.spec().platformLength() <= PLAN_HERE_UP_TO) {
+			StationCommand.Design design = null;
+			RuntimeException failure = null;
+			try {
+				design = StationCommand.design(parse);
+			} catch (RuntimeException e) {
+				failure = e;
+			}
+			return finishPlan(player.getServer(), id, request, world, place, design, failure);
+		}
+		// a big station takes a good part of a second to plan: do that on the planner thread, so the server keeps ticking,
+		// then place and survey it back on the server thread
+		final MinecraftServer server = player.getServer();
+		PLANNING.add(id);
+		PLANNER.execute(() -> {
+			StationCommand.Design design = null;
+			RuntimeException failure = null;
+			try {
+				design = StationCommand.design(parse);
+			} catch (RuntimeException e) {
+				failure = e;
+			}
+			final StationCommand.Design done = design;
+			final RuntimeException failed = failure;
+			server.execute(() -> finishPlan(server, id, request, world, place, done, failed));
+		});
+		player.sendMessage(Text.literal("Planning a big station...").formatted(Formatting.GRAY), true);
+		return true;
+	}
+
+	/** On the server thread: places and surveys a design, or explains why there is none. False when nothing was planned. */
+	private static boolean finishPlan(MinecraftServer server, UUID id, long request, ServerWorld world, Function<TrackLayout, LocalFrame> place,
+			@Nullable StationCommand.Design design, @Nullable RuntimeException failure) {
+		if (REQUESTS.getOrDefault(id, 0L) != request) {
+			// a newer plan request replaced this one while it was being worked out
+			return false;
+		}
+		PLANNING.remove(id);
+		final ServerPlayerEntity player = server.getPlayerManager().getPlayer(id);
+		if (player == null) {
+			return false;
+		}
+		final Consumer<Text> out = message(player);
+		if (failure != null || design == null) {
+			if (!(failure instanceof IllegalArgumentException)) {
+				AureliaTransitArchitecture.LOGGER.error("Planning a station failed", failure);
+			}
+			out.accept(Text.literal("Cannot plan that station: " + (failure instanceof IllegalArgumentException ? failure.getMessage()
+					: "something went wrong (see the server log)")).formatted(Formatting.RED));
+			return false;
+		}
+		if (player.getServerWorld() != world) {
+			out.accept(Text.literal("You changed dimension while it was planned; plan it again here.").formatted(Formatting.RED));
+			return false;
+		}
 		final StationSessions.Pending pending;
 		try {
-			pending = clicked == null
-					? StationCommand.prepare(world, description, player.getBlockPos(), facing)
-					: StationCommand.prepare(world, description, layout -> LocalFrame.onBlock(clicked.getX(), clicked.getY(), clicked.getZ(), facing, layout));
+			pending = StationCommand.place(world, design, place);
 		} catch (IllegalArgumentException e) {
 			out.accept(Text.literal("Cannot plan that station: " + e.getMessage()).formatted(Formatting.RED));
 			return false;
 		}
-		StationSessions.discard(player.getUuid());
-		StationSessions.setPending(player.getUuid(), pending);
-		StationText.shortSummary(pending, BlockStateResolver.check(pending.plan()), out);
-		StationSessions.startPreview(new StationPreview(player.getUuid(), pending.dimension(), pending.plan(), pending.frame(), pending.report()));
+		StationSessions.discard(id);
+		StationSessions.setPending(id, pending);
+		StationText.shortSummary(pending, design.check(), out);
+		StationSessions.startPreview(new StationPreview(id, pending.dimension(), pending.plan(), pending.frame(), pending.report()));
+		return true;
+	}
+
+	/** True while a big plan of this player's is still being worked out; tells them so. */
+	private static boolean stillPlanning(ServerPlayerEntity player) {
+		if (!PLANNING.contains(player.getUuid())) {
+			return false;
+		}
+		error(player, "Still planning the station; try again in a moment.");
 		return true;
 	}
 
@@ -84,6 +180,9 @@ public final class StationActions {
 
 	/** Builds the pending plan; {@code replaceTerrain} is the explicit approval and must come from a deliberate choice. */
 	public static boolean confirm(ServerPlayerEntity player, boolean replaceTerrain) {
+		if (stillPlanning(player)) {
+			return false;
+		}
 		final UUID id = player.getUuid();
 		final StationSessions.Pending pending = StationSessions.pending(id);
 		if (pending == null) {
@@ -107,6 +206,12 @@ public final class StationActions {
 
 	public static boolean cancel(ServerPlayerEntity player) {
 		if (StationSessions.cancelJob(player.getUuid())) {
+			return true;
+		}
+		if (PLANNING.remove(player.getUuid())) {
+			// the plan still being worked out is dropped when it arrives
+			REQUESTS.merge(player.getUuid(), 1L, Long::sum);
+			player.sendMessage(Text.literal("Plan discarded.").formatted(Formatting.YELLOW), false);
 			return true;
 		}
 		if (StationSessions.discard(player.getUuid())) {

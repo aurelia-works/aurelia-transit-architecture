@@ -16,7 +16,7 @@
 - **Fitted out:** departure screens hang from the canopy, centred on the platform on a cross beam (back to back on wide islands), with help points, benches, ceiling speakers and platform numbers. Each platform has its own colour stripe at the gates.
 - **Registered in MTR:** a built station adds itself as an MTR station with its name and area, so screens and announcements work at once. An MTR station already there is left alone; undo removes the one it added.
 - **Checked before building:** boarding edges, rail nodes, roof cover, headroom, step-free access, lighting and nothing left floating. A failed check stops the build.
-- **Fast:** builds use a fifth of each server tick, so most stations finish in under a second. Stations longer than the render distance load the chunks they need.
+- **Fast:** builds use a fifth of each server tick, so most stations finish in under a second. Big stations are planned on a separate thread, so the server keeps ticking. Stations longer than the render distance load the chunks they need.
 - **Guide book:** operators get a *Station Generator Guide* on first join; `/ata_guide` gives another.
 
 ### Screens, signs and announcements

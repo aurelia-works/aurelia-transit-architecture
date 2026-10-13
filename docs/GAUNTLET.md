@@ -33,3 +33,6 @@ States: OPEN, FIXED (commit), CHECKED (seen fixed), WONTFIX (why).
 | 14 | Back-to-back side platforms reported "no free place for a name sign" | the shared row stands on the neighbour; the audit credited only the platform under it | FIXED: the audit credits the shared row |
 | 15 | Name signs given up when the middle or back column is taken | sign rows tried every second cell of one column only | FIXED: every cell, then the next column in; 29 left, all 16-long platforms filled by a building |
 | 16 | Validator and audit took 1.8 s on a 140k-block plan | `unsupportedRoof` boxed 81 map merges per beam; `grounded` boxed 18 lookups per block | FIXED: dense grids; about 0.6 s, same results across the sweep |
+| 17 | Planning a 20-track, 300-long station stalled the server for over a second | plan, validate and audit all ran on the server thread | FIXED: above 2,000 track-blocks the plan is worked out on a planner thread; confirm waits for it; game test |
+| 18 | Any web page could make the Studio plan stations in a loop | `/api/plan` took a POST without the page token | FIXED: token required, as for `/api/send` |
+| 19 | Parser robustness | 20,000 fuzzed inputs (word soup, numeric extremes, control characters, 5,000-character input) | CHECKED: nothing throws; StationDescriptionFuzzTest keeps 3,000 |
