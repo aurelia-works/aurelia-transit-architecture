@@ -27,7 +27,7 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 
 	public DisplayConfig {
 		association = association == null ? StationAssociation.AUTO : association;
-		style = style == null ? DisplayStyle.EUROPEAN_MODERN : style;
+		style = style == null ? DisplayStyle.METRO_COUNTDOWN : style;
 		pageSeconds = Math.max(MIN_PAGE_SECONDS, Math.min(MAX_PAGE_SECONDS, pageSeconds));
 		alignment = alignment == null ? BoardAlignment.TOP : alignment;
 		message = TextSanitizer.sanitize(message, MAX_MESSAGE);
@@ -52,7 +52,7 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 	 */
 	public static DisplayConfig defaults(DisplayKind kind) {
 		final boolean platform = kind != DisplayKind.CONCOURSE;
-		return new DisplayConfig(StationAssociation.AUTO, DisplayStyle.EUROPEAN_MODERN, kind.defaultRows(), true, platform, DEFAULT_PAGE_SECONDS,
+		return new DisplayConfig(StationAssociation.AUTO, DisplayStyle.METRO_COUNTDOWN, kind.defaultRows(), true, platform, DEFAULT_PAGE_SECONDS,
 				BoardAlignment.TOP, "", platform, false, false);
 	}
 
@@ -60,14 +60,9 @@ public record DisplayConfig(StationAssociation association, DisplayStyle style, 
 		return new DisplayConfig(association, newStyle, rows, clock, callingAt, pageSeconds, alignment, message, callingTimes, arrivals, summary);
 	}
 
-	/** The style whose {@link DisplayStyle#id()} is {@code id}, or null. */
+	/** The style whose {@link DisplayStyle#id()} is {@code id} (or the board a former style id now shows), or null. */
 	public static DisplayStyle styleById(String id) {
-		for (final DisplayStyle style : DisplayStyle.values()) {
-			if (style.id().equals(id)) {
-				return style;
-			}
-		}
-		return null;
+		return DisplayStyle.byId(id);
 	}
 
 	/**

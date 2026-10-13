@@ -29,6 +29,8 @@ loom {
 			vmArg "-Dsodium.checks.issue2561=false"
 			// Dev only: lets scripts take the game's own screenshots through run/client/screenshot-requests (DevScreenshots).
 			vmArg "-Data.devScreenshots=true"
+			// Dev only: -Pata.demoBoards=true puts a made-up timetable on every live display (DemoStationData).
+			vmArg "-Data.demoBoards=" + (project.findProperty("ata.demoBoards") ?: "false")
 		}
 	}
 }

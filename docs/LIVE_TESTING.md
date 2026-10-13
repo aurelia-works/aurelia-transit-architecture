@@ -4,7 +4,7 @@
 
 Platform CIS board, hanging platform CIS board, platform PIDS, hanging platform PIDS, concourse departure board, wall speaker, ceiling speaker.
 
-Displays with the same facing that touch each other **join into one bigger screen** (like joined signs); the top-left block (from the viewer's side) owns the configuration and draws the whole screen. A new display starts with the clock on, and a platform display with its calling points and their times. Right-click any block of it to configure: style (European Amber, European Modern, Dutch Modern, UK Dot Matrix, UK Screen, County Commuter, German Main Line, Hamburg Metro, European Light, Philadelphia Split-Flap, New York Countdown; each takes only the general feel of such boards, never an operator's name, logo or typeface), rows, clock, calling-at lines, page time, and the station (Automatic, or pick a station and platforms; no platform ticked = all platforms).
+Displays with the same facing that touch each other **join into one bigger screen** (like joined signs); the top-left block (from the viewer's side) owns the configuration and draws the whole screen. A new display starts with the clock on, and a platform display with its calling points and their times. Right-click any block of it to configure: style (UK Dot Matrix, Metro Countdown, Dutch Platform Screen, German Platform Screen: each a whole board laid out like that country's, never an operator's name, logo or typeface; see `BoardBuilder`), rows, clock, calling-at lines, page time, and the station (Automatic, or pick a station and platforms; no platform ticked = all platforms).
 
 Suggested sizes: CIS 4-6 wide x 1 high, PIDS 6 wide x 1-2 high, concourse board 6-8 wide x 3-4 high. Text scales to the screen and squeezes or scrolls long destinations.
 
@@ -166,3 +166,7 @@ python3 tools/station_tour.py shot close_up "nohud fov=60"   # one shot from whe
 ```
 
 `ATA_PLAYER` names the player (default `ATATester`). A site with villages or paths fails the site check; build somewhere flat.
+
+## Looking at the boards without an MTR network
+
+`./gradlew runClient -Pata.demoBoards=true` puts a made-up station (Kingsbridge) with a moving timetable on every live display, so each style can be checked in game without building routes. Dev runs only; a normal game never installs it.

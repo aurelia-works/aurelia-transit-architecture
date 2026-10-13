@@ -28,7 +28,7 @@ class ConcourseOptionsTest {
 
 	@Test
 	void arrivalsAndSummarySurviveNbtAndPackets() {
-		final DisplayConfig config = new DisplayConfig(StationAssociation.AUTO, DisplayStyle.EUROPEAN_MODERN, 6, true, false, 6, BoardAlignment.TOP, "", false, true, true);
+		final DisplayConfig config = new DisplayConfig(StationAssociation.AUTO, DisplayStyle.METRO_COUNTDOWN, 6, true, false, 6, BoardAlignment.TOP, "", false, true, true);
 		final NbtCompound nbt = new NbtCompound();
 		config.writeNbt(nbt);
 		assertEquals(config, DisplayConfig.readNbt(nbt, DisplayKind.CONCOURSE));

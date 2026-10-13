@@ -188,18 +188,14 @@ public final class StylePalette {
 	 */
 	public com.aureliatransit.architecture.live.DisplayStyle screenStyle() {
 		return switch (buildingStyle) {
-			case MODERN, AMSTERDAM -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_MODERN;
-			case GOTHIC_BRICK -> com.aureliatransit.architecture.live.DisplayStyle.UK_LCD;
-			case SANDSTONE, CONCRETE, BERLIN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_MAINLINE;
-			case CLINKER -> com.aureliatransit.architecture.live.DisplayStyle.HAMBURG_METRO;
-			case BEAUX_ARTS -> com.aureliatransit.architecture.live.DisplayStyle.PHILADELPHIA_FLAP;
-			case ANTWERP, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_LIGHT;
-			case TOKYO, HONG_KONG, BEIJING -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_MODERN;
+			case MODERN, AMSTERDAM, ANTWERP -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;
+			case GOTHIC_BRICK -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
+			case SANDSTONE, CONCRETE, BERLIN, CLINKER, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_DB;
+			case BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
 			case NONE -> switch (style) {
-				case MODERN -> com.aureliatransit.architecture.live.DisplayStyle.EUROPEAN_MODERN;
-				case DUTCH -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_MODERN;
-				case GERMAN_SBAHN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_MAINLINE;
-				case METRO -> com.aureliatransit.architecture.live.DisplayStyle.HAMBURG_METRO;
+				case MODERN, METRO -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
+				case DUTCH -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;
+				case GERMAN_SBAHN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_DB;
 			};
 		};
 	}

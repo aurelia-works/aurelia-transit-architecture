@@ -42,7 +42,10 @@ public final class LiveClient {
 	}
 
 	public static void init() {
-		if (FabricLoader.getInstance().isModLoaded("mtr")) {
+		if (Boolean.getBoolean("ata.demoBoards")) {
+			// dev runs only: a made-up station on every display (DemoStationData)
+			StationData.install(new DemoStationData());
+		} else if (FabricLoader.getInstance().isModLoaded("mtr")) {
 			provider = new MtrStationDataProvider();
 			StationData.install(provider);
 		} else {

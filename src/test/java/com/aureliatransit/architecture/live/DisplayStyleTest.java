@@ -16,29 +16,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class DisplayStyleTest {
 
 	@Test
-	void savedBoardsKeepTheirStyle() {
-		// styles are saved by ordinal: the first three never move
-		assertEquals(DisplayStyle.EUROPEAN_AMBER, DisplayStyle.byOrdinal(0));
-		assertEquals(DisplayStyle.EUROPEAN_MODERN, DisplayStyle.byOrdinal(1));
-		assertEquals(DisplayStyle.DUTCH_MODERN, DisplayStyle.byOrdinal(2));
+	void savedBoardsKeepTheirPlaceAndOldIdsStillResolve() {
+		// styles are saved by ordinal: the three released in 1.4 and 1.5 keep their places, each now a real board
+		assertEquals(DisplayStyle.UK_DOT_MATRIX, DisplayStyle.byOrdinal(0));
+		assertEquals(DisplayStyle.METRO_COUNTDOWN, DisplayStyle.byOrdinal(1));
+		assertEquals(DisplayStyle.DUTCH_NS, DisplayStyle.byOrdinal(2));
+		assertEquals(DisplayStyle.GERMAN_DB, DisplayStyle.byOrdinal(3));
+		assertEquals(DisplayStyle.METRO_COUNTDOWN, DisplayStyle.byOrdinal(99));
+		assertEquals(4, DisplayStyle.values().length);
 		final Set<String> ids = new HashSet<>();
 		for (final DisplayStyle style : DisplayStyle.values()) {
 			assertTrue(ids.add(style.id()), style.id());
 			assertEquals(style, DisplayConfig.styleById(style.id()));
 		}
-		assertTrue(DisplayStyle.values().length >= 11);
+		// former ids (saved in plans and build jobs) show the board that replaced them
+		assertEquals(DisplayStyle.UK_DOT_MATRIX, DisplayConfig.styleById("european_amber"));
+		assertEquals(DisplayStyle.METRO_COUNTDOWN, DisplayConfig.styleById("european_modern"));
+		assertEquals(DisplayStyle.DUTCH_NS, DisplayConfig.styleById("dutch_modern"));
+		assertEquals(DisplayStyle.GERMAN_DB, DisplayConfig.styleById("german_mainline"));
+		assertEquals(null, DisplayConfig.styleById("nonsense"));
 	}
 
 	@Test
-	void rowsAreNumberedTheBoardsWay() {
-		assertEquals("", DisplayStyle.Numbering.NONE.prefix(1));
-		assertEquals("1 ", DisplayStyle.Numbering.NUMBER.prefix(1));
-		assertEquals("1st 2nd 3rd 4th 11th 12th 13th 21st 22nd ", DisplayStyle.Numbering.ORDINAL.prefix(1) + DisplayStyle.Numbering.ORDINAL.prefix(2)
-				+ DisplayStyle.Numbering.ORDINAL.prefix(3) + DisplayStyle.Numbering.ORDINAL.prefix(4) + DisplayStyle.Numbering.ORDINAL.prefix(11)
-				+ DisplayStyle.Numbering.ORDINAL.prefix(12) + DisplayStyle.Numbering.ORDINAL.prefix(13) + DisplayStyle.Numbering.ORDINAL.prefix(21)
-				+ DisplayStyle.Numbering.ORDINAL.prefix(22));
-		assertEquals("LONDON", DisplayStyle.NEW_YORK_COUNTDOWN.cased("London"));
-		assertEquals("London", DisplayStyle.UK_LCD.cased("London"));
+	void britishTrainsAreCountedInOrdinals() {
+		assertEquals("1st 2nd 3rd 4th 11th 12th 13th 21st 22nd", String.join(" ", DisplayStyle.ordinal(1), DisplayStyle.ordinal(2),
+				DisplayStyle.ordinal(3), DisplayStyle.ordinal(4), DisplayStyle.ordinal(11), DisplayStyle.ordinal(12), DisplayStyle.ordinal(13),
+				DisplayStyle.ordinal(21), DisplayStyle.ordinal(22)));
 	}
 
 	@Test
@@ -54,9 +57,10 @@ class DisplayStyleTest {
 
 	@Test
 	void plannedScreensCarryTheLookOfTheirStation() {
-		assertEquals(DisplayStyle.UK_LCD.id(), screenText("4 tracks st pancras station building 64 long"));
-		assertEquals(DisplayStyle.HAMBURG_METRO.id(), screenText("4 tracks hamburg station building 64 long"));
-		assertEquals(DisplayStyle.EUROPEAN_MODERN.id(), screenText("2 tracks island 64 long footbridge"));
+		assertEquals(DisplayStyle.UK_DOT_MATRIX.id(), screenText("4 tracks st pancras station building 64 long"));
+		assertEquals(DisplayStyle.GERMAN_DB.id(), screenText("4 tracks hamburg station building 64 long"));
+		assertEquals(DisplayStyle.DUTCH_NS.id(), screenText("4 tracks utrecht station building 64 long"));
+		assertEquals(DisplayStyle.METRO_COUNTDOWN.id(), screenText("2 tracks island 64 long footbridge"));
 	}
 
 	private static String screenText(String description) {

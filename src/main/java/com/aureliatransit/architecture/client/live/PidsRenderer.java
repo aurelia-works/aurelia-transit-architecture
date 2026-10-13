@@ -122,13 +122,13 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		final float frontZ = block.frontZPixels() / 16F;
 		final float left = 1 - BoardBuilder.FRAME;
 		final float top = 1 - block.topInsetPixels() / 16F - BoardBuilder.FRAME;
-		drawFace(matrices, vertexConsumers, model, left, top, frontZ);
+		drawFace(matrices, vertexConsumers, model, left, top, frontZ, now);
 		if (block.doubleSided()) {
 			final float centre = 1 - cache.width / 2F;
 			matrices.translate(centre, 0, 0.5);
 			matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180));
 			matrices.translate(-centre, 0, -0.5);
-			drawFace(matrices, vertexConsumers, model, left, top, frontZ);
+			drawFace(matrices, vertexConsumers, model, left, top, frontZ, now);
 		}
 		matrices.pop();
 	}
@@ -161,21 +161,15 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		if (snapshot == null) {
 			snapshot = provider.resolve(entity.getPos(), config.association(), true, config.callingTimes() && config.callingAt());
 		}
-		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now, clock(world));
+		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now);
 		cache.nextRebuild = now + (cache.model.stripScroll ? MessageRotation.STEP_MILLIS : cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
+		if (cache.model.seconds) {
+			// a clock with seconds ticks on the second, like the real board
+			cache.nextRebuild = Math.min(cache.nextRebuild, (now / 1000 + 1) * 1000);
+		}
 	}
 
-	/**
-	 * In-game time of day as HH:MM (world tick 0 is 06:00).
-	 */
-	private static String clock(World world) {
-		final long ticks = Math.floorMod(world.getTimeOfDay(), 24000L);
-		final int hour = (int) ((ticks / 1000 + 6) % 24);
-		final int minute = (int) ((ticks % 1000) * 60 / 1000);
-		return (hour < 10 ? "0" : "") + hour + ":" + (minute < 10 ? "0" : "") + minute;
-	}
-
-	private void drawFace(MatrixStack matrices, VertexConsumerProvider vertexConsumers, BoardModel model, float left, float top, float frontZ) {
+	private void drawFace(MatrixStack matrices, VertexConsumerProvider vertexConsumers, BoardModel model, float left, float top, float frontZ, long now) {
 		matrices.push();
 		matrices.translate(left, top, frontZ);
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180));
@@ -186,16 +180,44 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 
 		final VertexConsumer quads = vertexConsumers.getBuffer(RenderLayer.getEntityCutoutNoCull(PIXEL));
 		for (int i = 0; i < model.rectCount; i++) {
-			final float z = (Z_BACKGROUND + model.rl[i] * Z_LAYER) / model.scale;
+			// masks sit in front of the text, the other layers behind it
+			final float z = (model.rl[i] == BoardModel.LAYER_MASK ? Z_TEXT + Z_LAYER : Z_BACKGROUND + model.rl[i] * Z_LAYER) / model.scale;
 			quad(quads, position, normal, model.rx[i], model.ry[i], model.rx[i] + model.rw[i], model.ry[i] + model.rh[i], z, model.rc[i]);
 		}
 
 		final float zText = Z_TEXT / model.scale;
+		final float zTop = (Z_TEXT + 2 * Z_LAYER) / model.scale;
 		for (int i = 0; i < model.textCount; i++) {
-			scratch.set(position).translate(model.tx[i], model.ty[i], zText).scale(model.tk[i] * model.tsx[i], model.tk[i], 1);
+			scratch.set(position).translate(model.tx[i], model.ty[i], model.tl[i] == BoardModel.TEXT_TOP ? zTop : zText)
+					.scale(model.tk[i] * model.tsx[i], model.tk[i], 1);
 			textRenderer.draw(model.ts[i], 0, 0, model.tc[i], false, scratch, vertexConsumers, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, LIGHT);
 		}
+		for (int i = 0; i < model.scrollCount; i++) {
+			drawScroll(model, i, position, vertexConsumers, zText, now);
+		}
 		matrices.pop();
+	}
+
+	/** The characters of scrolling line {@code i} that are inside its window this frame. */
+	private void drawScroll(BoardModel model, int i, Matrix4f position, VertexConsumerProvider vertexConsumers, float z, long now) {
+		final float start = model.scrollStart(i, now);
+		final float[] at = model.sa[i];
+		final float k = model.sk[i];
+		final int length = at.length - 1;
+		int first = 0;
+		while (first < length && start + at[first + 1] * k <= model.sx0[i]) {
+			first++;
+		}
+		int end = first;
+		while (end < length && start + at[end] * k < model.sx1[i]) {
+			end++;
+		}
+		if (end <= first) {
+			return;
+		}
+		final String visible = model.ss[i].substring(first, end);
+		scratch.set(position).translate(start + at[first] * k, model.sy[i], z).scale(k, k, 1);
+		textRenderer.draw(model.sf[i].ordered(visible), 0, 0, model.sc[i], false, scratch, vertexConsumers, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, LIGHT);
 	}
 
 	private static void quad(VertexConsumer vc, Matrix4f position, Matrix3f normal, float x1, float y1, float x2, float y2, float z, int argb) {

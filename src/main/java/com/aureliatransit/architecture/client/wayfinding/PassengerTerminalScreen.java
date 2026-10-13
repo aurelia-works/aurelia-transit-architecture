@@ -5,7 +5,6 @@ import com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientServiceMessages;
 import com.aureliatransit.architecture.client.wayfinding.logic.ClientStationSuffixes;
 import com.aureliatransit.architecture.wayfinding.SuffixContext;
-import com.aureliatransit.architecture.live.DisplayStyle;
 import com.aureliatransit.architecture.terminal.MapLine;
 import com.aureliatransit.architecture.terminal.StationInfo;
 import com.aureliatransit.architecture.terminal.SystemMap;
@@ -39,7 +38,15 @@ import java.util.List;
  */
 public class PassengerTerminalScreen extends Screen {
 
-	private static final DisplayStyle STYLE = DisplayStyle.EUROPEAN_MODERN;
+	/** The terminal's own colours (charcoal, white text, a teal accent). */
+	private static final int BACKGROUND = 0xFF16191D;
+	private static final int ROW_BAND = 0xFF1E2227;
+	private static final int HEADER = 0xFF0F1215;
+	private static final int TEXT = 0xFFF2F2EE;
+	private static final int DIM = 0xFF9AA0A6;
+	private static final int ACCENT = 0xFF4FB8B0;
+	private static final int DELAY = 0xFFFF9A6B;
+	private static final int CHIP = 0xFF272C32;
 	private static final long DEPARTURES_MILLIS = 1000;
 	private static final long INFO_MILLIS = 10_000;
 	private static final int SIDEBAR = 84;
@@ -224,11 +231,11 @@ public class PassengerTerminalScreen extends Screen {
 
 	private static int colour(TerminalText.Kind kind) {
 		return switch (kind) {
-			case HEADING -> STYLE.accent();
-			case BODY, INFO -> STYLE.text();
-			case DIM -> STYLE.dim();
+			case HEADING -> ACCENT;
+			case BODY, INFO -> TEXT;
+			case DIM -> DIM;
 			case WARNING -> 0xFFFFD25A;
-			case DISRUPTION -> STYLE.delay();
+			case DISRUPTION -> DELAY;
 		};
 	}
 
@@ -241,14 +248,14 @@ public class PassengerTerminalScreen extends Screen {
 		}
 		renderBackground(context);
 		context.fill(left - 1, top - 1, left + panelW + 1, top + panelH + 1, 0xFF000000);
-		context.fill(left, top, left + panelW, top + panelH, STYLE.background());
-		context.fill(left, top, left + panelW, top + 22, STYLE.header());
-		context.fill(left + SIDEBAR + 2, top + 24, left + SIDEBAR + 3, top + panelH - 4, STYLE.chip());
+		context.fill(left, top, left + panelW, top + panelH, BACKGROUND);
+		context.fill(left, top, left + panelW, top + 22, HEADER);
+		context.fill(left + SIDEBAR + 2, top + 24, left + SIDEBAR + 3, top + panelH - 4, CHIP);
 
 		final String name = stationName();
 		final String title = name.isEmpty() ? Text.translatable(KEY + "term_title").getString() : name;
-		context.drawText(textRenderer, textRenderer.trimToWidth(title, panelW - 70), left + 8, top + 7, STYLE.text(), false);
-		context.drawText(textRenderer, clock, left + panelW - 8 - textRenderer.getWidth(clock), top + 7, STYLE.accent(), false);
+		context.drawText(textRenderer, textRenderer.trimToWidth(title, panelW - 70), left + 8, top + 7, TEXT, false);
+		context.drawText(textRenderer, clock, left + panelW - 8 - textRenderer.getWidth(clock), top + 7, ACCENT, false);
 
 		switch (page) {
 			case HOME -> drawHome(context, name);
@@ -262,14 +269,14 @@ public class PassengerTerminalScreen extends Screen {
 		}
 		if (pageCount > 1) {
 			final String counter = (subPage + 1) + "/" + pageCount;
-			context.drawText(textRenderer, counter, contentX + contentW / 2 - textRenderer.getWidth(counter) / 2, top + panelH - 19, STYLE.dim(), false);
+			context.drawText(textRenderer, counter, contentX + contentW / 2 - textRenderer.getWidth(counter) / 2, top + panelH - 19, DIM, false);
 		}
 		super.render(context, mouseX, mouseY, delta);
 	}
 
 	private void drawHome(DrawContext context, String name) {
 		int y = contentY;
-		context.drawText(textRenderer, Text.translatable(KEY + "term_next"), contentX, y, STYLE.dim(), false);
+		context.drawText(textRenderer, Text.translatable(KEY + "term_next"), contentX, y, DIM, false);
 		y += 12;
 		drawDepartures(context, y, name);
 		if (!homeMessages.isEmpty()) {
@@ -277,12 +284,12 @@ public class PassengerTerminalScreen extends Screen {
 			final int index = MessageRotation.index(System.currentTimeMillis(), homeSlots);
 			final ServiceMessage homeMessage = homeMessages.get(index);
 			final int color = switch (homeMessage.severity()) {
-				case INFO -> STYLE.text();
+				case INFO -> TEXT;
 				case WARNING -> 0xFFFFD25A;
-				case DISRUPTION, SEVERE -> STYLE.delay();
+				case DISRUPTION, SEVERE -> DELAY;
 			};
 			final int stripY = contentY + contentH - 22;
-			context.fill(contentX - 2, stripY, contentX + contentW + 2, stripY + 22, STYLE.rowBand());
+			context.fill(contentX - 2, stripY, contentX + contentW + 2, stripY + 22, ROW_BAND);
 			final String counter = homeMessages.size() > 1 ? (index + 1) + "/" + homeMessages.size() : "";
 			final int textW = contentW - 4 - (counter.isEmpty() ? 0 : textRenderer.getWidth(counter) + 4);
 			int line = 0;
@@ -294,7 +301,7 @@ public class PassengerTerminalScreen extends Screen {
 				line++;
 			}
 			if (!counter.isEmpty()) {
-				context.drawText(textRenderer, counter, contentX + contentW - textRenderer.getWidth(counter), stripY + 3, STYLE.dim(), false);
+				context.drawText(textRenderer, counter, contentX + contentW - textRenderer.getWidth(counter), stripY + 3, DIM, false);
 			}
 		}
 	}
@@ -302,14 +309,14 @@ public class PassengerTerminalScreen extends Screen {
 	private void drawDepartures(DrawContext context, int startY, String name) {
 		if (departureRows.isEmpty()) {
 			final String empty = snapshot.station() == null ? Tr.t(TerminalText.NO_STATION_KEY) : Tr.t("term_no_departures");
-			context.drawText(textRenderer, empty, contentX, startY + 2, STYLE.dim(), false);
+			context.drawText(textRenderer, empty, contentX, startY + 2, DIM, false);
 			return;
 		}
 		for (int i = 0; i < departureRows.size(); i++) {
 			final TerminalFeed.Row row = departureRows.get(i);
 			final int y = startY + i * DEPARTURE_ROW;
 			if ((i & 1) == 0) {
-				context.fill(contentX - 2, y, contentX + contentW + 2, y + DEPARTURE_ROW - 1, STYLE.rowBand());
+				context.fill(contentX - 2, y, contentX + contentW + 2, y + DEPARTURE_ROW - 1, ROW_BAND);
 			}
 			final int chipW = 30;
 			final int rgb = 0xFF000000 | row.routeRgb();
@@ -317,22 +324,22 @@ public class PassengerTerminalScreen extends Screen {
 			context.drawText(textRenderer, row.route(), contentX + chipW / 2 - textRenderer.getWidth(row.route()) / 2, y + 4, TerminalFace.contrast(row.routeRgb()), false);
 			final int statusW = textRenderer.getWidth(row.status());
 			final int right = contentX + contentW;
-			context.drawText(textRenderer, row.status(), right - statusW, y + 4, row.delayed() ? STYLE.delay() : STYLE.accent(), false);
+			context.drawText(textRenderer, row.status(), right - statusW, y + 4, row.delayed() ? DELAY : ACCENT, false);
 			final int platW = row.platform().isEmpty() ? 0 : Math.max(14, textRenderer.getWidth(row.platform()) + 6);
 			if (platW > 0) {
 				final int px = right - statusW - 6 - platW;
-				context.fill(px, y + 2, px + platW, y + DEPARTURE_ROW - 3, STYLE.chip());
-				context.drawText(textRenderer, row.platform(), px + platW / 2 - textRenderer.getWidth(row.platform()) / 2, y + 4, STYLE.text(), false);
+				context.fill(px, y + 2, px + platW, y + DEPARTURE_ROW - 3, CHIP);
+				context.drawText(textRenderer, row.platform(), px + platW / 2 - textRenderer.getWidth(row.platform()) / 2, y + 4, TEXT, false);
 			}
 			final int destX = contentX + chipW + 5;
 			final int destEnd = right - statusW - 10 - (platW > 0 ? platW + 4 : 0);
-			context.drawText(textRenderer, textRenderer.trimToWidth(row.destination(), Math.max(0, destEnd - destX)), destX, y + 4, STYLE.text(), false);
+			context.drawText(textRenderer, textRenderer.trimToWidth(row.destination(), Math.max(0, destEnd - destX)), destX, y + 4, TEXT, false);
 		}
 	}
 
 	private void drawMap(DrawContext context) {
 		if (map.lines().isEmpty()) {
-			context.drawText(textRenderer, Text.translatable(KEY + "term_no_map"), contentX, contentY + 2, STYLE.dim(), false);
+			context.drawText(textRenderer, Text.translatable(KEY + "term_no_map"), contentX, contentY + 2, DIM, false);
 			return;
 		}
 		final var matrices = context.getMatrices();
@@ -345,17 +352,17 @@ public class PassengerTerminalScreen extends Screen {
 			final int badgeW = Math.max(14, textRenderer.getWidth(badge.label()) + 6);
 			context.fill(x0, bandY, x0 + badgeW, bandY + 10, rgb);
 			context.drawText(textRenderer, badge.label(), x0 + badgeW / 2 - textRenderer.getWidth(badge.label()) / 2, bandY + 1, TerminalFace.contrast(badge.rgb()), false);
-			context.drawText(textRenderer, textRenderer.trimToWidth(line.name(), contentW - badgeW - 8), x0 + badgeW + 5, bandY + 1, STYLE.dim(), false);
+			context.drawText(textRenderer, textRenderer.trimToWidth(line.name(), contentW - badgeW - 8), x0 + badgeW + 5, bandY + 1, DIM, false);
 			final int sy = contentY + Math.round(strip.stripY());
 			context.fill(x0 + Math.round(strip.left()), sy - 1, x0 + Math.round(strip.right()), sy + 2, rgb);
 			for (final MapLayout.Dot dot : strip.dots()) {
 				final int dx = x0 + Math.round(dot.x());
 				if (dot.current()) {
 					context.fill(dx - 4, sy - 4, dx + 4, sy + 5, 0xFFFFFFFF);
-					context.fill(dx - 3, sy - 3, dx + 3, sy + 4, STYLE.accent());
+					context.fill(dx - 3, sy - 3, dx + 3, sy + 4, ACCENT);
 				} else if (dot.transfer()) {
 					context.fill(dx - 3, sy - 3, dx + 3, sy + 4, 0xFFFFFFFF);
-					context.fill(dx - 2, sy - 2, dx + 2, sy + 3, STYLE.background());
+					context.fill(dx - 2, sy - 2, dx + 2, sy + 3, BACKGROUND);
 				} else {
 					context.fill(dx - 2, sy - 2, dx + 2, sy + 3, 0xFFDDDDDD);
 				}
@@ -364,7 +371,7 @@ public class PassengerTerminalScreen extends Screen {
 					final float ly = dot.labelAbove() ? sy - 13 : sy + 6;
 					matrices.translate(x0 + dot.labelLeft(), ly, 0);
 					matrices.scale(0.75F, 0.75F, 1);
-					context.drawText(textRenderer, dot.label(), 0, 0, dot.current() ? STYLE.accent() : STYLE.text(), false);
+					context.drawText(textRenderer, dot.label(), 0, 0, dot.current() ? ACCENT : TEXT, false);
 					matrices.pop();
 				}
 			}
@@ -398,9 +405,9 @@ public class PassengerTerminalScreen extends Screen {
 		@Override
 		public void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
 			final boolean selected = page == tab;
-			final int fill = selected ? STYLE.accent() : isHovered() ? STYLE.chip() : STYLE.rowBand();
+			final int fill = selected ? ACCENT : isHovered() ? CHIP : ROW_BAND;
 			context.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), fill);
-			final int color = selected ? 0xFF0F1215 : STYLE.text();
+			final int color = selected ? 0xFF0F1215 : TEXT;
 			context.drawText(textRenderer, getMessage(), getX() + getWidth() / 2 - textRenderer.getWidth(getMessage()) / 2, getY() + (getHeight() - 8) / 2, color, false);
 		}
 	}
