@@ -35,8 +35,10 @@ public final class MtrStationContract {
 		}
 		try {
 			MtrStations.create(world, zone, result -> {
-				if (result.id() != 0) {
-					log.addStation(result.id());
+				if (result.id() != 0 && !log.addStation(result.id())) {
+					// MTR answered after the build was undone: take the station away again
+					remove(world, List.of(result.id()));
+				} else if (result.id() != 0) {
 					out.accept(Text.literal("MTR station \"" + zone.name() + "\" added to the dashboard.").formatted(Formatting.GREEN));
 				} else {
 					out.accept(Text.literal("Inside MTR station \"" + result.existing() + "\" already; its area is unchanged.").formatted(Formatting.GRAY));

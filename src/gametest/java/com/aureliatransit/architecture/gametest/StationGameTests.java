@@ -191,6 +191,11 @@ public class StationGameTests implements FabricGameTest {
 			check(job.terrainChanged() == 0, "terrain changed without approval");
 			checkBuilt(context, pending);
 			StationSessions.cancelJob(owner);
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
 			context.complete();
 		});
 	}
@@ -433,6 +438,35 @@ public class StationGameTests implements FabricGameTest {
 						context.complete();
 					});
 				});
+			});
+		});
+	}
+
+	/** Undo straight after the build, before MTR has answered: the station MTR adds afterwards is deleted again, not left behind. */
+	@GameTest(templateName = SITE_Z, tickLimit = 200)
+	public void undoBeforeMtrAnswersLeavesNoStation(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final StationSessions.Pending pending = StationCommand.prepare(world, "1 track, length 16, width 3, canopy, named Early Undo Halt",
+				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationZone zone = StationZone.of(pending.spec().name(), pending.report().ops());
+		final StationBuildJob job = StationBuildJob.build(world, new UUID(0, 13), BlockStateResolver.resolve(pending.report().ops()), false, text -> {
+		}, zone);
+		while (!job.finished()) {
+			job.step(StationBuildJob.OPS_PER_TICK);
+		}
+		final StationBuildJob undo = StationBuildJob.undo(world, new UUID(0, 13), job.undoLog(), text -> {
+		});
+		while (!undo.finished()) {
+			undo.step(StationBuildJob.OPS_PER_TICK);
+		}
+		final BlockPos centre = new BlockPos(zone.centerX(), zone.centerY(), zone.centerZ());
+		final List<List<String>> found = new ArrayList<>();
+		context.waitAndRun(60, () -> {
+			check(job.undoLog().stations() == 0, "undo log took a station after undo");
+			MtrStationContract.namesNear(world, centre, 2, found::add);
+			context.waitAndRun(20, () -> {
+				check(found.size() == 1 && !found.get(0).contains("Early Undo Halt"), "undo before MTR answered left the station: " + found);
+				context.complete();
 			});
 		});
 	}
@@ -734,6 +768,11 @@ public class StationGameTests implements FabricGameTest {
 			check(job.state() == StationBuildJob.State.DONE, "job " + job.state());
 			checkBuilt(context, fromFeet);
 			StationSessions.cancelJob(id);
+			final StationBuildJob undo = StationBuildJob.undo(world, id, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
 			StationSessions.forgetPlayer(id);
 			world.getServer().getPlayerManager().removeFromOperators(player.getGameProfile());
 			Fixtures.removePlayer(context, player);

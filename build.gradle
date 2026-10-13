@@ -46,6 +46,14 @@ fabricApi {
 	}
 }
 
+// The game test world is kept between runs, and MTR keeps its stations and lifts there; start each run from a fresh world
+// so one run's MTR data cannot sit under the next run's test plots.
+tasks.named("runGameTest") {
+	doFirst {
+		delete layout.buildDirectory.dir("run/gameTest/world")
+	}
+}
+
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"

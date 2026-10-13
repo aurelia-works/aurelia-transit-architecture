@@ -31,6 +31,8 @@ public final class UndoLog {
 	private final List<BlockPos> lifts = new ArrayList<>();
 	/** Ids of the MTR stations the build added; undo deletes them. */
 	private final List<Long> stations = new ArrayList<>();
+	/** Set once undo has taken the stations: one MTR answers after that is deleted at once instead of kept. */
+	private boolean stationsTaken;
 
 	public UndoLog(RegistryKey<World> dimension) {
 		this.dimension = dimension;
@@ -78,8 +80,13 @@ public final class UndoLog {
 		return taken;
 	}
 
-	void addStation(long id) {
+	/** @return false when undo already ran, so the caller deletes the station instead */
+	boolean addStation(long id) {
+		if (stationsTaken) {
+			return false;
+		}
 		stations.add(id);
+		return true;
 	}
 
 	/** How many MTR stations the build added (and undo will delete). */
@@ -91,6 +98,7 @@ public final class UndoLog {
 	List<Long> takeStations() {
 		final List<Long> taken = List.copyOf(stations);
 		stations.clear();
+		stationsTaken = true;
 		return taken;
 	}
 
