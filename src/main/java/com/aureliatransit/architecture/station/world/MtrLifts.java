@@ -46,7 +46,7 @@ final class MtrLifts {
 			final Lift lift = new Lift(new MinecraftClientData());
 			lift.setFloors(floors);
 			lift.setDimensions(3, 2, 2, shaft.offsetX(), 0, shaft.offsetZ());
-			lift.setIsDoubleSided(false);
+			lift.setIsDoubleSided(shaft.doubleSided());
 			lift.setStyle("default_transparent");
 			lift.setAngle(switch (shaft.doors()) {
 				case EAST -> Angle.E;

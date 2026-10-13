@@ -982,13 +982,15 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final StationLayout.Lift lift = site.platformLift(band, layout);
 				if (lift != null) {
-					shaft(lift, b.bridgeWall(), true, b.bridgeRoof());
+					// at the platform the car also opens at the back, onto the platform, when the platform runs on past it;
+					// at the footbridge it opens only into the corridor
+					shaft(lift, b.bridgeWall(), true, b.bridgeRoof(), band.runs(lift.doorV() + 4 * lift.out()));
 				}
 			}
 			final StationLayout.Lift hall = site.buildingLift(layout);
 			if (hall != null) {
 				// the building's own platform wall closes the shaft's far side, and its roof covers it
-				shaft(hall, b.interiorWall(), false, null);
+				shaft(hall, b.interiorWall(), false, null, false);
 			}
 		}
 
@@ -1013,9 +1015,10 @@ public final class StationPlanner {
 		/**
 		 * One shaft: a track column against the back wall with a stop at the walk level and at the upper walk level, a pair of
 		 * landing doors at each stop with a call button beside them, walls, and a roof unless {@code roofId} is null. The car
-		 * space stays empty from the walk level to the roof.
+		 * space stays empty from the walk level to the roof. With {@code backDoor} the back wall also has a pair of doors at the
+		 * walk level only, and the car is formed double-sided: MTR opens each side only where it finds doors at that floor.
 		 */
-		private void shaft(StationLayout.Lift lift, String wallId, boolean farWall, String roofId) {
+		private void shaft(StationLayout.Lift lift, String wallId, boolean farWall, String roofId, boolean backDoor) {
 			final int o = lift.out();
 			final LocalDir in = o > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
 			final int c0 = lift.c0();
@@ -1039,6 +1042,12 @@ public final class StationPlanner {
 				}
 				for (int y = low; y <= low + 2; y++) {
 					keepClear(c, y, vD - o);
+					if (backDoor) {
+						// three rows: a roof column just past the landing would still stand in the way of whoever steps out
+						for (int k = 1; k <= 3; k++) {
+							keepClear(c, y, vBack + k * o);
+						}
+					}
 				}
 				// MTR draws the car's floor level with the stop; a floor block there flickers through it, so the car rests in a pit
 				for (int v = vD + o; v != vBack; v += o) {
@@ -1055,6 +1064,15 @@ public final class StationPlanner {
 				}
 				buttons.add(new LiftButton(c0 - 1, stop + 1, vD, o, in));
 			}
+			if (backDoor) {
+				// seen from the platform behind the shaft the pair is mirrored: the left leaf is the one away from the track
+				for (int c = c0; c <= c1; c++) {
+					final String side = c == cT ? "side=right" : "side=left";
+					put(Role.LIFT, c, low, vBack, in.opposite(), StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
+					put(Role.LIFT, c, low + 1, vBack, in.opposite(), StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
+				}
+				buttons.add(new LiftButton(c1 + 1, low + 1, vBack, -o, in.opposite()));
+			}
 			final int cMax = farWall ? c1 + 1 : c1;
 			for (int y = low; y < roof; y++) {
 				for (int c = c0 - 1; c <= cMax; c++) {
@@ -1062,7 +1080,9 @@ public final class StationPlanner {
 					if (y != StationGeometry.UPPER_FLOOR_Y) {
 						put(Role.WALL, c, y, vD, in.opposite(), wallId);
 					}
-					put(Role.WALL, c, y, vBack, in, wallId);
+					if (!backDoor || y > low + 1 || c < c0 || c > c1) {
+						put(Role.WALL, c, y, vBack, in, wallId);
+					}
 				}
 				for (int v = vD + o; v != vBack; v += o) {
 					put(Role.WALL, c0 - 1, y, v, LocalDir.MINUS_U, wallId);
@@ -1593,7 +1613,9 @@ public final class StationPlanner {
 			// deck, out to and under both corridor walls, so the stair exits have a floor and the walls do not float
 			for (int u = from; u <= to; u++) {
 				for (int v = wallLo; v <= wallHi; v++) {
-					if ((u + v) % 5 == 0) {
+					// lights only under the walkway: in a wall row one sits under the glass, or in a lift's doorway, half seen
+					// through the glass from the platform
+					if ((u + v) % 5 == 0 && Math.abs(v - vB) <= 1) {
 						// the building's recessed light: a full block with the light underneath, so the walkway has no pit
 						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
 					} else {
@@ -3177,7 +3199,8 @@ public final class StationPlanner {
 		/**
 		 * The column spans a hanging screen may take, widest first: four across the middle of an island or from the back of a
 		 * side platform, then two (the middle and the next of an island, the back two of a side platform), each clear of the
-		 * boarding edges.
+		 * boarding edges. Centred on the platform, not on a girder line: an even-width island's girder is half a cell off its
+		 * middle, and the screen is read against the platform.
 		 */
 		private static List<List<Integer>> screenSpans(TrackLayout.PlatformBand band) {
 			final List<List<Integer>> spans = new ArrayList<>();
@@ -3230,6 +3253,14 @@ public final class StationPlanner {
 					}
 					for (final int u : columns) {
 						put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, HANGING_PIDS);
+					}
+					// where the roof is a cell higher than the girder the screen hangs from, a cross beam joins the two, so
+					// every block of the screen hangs from steel rather than from the air under the roof
+					for (final int u : columns) {
+						if (ceiling(u, v) == y + 2 && !taken(u, y + 1, v)) {
+							// a hanger, not part of the roof's frame: it carries only the screen
+							put(Role.FIXTURE, u, y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.BEAM), "kind=" + palette.girderKind());
+						}
 					}
 					return true;
 				}
@@ -3370,6 +3401,18 @@ public final class StationPlanner {
 			return false;
 		}
 
+		/** True in a flight's columns or the one beside them, from its top step to two rows past its landing. */
+		private boolean atStairFoot(TrackLayout.PlatformBand band, int u, int v) {
+			for (final StationLayout.Flight flight : site.flights(band)) {
+				final int a = Math.min(flight.wallV(), flight.landingV() + 2 * flight.side());
+				final int z = Math.max(flight.wallV(), flight.landingV() + 2 * flight.side());
+				if (v >= a && v <= z && u >= flight.columns().get(0) - 1 && u <= flight.columns().get(flight.columns().size() - 1) + 1) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		void nameSigns() {
 			if (spec.name().isEmpty()) {
 				return;
@@ -3408,20 +3451,21 @@ public final class StationPlanner {
 		private void signRow(TrackLayout.PlatformBand band, int u, LocalDir front) {
 			final int start = band.vFrom() + band.length() / 2 - 1;
 			for (int v = start; v + 2 <= band.vTo(); v += 2) {
-				if (placeRow(u, v, front)) {
+				if (placeRow(band, u, v, front)) {
 					return;
 				}
 			}
 			for (int v = start - 2; v >= band.vFrom(); v -= 2) {
-				if (placeRow(u, v, front)) {
+				if (placeRow(band, u, v, front)) {
 					return;
 				}
 			}
 		}
 
-		private boolean placeRow(int u, int v, LocalDir front) {
+		private boolean placeRow(TrackLayout.PlatformBand band, int u, int v, LocalDir front) {
 			for (int i = 0; i < 3; i++) {
-				if (taken(u, StationGeometry.WALK_Y, v + i)) {
+				// never across the foot of a stair: a sign there walled in whoever came down it
+				if (taken(u, StationGeometry.WALK_Y, v + i) || atStairFoot(band, u, v + i)) {
 					return false;
 				}
 			}

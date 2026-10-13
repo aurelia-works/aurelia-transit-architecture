@@ -22,8 +22,8 @@ import net.minecraft.text.Text;
  * /ata_message station &lt;name&gt; set &lt;severity&gt; &lt;text...&gt;         (1.2 form: replaces that station's messages)
  * /ata_message station &lt;name&gt; clear
  * </pre>
- * A display's own message is typed into the display's config screen. Text is sanitised and capped at
- * {@value ServiceMessage#MAX_TEXT} characters.
+ * A display's own message is typed into the display's config screen. Text is sanitised; text longer than
+ * {@value ServiceMessage#MAX_TEXT} characters is refused rather than cut off mid-word.
  */
 final class ServiceMessageCommand {
 
@@ -90,7 +90,20 @@ final class ServiceMessageCommand {
 		return 1;
 	}
 
+	/** Refuses text the message would have to cut short, so a board never shows half a word. */
+	private static boolean tooLong(CommandContext<ServerCommandSource> context) {
+		final int length = StringArgumentType.getString(context, "text").strip().length();
+		if (length <= ServiceMessage.MAX_TEXT) {
+			return false;
+		}
+		context.getSource().sendError(Text.literal("The message is " + length + " characters; at most " + ServiceMessage.MAX_TEXT + " fit"));
+		return true;
+	}
+
 	private static int addMessage(CommandContext<ServerCommandSource> context, MessageScope scope, String station, MessageSeverity severity) {
+		if (tooLong(context)) {
+			return 0;
+		}
 		final ServiceMessages current = ServiceMessageState.get(context.getSource().getServer()).messages();
 		final ServiceMessages next = current.add(scope, station, severity, StringArgumentType.getString(context, "text"));
 		if (next == null) {
@@ -102,6 +115,9 @@ final class ServiceMessageCommand {
 
 	/** 1.2 behaviour: the one message of a scope is replaced. */
 	private static int replace(CommandContext<ServerCommandSource> context, MessageScope scope, String station, MessageSeverity severity) {
+		if (tooLong(context)) {
+			return 0;
+		}
 		final ServiceMessages current = ServiceMessageState.get(context.getSource().getServer()).messages();
 		final ServiceMessages cleared = scope == MessageScope.NETWORK ? current.clearNetwork() : current.clearStation(station);
 		final ServiceMessages next = cleared.add(scope, station, severity, StringArgumentType.getString(context, "text"));

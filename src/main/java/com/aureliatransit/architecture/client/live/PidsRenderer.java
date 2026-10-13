@@ -45,11 +45,13 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 	private static final int LIGHT = LightmapTextureManager.MAX_LIGHT_COORDINATE;
 	/**
 	 * Offsets (blocks) in front of the screen surface: each rectangle layer ({@link BoardModel#LAYER_BACKGROUND} ...)
-	 * sits {@link #Z_LAYER} further out, text in front of all of them. The step stays depth-resolvable at the full
-	 * {@link #RENDER_DISTANCE} with a 24-bit depth buffer (about 0.0023 blocks at 44 blocks) yet is invisible (1/16 px).
+	 * sits {@link #Z_LAYER} further out, text in front of all of them, masks and top text further still. A 24-bit depth
+	 * buffer resolves about 0.0023 blocks at 44 blocks, so 0.004 left the background losing to the screen block's own face
+	 * from about 25 blocks (the board turned near-black with its text still showing); these steps keep a wide margin at the
+	 * full {@link #RENDER_DISTANCE}, and the whole stack (0.052) stays under one pixel (0.0625).
 	 */
-	private static final float Z_BACKGROUND = 0.004F;
-	private static final float Z_LAYER = 0.004F;
+	private static final float Z_BACKGROUND = 0.012F;
+	private static final float Z_LAYER = 0.008F;
 	private static final float Z_TEXT = Z_BACKGROUND + BoardModel.LAYERS * Z_LAYER;
 	private static final long REBUILD_MILLIS = 1000;
 	private static final long REBUILD_MARQUEE_MILLIS = 350;

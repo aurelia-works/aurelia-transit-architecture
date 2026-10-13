@@ -22,6 +22,8 @@ class NameSignsTest {
 					+ "platform 8: side; platform 9: side; platform 10: side; terminus, named Halt",
 			"platform 1: side; platform 2: island; platform 3: side; platform 4: side; footbridge, named Halt",
 			"platform 1: island; platform 2: side bay; platform 3: side bay; platform 4: island; terminus, named Halt",
+			"platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, named Halt",
+			"two track station, side platforms, length 24, width 6, footbridge, named Halt",
 	};
 
 	@Test
@@ -36,6 +38,29 @@ class NameSignsTest {
 					if (a.u() != b.u() && Math.abs(a.u() - b.u()) <= 2 && Math.abs(a.v() - b.v()) <= 2) {
 						problems.add(text + ": signs at u=" + a.u() + " and u=" + b.u() + " near v=" + a.v());
 					}
+				}
+			}
+		}
+		assertEquals(List.of(), problems.stream().distinct().limit(20).toList());
+	}
+
+	@Test
+	void noSignAtTheFootOfAStair() {
+		final List<String> problems = new ArrayList<>();
+		for (final String text : TEXTS) {
+			final StationSpec spec = StationDescriptionParser.parse(text).spec();
+			final StationPlan plan = StationPlanner.plan(spec);
+			final StationLayout site = StationLayout.of(spec, plan.layout());
+			for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					// the cells someone coming down the stair walks into: the flight, its landing and two rows past it, in its
+					// columns and the one beside them
+					final int a = Math.min(flight.wallV(), flight.landingV() + 2 * flight.side());
+					final int z = Math.max(flight.wallV(), flight.landingV() + 2 * flight.side());
+					final int u0 = flight.columns().get(0) - 1;
+					final int u1 = flight.columns().get(flight.columns().size() - 1) + 1;
+					plan.blocks().stream().filter(b -> b.role() == Role.NAME_SIGN && b.u() >= u0 && b.u() <= u1 && b.v() >= a && b.v() <= z)
+							.forEach(b -> problems.add(text + ": sign at the stair foot " + b));
 				}
 			}
 		}

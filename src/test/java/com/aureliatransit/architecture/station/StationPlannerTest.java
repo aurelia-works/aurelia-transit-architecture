@@ -494,9 +494,11 @@ class StationPlannerTest {
 		expected.put(Role.ROOF_LIGHT, 24);
 		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
-		expected.put(Role.FIXTURE, 14); // per platform: two 2-wide hanging departure screens, a help point and two speakers
+		// per platform: two 2-wide hanging departure screens, each with a cross beam over the cell off the girder line, a help
+		// point and two speakers
+		expected.put(Role.FIXTURE, 18);
 		assertEquals(expected, counts);
-		assertEquals(1250, plan(spec).blocks().size());
+		assertEquals(1254, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -952,31 +954,35 @@ class StationPlannerTest {
 	}
 
 	@Test
-	void screensHangFromTheCanopyFourWideClearOfTheStairs() {
-		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).platformWidth(6)
-				.roof(RoofType.CANOPY).footbridge(true).build();
-		final StationPlan plan = plan(spec);
-		final StationLayout site = StationLayout.of(spec, plan.layout());
-		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":hanging_platform_pids")).toList();
-		assertEquals(8, screens.size(), "two 4-wide screens on a 64 long island");
-		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":platform_pids")), "no standing screens under a roof");
-		for (final PlannedBlock screen : screens) {
-			// the four cells of a screen hang from the lowest ceiling over them: the canopy's girders sit directly under its roof, so
-			// where one runs over the screen (the line down the middle, or an edge girder) it hangs a block lower than the roof
-			final List<PlannedBlock> span = screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front() && Math.abs(o.u() - screen.u()) <= 3)
-					.sorted(Comparator.comparingInt(PlannedBlock::u)).toList();
-			final int ceiling = plan.blocks().stream().filter(b -> b.v() == screen.v() && b.y() > StationGeometry.WALK_Y && b.role().covers()
-					&& span.stream().anyMatch(o -> o.u() == b.u())).mapToInt(PlannedBlock::y).min().orElse(-1);
-			assertEquals(ceiling - 1, screen.y(), "hangs under the lowest ceiling over its span: " + screen);
-			assertEquals(StationGeometry.CANOPY_Y - 2, screen.y(), "hangs under the girders: " + screen);
-			assertTrue(screen.front().alongTrack(), "faces along the platform: " + screen);
-			assertEquals(4, screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front() && Math.abs(o.u() - screen.u()) <= 3).count(),
-					"not four wide: " + screen);
-			final int lo = Math.min(site.stairWallV(), site.landingV()) - 2;
-			final int hi = Math.max(site.stairWallV(), site.landingV()) + 2;
-			assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);
+	void screensHangCentredOnThePlatformFromSteelClearOfTheStairs() {
+		for (final CanopyShape shape : CanopyShape.values()) {
+			final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(64).platformWidth(6)
+					.roof(RoofType.CANOPY).canopy(shape).footbridge(true).build();
+			final StationPlan plan = plan(spec);
+			final StationLayout site = StationLayout.of(spec, plan.layout());
+			final TrackLayout.PlatformBand band = plan.layout().platforms().get(0);
+			final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":hanging_platform_pids")).toList();
+			assertEquals(8, screens.size(), shape + ": two 4-wide screens on a 64 long island");
+			assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":platform_pids")), "no standing screens under a roof");
+			for (final PlannedBlock screen : screens) {
+				// four across the island's middle (its girder line is half a cell off it), under the girders, and steel over
+				// every block: the girder, or a cross beam joining it where the roof is a cell higher
+				assertTrue(screen.u() >= band.uMin() + 1 && screen.u() <= band.uMax() - 1, shape + ": on a boarding edge: " + screen);
+				assertEquals(4, screens.stream().filter(o -> o.v() == screen.v() && o.front() == screen.front()).count(), shape + ": not four wide: " + screen);
+				assertEquals(band.uMin() + band.uMax(), screens.stream().filter(o -> o.v() == screen.v()).mapToInt(PlannedBlock::u).min().orElseThrow()
+						+ screens.stream().filter(o -> o.v() == screen.v()).mapToInt(PlannedBlock::u).max().orElseThrow(), shape + ": not centred: " + screen);
+				assertEquals(StationGeometry.CANOPY_Y - 2, screen.y(), "hangs under the girders: " + screen);
+				assertTrue(screen.front().alongTrack(), "faces along the platform: " + screen);
+				final PlannedBlock above = plan.blocks().stream().filter(b -> b.u() == screen.u() && b.v() == screen.v() && b.y() == screen.y() + 1)
+						.findFirst().orElse(null);
+				assertTrue(above != null && (above.role() == Role.BEAM || above.role() == Role.FIXTURE && above.blockId().endsWith(":station_girder")),
+						shape + ": nothing to hang from above " + screen + ": " + above);
+				final int lo = Math.min(site.stairWallV(), site.landingV()) - 2;
+				final int hi = Math.max(site.stairWallV(), site.landingV()) + 2;
+				assertFalse(screen.v() >= lo && screen.v() <= hi, "screen at the stairs: " + screen);
+			}
+			assertEquals(List.of(), LayoutValidator.validate(plan), shape.name());
 		}
-		assertEquals(List.of(), LayoutValidator.validate(plan));
 	}
 
 	@Test

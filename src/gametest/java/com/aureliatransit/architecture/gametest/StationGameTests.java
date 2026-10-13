@@ -230,7 +230,8 @@ public class StationGameTests implements FabricGameTest {
 					buttons.add(cellPos(pending, block));
 				}
 			}
-			check(stops.size() == 4 && buttons.size() == 4, "expected two lifts with two stops and two buttons each: " + stops + " " + buttons);
+			// a button beside each door: the front doors at both stops, and the back doors onto the platform at the foot
+			check(stops.size() == 4 && buttons.size() == 6, "expected two lifts with two stops and three buttons each: " + stops + " " + buttons);
 			check(job.undoLog().lifts() == 2, "lifts formed: " + job.undoLog().lifts());
 			for (final BlockPos stop : stops) {
 				final NbtCompound data = world.getBlockEntity(stop).createNbt();

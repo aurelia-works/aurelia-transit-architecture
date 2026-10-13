@@ -29,10 +29,11 @@ public final class MtrLiftContract {
 	}
 
 	/**
-	 * One lift to form: its stops from the bottom up, the way its doors face, and where the car's centre lies relative to the
-	 * stops' block corner (MTR draws the car centred on that corner plus this offset).
+	 * One lift to form: its stops from the bottom up, the way its doors face, where the car's centre lies relative to the
+	 * stops' block corner (MTR draws the car centred on that corner plus this offset), and whether the car has doors at the
+	 * back as well.
 	 */
-	public record Shaft(List<BlockPos> stops, Heading doors, double offsetX, double offsetZ) {
+	public record Shaft(List<BlockPos> stops, Heading doors, double offsetX, double offsetZ, boolean doubleSided) {
 
 		public Shaft {
 			stops = List.copyOf(stops);

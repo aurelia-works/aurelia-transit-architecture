@@ -11,7 +11,7 @@ import net.minecraft.network.PacketByteBuf;
  */
 public record ServiceMessage(int id, MessageScope scope, String station, MessageSeverity severity, String text) {
 
-	public static final int MAX_TEXT = 96;
+	public static final int MAX_TEXT = 256;
 	public static final int MAX_STATION_NAME = 48;
 	public static final ServiceMessage NONE = new ServiceMessage("", MessageSeverity.INFO);
 

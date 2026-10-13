@@ -90,7 +90,7 @@ class ServiceMessagesTest {
 
 	@Test
 	void textIsSanitisedAndRefusedWhenInvalid() {
-		final ServiceMessage m = new ServiceMessage("§cRed\u0007 " + "x".repeat(200), MessageSeverity.WARNING);
+		final ServiceMessage m = new ServiceMessage("§cRed\u0007 " + "x".repeat(400), MessageSeverity.WARNING);
 		assertEquals(ServiceMessage.MAX_TEXT, m.text().length());
 		assertEquals(MessageSeverity.INFO, new ServiceMessage("a", null).severity());
 		assertNull(ServiceMessages.EMPTY.add(MessageScope.NETWORK, "", MessageSeverity.INFO, "  "), "empty text");

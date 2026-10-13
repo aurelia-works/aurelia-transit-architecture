@@ -462,8 +462,11 @@ public final class StationBuildJob {
 			}
 			final Direction back = stop.get(Properties.HORIZONTAL_FACING);
 			final Direction beside = back.rotateYClockwise();
+			// a door in the back wall beside the bottom stop: the car opens there too (MTR opens a side only where it finds doors)
+			final boolean doubleSided = Registries.BLOCK.getId(world.getBlockState(stops.firstEntry().getValue().offset(back)).getBlock()).toString()
+					.equals(StylePalette.MTR_LIFT_DOOR);
 			shafts.add(new MtrLiftContract.Shaft(List.copyOf(stops.values()), BlockStateResolver.heading(back.getOpposite()),
-					0.5 + (beside.getOffsetX() - back.getOffsetX()) / 2.0, 0.5 + (beside.getOffsetZ() - back.getOffsetZ()) / 2.0));
+					0.5 + (beside.getOffsetX() - back.getOffsetX()) / 2.0, 0.5 + (beside.getOffsetZ() - back.getOffsetZ()) / 2.0, doubleSided));
 		}
 		if (shafts.isEmpty()) {
 			return;
