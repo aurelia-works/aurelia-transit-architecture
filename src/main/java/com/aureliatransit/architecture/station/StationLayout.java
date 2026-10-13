@@ -22,11 +22,41 @@ import java.util.List;
  *                      room on either side
  * @param served        platforms reached by footbridge stairs (platform numbers)
  * @param escalators    an up escalator beside each platform stair where the platform is wide enough
+ * @param bothWays      a second stair down to each platform wide enough, from the corridor's other side, facing the other way
  */
 public record StationLayout(boolean building, int bays, int vStart, int vEnd, int entranceV, int innerStairSide, boolean bridge, int bridgeV,
-		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators) {
+		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays) {
 
-	/** Narrowest island and side platform that take an escalator beside the stair and keep a walkway past both. */
+	/**
+	 * One stair flight down from the footbridge corridor to a platform.
+	 *
+	 * @param columns the flight's columns, ascending
+	 * @param side    +1 when the flight runs from the corridor towards higher v, -1 towards lower v
+	 * @param wallV   v of the corridor wall it leaves through
+	 */
+	public record Flight(List<Integer> columns, int side, int wallV) {
+
+		public Flight {
+			columns = List.copyOf(columns);
+		}
+
+		/** v of the step at height y (1..{@link StationGeometry#STAIR_STEPS}); the top step is next to the wall. */
+		public int stepV(int y) {
+			return wallV + side * (1 + StationGeometry.STAIR_STEPS - y);
+		}
+
+		/** v of the landing at the flight's foot. */
+		public int landingV() {
+			return wallV + side * (StationGeometry.STAIR_STEPS + 1);
+		}
+
+		/** The way the flight climbs (its steps' front). */
+		public LocalDir front() {
+			return side > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
+		}
+	}
+
+	/** Narrowest island and side platform that take an escalator or second stair beside the stair and keep a walkway past both. */
 	public static final int MIN_ESCALATOR_ISLAND = 11;
 	public static final int MIN_ESCALATOR_SIDE = 9;
 
@@ -87,7 +117,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			bridge = false;
 		}
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
-				bridge ? served : List.of(), spec.escalators());
+				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays());
 	}
 
 	/** Facade bays of a station building beside platforms this long. */
@@ -137,31 +167,64 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return stairSide > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
 	}
 
+	/** A served platform wide enough for a stair, a rail column and a second pair of columns side by side. */
+	private boolean wideFlight(TrackLayout.PlatformBand band) {
+		return bridge && served.contains(band.number()) && band.width() >= (band.island() ? MIN_ESCALATOR_ISLAND : MIN_ESCALATOR_SIDE);
+	}
+
 	/** True when this platform's stair has an up escalator beside it. */
 	public boolean hasEscalator(TrackLayout.PlatformBand band) {
-		return escalators && bridge && served.contains(band.number())
-				&& band.width() >= (band.island() ? MIN_ESCALATOR_ISLAND : MIN_ESCALATOR_SIDE) && band.runs(escalatorFootV());
+		return escalators && wideFlight(band) && band.runs(escalatorFootV());
+	}
+
+	/** True when this platform also has the second stair, down from the corridor's other side. */
+	public boolean hasReverse(TrackLayout.PlatformBand band) {
+		return bothWays && wideFlight(band) && band.runs(reverseFlight(band, List.of()).landingV());
+	}
+
+	private boolean grouped(TrackLayout.PlatformBand band) {
+		return hasEscalator(band) || hasReverse(band);
 	}
 
 	/**
-	 * Columns of a platform's stair. Beside an escalator the stair, a rail column and the escalator form one group: centred
-	 * on an island with the escalator on the right, and on a side platform with the stair against the back as without one.
+	 * Columns of a platform's stair. Beside an escalator or a second stair the stair, a rail column and the other pair of
+	 * columns form one group: centred on an island with the pair on the right, and on a side platform with the stair against
+	 * the back as without one.
 	 */
 	public List<Integer> stairs(TrackLayout.PlatformBand band) {
-		if (!hasEscalator(band)) {
+		if (!grouped(band)) {
 			return stairColumns(band);
 		}
 		final int s = band.island() ? band.uMin() + (band.width() - 5) / 2 : band.trackLeft() ? band.uMax() - 2 : band.uMin() + 1;
 		return List.of(s, s + 1);
 	}
 
-	/** The escalator's two columns, ascending; empty without one. */
-	public List<Integer> escalator(TrackLayout.PlatformBand band) {
-		if (!hasEscalator(band)) {
-			return List.of();
-		}
+	/** The group's other pair of columns: the escalator beside the stair, and the second stair on the corridor's other side. */
+	private List<Integer> pair(TrackLayout.PlatformBand band) {
 		final int e = band.island() ? band.uMin() + (band.width() - 5) / 2 + 3 : band.trackLeft() ? band.uMax() - 5 : band.uMin() + 4;
 		return List.of(e, e + 1);
+	}
+
+	/** The escalator's two columns, ascending; empty without one. */
+	public List<Integer> escalator(TrackLayout.PlatformBand band) {
+		return hasEscalator(band) ? pair(band) : List.of();
+	}
+
+	/**
+	 * The platform's stair flights down from the corridor: the stair on the stair side, and with {@link #bothWays} the second
+	 * one from the other wall, on the group's pair columns beside the lift, running the other way. Empty off the footbridge.
+	 */
+	public List<Flight> flights(TrackLayout.PlatformBand band) {
+		final List<Integer> stairs = stairs(band);
+		if (!bridge || !served.contains(band.number()) || stairs.isEmpty()) {
+			return List.of();
+		}
+		final Flight main = new Flight(stairs, stairSide, stairWallV());
+		return hasReverse(band) ? List.of(main, reverseFlight(band, pair(band))) : List.of(main);
+	}
+
+	private Flight reverseFlight(TrackLayout.PlatformBand band, List<Integer> columns) {
+		return new Flight(columns, -stairSide, bridgeV - 2 * stairSide);
 	}
 
 	/** Stair and escalator columns together: every column that opens out of the corridor and is kept clear down to the platform. */

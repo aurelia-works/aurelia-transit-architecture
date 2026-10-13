@@ -625,18 +625,20 @@ public final class StationAudit {
 					if (!site.served().contains(band.number())) {
 						continue;
 					}
-					for (final int u : site.stairs(band)) {
-						boolean intact = true;
-						for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
-							final PlannedBlock step = at(u, y, site.stairV(y));
-							if (step == null || step.role() != Role.STAIR || step.front() != site.stairFront()) {
-								intact = false;
-								break;
+					for (final StationLayout.Flight flight : site.flights(band)) {
+						for (final int u : flight.columns()) {
+							boolean intact = true;
+							for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+								final PlannedBlock step = at(u, y, flight.stepV(y));
+								if (step == null || step.role() != Role.STAIR || step.front() != flight.front()) {
+									intact = false;
+									break;
+								}
 							}
-						}
-						if (intact && inGrid(u, site.landingV()) && inGrid(u, site.bridgeV())
-								&& ground[index(u, site.landingV())] != Ground.BLOCKED && upper[index(u, site.bridgeV())] != Ground.BLOCKED) {
-							flights.add(new Flight(u, site.landingV(), u, site.bridgeV()));
+							if (intact && inGrid(u, flight.landingV()) && inGrid(u, site.bridgeV())
+									&& ground[index(u, flight.landingV())] != Ground.BLOCKED && upper[index(u, site.bridgeV())] != Ground.BLOCKED) {
+								flights.add(new Flight(u, flight.landingV(), u, site.bridgeV()));
+							}
 						}
 					}
 					// an escalator carries passengers up from the landing past its foot

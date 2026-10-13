@@ -78,8 +78,18 @@ public final class StudioApi {
 		if (bed.equals("gravel") || bed.equals("andesite")) {
 			text = bed + " track bed " + text;
 		}
-		if (q.getOrDefault("esc", "").equals("1")) {
+		final String esc = q.getOrDefault("esc", "");
+		if (esc.equals("1") || esc.equals("both")) {
 			text = "escalators " + text;
+		}
+		if (esc.equals("reverse") || esc.equals("both")) {
+			text = "stairs both ways " + text;
+		}
+		if (q.getOrDefault("walls", "").equals("1")) {
+			text = "enclosed stairs " + text;
+		}
+		if (q.getOrDefault("trav", "").equals("1")) {
+			text = "travelators " + text;
 		}
 		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;

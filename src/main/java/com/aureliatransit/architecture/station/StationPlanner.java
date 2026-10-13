@@ -1515,24 +1515,19 @@ public final class StationPlanner {
 			final int to = site.deckTo();
 			final int wallLo = vB - 2;
 			final int wallHi = vB + 2;
-			final int stairWall = site.stairWallV();
-			final int landing = site.landingV();
-			final int loStair = Math.min(stairWall, landing) - 1;
-			final int hiStair = Math.max(stairWall, landing) + 1;
-			// keep the stair corridor and landings clear before the deck and walls go up
+			// keep the stair corridors and landings clear before the deck and walls go up
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (!site.served().contains(band.number())) {
-					continue;
-				}
-				for (final int u : site.stairs(band)) {
-					for (int y = 1; y <= 3; y++) {
-						keepClear(u, y, landing);
-					}
-					// two clear above every step, and a third: stepping up from it your head passes under the cell above it
-					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
-						keepClear(u, y + 1, site.stairV(y));
-						keepClear(u, y + 2, site.stairV(y));
-						keepClear(u, y + 3, site.stairV(y));
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					for (final int u : flight.columns()) {
+						for (int y = 1; y <= 3; y++) {
+							keepClear(u, y, flight.landingV());
+						}
+						// two clear above every step, and a third: stepping up from it your head passes under the cell above it
+						for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+							keepClear(u, y + 1, flight.stepV(y));
+							keepClear(u, y + 2, flight.stepV(y));
+							keepClear(u, y + 3, flight.stepV(y));
+						}
 					}
 				}
 			}
@@ -1547,22 +1542,27 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// corridor walls (glass, facing outwards); only the exit-side wall opens at stair columns
+			// corridor walls (glass, facing outwards); each wall opens where a flight leaves through it
 			for (int u = from; u <= to; u++) {
-				boolean exit = false;
+				boolean exitLo = false;
+				boolean exitHi = false;
 				for (final TrackLayout.PlatformBand band : layout.platforms()) {
-					if (u >= band.uMin() && u <= band.uMax() && site.served().contains(band.number())
-							&& site.flightColumns(band).contains(u)) {
-						exit = true;
-						break;
+					if (u < band.uMin() || u > band.uMax()) {
+						continue;
+					}
+					for (final StationLayout.Flight flight : site.flights(band)) {
+						if (opening(band, flight).contains(u)) {
+							exitLo |= flight.wallV() == wallLo;
+							exitHi |= flight.wallV() == wallHi;
+						}
 					}
 				}
 				for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
-					final boolean open = exit && y <= StationGeometry.UPPER_WALK_Y + 1;
-					if (!(open && wallLo == stairWall)) {
+					final boolean low = y <= StationGeometry.UPPER_WALK_Y + 1;
+					if (!(low && exitLo)) {
 						put(Role.WINDOW, u, y, wallLo, LocalDir.MINUS_V, b.bridgeWall());
 					}
-					if (!(open && wallHi == stairWall)) {
+					if (!(low && exitHi)) {
 						put(Role.WINDOW, u, y, wallHi, LocalDir.PLUS_V, b.bridgeWall());
 					}
 				}
@@ -1585,20 +1585,13 @@ public final class StationPlanner {
 					}
 				}
 			}
+			// each flight glazed (or walled) and roofed like the corridor it leaves
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (!hasStairs(band)) {
-					continue;
-				}
-				if (roof(band) == RoofType.CANOPY ? stairShaft(band, b) : stairHood(band, b)) {
-					continue;
-				}
-				for (int u = band.uMin(); u <= band.uMax(); u++) {
-					for (int v = loStair; v <= hiStair; v++) {
-						if ((u + v) % 4 == 1) {
-							put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeLight());
-						} else {
-							put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeRoof());
-						}
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					if (roof(band) == RoofType.CANOPY) {
+						stairShaft(band, flight, b);
+					} else {
+						stairHood(band, flight, b);
 					}
 				}
 			}
@@ -1621,61 +1614,59 @@ public final class StationPlanner {
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
 			// they stop below it, so the canopy runs over them
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (!site.served().contains(band.number())) {
-					continue;
-				}
 				final int flankTop = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
-				for (final int su : site.flightColumns(band)) {
-					for (final int du : new int[]{-1, 1}) {
-						final int u = su + du;
-						if (u < band.uMin() || u > band.uMax() || isEdge(band, u) || site.flightColumns(band).contains(u)) {
-							continue;
-						}
-						boolean free = true;
-						for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
-							if (taken(u, y, landing)) {
-								free = false;
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					final List<Integer> open = opening(band, flight);
+					final int landing = flight.landingV();
+					for (final int su : open) {
+						for (final int du : new int[]{-1, 1}) {
+							final int u = su + du;
+							if (u < band.uMin() || u > band.uMax() || isEdge(band, u) || open.contains(u)) {
+								continue;
+							}
+							boolean free = true;
+							for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
+								if (taken(u, y, landing)) {
+									free = false;
+									break;
+								}
+							}
+							if (free) {
+								for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
+									put(Role.BRIDGE_PIER, u, y, landing, LocalDir.PLUS_V, b.pier());
+								}
 								break;
 							}
-						}
-						if (free) {
-							for (int y = StationGeometry.WALK_Y; y < flankTop; y++) {
-								put(Role.BRIDGE_PIER, u, y, landing, LocalDir.PLUS_V, b.pier());
-							}
-							break;
 						}
 					}
 				}
 			}
 			// platform stairs with landings kept clear
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (!site.served().contains(band.number())) {
-					continue;
-				}
-				final List<Integer> flight = site.stairs(band);
-				for (final int u : flight) {
-					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
-						put(Role.STAIR, u, y, site.stairV(y), site.stairFront(), b.stair());
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					final List<Integer> columns = flight.columns();
+					for (final int u : columns) {
+						for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+							put(Role.STAIR, u, y, flight.stepV(y), flight.front(), b.stair());
+						}
 					}
-				}
-				if (flight.isEmpty()) {
-					continue;
-				}
-				// balustrades on the outer flanks of the whole flight, from the floor up to each step, so no rail hangs at head
-				// height over the platform (never at the canopy roof level, which the canopy fills, never on boarding edges)
-				final int left = flight.get(0) - 1;
-				final int right = flight.get(flight.size() - 1) + 1;
-				for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
-					final int v = site.stairV(y);
-					for (int rail = StationGeometry.WALK_Y; rail <= y; rail++) {
-						if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
-							continue;
-						}
-						if (!isEdge(band, left)) {
-							put(Role.RAILING, left, rail, v, LocalDir.MINUS_U);
-						}
-						if (!isEdge(band, right)) {
-							put(Role.RAILING, right, rail, v, LocalDir.PLUS_U);
+					// balustrades on the outer flanks of the whole flight, from the floor up to each step, so no rail hangs at
+					// head height over the platform (never at the canopy roof level, which the canopy fills, never on boarding
+					// edges)
+					final int left = columns.get(0) - 1;
+					final int right = columns.get(columns.size() - 1) + 1;
+					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+						final int v = flight.stepV(y);
+						for (int rail = StationGeometry.WALK_Y; rail <= y; rail++) {
+							if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
+								continue;
+							}
+							if (!isEdge(band, left)) {
+								put(Role.RAILING, left, rail, v, LocalDir.MINUS_U);
+							}
+							if (!isEdge(band, right)) {
+								put(Role.RAILING, right, rail, v, LocalDir.PLUS_U);
+							}
 						}
 					}
 				}
@@ -1785,9 +1776,9 @@ public final class StationPlanner {
 			}
 		}
 
-		/** Bands with a stair flight down from the footbridge: served and wide enough for steps. */
-		private boolean hasStairs(TrackLayout.PlatformBand band) {
-			return site.bridge() && site.served().contains(band.number()) && !StationLayout.stairColumns(band).isEmpty();
+		/** The columns a flight opens out of the corridor: the main stair's include the escalator beside it. */
+		private List<Integer> opening(TrackLayout.PlatformBand band, StationLayout.Flight flight) {
+			return flight.side() == site.stairSide() ? site.flightColumns(band) : flight.columns();
 		}
 
 		void columns() {
@@ -2808,40 +2799,45 @@ public final class StationPlanner {
 			return false;
 		}
 
-		/**
-		 * Under a canopy, a platform stair is enclosed in glass in the footbridge's glazing: both flanks of the whole flight from
-		 * the platform up to the bridge roof (glass balustrades, no metal rails; never on a boarding edge), across its far end
-		 * above the canopy, and a roof over just that shaft. So the steps are not left standing in the open above the canopy.
-		 * False if the flight has no steps (nothing to enclose).
-		 */
-		private boolean stairShaft(TrackLayout.PlatformBand band, StylePalette.Building b) {
-			final List<Integer> flight = site.flightColumns(band);
-			if (flight.isEmpty()) {
-				return false;
+		/** A stairwell's flank: glass like the corridor, or solid wall when the stairs are asked for enclosed. */
+		private void flank(int u, int y, int v, LocalDir out, StylePalette.Building b) {
+			if (spec.enclosedStairs()) {
+				put(Role.WALL, u, y, v, out, b.wall());
+			} else {
+				put(Role.WINDOW, u, y, v, out, b.bridgeWall());
 			}
-			final int left = flight.get(0) - 1;
-			final int right = flight.get(flight.size() - 1) + 1;
+		}
+
+		/**
+		 * Under a canopy, a platform stair is enclosed in the footbridge's glazing (or walls): both flanks of the whole flight
+		 * from the platform up to the bridge roof (no metal rails; never on a boarding edge), across its far end above the
+		 * canopy, and a roof over just that shaft. So the steps are not left standing in the open above the canopy.
+		 */
+		private void stairShaft(TrackLayout.PlatformBand band, StationLayout.Flight flight, StylePalette.Building b) {
+			final List<Integer> open = opening(band, flight);
+			final int left = open.get(0) - 1;
+			final int right = open.get(open.size() - 1) + 1;
 			// steps whose headroom reaches the canopy level pass through it; the step below them ends the shaft
 			final int lowest = Math.max(1, StationGeometry.CANOPY_Y - 2);
-			final int top = site.stairV(StationGeometry.STAIR_STEPS);
-			final int end = lowest > 1 ? site.stairV(lowest - 1) : site.landingV();
-			final int side = Integer.signum(end - top);
+			final int top = flight.stepV(StationGeometry.STAIR_STEPS);
+			final int end = lowest > 1 ? flight.stepV(lowest - 1) : flight.landingV();
+			final int side = flight.side();
 			final LocalDir out = side > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
-			final int foot = site.stairV(1);
+			final int foot = flight.stepV(1);
 			for (int y = StationGeometry.WALK_Y; y < StationGeometry.BUILDING_ROOF_Y; y++) {
 				for (int v = top; v != foot + side; v += side) {
 					// below the canopy a flank on a boarding edge stays open
 					final boolean high = y > StationGeometry.CANOPY_Y;
 					if (high || !isEdge(band, left) && left >= band.uMin()) {
-						put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
+						flank(left, y, v, LocalDir.MINUS_U, b);
 					}
 					if (high || !isEdge(band, right) && right <= band.uMax()) {
-						put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+						flank(right, y, v, LocalDir.PLUS_U, b);
 					}
 				}
 				if (y > StationGeometry.CANOPY_Y) {
 					for (int u = left + 1; u < right; u++) {
-						put(Role.WINDOW, u, y, end, out, b.bridgeWall());
+						flank(u, y, end, out, b);
 					}
 				}
 			}
@@ -2850,49 +2846,46 @@ public final class StationPlanner {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
 				}
 			}
-			return true;
 		}
 
 		/**
-		 * Without a canopy, a stair flight is glazed like the corridor it leaves: glass walls on both flanks from the platform
-		 * up to a roof over the flight alone, open at the bottom step. A flank on a boarding edge stays open.
+		 * Without a canopy, a stair flight is glazed (or walled) like the corridor it leaves: walls on both flanks from the
+		 * platform up to a roof over the flight alone, open at the bottom step. A flank on a boarding edge stays open.
 		 */
-		private boolean stairHood(TrackLayout.PlatformBand band, StylePalette.Building b) {
-			final List<Integer> flight = site.flightColumns(band);
-			if (flight.isEmpty()) {
-				return false;
-			}
-			final int left = Math.max(band.uMin(), flight.get(0) - 1);
-			final int right = Math.min(band.uMax(), flight.get(flight.size() - 1) + 1);
-			final boolean wallLeft = left < flight.get(0) && !isEdge(band, left);
-			final boolean wallRight = right > flight.get(flight.size() - 1) && !isEdge(band, right);
-			final int top = site.stairV(StationGeometry.STAIR_STEPS);
-			final int bottom = site.stairV(1);
-			final int side = Integer.signum(bottom - top);
+		private void stairHood(TrackLayout.PlatformBand band, StationLayout.Flight flight, StylePalette.Building b) {
+			final List<Integer> open = opening(band, flight);
+			final int left = Math.max(band.uMin(), open.get(0) - 1);
+			final int right = Math.min(band.uMax(), open.get(open.size() - 1) + 1);
+			final boolean wallLeft = left < open.get(0) && !isEdge(band, left);
+			final boolean wallRight = right > open.get(open.size() - 1) && !isEdge(band, right);
+			final int top = flight.stepV(StationGeometry.STAIR_STEPS);
+			final int bottom = flight.stepV(1);
+			final int side = flight.side();
 			for (int v = top; v != bottom + side; v += side) {
 				for (int y = StationGeometry.WALK_Y; y < StationGeometry.BUILDING_ROOF_Y; y++) {
 					if (wallLeft) {
-						put(Role.WINDOW, left, y, v, LocalDir.MINUS_U, b.bridgeWall());
+						flank(left, y, v, LocalDir.MINUS_U, b);
 					}
 					if (wallRight) {
-						put(Role.WINDOW, right, y, v, LocalDir.PLUS_U, b.bridgeWall());
+						flank(right, y, v, LocalDir.PLUS_U, b);
 					}
 				}
 				for (int u = left; u <= right; u++) {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
 				}
 			}
-			return true;
 		}
 
 		/** True within 2 of a footbridge stair flight or its landing on this platform. */
 		private boolean nearStairs(TrackLayout.PlatformBand band, int v) {
-			if (!hasStairs(band)) {
-				return false;
+			for (final StationLayout.Flight flight : site.flights(band)) {
+				final int a = Math.min(flight.wallV(), flight.landingV());
+				final int z = Math.max(flight.wallV(), flight.landingV());
+				if (v >= a - 2 && v <= z + 2) {
+					return true;
+				}
 			}
-			final int a = Math.min(site.stairWallV(), site.landingV());
-			final int z = Math.max(site.stairWallV(), site.landingV());
-			return v >= a - 2 && v <= z + 2;
+			return false;
 		}
 
 		void nameSigns() {

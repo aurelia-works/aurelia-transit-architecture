@@ -23,11 +23,15 @@ import java.util.Objects;
  *                       fixes the tracks, up to {@link #MAX_LISTED_TRACKS}
  * @param trackBed       what fills the ground under the tracks
  * @param escalators     an up escalator beside each footbridge stair where the platform is wide enough
+ * @param stairsBothWays a second footbridge stair to each platform wide enough, from the corridor's other side
+ * @param enclosedStairs walls round every footbridge stairwell instead of glass
+ * @param travelators    moving walkways along the footbridge and long platforms where there is room
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, StationScale scale, boolean hub,
-		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators) {
+		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
+		boolean stairsBothWays, boolean enclosedStairs, boolean travelators) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -117,7 +121,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
-				.escalators(escalators);
+				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators);
 	}
 
 	public boolean hasBuilding() {
@@ -159,6 +163,9 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private List<PlatformSpec> platforms = List.of();
 		private TrackBed trackBed = TrackBed.NONE;
 		private boolean escalators;
+		private boolean stairsBothWays;
+		private boolean enclosedStairs;
+		private boolean travelators;
 
 		private Builder() {
 		}
@@ -263,6 +270,21 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder stairsBothWays(boolean value) {
+			stairsBothWays = value;
+			return this;
+		}
+
+		public Builder enclosedStairs(boolean value) {
+			enclosedStairs = value;
+			return this;
+		}
+
+		public Builder travelators(boolean value) {
+			travelators = value;
+			return this;
+		}
+
 		public Builder shed(ShedShape value) {
 			shed = value;
 			return this;
@@ -275,7 +297,8 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
-					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, scale, hub, platforms, trackBed, escalators);
+					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, scale, hub, platforms, trackBed, escalators,
+					stairsBothWays, enclosedStairs, travelators);
 		}
 	}
 }

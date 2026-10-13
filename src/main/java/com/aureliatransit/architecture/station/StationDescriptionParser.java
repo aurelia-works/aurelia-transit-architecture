@@ -184,6 +184,9 @@ public final class StationDescriptionParser {
 		private Boolean tactile;
 		private TrackBed trackBed;
 		private boolean escalators;
+		private boolean bothWays;
+		private boolean enclosedStairs;
+		private boolean travelators;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -347,6 +350,29 @@ public final class StationDescriptionParser {
 
 		private void note(int at, String text) {
 			understood.add(new Note(at, text));
+		}
+
+		private void setBothWays(int i) {
+			if (!bothWays) {
+				bothWays = true;
+				note(i, "a second footbridge stair facing the other way on platforms wide enough (islands " + StationLayout.MIN_ESCALATOR_ISLAND
+						+ ", side platforms " + StationLayout.MIN_ESCALATOR_SIDE + ")");
+			}
+		}
+
+		/** "reverse stairs", "enclosed stairwells": the noun after the option word belongs to it. */
+		private void useStairWord(int i) {
+			final String word = at(i);
+			if (word.equals("stair") || word.equals("stairs") || word.equals("stairwell") || word.equals("stairwells") || word.equals("staircases")) {
+				use(i, i);
+			}
+		}
+
+		private void setTravelators(int i) {
+			if (!travelators) {
+				travelators = true;
+				note(i, "travelators along the footbridge and long platforms where there is room");
+			}
 		}
 
 		private void warn(String text) {
@@ -579,7 +605,27 @@ public final class StationDescriptionParser {
 						return true;
 					}
 					return false;
+				case "both":
+					if (next.equals("ways") || next.equals("way")) {
+						setBothWays(i);
+						use(i, i + 1);
+						return true;
+					}
+					return false;
+				case "moving":
+					if (next.equals("walkway") || next.equals("walkways")) {
+						setTravelators(i);
+						use(i, i + 1);
+						return true;
+					}
+					return false;
+				case "stair":
 				case "stairs":
+					if (next.equals("both") && (at(i + 2).equals("ways") || at(i + 2).equals("way"))) {
+						setBothWays(i);
+						use(i, i + 2);
+						return true;
+					}
 					if (next.equals("only")) {
 						stepFree = false;
 						note(i, "no ramps");
@@ -659,6 +705,17 @@ public final class StationDescriptionParser {
 				setSurface(SurfaceMaterial.GRANITE, i);
 			} else if (token.equals("accessible") || token.equals("wheelchair") || token.equals("ramp") || token.equals("ramps")) {
 				setStepFree(true, i);
+			} else if (token.equals("reverse") || token.equals("twoway")) {
+				setBothWays(i);
+				useStairWord(i + 1);
+			} else if (token.equals("enclosed") || token.equals("walled")) {
+				if (!enclosedStairs) {
+					enclosedStairs = true;
+					note(i, "walls round the footbridge stairwells");
+				}
+				useStairWord(i + 1);
+			} else if (token.equals("travelator") || token.equals("travelators") || token.equals("travolator") || token.equals("travolators")) {
+				setTravelators(i);
 			} else if (token.equals("escalator") || token.equals("escalators")) {
 				if (!escalators) {
 					escalators = true;
@@ -1217,7 +1274,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
-			builder.escalators(escalators);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators);
 			if (tactile != null) {
 				builder.tactile(tactile);
 			} else {
