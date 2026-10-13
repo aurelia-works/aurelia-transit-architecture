@@ -48,6 +48,7 @@ public final class StationPlanner {
 		planning.floors();
 		planning.ramps();
 		planning.railNodes();
+		planning.trackBed();
 		planning.bayEnds();
 		planning.lifts();
 		planning.building();
@@ -301,6 +302,31 @@ public final class StationPlanner {
 			for (final TrackLayout.Track track : layout.tracks()) {
 				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformFrom(track), LocalDir.PLUS_V);
 				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformTo(track), LocalDir.PLUS_V);
+			}
+		}
+
+		/**
+		 * Ballast under every track's clearance (y = -1) for its whole run, with a glowstone strip in the row at the foot of
+		 * each platform wall along that platform.
+		 */
+		void trackBed() {
+			final TrackBed bed = spec.trackBed();
+			if (bed == TrackBed.NONE) {
+				return;
+			}
+			for (final TrackLayout.Track track : layout.tracks()) {
+				for (final int side : new int[]{-1, 1}) {
+					if (side < 0 ? track.platformLeft() : track.platformRight()) {
+						for (int v = layout.platformFrom(track); v <= layout.platformTo(track); v++) {
+							put(Role.TRACK_BED, track.u() + side, -1, v, LocalDir.PLUS_V, TrackBed.LIGHT);
+						}
+					}
+				}
+				for (int v = layout.vMin(); v <= layout.trackEnd(track); v++) {
+					for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+						put(Role.TRACK_BED, u, -1, v, LocalDir.PLUS_V, bed.blockId());
+					}
+				}
 			}
 		}
 
@@ -2760,6 +2786,11 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
 				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd(track)));
+				if (spec.trackBed().falls()) {
+					// gravel needs a block under it
+					supports.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, -2, layout.vMin(), track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, -2,
+							layout.trackEnd(track)));
+				}
 				if (layout.deadEnd(track)) {
 					// the ground under a bay track's buffer stop
 					final int v = layout.trackEnd(track) + 1;

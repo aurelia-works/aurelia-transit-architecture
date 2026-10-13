@@ -74,6 +74,11 @@ public final class StudioApi {
 		if (platforms.length() > MAX_PLATFORM_WORDS) {
 			platforms = platforms.substring(0, platforms.lastIndexOf(';', MAX_PLATFORM_WORDS) + 1);
 		}
+		final String bed = q.getOrDefault("bed", "");
+		if (bed.equals("gravel") || bed.equals("andesite")) {
+			text = bed + " track bed " + text;
+		}
+		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}
 

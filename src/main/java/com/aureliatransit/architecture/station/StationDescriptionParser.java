@@ -182,6 +182,7 @@ public final class StationDescriptionParser {
 		private SurfaceMaterial surface;
 		private Boolean stepFree;
 		private Boolean tactile;
+		private TrackBed trackBed;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -657,6 +658,14 @@ public final class StationDescriptionParser {
 				setSurface(SurfaceMaterial.GRANITE, i);
 			} else if (token.equals("accessible") || token.equals("wheelchair") || token.equals("ramp") || token.equals("ramps")) {
 				setStepFree(true, i);
+			} else if (token.equals("gravel") || token.equals("ballast") || token.equals("andesite")) {
+				final TrackBed bed = token.equals("andesite") ? TrackBed.ANDESITE : TrackBed.GRAVEL;
+				if (trackBed == null) {
+					trackBed = bed;
+					note(i, bed.name().toLowerCase(java.util.Locale.ROOT) + " track bed with lit platform walls");
+				} else if (trackBed != bed) {
+					warn("two track beds given; the first (" + trackBed.name().toLowerCase(java.util.Locale.ROOT) + ") is used");
+				}
 			} else if (token.equals("tactile")) {
 				if (tactile == null) {
 					tactile = true;
@@ -1197,6 +1206,9 @@ public final class StationDescriptionParser {
 				builder.stepFree(stepFree);
 			} else {
 				defaulted.add("step-free access (default)");
+			}
+			if (trackBed != null) {
+				builder.trackBed(trackBed);
 			}
 			if (tactile != null) {
 				builder.tactile(tactile);

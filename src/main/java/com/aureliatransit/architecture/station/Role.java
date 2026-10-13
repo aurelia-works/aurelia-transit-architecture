@@ -66,6 +66,8 @@ public enum Role {
 	LIFT,
 	/** Station name sign, in rows of three along the platform; front (text side) points at the track. */
 	NAME_SIGN,
+	/** Ballast under a track (y = -1), or the light strip in it at the foot of a platform wall. */
+	TRACK_BED,
 	/** Ground fill under unsupported cells; only used by {@link SiteSurvey} when terrain changes are approved. */
 	FOUNDATION;
 

@@ -208,6 +208,7 @@ public final class StylePalette {
 			case BIN -> ata("waste_bin");
 			case NAME_SIGN -> sign;
 			case FOUNDATION -> FOUNDATION;
+			case TRACK_BED -> "minecraft:gravel";
 			case FLOOR -> building.floor();
 			case LIGHT_PANEL -> building.light();
 			case WALL -> building.wall();
