@@ -16,8 +16,8 @@ States: OPEN, FIXED (commit), CHECKED (seen fixed), WONTFIX (why).
 | 4 | "Stairs both ways" makes no second stair | Studio plan view: identical with and without at default widths (needs islands 11, side 9) | FIXED: the option widens platforms to fit, warns when a given width is too narrow |
 | 5 | Studio stuck at 11 tracks | "Platforms one by one" list (saved in the browser) dims the track and type buttons; 10 side platforms plan as 11 tracks; a hub falls back to a terminus | FIXED: buttons stay live and rebuild the list; hub lists are islands |
 | 6 | Two name signs stacked | Jah | OPEN: check in game |
-| 7 | Tokyo front detailing does not wrap round the corner | Jah's screenshot | OPEN |
-| 8 | Grand size ignored ("-") on Jah's 10-platform Tokyo plan | Jah's screenshot | OPEN: probably the list; recheck |
+| 7 | Tokyo front detailing does not wrap round the corner | Jah's screenshot; a head building's upper storeys used the side-building rhythm on its 12-deep side walls (two window groups) | FIXED: head buildings' side walls take the street front's rhythm; CHECKED in a render |
+| 8 | Grand size ignored ("-") on Jah's 10-platform Tokyo plan | Jah's screenshot; the parser keeps Grand, but the Studio's built column printed the size for side buildings only | FIXED: a terminus reports its head building's size; StudioTest |
 | 9 | Lights where there should be none, under the footbridge | Jah's screenshot; deck lights fell in the glass-wall rows (under the glazing and lift doorways) | FIXED bbbe998: walkway rows only; CHECKED in a render |
 | 10 | Lifts should open both ways at the bottom only | Jah | FIXED bbbe998: back doors at platform level, car formed double-sided; CHECKED: back doors open on a call |
 | 11 | Departure screens not aligned with the platform | Jah; the girder-centred span sat half a cell off an even island's middle | FIXED bbbe998: centred 4-wide with girder hangers; CHECKED in a render |

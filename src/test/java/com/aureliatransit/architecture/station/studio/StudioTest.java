@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.studio;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationPlanner;
+import com.aureliatransit.architecture.station.StationScale;
 import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.StationSpec;
 import org.junit.jupiter.api.Test;
@@ -89,6 +90,16 @@ class StudioTest {
 				.filter(m -> !Json.list(Json.object(m.get("model")).get("parts")).isEmpty()).count();
 		long own = models.stream().map(Json::object).filter(m -> ((String) m.get("id")).startsWith("aurelia_transit_architecture:")).count();
 		assertEquals(own, ownWithParts, "every one of the mod's blocks resolves to a model");
+	}
+
+	@Test
+	void aGrandTerminusReportsItsBuildingSize() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("look", "TOKYO", "tracks", "10", "length", "200", "mode", "terminus",
+				"size", "GRAND", "text", "named Ueno"))));
+		final Map<String, Object> built = Json.object(plan.get("built"));
+		assertEquals("Terminus", built.get("mode"));
+		assertEquals(StationScale.GRAND.label(), built.get("scale"), "the head building's size, not \"-\"");
 	}
 
 	@Test

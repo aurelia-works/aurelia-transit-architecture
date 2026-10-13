@@ -211,7 +211,7 @@ public final class StudioApi {
 				.append(",\"faces\":").append(audit.faces().size()).append(",\"length\":").append(spec.platformLength())
 				.append(",\"platformWidth\":").append(spec.platformWidth()).append(",\"style\":").append(Json.quote(lower(spec.style().name())))
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
-				.append(",\"scale\":").append(Json.quote(spec.sideBuilding() ? spec.scale().label() : "-"))
+				.append(",\"scale\":").append(Json.quote(spec.hasBuilding() ? spec.buildingScale().label() : "-"))
 				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(spec.footbridge())
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")

@@ -613,6 +613,14 @@ public final class StationPlanner {
 		 * every bay along the long walls. {@code endWindows} puts windows in the end walls too (a wing's end walls are shared).
 		 */
 		private void storey(int floorY, int uS, int uP, int vS, int vE, boolean endWindows) {
+			storey(floorY, uS, uP, vS, vE, endWindows, false);
+		}
+
+		/**
+		 * {@link #storey(int, int, int, int, int, boolean)}; with {@code allRound} the side walls take the end walls' rhythm (a
+		 * window every other cell, trim every third), so a head building's street front carries on round its corners.
+		 */
+		private void storey(int floorY, int uS, int uP, int vS, int vE, boolean endWindows, boolean allRound) {
 			final StylePalette.Building b = palette.building();
 			for (int u = uS; u <= uP; u++) {
 				for (int v = vS; v <= vE; v++) {
@@ -627,8 +635,9 @@ public final class StationPlanner {
 			for (int y = floorY + 1; y <= floorY + 3; y++) {
 				final boolean windowRow = y == floorY + 2;
 				for (int v = vS; v <= vE; v++) {
-					final boolean pilaster = Math.floorMod(v - vS, StationGeometry.BAY) == 0;
-					final boolean window = windowRow && !pilaster && Math.abs(Math.floorMod(v - vS, StationGeometry.BAY) - 3) <= 1;
+					final boolean pilaster = allRound ? (v - vS) % 3 == 0 : Math.floorMod(v - vS, StationGeometry.BAY) == 0;
+					final boolean window = allRound ? windowRow && v >= vS + 2 && v <= vE - 2 && (v - vS) % 2 == 0
+							: windowRow && !pilaster && Math.abs(Math.floorMod(v - vS, StationGeometry.BAY) - 3) <= 1;
 					for (final int u : new int[]{uS, uP}) {
 						final LocalDir front = u == uS ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 						if (window) {
@@ -1192,7 +1201,7 @@ public final class StationPlanner {
 				// a city or grand head building: storeys over the whole concourse (its ceiling is their first floor), the roof,
 				// and a grand one's clock tower over the entrance
 				for (int storey = 0; storey < scale.extraStoreys(); storey++) {
-					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, u0, u1, vL, vE, true);
+					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, u0, u1, vL, vE, true, true);
 				}
 				headCrown(u0, u1, vL, vE, door);
 				return;
