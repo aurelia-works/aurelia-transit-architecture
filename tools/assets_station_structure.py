@@ -1,4 +1,5 @@
-"""Station structure blocks for the generator's train sheds: the connecting station girder (four colours).
+"""Station structure blocks for the generator: the connecting train-shed girder (four colours), and the track bed lights
+(gravel or andesite ballast with a lit channel along the edge that lies against a platform wall).
 
 Same extension interface as the other assets_*.py modules. The girder's blockstate is a multipart: the centre node always,
 an I-section arm toward each joined side, a stiffener when it continues up or down, and, when nothing is joined, both arms
@@ -59,7 +60,27 @@ def vertical(kind):
     return g.model({"particle": f"girder_{kind}", "s": f"girder_{kind}"}, [g.el([4, 0, 7], [12, 16, 9], "#s")], ao=False)
 
 
+BED_LIGHTS = {"gravel_bed_light": ("minecraft:block/gravel", "Gravel Bed Light"),
+              "andesite_bed_light": ("minecraft:block/andesite", "Andesite Bed Light")}
+
+
+def bed_light(ballast):
+    """Ballast with a lit channel along its north edge, 2 px deep, so the light sits under the lip of the platform beside it."""
+    return g.model({"particle": ballast, "b": ballast, "light": "lamp_diffuser"}, [
+        g.el([0, 0, 3], [16, 16, 16], "#b"),
+        g.el([0, 0, 0], [16, 14, 3], "#b"),
+        g.el([0.5, 14, 0.5], [15.5, 15, 2.5], "#b", faces={"up": "#light", "south": "#light", "north": None, "down": None, "east": None, "west": None},
+             shade_=False),
+    ])
+
+
 def blocks():
+    out = {k: ("facing", {"": bed_light(tex)}) for k, (tex, _) in BED_LIGHTS.items()}
+    out.update(girder_blocks())
+    return out
+
+
+def girder_blocks():
     models = {"": node("steel")}
     for k in GIRDER:
         models[f"_node_{k}"] = node(k)
@@ -69,7 +90,7 @@ def blocks():
 
 
 def names():
-    return {"station_girder": "Station Roof Girder"}
+    return {"station_girder": "Station Roof Girder"} | {k: name for k, (_, name) in BED_LIGHTS.items()}
 
 
 def lang():
@@ -79,9 +100,13 @@ def lang():
 
 
 def recipes():
-    return {"station_girder_from_iron_ingot_stonecutting": {
+    out = {"station_girder_from_iron_ingot_stonecutting": {
         "type": "minecraft:stonecutting", "ingredient": {"item": "minecraft:iron_ingot"},
         "result": f"{MOD}:station_girder", "count": 2}}
+    for block, ballast in (("gravel_bed_light", "minecraft:gravel"), ("andesite_bed_light", "minecraft:andesite")):
+        out[block] = {"type": "minecraft:crafting_shapeless", "ingredients": [{"item": ballast}, {"item": "minecraft:glowstone_dust"}],
+                      "result": {"item": f"{MOD}:{block}", "count": 1}}
+    return out
 
 
 def write_extra(assets, data, write_json):

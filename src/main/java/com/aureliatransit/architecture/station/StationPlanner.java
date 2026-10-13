@@ -319,7 +319,8 @@ public final class StationPlanner {
 				for (final int side : new int[]{-1, 1}) {
 					if (side < 0 ? track.platformLeft() : track.platformRight()) {
 						for (int v = layout.platformFrom(track); v <= layout.platformTo(track); v++) {
-							put(Role.TRACK_BED, track.u() + side, -1, v, LocalDir.PLUS_V, TrackBed.LIGHT);
+							// the channel against the wall, under the platform's lip
+							put(Role.TRACK_BED, track.u() + side, -1, v, side < 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U, bed.light());
 						}
 					}
 				}

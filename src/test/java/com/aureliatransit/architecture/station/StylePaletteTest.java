@@ -62,7 +62,7 @@ class StylePaletteTest {
 				} else {
 					assertTrue(id.equals(StylePalette.MTR_RAIL_NODE) || id.equals(StylePalette.MTR_LIFT_TRACK) || id.equals(StylePalette.MTR_ESCALATOR_STEP)
 									|| id.equals("minecraft:stone_bricks")
-									|| role == Role.TRACK_BED && (id.equals(TrackBed.GRAVEL.blockId()) || id.equals(TrackBed.ANDESITE.blockId()) || id.equals(TrackBed.LIGHT)),
+									|| role == Role.TRACK_BED && (id.equals(TrackBed.GRAVEL.blockId()) || id.equals(TrackBed.ANDESITE.blockId())),
 							"unexpected id " + id + " for " + role);
 				}
 			}

@@ -116,6 +116,17 @@ public final class ElevatedBlocks {
 	public static final Block STATION_GIRDER = ModBlocks.register("station_girder", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
 			new GirderBlock(ModBlocks.metal().nonOpaque()), TIP_STYLE, TIP_GIRDER);
 
+	/**
+	 * Ballast with a lit channel along one edge, laid against a platform wall so the light sits under the platform's lip; the
+	 * station generator's track bed light. The channel faces the placing player.
+	 */
+	public static final Block GRAVEL_BED_LIGHT = ModBlocks.register("gravel_bed_light", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).sounds(net.minecraft.sound.BlockSoundGroup.GRAVEL).luminance(state -> 15),
+					Placement.TOWARD_PLAYER, box(0, 0, 0, 16, 16, 16)), TIP + "faces_you");
+	public static final Block ANDESITE_BED_LIGHT = ModBlocks.register("andesite_bed_light", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).luminance(state -> 15), Placement.TOWARD_PLAYER, box(0, 0, 0, 16, 16, 16)),
+			TIP + "faces_you");
+
 	public static void init() {
 		// Class loading registers everything declared here.
 	}

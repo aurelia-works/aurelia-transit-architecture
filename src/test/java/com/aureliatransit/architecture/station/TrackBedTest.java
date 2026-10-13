@@ -9,7 +9,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Ballast under the tracks with a light strip at the foot of each platform wall, only when asked for. */
+/** Ballast under the tracks from wall to wall, the row at each platform wall lit under the lip, only when asked for. */
 class TrackBedTest {
 
 	private static StationPlan plan(String text) {
@@ -43,10 +43,18 @@ class TrackBedTest {
 							&& v >= layout.platformFrom(track) && v <= layout.platformTo(track);
 					final String id = plan.blocks().stream().filter(b -> b.u() == uu && b.y() == -1 && b.v() == vv).findFirst()
 							.map(PlannedBlock::blockId).orElse("none");
-					assertEquals(wall ? TrackBed.LIGHT : TrackBed.GRAVEL.blockId(), id, "track " + track.number() + " u=" + u + " v=" + v);
+					assertEquals(wall ? TrackBed.GRAVEL.light() : TrackBed.GRAVEL.blockId(), id, "track " + track.number() + " u=" + u + " v=" + v);
 				}
 			}
 		}
+		// every light's channel faces the platform wall it lies against
+		for (final PlannedBlock light : plan.blocks()) {
+			if (light.blockId().equals(TrackBed.GRAVEL.light())) {
+				final boolean wallOnLeft = layout.tracks().stream().anyMatch(t -> t.u() - 1 == light.u() && t.platformLeft());
+				assertEquals(wallOnLeft ? LocalDir.MINUS_U : LocalDir.PLUS_U, light.front(), light.toString());
+			}
+		}
+		assertTrue(plan("andesite 2 tracks").blocks().stream().anyMatch(b -> b.blockId().equals(TrackBed.ANDESITE.light())));
 		assertEquals(List.of(), LayoutValidator.validate(plan));
 		assertTrue(StationAudit.audit(plan).buildable());
 		// gravel falls, so the ground under it is a support
