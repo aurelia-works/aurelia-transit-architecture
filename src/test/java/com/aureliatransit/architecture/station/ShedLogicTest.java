@@ -74,7 +74,7 @@ class ShedLogicTest {
 	@Test
 	void sampledStationsPlanCleanly() {
 		final String[] kinds = {"", "with a station building", "city building", "grand building", "terminus", "hub"};
-		final String[] roofs = {"canopies", "wave canopies", "butterfly canopies", "gable canopies", "flat train shed", "arched train shed", "pointed train shed", "several arches train shed", "no roof"};
+		final String[] roofs = {"canopies", "butterfly canopies", "gable canopies", "flat train shed", "arched train shed", "pointed train shed", "several arches train shed", "no roof"};
 		final int[] tracks = {1, 2, 3, 4, 5, 6, 8, 10};
 		final Random random = new Random(4440);
 		final List<String> problems = new ArrayList<>();

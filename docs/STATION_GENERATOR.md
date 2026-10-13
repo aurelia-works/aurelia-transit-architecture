@@ -58,7 +58,7 @@ Examples:
 | Width (3-20) | `5 wide`, `width 6`, `wide`, `narrow` | 4 side (6 with a footbridge), 6 island |
 | Style | modern; dutch/utrecht/leidsche rijn; german/s-bahn/hamburg; metro/u-bahn | modern |
 | Roof | `no roof`/`open`; `canopy`/`covered`; `hall`/`train shed` | canopy |
-| Canopy shape | `flat`; `wave`/`wavy`; `butterfly`/`v roof`; `gable`/`gabled`/`heritage`/`pitched` (asks for canopies when no roof is given) | the building look's own (see **Canopies**) |
+| Canopy shape | `flat`; `butterfly`/`v roof`; `gable`/`gabled`/`heritage`/`pitched` (asks for canopies when no roof is given) | the building look's own (see **Canopies**) |
 | Train shed shape | `flat roof`; `arched`/`barrel`/`vault`/`curved`; `pointed`; `arches`/`vaults`/`multi span`/`several arches` (asks for a train shed) | the building look's own |
 | Roof material | `glass`, `timber`/`wooden roof`, `steel` | style's own |
 | Floor | `light/dark paving`, `concrete`, `terrazzo`, `granite` | style's own |
@@ -67,7 +67,7 @@ Examples:
 | Escalators | `escalator`/`escalators`: an MTR up escalator beside each footbridge stair, with a rail between, on islands at least 11 wide and side platforms at least 9 wide (narrower platforms keep the stair only). Studio: *Footbridge stairs* | stairs only |
 | Stairs both ways | `stairs both ways`, `reverse stairs`: a second stair down to each platform wide enough (islands 11, side platforms 9), from the corridor's other side beside the lift, facing the other way. Studio: *Footbridge stairs* | one stair per platform |
 | Enclosed stairs | `enclosed stairs`, `walled stairwells`: solid walls round every footbridge stairwell instead of glass. Studio: *Stairwells* | glass |
-| Travelators | `travelators`, `moving walkways`: flat MTR escalators. On the footbridge two wide in the corridor rows on the lift side, broken at every lift and second-stair exit (at least 8 long); along platforms at least 72 long and wide enough (islands 11, side 9), in a lane clear of the column lines, in stretches of up to 16 with 3-row gaps to cross, moving towards the footbridge or the terminus head. Studio: *Travelators* | none |
+| Travelators | `travelators`, `moving walkways`: flat MTR escalators, only on the platforms (none in the footbridge corridor): along platforms at least 72 long and wide enough (islands 11, side 9), in a lane clear of the column lines, in stretches of up to 16 with 3-row gaps to cross, moving towards the footbridge or the terminus head. Studio: *Travelators* | none |
 | Other | `no benches`, `no rail nodes`, `named "X"` / `called X` | benches, rail nodes, no name signs |
 | Building | `station building`, `ticket hall`, `concourse`, `furnished`, `centraal`, `hauptbahnhof`, `no station building` | none |
 | Building look | `utrecht`/`rotterdam` (modern glass), `amsterdam`/`brick`, `st pancras`/`london`/`gothic`, `antwerp`/`marble`, `frankfurt`/`sandstone`, `hamburg`/`clinker`, `munich`/`brutalist`, `grand central`/`union station`/`washington` (Beaux-Arts), `tokyo`/`japan` (red brick with domes), `zurich`/`swiss` (sandstone with a giant arch), `paris`/`french` (limestone with statues), `milan`/`milano`/`italian` (monumental stone), `berlin` (glass and steel), `hong kong`/`kowloon` (white, wave roof), `beijing`/`china`/`shanghai` (glass, deep roof). Also `american`/`usa`/`new york`/`boston` (Beaux-Arts), `british`/`london`, `leipzig`/`cologne` (sandstone), `brussels`. Landmarks (`st pancras`, `antwerp`, `grand central`, `marunouchi`, `kowloon`...) also ask for a building. | the style's own look |
@@ -81,16 +81,15 @@ Out-of-range values are clamped with a warning. A contradiction gives a warning 
 
 ## Canopies
 
-A platform canopy stands on one column line down the middle of the platform (more on a wide one), with girders at y = 4 above 4 blocks of headroom, and reaches one cell out over each boarding edge. Its roof comes in four shapes, chosen by the building look or by a shape word. Only the roof changes: the columns, girders and headroom are the same in every shape, and a hall roof ignores the shape.
+A platform canopy stands on one column line down the middle of the platform (more on a wide one), with girders at y = 4 above 4 blocks of headroom, and reaches one cell out over each boarding edge. Its roof comes in three shapes, chosen by the building look or by a shape word. Only the roof changes: the columns, girders and headroom are the same in every shape, and a hall roof ignores the shape.
 
 | Shape | Look | Roof |
 |---|---|---|
-| Flat | Beijing, or no look and Modern or Metro platforms | Level at y = 5. |
-| Wave | Utrecht, Hong Kong, Dutch platforms | Swells and falls along the platform: waves of about 14 cells, one block high. Each climb is two curved blocks (`canopy_wave_rise`, `canopy_wave_flat`), so the roof is smooth. It begins and ends low. |
+| Flat | Utrecht, Hong Kong, Beijing, or no look and Dutch, Modern or Metro platforms | Level at y = 5. (Utrecht's wave is its hall roof; its platform canopies are flat.) |
 | Butterfly | Berlin, Munich, Frankfurt, Hamburg, S-Bahn platforms | A V across the platform: level over the columns, then rising a block over two cells (`canopy_slope_lower`, `canopy_slope_upper`) to both edges. |
 | Gable | St Pancras, Amsterdam, Antwerp, Paris, Grand Central, Tokyo, Zurich, Milan | A ridge over the columns, one block above the canopy (two on a roof 11 or more wide), falling the same way to the eaves, which stay at y = 5 clear of the trains. |
 
-A girder block under each ridge, butterfly fold and wave crest joins the raised roof to the sloping blocks beside it, so no part hangs by an edge (it also reads as a post). A canopy narrower than three cells from its columns to its edge stays level. Lamps sit at the same density as on a flat roof: beside the girder on a flat or wave roof (on a wave they move to the nearest level cell), in the valley or on the ridge for a butterfly or gable. Where a footbridge or stairwell passes through the canopy, a raised roof leaves that cell open, so nothing ever sits inside a corridor. The sloping blocks are the existing canopy blocks; the roof material option changes the flat parts only.
+A girder block under each ridge, and butterfly fold joins the raised roof to the sloping blocks beside it, so no part hangs by an edge (it also reads as a post). A canopy narrower than three cells from its columns to its edge stays level. Lamps sit at the same density as on a flat roof: beside the girder on a flat roof, in the valley or on the ridge for a butterfly or gable. Where a footbridge or stairwell passes through the canopy, a raised roof leaves that cell open, so nothing ever sits inside a corridor. The sloping blocks are the existing canopy blocks; the roof material option changes the flat parts only.
 
 ## Train sheds
 

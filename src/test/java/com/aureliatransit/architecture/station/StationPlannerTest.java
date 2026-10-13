@@ -1222,7 +1222,7 @@ class StationPlannerTest {
 	private static int archRuns(StationPlan plan) {
 		final int front = plan.layout().headEnd();
 		final Set<Integer> glass = new HashSet<>();
-		head(plan).filter(b -> b.v() == front && b.y() == 8 && b.blockId().endsWith("curtain_wall_glass")).forEach(b -> glass.add(b.u()));
+		head(plan).filter(b -> b.v() == front && b.y() == 8 && b.blockId().endsWith(":clear_float_glass")).forEach(b -> glass.add(b.u()));
 		int runs = 0;
 		for (final int u : glass) {
 			// count a run at its first cell; glazing bars split a run every three cells, so look up to three back

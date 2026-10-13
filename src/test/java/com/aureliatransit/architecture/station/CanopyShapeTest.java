@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Canopy roof shapes: which look gets which, how they are asked for, and the profile each one builds. */
 class CanopyShapeTest {
 
-	private static final List<CanopyShape> SHAPED = List.of(CanopyShape.WAVE, CanopyShape.BUTTERFLY, CanopyShape.GABLE);
+	private static final List<CanopyShape> SHAPED = List.of(CanopyShape.BUTTERFLY, CanopyShape.GABLE);
 
 	private static StationPlan plan(String text) {
 		return StationPlanner.plan(StationDescriptionParser.parse(text).spec());
@@ -106,8 +106,9 @@ class CanopyShapeTest {
 
 	@Test
 	void looksChooseTheirCanopies() {
-		assertEquals(CanopyShape.WAVE, CanopyShape.forLook(BuildingStyle.MODERN, StationStyle.DUTCH));
-		assertEquals(CanopyShape.WAVE, CanopyShape.forLook(BuildingStyle.HONG_KONG, StationStyle.METRO));
+		// Utrecht's wave is its hall roof; its platform canopies (and Hong Kong's) are flat
+		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.MODERN, StationStyle.DUTCH));
+		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.HONG_KONG, StationStyle.METRO));
 		for (final BuildingStyle look : List.of(BuildingStyle.BERLIN, BuildingStyle.CONCRETE, BuildingStyle.SANDSTONE, BuildingStyle.CLINKER)) {
 			assertEquals(CanopyShape.BUTTERFLY, CanopyShape.forLook(look, StationStyle.MODERN), look.name());
 		}
@@ -117,7 +118,7 @@ class CanopyShapeTest {
 		}
 		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.BEIJING, StationStyle.DUTCH));
 		// without a building the platform style decides
-		assertEquals(CanopyShape.WAVE, CanopyShape.forLook(BuildingStyle.NONE, StationStyle.DUTCH));
+		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.NONE, StationStyle.DUTCH));
 		assertEquals(CanopyShape.BUTTERFLY, CanopyShape.forLook(BuildingStyle.NONE, StationStyle.GERMAN_SBAHN));
 		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.NONE, StationStyle.MODERN));
 		assertEquals(CanopyShape.FLAT, CanopyShape.forLook(BuildingStyle.NONE, StationStyle.METRO));
@@ -134,8 +135,6 @@ class CanopyShapeTest {
 
 	@Test
 	void shapeWordsAskForThatCanopy() {
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("wave canopies").spec().canopy());
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("wavy canopy").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("butterfly canopies").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("v roof").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("v-roof canopies").spec().canopy());
@@ -144,7 +143,7 @@ class CanopyShapeTest {
 		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("gabled roof").spec().canopy());
 		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("heritage canopies").spec().canopy());
 		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("pitched canopy").spec().canopy());
-		for (final String text : List.of("wave", "butterfly", "gable", "v roof")) {
+		for (final String text : List.of("butterfly", "gable", "v roof")) {
 			final ParseResult result = StationDescriptionParser.parse(text);
 			assertEquals(RoofType.CANOPY, result.spec().roof(), text + " asks for canopies");
 			assertEquals(List.of(), result.warnings(), text);
@@ -157,16 +156,16 @@ class CanopyShapeTest {
 	void aShapeWordBeatsTheLook() {
 		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("utrecht station with gable canopies").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("st pancras station, butterfly canopies").spec().canopy());
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("hamburg, no station building, wave canopies").spec().canopy());
+		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("hamburg, no station building, gable canopies").spec().canopy());
 	}
 
 	@Test
 	void withoutAShapeWordTheLookDecides() {
 		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("").spec().canopy());
 		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("modern station with canopies").spec().canopy());
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("dutch station").spec().canopy());
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("utrecht station with canopies").spec().canopy());
-		assertEquals(CanopyShape.WAVE, StationDescriptionParser.parse("hong kong station").spec().canopy());
+		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("dutch station").spec().canopy());
+		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("utrecht station with canopies").spec().canopy());
+		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("hong kong station").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("s-bahn station").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("munich station with canopies").spec().canopy());
 		assertEquals(CanopyShape.BUTTERFLY, StationDescriptionParser.parse("hamburg station, canopies").spec().canopy());
@@ -175,21 +174,21 @@ class CanopyShapeTest {
 		assertEquals(CanopyShape.FLAT, StationDescriptionParser.parse("beijing station").spec().canopy());
 		// "no station building" keeps the look's canopy
 		assertEquals(CanopyShape.GABLE, StationDescriptionParser.parse("amsterdam station with canopies, no station building").spec().canopy());
-		assertTrue(StationDescriptionParser.parse("dutch station").defaulted().stream().anyMatch(line -> line.contains("wave canopies")));
+		assertTrue(StationDescriptionParser.parse("s-bahn station").defaulted().stream().anyMatch(line -> line.contains("butterfly canopies")));
 	}
 
 	@Test
 	void aShapeWithoutCanopiesIsReported() {
-		assertTrue(StationDescriptionParser.parse("wave canopies, no roof").warnings().stream().anyMatch(w -> w.contains("no roof")));
+		assertTrue(StationDescriptionParser.parse("butterfly canopies, no roof").warnings().stream().anyMatch(w -> w.contains("no roof")));
 		assertTrue(StationDescriptionParser.parse("gable roof, arched train shed").warnings().stream().anyMatch(w -> w.contains("train shed")));
-		assertEquals(RoofType.NONE, StationDescriptionParser.parse("wave canopies, no roof").spec().roof());
+		assertEquals(RoofType.NONE, StationDescriptionParser.parse("butterfly canopies, no roof").spec().roof());
 		assertEquals(RoofType.HALL, StationDescriptionParser.parse("gable roof, arched train shed").spec().roof());
 	}
 
 	@Test
 	void twoShapesKeepTheFirst() {
-		final ParseResult result = StationDescriptionParser.parse("wave canopies, gable canopies");
-		assertEquals(CanopyShape.WAVE, result.spec().canopy());
+		final ParseResult result = StationDescriptionParser.parse("butterfly canopies, gable canopies");
+		assertEquals(CanopyShape.BUTTERFLY, result.spec().canopy());
 		assertTrue(result.warnings().stream().anyMatch(w -> w.contains("canopy shape given twice")));
 	}
 
@@ -247,7 +246,7 @@ class CanopyShapeTest {
 
 	@Test
 	void sampledShapedStationsPlanCleanly() {
-		final String[] shapes = {"wave canopies", "butterfly canopies", "gable canopies"};
+		final String[] shapes = {"flat canopies", "butterfly canopies", "gable canopies"};
 		final String[] kinds = {"", "with a station building", "city building", "grand building", "terminus", "hub"};
 		final int[] tracks = {1, 2, 3, 4, 5, 6, 8, 10};
 		final Random random = new Random(2024);
@@ -337,45 +336,6 @@ class CanopyShapeTest {
 	}
 
 	@Test
-	void waveRisesAndFallsAlongThePlatformWithTheExpectedPeriod() {
-		final StationPlan plan = plan("wave canopies 2 tracks island 8 wide 70 long");
-		final int u = columnU(plan) + 1;
-		final Map<Integer, Integer> column = roofColumn(plan, u);
-		final int base = StationGeometry.CANOPY_Y;
-		assertEquals(Set.of(base, base + 1), new HashSet<>(column.values()), "one block of amplitude");
-		assertEquals(base, column.get(0), "begins low");
-		assertEquals(base, column.get(69), "ends low");
-		// each rise is two cells of curved blocks, then a flat high stretch
-		final List<Integer> crests = new ArrayList<>();
-		for (int v = 1; v < 70; v++) {
-			if (column.get(v) > base && column.get(v - 1) == base) {
-				crests.add(v);
-			}
-		}
-		assertEquals(5, crests.size(), "70 cells hold five waves");
-		for (int i = 0; i + 1 < crests.size(); i++) {
-			final int period = crests.get(i + 1) - crests.get(i);
-			assertTrue(period >= 12 && period <= 16, "period " + period);
-		}
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":canopy_wave_rise") && b.front() == LocalDir.MINUS_V));
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":canopy_wave_rise") && b.front() == LocalDir.PLUS_V));
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":canopy_wave_flat") && b.front() == LocalDir.MINUS_V));
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":canopy_wave_flat") && b.front() == LocalDir.PLUS_V));
-	}
-
-	@Test
-	void waveIsTheSameAcrossThePlatform() {
-		final StationPlan plan = plan("wave canopies 2 tracks island 8 wide 64 long");
-		final int u = columnU(plan);
-		final Map<Integer, Integer> left = roofColumn(plan, u - 1);
-		final Map<Integer, Integer> right = roofColumn(plan, u + 1);
-		assertEquals(left.keySet(), right.keySet());
-		for (final int v : left.keySet()) {
-			assertEquals(left.get(v), right.get(v), "v=" + v);
-		}
-	}
-
-	@Test
 	void everyShapeKeepsLampsAndTheHeadroomUnderTheGirders() {
 		for (final CanopyShape shape : SHAPED) {
 			final StationPlan plan = plan(shape.label() + " canopies 2 tracks island 8 wide 64 long");
@@ -416,8 +376,8 @@ class CanopyShapeTest {
 
 	@Test
 	void recipeWordsAskForTheShapes() {
-		final Map<StationRecipe.Roof, CanopyShape> wanted = Map.of(StationRecipe.Roof.WAVE, CanopyShape.WAVE, StationRecipe.Roof.BUTTERFLY, CanopyShape.BUTTERFLY,
-				StationRecipe.Roof.GABLE, CanopyShape.GABLE, StationRecipe.Roof.CANOPIES, CanopyShape.WAVE);
+		final Map<StationRecipe.Roof, CanopyShape> wanted = Map.of(StationRecipe.Roof.BUTTERFLY, CanopyShape.BUTTERFLY,
+				StationRecipe.Roof.GABLE, CanopyShape.GABLE, StationRecipe.Roof.CANOPIES, CanopyShape.FLAT);
 		for (final Map.Entry<StationRecipe.Roof, CanopyShape> entry : wanted.entrySet()) {
 			final StationRecipe recipe = StationRecipe.defaults().withRoof(entry.getKey());
 			final ParseResult result = StationDescriptionParser.parse(recipe.description());

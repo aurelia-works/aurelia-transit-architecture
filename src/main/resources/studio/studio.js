@@ -66,6 +66,8 @@
 		if ($("listOn") && $("listOn").checked) {
 			// the advanced platform list sets the tracks
 			const listed = plats.reduce((n, p) => n + (p.kind.startsWith("island") ? 2 : 1), 0);
+			// keep the stepper on the list's own count, so + and - start from what is shown
+			$("tracks").value = Math.max(+$("tracks").min, Math.min(+$("tracks").max, listed));
 			$("tracksOut").textContent = listed + (listed === 1 ? " track" : " tracks");
 		} else {
 			$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
@@ -93,6 +95,10 @@
 
 	function set(id, value) {
 		$(id).value = value;
+		// with the platform list on, the tracks, platforms and type buttons still work: they rebuild the list to match
+		if ((id === "tracks" || id === "layout" || id === "mode") && $("listOn") && $("listOn").checked) {
+			rebuildPlats();
+		}
 		$(id).dispatchEvent(new Event("input"));
 	}
 
@@ -258,7 +264,9 @@
 	/** A first list from the buttons above: two side platforms for one or two tracks, islands for more. */
 	function defaultPlats() {
 		const tracks = +$("tracks").value;
-		const islands = $("layout").value === "SIDE" ? 0 : tracks <= 2 && $("layout").value !== "ISLAND" ? 0 : Math.floor(tracks / 2);
+		// a hub is islands only (its outer tracks run through on both sides of the outer islands)
+		const islands = $("mode").value === "hub" ? Math.floor(tracks / 2)
+			: $("layout").value === "SIDE" ? 0 : tracks <= 2 && $("layout").value !== "ISLAND" ? 0 : Math.floor(tracks / 2);
 		const list = [];
 		if (islands === 0) {
 			list.push({ kind: "side", width: 0, length: 0, roof: "station" });
@@ -290,10 +298,6 @@
 	function renderPlats() {
 		const on = $("listOn").checked;
 		$("listBody").hidden = !on;
-		// the list sets the tracks and the platform kinds, so those controls step aside while it is on
-		for (const id of ["tracksDown", "tracksUp", "layoutSeg"]) {
-			$(id).classList.toggle("dimmed", on);
-		}
 		$("platOut").textContent = plats.length + (plats.length === 1 ? " platform" : " platforms");
 		$("platDown").disabled = plats.length <= 1;
 		$("platUp").disabled = plats.length >= MAX_PLATFORMS;
@@ -333,6 +337,21 @@
 				length);
 			rows.append(row);
 		});
+	}
+
+	/** The list for the buttons' tracks, platforms and type, keeping each row's width, length and roof where a row stays. */
+	function rebuildPlats() {
+		const fresh = defaultPlats();
+		fresh.forEach((p, i) => {
+			if (plats[i]) {
+				p.width = plats[i].width;
+				p.length = plats[i].length;
+				p.roof = plats[i].roof;
+			}
+		});
+		plats = fresh;
+		$("platforms").value = platWords();
+		renderPlats();
 	}
 
 	function platsChanged() {

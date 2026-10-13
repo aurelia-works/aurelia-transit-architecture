@@ -65,7 +65,6 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	public enum Roof {
 		AUTO("Auto (city's own)", ""),
 		CANOPIES("Canopies", "canopies"),
-		WAVE("Wave canopies (Utrecht)", "wave canopies"),
 		BUTTERFLY("Butterfly canopies (S-Bahn)", "butterfly canopies"),
 		GABLE("Gable canopies (heritage)", "gable canopies"),
 		FLAT_SHED("Flat train shed", "flat roof"),

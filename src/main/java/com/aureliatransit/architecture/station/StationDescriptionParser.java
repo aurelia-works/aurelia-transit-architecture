@@ -126,8 +126,7 @@ public final class StationDescriptionParser {
 			Map.entry("pointed", ShedShape.POINTED), Map.entry("arches", ShedShape.MULTI_ARCH), Map.entry("vaults", ShedShape.MULTI_ARCH),
 			Map.entry("multispan", ShedShape.MULTI_ARCH));
 	/** Canopy shapes; each also asks for platform canopies (unless a roof was given). */
-	private static final Map<String, CanopyShape> CANOPY_SHAPE_WORDS = Map.ofEntries(Map.entry("wave", CanopyShape.WAVE), Map.entry("wavy", CanopyShape.WAVE),
-			Map.entry("undulating", CanopyShape.WAVE), Map.entry("butterfly", CanopyShape.BUTTERFLY), Map.entry("gable", CanopyShape.GABLE),
+	private static final Map<String, CanopyShape> CANOPY_SHAPE_WORDS = Map.ofEntries(Map.entry("butterfly", CanopyShape.BUTTERFLY), Map.entry("gable", CanopyShape.GABLE),
 			Map.entry("gabled", CanopyShape.GABLE), Map.entry("pitched", CanopyShape.GABLE), Map.entry("heritage", CanopyShape.GABLE));
 	/** Words that say several looks are mixed ("Utrecht and Hamburg combined"); read so they are not reported as ignored. */
 	private static final Set<String> MIX_WORDS = Set.of("combined", "combine", "combo", "mix", "mixed", "mixture", "hybrid", "fusion", "meets",
@@ -1063,7 +1062,6 @@ public final class StationDescriptionParser {
 			if (canopy == null) {
 				canopy = value;
 				note(i, switch (value) {
-					case WAVE -> "wave canopies: the roof swells and falls along the platform";
 					case BUTTERFLY -> "butterfly canopies: a V roof, low over the columns and rising to both edges";
 					case GABLE -> "gable canopies: a pitched roof with its ridge over the columns";
 					case FLAT -> "flat canopies";
@@ -1257,10 +1255,17 @@ public final class StationDescriptionParser {
 			// width
 			// a footbridge's side platforms need room for a two-column stair, or they get no lift and are not step-free
 			final boolean bridgeSide = layout != PlatformLayout.ISLAND && Boolean.TRUE.equals(footbridge) && !terminus;
-			final int defaultWidth = layout == PlatformLayout.ISLAND ? StationSpec.DEFAULT_ISLAND_WIDTH
+			// a second stair or an up escalator needs a wider platform beside the lift: asking for one widens the platforms to fit
+			final boolean stairGroup = (bothWays || escalators) && Boolean.TRUE.equals(footbridge);
+			final int groupWidth = layout == PlatformLayout.ISLAND ? StationLayout.MIN_ESCALATOR_ISLAND : StationLayout.MIN_ESCALATOR_SIDE;
+			final int defaultWidth = stairGroup ? groupWidth : layout == PlatformLayout.ISLAND ? StationSpec.DEFAULT_ISLAND_WIDTH
 					: bridgeSide ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : StationSpec.DEFAULT_SIDE_WIDTH;
 			if (width != null) {
 				builder.platformWidth(clamp(width, StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH, "width"));
+				if (stairGroup && width < groupWidth) {
+					warn((bothWays ? "stairs both ways" : "escalators") + " need platforms " + groupWidth + " wide; at " + width
+							+ " each platform gets one stair");
+				}
 			} else if (narrow) {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
 			} else if (wide) {
@@ -1269,7 +1274,8 @@ public final class StationDescriptionParser {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
 			} else {
 				builder.platformWidth(defaultWidth);
-				defaulted.add("width " + defaultWidth + (bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
+				defaulted.add("width " + defaultWidth + (stairGroup ? " (so the " + (bothWays ? "second stair" : "escalator") + " fits beside the lift)"
+						: bridgeSide ? " (default with a footbridge, so the lifts fit)" : " (default)"));
 			}
 
 			// a canopy shape asks for canopies, unless the text chose a roof (or a look would give it a train shed)

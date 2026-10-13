@@ -24,11 +24,9 @@ public final class StationPlanner {
 	private static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
-	/** The canopy's sloping blocks (the low end points the way the block faces): a half-block slope, and the wave's two curved ones. */
+	/** The canopy's sloping blocks (the low end points the way the block faces): the two halves of a half-block slope. */
 	private static final String CANOPY_SLOPE_LOWER = "aurelia_transit_architecture:canopy_slope_lower";
 	private static final String CANOPY_SLOPE_UPPER = "aurelia_transit_architecture:canopy_slope_upper";
-	private static final String CANOPY_WAVE_RISE = "aurelia_transit_architecture:canopy_wave_rise";
-	private static final String CANOPY_WAVE_FLAT = "aurelia_transit_architecture:canopy_wave_flat";
 	/** One colour per platform at a terminus gate line, in turn: a stripe on the floor and over the arcade, to follow to the gates. */
 	private static final List<String> PLATFORM_COLOURS = List.of("aurelia_transit_architecture:metro_tile_blue",
 			"aurelia_transit_architecture:metro_tile_green", "aurelia_transit_architecture:metro_tile_orange",
@@ -43,7 +41,7 @@ public final class StationPlanner {
 	private static final String PITCH_STATE = "half=bottom,shape=straight";
 	/** Copper for domes, and glass for giant arched windows (whole blocks, so the arch reads from the street). */
 	private static final String DOME = "minecraft:oxidized_cut_copper";
-	private static final String ARCH_GLASS = "aurelia_transit_architecture:curtain_wall_glass";
+	private static final String ARCH_GLASS = "aurelia_transit_architecture:clear_float_glass";
 	/** A statue's base; its figure is a quartz pillar. */
 	private static final String STATUE = "minecraft:chiseled_quartz_block";
 
@@ -75,6 +73,7 @@ public final class StationPlanner {
 		planning.nameSigns();
 		planning.speakers();
 		planning.liftButtons();
+		planning.cornerPosts();
 		return planning.finish();
 	}
 
@@ -1843,10 +1842,8 @@ public final class StationPlanner {
 		static final int TRAVELATOR_PLATFORM = 72;
 
 		/**
-		 * MTR escalators laid flat as moving walkways, planned before the floors and the deck so those leave them their cells.
-		 * On the footbridge: two wide in the corridor's two rows on the lift side, broken at every lift and second-stair exit,
-		 * so the stair-side row stays free to walk and every exit opens onto it; they carry passengers towards the station
-		 * building (or the corridor's start). Along a platform at least {@link #TRAVELATOR_PLATFORM} long: two wide in a lane
+		 * MTR escalators laid flat as moving walkways, planned before the floors so those leave them their cells. Only on the
+		 * platforms (in the footbridge corridor they looked wrong and are left out). Along a platform at least {@link #TRAVELATOR_PLATFORM} long: two wide in a lane
 		 * clear of the column lines, away from the stairs and platform ends, in stretches of at most
 		 * {@link #MAX_PLATFORM_TRAVELATOR} with a gap to cross between, each carrying passengers towards the footbridge or the
 		 * terminus head (outwards to the platform ends without either).
@@ -1855,53 +1852,9 @@ public final class StationPlanner {
 			if (!spec.travelators()) {
 				return;
 			}
-			if (site.bridge()) {
-				bridgeTravelators();
-			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (band.length() >= TRAVELATOR_PLATFORM) {
 					platformTravelators(band);
-				}
-			}
-		}
-
-		private void bridgeTravelators() {
-			final int s = site.stairSide();
-			final int[] rows = {site.bridgeV(), site.bridgeV() - s};
-			final int from = site.building() ? site.platformWall(layout) : site.deckFrom();
-			final int to = site.deckTo();
-			final java.util.Set<Integer> blocked = new java.util.HashSet<>();
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				final StationLayout.Lift lift = site.platformLift(band, layout);
-				if (lift != null) {
-					for (int u = lift.c0() - 1; u <= lift.c0() + 2; u++) {
-						blocked.add(u);
-					}
-				}
-				for (final StationLayout.Flight flight : site.flights(band)) {
-					if (flight.side() != s) {
-						for (int u = flight.columns().get(0) - 1; u <= flight.columns().get(flight.columns().size() - 1) + 1; u++) {
-							blocked.add(u);
-						}
-					}
-				}
-			}
-			int start = -1;
-			for (int u = from + 2; u <= to - 1; u++) {
-				final boolean free = u <= to - 2 && !blocked.contains(u);
-				if (free && start < 0) {
-					start = u;
-				} else if (!free && start >= 0) {
-					if (u - start >= MIN_TRAVELATOR) {
-						// towards the building (or the corridor's start): facing -U, so MTR's right half is the higher-v row
-						final int hi = Math.max(rows[0], rows[1]);
-						for (int x = start; x < u; x++) {
-							for (final int v : rows) {
-								travelatorStep(x, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.MINUS_U, v == hi ? "right" : "left");
-							}
-						}
-					}
-					start = -1;
 				}
 			}
 		}
@@ -2415,8 +2368,7 @@ public final class StationPlanner {
 				final String kind = "kind=" + palette.girderKind();
 				final CanopyShape shape = spec.canopy();
 				final RoofPiece[] across = acrossProfile(shape, lines, from, to);
-				final RoofPiece[] wave = shape == CanopyShape.WAVE ? waveAlong(band.length()) : null;
-				final int[] lamp = lampsAlong(band.length(), shape, wave);
+				final int[] lamp = lampsAlong(band.length(), shape);
 				// each line's arms reach towards the roof edge (or halfway to the next line), stopping a cell short of it
 				final int[] armLeft = new int[lines.size()];
 				final int[] armRight = new int[lines.size()];
@@ -2475,10 +2427,10 @@ public final class StationPlanner {
 							}
 						}
 					}
-					// the roof row: its profile across the platform (butterfly, gable) or along it (wave) lifts some cells above y
+					// the roof row: its profile across the platform (butterfly, gable) lifts some cells above y
 					final int along = v - band.vFrom();
 					for (int u = from; u <= to; u++) {
-						final RoofPiece piece = shape == CanopyShape.WAVE ? wave[along] : across[u - from];
+						final RoofPiece piece = across[u - from];
 						final boolean edge = u == from || u == to;
 						final int rise = edge ? piece.edgeRise() : piece.rise();
 						// a roof lifted above the platform's level leaves the cells below it alone: a footbridge or stairwell there
@@ -2490,8 +2442,8 @@ public final class StationPlanner {
 						if (!clear) {
 							continue;
 						}
-						// a girder under the raised roof, where it meets the sloping blocks (a wave: under its crest on each column line)
-						if (rise > 0 && (piece.braced() || shape == CanopyShape.WAVE && lines.contains(u))) {
+						// a girder under the raised roof, where it meets the sloping blocks
+						if (rise > 0 && piece.braced()) {
 							for (int level = y; level < y + rise; level++) {
 								put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.RIB), kind);
 							}
@@ -2512,8 +2464,6 @@ public final class StationPlanner {
 
 		/** The lamp offset of a row with no lamp. */
 		private static final int NO_LAMP = 2;
-		/** Cells of a wave canopy from one crest to the next, about. */
-		private static final int WAVE_PERIOD = 14;
 		/** Cells from a column line to the roof edge (or the next line's half) below which a canopy stays level. */
 		private static final int MIN_SLOPE_REACH = 3;
 
@@ -2583,58 +2533,14 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * The wave along a platform of {@code length} cells, one piece per cell: waves of about {@link #WAVE_PERIOD} cells, each
-		 * low, then two cells up (a curved rise and the curved block that tops it off, so the climb is smooth), high for as long
-		 * as it was low, and two cells down. A platform is whole waves long, so it begins and ends low.
-		 */
-		private static RoofPiece[] waveAlong(int length) {
-			final RoofPiece[] pieces = new RoofPiece[length];
-			final int waves = Math.max(1, Math.round(length / (float) WAVE_PERIOD));
-			for (int w = 0; w < waves; w++) {
-				final int start = w * length / waves;
-				final int end = (w + 1) * length / waves;
-				final int high = (end - start - 4) / 2;
-				final int lead = (end - start - 4 - high) / 2;
-				for (int i = start; i < end; i++) {
-					final int at = i - start;
-					final int top = lead + 2 + high;
-					if (at < lead || at >= top + 2) {
-						pieces[i] = RoofPiece.level(0);
-					} else if (at == lead) {
-						pieces[i] = new RoofPiece(0, CANOPY_WAVE_RISE, LocalDir.MINUS_V, 0, false);
-					} else if (at == lead + 1) {
-						pieces[i] = new RoofPiece(0, CANOPY_WAVE_FLAT, LocalDir.MINUS_V, 1, false);
-					} else if (at < top) {
-						pieces[i] = RoofPiece.level(1);
-					} else if (at == top) {
-						pieces[i] = new RoofPiece(0, CANOPY_WAVE_FLAT, LocalDir.PLUS_V, 1, false);
-					} else {
-						pieces[i] = new RoofPiece(0, CANOPY_WAVE_RISE, LocalDir.PLUS_V, 0, false);
-					}
-				}
-			}
-			return pieces;
-		}
-
-		/**
 		 * Where the lamps of a canopy go along a platform, per cell along it: every 4th cell, beside each girder on alternating
-		 * sides (a butterfly or gable lights its line itself: the valley or the ridge). A lamp is a flat block, so on a wave it
-		 * moves to the nearest level cell. Each entry is -1 or 1 for the side of the line, 0 for on it, or {@link #NO_LAMP}.
+		 * sides (a butterfly or gable lights its line itself: the valley or the ridge). Each entry is -1 or 1 for the side of the line, 0 for on it, or {@link #NO_LAMP}.
 		 */
-		private static int[] lampsAlong(int length, CanopyShape shape, RoofPiece[] wave) {
+		private static int[] lampsAlong(int length, CanopyShape shape) {
 			final int[] lamps = new int[length];
 			java.util.Arrays.fill(lamps, NO_LAMP);
 			for (int along = 2; along < length; along += 4) {
-				int at = along;
-				if (shape == CanopyShape.WAVE) {
-					for (final int shift : new int[]{0, -1, 1, -2, 2}) {
-						if (along + shift >= 2 && along + shift < length && wave[along + shift].block() == null) {
-							at = along + shift;
-							break;
-						}
-					}
-				}
-				lamps[at] = shape == CanopyShape.BUTTERFLY || shape == CanopyShape.GABLE ? 0 : along % 8 == 2 ? 1 : -1;
+				lamps[along] = shape == CanopyShape.BUTTERFLY || shape == CanopyShape.GABLE ? 0 : along % 8 == 2 ? 1 : -1;
 			}
 			return lamps;
 		}
@@ -3472,10 +3378,27 @@ public final class StationPlanner {
 				if (band.island()) {
 					// one row down the middle: the signs are double-sided, so it reads from both tracks
 					signRow(band, (band.uMin() + band.uMax()) / 2, LocalDir.MINUS_U);
-				} else {
+				} else if (!signBeside(band)) {
 					signRow(band, backColumn(band), towardTrack(band));
 				}
 			}
+		}
+
+		/**
+		 * True when a side platform backs onto one that already has its name signs: the two backs touch with nothing between,
+		 * and the signs are double-sided, so the row already there reads from this track too. A second row beside it read as
+		 * two signs stacked.
+		 */
+		private boolean signBeside(TrackLayout.PlatformBand band) {
+			final int u = backColumn(band);
+			for (final Map.Entry<Cell, PlannedBlock> entry : cells.entrySet()) {
+				final Cell cell = entry.getKey();
+				if (entry.getValue().role() == Role.NAME_SIGN && cell.u() != u && Math.abs(cell.u() - u) <= 2
+						&& cell.v() >= band.vFrom() && cell.v() <= band.vTo()) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		/**
@@ -3506,6 +3429,35 @@ public final class StationPlanner {
 				put(Role.NAME_SIGN, u, StationGeometry.WALK_Y, v + i, front);
 			}
 			return true;
+		}
+
+		/**
+		 * Where two walls meet (a corner, or a wall butting into another), a window becomes a solid post in the building's
+		 * trim. Most window blocks are thin (a panel in the middle of the cell, or a pane), so at a corner their edge showed
+		 * as a sliver and the corner looked open; a full glass block at a corner had no frame. Decided on the walls as
+		 * planned, so one post never turns its neighbour into another.
+		 */
+		void cornerPosts() {
+			final String post = palette.building().trim();
+			final List<PlannedBlock> corners = new ArrayList<>();
+			for (final PlannedBlock block : cells.values()) {
+				if (block.role() != Role.WINDOW) {
+					continue;
+				}
+				final boolean alongU = wallAt(block.u() - 1, block.y(), block.v()) || wallAt(block.u() + 1, block.y(), block.v());
+				final boolean alongV = wallAt(block.u(), block.y(), block.v() - 1) || wallAt(block.u(), block.y(), block.v() + 1);
+				if (alongU && alongV) {
+					corners.add(block);
+				}
+			}
+			for (final PlannedBlock block : corners) {
+				cells.put(new Cell(block.u(), block.y(), block.v()), new PlannedBlock(block.u(), block.y(), block.v(), Role.WALL, post, block.front(), "", ""));
+			}
+		}
+
+		private boolean wallAt(int u, int y, int v) {
+			final PlannedBlock block = cells.get(new Cell(u, y, v));
+			return block != null && (block.role() == Role.WALL || block.role() == Role.WINDOW);
 		}
 
 		StationPlan finish() {

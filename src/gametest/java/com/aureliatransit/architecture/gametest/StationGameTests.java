@@ -278,7 +278,7 @@ public class StationGameTests implements FabricGameTest {
 				}
 			}
 			check(steps == 16, "expected one escalator of two columns of eight steps, found " + steps);
-			// the footbridge travelator: flat between a landing at each end, running along the corridor
+			// no travelator in the footbridge corridor (the platforms here are too short for their own)
 			final Map<Integer, List<BlockPos>> rows = new HashMap<>();
 			for (final PlannedBlock block : pending.plan().blocks()) {
 				if (block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP) && !block.front().alongTrack()) {
@@ -293,15 +293,7 @@ public class StationGameTests implements FabricGameTest {
 					check(entity.config().style().id().equals(block.text()), "screen at " + owner + " has style " + entity.config().style().id() + ", planned " + block.text());
 				}
 			}
-			check(rows.size() == 2, "expected a two-wide travelator on the footbridge, found rows " + rows.keySet());
-			for (final List<BlockPos> row : rows.values()) {
-				row.sort(java.util.Comparator.comparingInt(pos -> pos.getX() * 100000 + pos.getZ()));
-				for (int i = 0; i < row.size(); i++) {
-					final String shape = value(world.getBlockState(row.get(i)), "orientation");
-					final boolean end = i == 0 || i == row.size() - 1;
-					check(end ? shape.startsWith("landing") : shape.equals("flat"), "travelator step " + i + " of " + row.size() + " is " + shape);
-				}
-			}
+			check(rows.isEmpty(), "a travelator in the footbridge corridor, rows " + rows.keySet());
 		});
 	}
 

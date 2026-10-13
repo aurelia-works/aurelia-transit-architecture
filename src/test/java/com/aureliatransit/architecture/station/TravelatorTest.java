@@ -24,22 +24,11 @@ class TravelatorTest {
 	}
 
 	@Test
-	void footbridgeTravelatorKeepsTheStairRowAndExitsFree() {
-		final StationSpec spec = StationDescriptionParser.parse("4 tracks island 12 wide 120 long footbridge travelators").spec();
-		final StationPlan plan = StationPlanner.plan(spec);
-		final StationLayout site = StationLayout.of(spec, plan.layout());
+	void theFootbridgeCorridorHasNoTravelator() {
+		final StationPlan plan = plan("4 tracks island 12 wide 120 long footbridge travelators");
 		assertEquals(List.of(), LayoutValidator.validate(plan));
 		assertTrue(StationAudit.audit(plan).buildable());
-		final List<PlannedBlock> deck = steps(plan).stream().filter(b -> b.y() == StationGeometry.UPPER_FLOOR_Y).toList();
-		assertTrue(deck.size() >= 2 * 8, "a footbridge travelator at least eight long");
-		for (final PlannedBlock step : deck) {
-			// the two rows on the lift side, never the stair side's row
-			assertTrue(step.v() == site.bridgeV() || step.v() == site.bridgeV() - site.stairSide(), step.toString());
-			for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
-				final StationLayout.Lift lift = site.platformLift(band, plan.layout());
-				assertTrue(lift == null || step.u() < lift.c0() - 1 || step.u() > lift.c0() + 2, "clear of the lift doors: " + step);
-			}
-		}
+		assertEquals(List.of(), steps(plan).stream().filter(b -> b.y() == StationGeometry.UPPER_FLOOR_Y).toList(), "travelators only on the platforms");
 	}
 
 	@Test
