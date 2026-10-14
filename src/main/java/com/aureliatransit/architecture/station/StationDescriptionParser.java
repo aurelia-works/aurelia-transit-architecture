@@ -379,7 +379,7 @@ public final class StationDescriptionParser {
 		private void setTravelators(int i) {
 			if (!travelators) {
 				travelators = true;
-				note(i, "travelators along the footbridge and long platforms where there is room");
+				note(i, "travelators along long platforms where there is room");
 			}
 		}
 
@@ -1411,6 +1411,9 @@ public final class StationDescriptionParser {
 				builder.trackBed(trackBed);
 			}
 			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators);
+			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
+				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
+			}
 			if (tactile != null) {
 				builder.tactile(tactile);
 			} else {

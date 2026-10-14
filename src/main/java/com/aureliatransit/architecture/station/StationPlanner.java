@@ -65,6 +65,7 @@ public final class StationPlanner {
 		planning.columns();
 		planning.canopyRoofs();
 		planning.hallRoof();
+		planning.numberSigns();
 		planning.lamps();
 		planning.benchesAndBins();
 		planning.interior();
@@ -185,6 +186,12 @@ public final class StationPlanner {
 
 	private record Cell(int u, int y, int v) {
 	}
+
+	/** Platforms at least this long (rows, both ends included) get travelators along them. */
+	static final int TRAVELATOR_PLATFORM = 72;
+
+	/** Roughly how many blocks of platform each departure screen serves. */
+	static final int SCREEN_SPACING = 30;
 
 	private static final class Planning {
 
@@ -311,6 +318,34 @@ public final class StationPlanner {
 		/** A platform's colour at the gate line. */
 		private static String platformColour(TrackLayout.PlatformBand band) {
 			return PLATFORM_COLOURS.get((band.number() - 1) % PLATFORM_COLOURS.size());
+		}
+
+		/**
+		 * A big number beside each platform's pier, seen as you come off the stairs, hung right under whatever is above it (the
+		 * deck, or a girder under it). Planned after the roofs, so it never takes a girder's cell; off the middle when a lift
+		 * landing or the structure has the middle. A platform numbered over its gates at a terminus head gets no second one.
+		 */
+		void numberSigns() {
+			if (!site.bridge()) {
+				return;
+			}
+			final int v = site.bridgeV() - site.stairSide();
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				if (!site.served().contains(band.number()) || gateNumbered(band)) {
+					continue;
+				}
+				final int mid = (band.uMin() + band.uMax()) / 2;
+				for (int d = 0; d <= band.width(); d++) {
+					final int u = mid + (d % 2 == 0 ? d / 2 : -(d + 1) / 2);
+					if (u < band.uMin() || u > band.uMax() || isEdge(band, u)) {
+						continue;
+					}
+					final int y = ceiling(u, v) - 1;
+					if (y >= StationGeometry.WALK_Y + 2 && numberSign(band, u, y, v, LocalDir.PLUS_V)) {
+						break;
+					}
+				}
+			}
 		}
 
 		/** A big platform number plate hung from the structure above; double-sided, so it reads from both ways. */
@@ -1101,12 +1136,15 @@ public final class StationPlanner {
 			final int cMax = farWall ? c1 + 1 : c1;
 			for (int y = low; y < roof; y++) {
 				for (int c = c0 - 1; c <= cMax; c++) {
+					// a glass shaft stands on solid corner posts: the panes end on them and the call buttons are fixed to them
+					final boolean corner = farWall && (c == c0 - 1 || c == cMax);
+					final String id = corner ? palette.building().pier() : wallId;
 					// the door row's floor at the upper level is the deck or the slab
 					if (y != StationGeometry.UPPER_FLOOR_Y) {
-						put(Role.WALL, c, y, vD, in.opposite(), wallId);
+						put(Role.WALL, c, y, vD, in.opposite(), id);
 					}
 					if (!backDoor || y > low + 1 || c < c0 || c > c1) {
-						put(Role.WALL, c, y, vBack, in, wallId);
+						put(Role.WALL, c, y, vBack, in, id);
 					}
 				}
 				for (int v = vD + o; v != vBack; v += o) {
@@ -1710,13 +1748,6 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// a big number under the deck beside each platform's pier, seen as you come off the stairs; a platform numbered over
-			// its gates at a terminus head gets no second one hanging over the platform
-			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-				if (site.served().contains(band.number()) && !gateNumbered(band)) {
-					numberSign(band, (band.uMin() + band.uMax()) / 2, roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y - 2 : StationGeometry.MIN_ROOF_Y, vB - site.stairSide(), LocalDir.PLUS_V);
-				}
-			}
 			// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
 			// they stop below it, so the canopy runs over them
 			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
@@ -1885,8 +1916,6 @@ public final class StationPlanner {
 		/** Shortest travelator run, landings included; and the longest platform stretch before a gap to cross. */
 		private static final int MIN_TRAVELATOR = 8;
 		private static final int MAX_PLATFORM_TRAVELATOR = 16;
-		/** Platforms at least this long get travelators along them. */
-		static final int TRAVELATOR_PLATFORM = 72;
 
 		/**
 		 * MTR escalators laid flat as moving walkways, planned before the floors so those leave them their cells. Only on the
@@ -3173,7 +3202,7 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final int run = band.length();
 				final int from = band.vFrom();
-				final List<Integer> targets = run >= 48 ? List.of(from + run / 4, from + run * 3 / 4) : List.of(from + run / 2);
+				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
 					if (!hangScreen(band, target)) {
 						onPost(band, target, StationGeometry.WALK_Y, PIDS);
@@ -3181,6 +3210,17 @@ public final class StationPlanner {
 				}
 				onPost(band, targets.get(0), StationGeometry.WALK_Y, HELP_POINT);
 			}
+		}
+
+		/** Where a platform's screens go: one per {@link #SCREEN_SPACING} blocks of platform, evenly spread, at least one. */
+		private static List<Integer> screenTargets(TrackLayout.PlatformBand band) {
+			final int run = band.length();
+			final int count = Math.max(1, Math.round(run / (float) SCREEN_SPACING));
+			final List<Integer> targets = new ArrayList<>();
+			for (int i = 0; i < count; i++) {
+				targets.add(band.vFrom() + run * (2 * i + 1) / (2 * count));
+			}
+			return targets;
 		}
 
 		/**
@@ -3194,7 +3234,7 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final int run = band.length();
 				final int from = band.vFrom();
-				for (final int target : run >= 48 ? List.of(from + run / 4 + 3, from + run * 3 / 4 + 3) : List.of(from + run / 2 + 3)) {
+				for (final int target : screenTargets(band).stream().map(t -> t + 3).toList()) {
 					if (!hangSpeaker(band, target)) {
 						onPost(band, target, StationGeometry.WALK_Y, WALL_SPEAKER);
 					}
@@ -3389,6 +3429,27 @@ public final class StationPlanner {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
 				}
 			}
+			flankPosts(band, flight, left, right, b);
+		}
+
+		/**
+		 * Posts under the deck at the top of a flight's glazed flanks, in the corridor's wall row: the panes would otherwise end
+		 * in the air there, below the deck edge.
+		 */
+		private void flankPosts(TrackLayout.PlatformBand band, StationLayout.Flight flight, int left, int right, StylePalette.Building b) {
+			if (spec.enclosedStairs()) {
+				return;
+			}
+			for (final int u : new int[]{left, right}) {
+				if (u < band.uMin() || u > band.uMax() || isEdge(band, u) || flight.columns().contains(u)) {
+					continue;
+				}
+				for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+					if (!taken(u, y, flight.wallV())) {
+						put(Role.BRIDGE_PIER, u, y, flight.wallV(), LocalDir.PLUS_V, b.pier());
+					}
+				}
+			}
 		}
 
 		/**
@@ -3417,10 +3478,16 @@ public final class StationPlanner {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, (u + v) % 4 == 1 ? b.bridgeLight() : b.bridgeRoof());
 				}
 			}
+			flankPosts(band, flight, wallLeft ? left : -1, wallRight ? right : -1, b);
 		}
 
-		/** True within 2 of a footbridge stair flight or its landing on this platform. */
+		/** True within 2 of a footbridge stair flight or its landing on this platform, or within 3 of its lift shaft. */
 		private boolean nearStairs(TrackLayout.PlatformBand band, int v) {
+			final StationLayout.Lift lift = site.platformLift(band, layout);
+			// the shaft and the landings at both its doors stay clear: nobody wants a bench or a screen against the lift
+			if (lift != null && v >= lift.vMin() - 3 && v <= lift.vMax() + 3) {
+				return true;
+			}
 			for (final StationLayout.Flight flight : site.flights(band)) {
 				final int a = Math.min(flight.wallV(), flight.landingV());
 				final int z = Math.max(flight.wallV(), flight.landingV());

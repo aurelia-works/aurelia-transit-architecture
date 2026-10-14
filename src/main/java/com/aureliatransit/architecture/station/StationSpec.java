@@ -26,7 +26,7 @@ import java.util.Objects;
  * @param escalators     an up escalator beside each footbridge stair where the platform is wide enough
  * @param stairsBothWays a second footbridge stair to each platform wide enough, from the corridor's other side
  * @param enclosedStairs walls round every footbridge stairwell instead of glass
- * @param travelators    moving walkways along the footbridge and long platforms where there is room
+ * @param travelators    moving walkways along long platforms where there is room
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,

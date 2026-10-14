@@ -97,7 +97,7 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
 	/** The smallest footbridge station with lifts: platforms six wide take a two-column stair and a lift beside it. */
 	private static final String LIFTS = "two track station, side platforms, length 24, width 6, footbridge, named Test";
-	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, travelators, named Test";
+	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, named Test";
 	/**
 	 * Feet of the imaginary planning player in each site: rail level, on the template's two stone layers. Test-relative y is one
 	 * below template y (the structure sits one above the test origin), so template y = 2 is relative y = 3.
