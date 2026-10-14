@@ -72,6 +72,10 @@ dependencies {
 	// Sodium 0.5.13 is the last 1.20.1 release. Both target Fabric API 0.92.x / loader >= 0.15.
 	modLocalRuntime "maven.modrinth:sodium:${project.sodium_version}"
 	modLocalRuntime "maven.modrinth:iris:${project.iris_version}"
+	// Iris bundles these, but Loom does not load a dev-only mod's bundled libraries, and shader packs fail without them
+	localRuntime "org.anarres:jcpp:1.4.14"
+	localRuntime "io.github.douira:glsl-transformer:2.0.1"
+	localRuntime "org.antlr:antlr4-runtime:4.13.1"
 
 	// Pure-logic unit tests (text sanitising, caches, announcement queue, seat bookkeeping, pagination ...)
 	testImplementation "org.junit.jupiter:junit-jupiter:5.10.2"
