@@ -17,6 +17,9 @@ class LiftDoorsTest {
 			"platform 1: island; platform 2: island; platform 3: island; platform 4: island; platform 5: island; platform 6: island 13 wide; "
 					+ "hub, 201 long, canopies, utrecht, named Halt",
 			"6 tracks island 120 long, footbridge, hall roof, named Halt",
+			"platform 1: side 5 wide; platform 2: side; platform 3: island 8 wide; platform 4: side 15 wide; platform 5: island 16 wide; "
+					+ "platform 6: island 14 wide; 120 long, no building, named Halt",
+			"4 tracks island, 64 long, with a building, footbridge, named Halt",
 	};
 
 	@Test
@@ -63,6 +66,33 @@ class LiftDoorsTest {
 		}
 		assertTrue(lifts > 0, text + ": the station has platform lifts");
 		assertEquals(List.of(), LayoutValidator.validate(plan), text);
+	}
+
+	/**
+	 * Every call button stands on a landing with its plate against a corner post or a solid wall: never in the shaft's own
+	 * wall (where it breaks the post and the car clips it), never against glass (where it hangs off the pane).
+	 */
+	@Test
+	void callButtonsHangOnAPostOrWall() {
+		for (final String text : TEXTS) {
+			final StationSpec spec = StationDescriptionParser.parse(text).spec();
+			final StationPlan plan = StationPlanner.plan(spec);
+			final StylePalette.Building building = StylePalette.of(spec).building();
+			int buttons = 0;
+			for (final PlannedBlock button : plan.blocks()) {
+				if (!button.blockId().equals(StylePalette.MTR_LIFT_BUTTONS)) {
+					continue;
+				}
+				buttons++;
+				final int du = button.front() == LocalDir.PLUS_U ? 1 : button.front() == LocalDir.MINUS_U ? -1 : 0;
+				final int dv = button.front() == LocalDir.PLUS_V ? 1 : button.front() == LocalDir.MINUS_V ? -1 : 0;
+				final PlannedBlock holder = plan.blocks().stream()
+						.filter(b -> b.u() == button.u() + du && b.y() == button.y() && b.v() == button.v() + dv).findFirst().orElse(null);
+				assertTrue(holder != null && (holder.blockId().equals(building.pier()) || holder.blockId().equals(building.interiorWall())),
+						text + ": call button at " + button.u() + " " + button.y() + " " + button.v() + " is held by " + holder);
+			}
+			assertTrue(buttons > 0, text + ": the station has call buttons");
+		}
 	}
 
 	private static boolean door(StationPlan plan, int u, int y, int v) {

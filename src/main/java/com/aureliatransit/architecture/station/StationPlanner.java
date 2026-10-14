@@ -205,8 +205,11 @@ public final class StationPlanner {
 		/** Lift call buttons, placed once everything else has its cells. */
 		private final List<LiftButton> buttons = new ArrayList<>();
 
-		/** A call button beside a lift door: in the shaft's front wall at {@code (u, y, v)}, with the landing on the -o side. */
-		private record LiftButton(int u, int y, int v, int o, LocalDir in) {
+		/**
+		 * A call button beside a lift door: in the shaft's front wall at {@code (u, y, v)}, with the landing on the -o side;
+		 * {@code otherU} is the wall cell on the doors' other side.
+		 */
+		private record LiftButton(int u, int y, int v, int o, LocalDir in, int otherU) {
 		}
 		private final List<Integer> columnV;
 		private final List<Box> extraSupport = new ArrayList<>();
@@ -1057,13 +1060,24 @@ public final class StationPlanner {
 		/**
 		 * Lift call buttons, at hand height beside each door. MTR's button is a thin plate on its block's front side, meant to
 		 * stand in front of a wall; in the shaft's own wall it would sit flush with the car, which clips it. So it stands on the
-		 * landing against the wall, unless that cell is taken (a corridor's glass wall), where it stays in the shaft wall.
+		 * landing against a corner post, on whichever side of the doors has a free landing cell (a corridor's glass wall takes
+		 * one side at the footbridge); then against the wall; and only with both sides taken does it stay in the shaft wall.
 		 */
 		void liftButtons() {
+			final String post = palette.building().pier();
 			for (final LiftButton button : buttons) {
 				final int landing = button.v() - button.o();
-				if (!taken(button.u(), button.y(), landing)) {
-					put(Role.LIFT, button.u(), button.y(), landing, button.in(), StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
+				Integer at = null;
+				for (final boolean onPost : new boolean[]{true, false}) {
+					for (final int u : new int[]{button.u(), button.otherU()}) {
+						final PlannedBlock holder = cells.get(new Cell(u, button.y(), button.v()));
+						if (at == null && holder != null && (!onPost || holder.blockId().equals(post)) && !taken(u, button.y(), landing)) {
+							at = u;
+						}
+					}
+				}
+				if (at != null) {
+					put(Role.LIFT, at, button.y(), landing, button.in(), StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
 				} else {
 					final Cell wall = new Cell(button.u(), button.y(), button.v());
 					cells.put(wall, new PlannedBlock(button.u(), button.y(), button.v(), Role.LIFT, StylePalette.MTR_LIFT_BUTTONS, button.in(), "",
@@ -1122,7 +1136,7 @@ public final class StationPlanner {
 					put(Role.LIFT, c, stop, vD, in, StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
 					put(Role.LIFT, c, stop + 1, vD, in, StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
 				}
-				buttons.add(new LiftButton(c0 - 1, stop + 1, vD, o, in));
+				buttons.add(new LiftButton(c0 - 1, stop + 1, vD, o, in, c1 + 1));
 			}
 			if (backDoor) {
 				// seen from the platform behind the shaft the pair is mirrored: the left leaf is the one away from the track
@@ -1131,7 +1145,7 @@ public final class StationPlanner {
 					put(Role.LIFT, c, low, vBack, in.opposite(), StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
 					put(Role.LIFT, c, low + 1, vBack, in.opposite(), StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
 				}
-				buttons.add(new LiftButton(c1 + 1, low + 1, vBack, -o, in.opposite()));
+				buttons.add(new LiftButton(c1 + 1, low + 1, vBack, -o, in.opposite(), c0 - 1));
 			}
 			final int cMax = farWall ? c1 + 1 : c1;
 			for (int y = low; y < roof; y++) {
