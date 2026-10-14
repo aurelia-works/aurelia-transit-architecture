@@ -12,7 +12,7 @@ Rules for every shot: no Minecraft or Mojang logo, no operator names or logos (n
 | 2 | 0:04-0:09 | First person: right-click the air with the Station Wrench. The wrench screen opens; click a city tile, drag the length slider, the 3D preview turns by itself. | *Describe a station. Or just pick one.* |
 | 3 | 0:09-0:15 | Time-lapse from a high corner: *Build it!*. Platforms, canopy and footbridge rise in batches. Speed up 4x; keep the last second real time. | *Built from real blocks, in seconds* |
 | 4 | 0:15-0:21 | Three quick cuts, 2 s each, of city looks: a red-brick terminus with twin towers, a glass vault shed with arches, a stone Beaux-Arts front with a clock. | *Fifteen city looks, mixable* |
-| 5 | 0:21-0:26 | Walk up the footbridge: escalator beside the stairs, glass stairwell, the travelator along the corridor carries you. | *Escalators, travelators, lifts that work* |
+| 5 | 0:21-0:26 | Walk up the footbridge: escalator beside the stairs, glass stairwell, then down to a long platform where a travelator carries you along. | *Escalators, travelators, lifts that work* |
 | 6 | 0:26-0:31 | Lift: press the call button, doors open, ride down, step out onto the platform. | |
 | 7 | 0:31-0:37 | Close on a 4-wide hanging departure screen: clock ticking, calling points with times. Cut through three display styles (dot matrix, split-flap in capitals, countdown). | *Live departures from MTR* |
 | 8 | 0:37-0:43 | A train rolls in. The chime, then the British wording on the action bar or voice: "The next train to arrive at platform 2 ...". | *Announcements on every platform* |
