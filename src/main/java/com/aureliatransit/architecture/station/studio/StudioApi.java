@@ -4,6 +4,7 @@ import com.aureliatransit.architecture.station.BuildingStyle;
 import com.aureliatransit.architecture.station.CanopyShape;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LayoutValidator;
+import com.aureliatransit.architecture.station.LocalDir;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.PlannedBlock;
@@ -173,7 +174,17 @@ public final class StudioApi {
 		final Map<String, Integer> modelIndex = new LinkedHashMap<>();
 		final List<String> modelJson = new ArrayList<>();
 		final StringBuilder cells = new StringBuilder();
+		final StringBuilder moving = new StringBuilder();
 		for (final PlannedBlock block : plan.blocks()) {
+			if (block.blockId().equals(com.aureliatransit.architecture.station.StylePalette.MTR_ESCALATOR_STEP)) {
+				// MTR's step model is the same both ways along its axis, so the page is told which way each step moves
+				final int du = block.front() == LocalDir.PLUS_U ? 1 : block.front() == LocalDir.MINUS_U ? -1 : 0;
+				final int dv = block.front() == LocalDir.PLUS_V ? 1 : block.front() == LocalDir.MINUS_V ? -1 : 0;
+				final int x = FRAME.x(block.u(), block.v());
+				final int z = FRAME.z(block.u(), block.v());
+				moving.append(moving.length() == 0 ? "" : ",").append(x).append(',').append(block.y()).append(',').append(z).append(',')
+						.append(FRAME.x(block.u() + du, block.v() + dv) - x).append(',').append(FRAME.z(block.u() + du, block.v() + dv) - z);
+			}
 			final Heading heading = FRAME.heading(block.front());
 			final String state = withConnections(block, idAt);
 			final String key = BlockModels.key(block.blockId(), heading, state);
@@ -242,10 +253,12 @@ public final class StudioApi {
 					.append('}');
 		}
 		out.append("],\"passenger\":").append(passenger(layout, idAt));
+		out.append(",\"street\":").append(street(spec, layout, idAt));
 		out.append(",\"head\":").append(headView(layout));
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
 		out.append(",\"models\":[").append(String.join(",", modelJson)).append(']');
 		out.append(",\"cells\":[").append(cells).append(']');
+		out.append(",\"moving\":[").append(moving).append(']');
 		out.append(",\"ms\":").append((planned - started) / 1_000_000);
 		return out.append('}').toString();
 	}
@@ -299,6 +312,41 @@ public final class StudioApi {
 		final int z = FRAME.z(u, v);
 		return "{\"x\":" + x + ",\"z\":" + z + ",\"dx\":" + (FRAME.x(u, v + 1) - x) + ",\"dz\":" + (FRAME.z(u, v + 1) - z)
 				+ ",\"width\":" + (layout.headTo() - layout.headFrom() + 1) + "}";
+	}
+
+	/**
+	 * Where a walk from the street starts: on the ground in front of the station's street entrance (a terminus's head front, or
+	 * the side building's entrance), on the first spot with three clear blocks, looking at the door; null without a building.
+	 */
+	private static String street(StationSpec spec, TrackLayout layout, Map<Long, String> idAt) {
+		final int u;
+		final int du;
+		final int v;
+		final int dv;
+		if (layout.terminus()) {
+			u = (layout.headFrom() + layout.headTo()) / 2;
+			v = layout.headEnd() + 1;
+			du = 0;
+			dv = 1;
+		} else if (spec.hasBuilding() && layout.buildingWidth() > 0) {
+			u = StationLayout.streetWall() - 1;
+			v = StationLayout.of(spec, layout).entranceV();
+			du = -1;
+			dv = 0;
+		} else {
+			return "null";
+		}
+		for (int step = 0; step < 24; step++) {
+			final int x = FRAME.x(u + du * step, v + dv * step);
+			final int z = FRAME.z(u + du * step, v + dv * step);
+			if (!idAt.containsKey(cell(x, 0, z)) && !idAt.containsKey(cell(x, 1, z)) && !idAt.containsKey(cell(x, 2, z))) {
+				// a few steps further out, so the whole entrance is in view
+				final int out = step + 4;
+				return "{\"x\":" + FRAME.x(u + du * out, v + dv * out) + ",\"z\":" + FRAME.z(u + du * out, v + dv * out) + ",\"tx\":"
+						+ FRAME.x(u, v) + ",\"tz\":" + FRAME.z(u, v) + "}";
+			}
+		}
+		return "null";
 	}
 
 	/**

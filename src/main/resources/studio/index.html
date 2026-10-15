@@ -125,6 +125,7 @@
 				<button type="button" data-view="head" id="headView" hidden>Head</button>
 				<button type="button" data-view="passenger">Passenger</button>
 				<button type="button" data-view="plan">From above</button>
+				<button type="button" id="walkBtn" class="walk-btn" aria-pressed="false" title="Walk through the station yourself">Walk</button>
 			</div>
 		</div>
 
@@ -150,12 +151,21 @@
 			<p>Your browser has graphics (WebGL) turned off, so the station can't be drawn. Everything else still works.</p>
 			<p>In Chrome, turn on <b>Settings › System › Use graphics acceleration when available</b>, then restart Chrome. Check <b>chrome://gpu</b> if it stays off.</p>
 		</div>
+		<div id="walkHud" class="walk-hud" hidden>
+			<div class="crosshair" aria-hidden="true"></div>
+			<button type="button" id="walkClick" class="walk-click">Click to walk around</button>
+			<p id="walkTip" class="walk-tip" role="status"></p>
+			<div class="walk-keys">
+				<p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>F</kbd> fly (<kbd>Space</kbd> up, <kbd>C</kbd> down)</p>
+				<p><kbd>E</kbd> lift · <kbd>1</kbd> platform · <kbd>2</kbd> street · <kbd>Esc</kbd> free the mouse, again to leave</p>
+			</div>
+		</div>
 		<div id="busy" class="busy" hidden><span class="bars" aria-hidden="true"><i></i><i></i><i></i></span>Planning…</div>
 		<div id="pick" class="pick" hidden></div>
 		<div class="overlay bottom-left caption">
 			<p id="banner" class="banner"></p>
 		</div>
-		<p class="overlay bottom-right hint">Drag to turn · Right-drag to move · Scroll to zoom · Click a block to name it</p>
+		<p class="overlay bottom-right hint" id="orbitHint">Drag to turn · Right-drag to move · Scroll to zoom · Click a block to name it</p>
 	</section>
 
 	<aside class="report" aria-label="Station checks">

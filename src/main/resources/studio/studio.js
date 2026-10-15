@@ -484,7 +484,9 @@
 		}
 	})();
 	const scene = new THREE.Scene();
-	scene.background = new THREE.Color(0x101317);
+	const NIGHT = new THREE.Color(0x101317);
+	const SKY = new THREE.Color(0xa9bfd3);
+	scene.background = NIGHT;
 	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 4000);
 	const station = new THREE.Group();
 	scene.add(station);
@@ -634,6 +636,15 @@
 		return new THREE.Color().setHSL((h % 360) / 360, 0.35, 0.55).getHex();
 	}
 
+	// the ground under the station; walking, it reaches past the fog so the street never ends at a cliff
+	function sizeGround() {
+		const size = bounds.getSize(new THREE.Vector3());
+		const margin = walk ? 1200 : 40;
+		ground.scale.set(size.x + margin, size.z + margin, 1);
+		ground.position.set((bounds.min.x + bounds.max.x) / 2, bounds.min.y - 0.02, (bounds.min.z + bounds.max.z) / 2);
+		ground.material.color.set(walk ? 0x5b6168 : 0x23282e);
+	}
+
 	let meshes = [];
 	function showPlan(plan) {
 		for (const m of meshes) {
@@ -671,14 +682,17 @@
 			}
 		}
 		const size = bounds.getSize(new THREE.Vector3());
-		ground.scale.set(size.x + 40, size.z + 40, 1);
-		ground.position.set((bounds.min.x + bounds.max.x) / 2, bounds.min.y - 0.02, (bounds.min.z + bounds.max.z) / 2);
+		sizeGround();
 		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + plan.size.blocks.toLocaleString() + " blocks · " + plan.size.width + " wide, "
 			+ plan.size.length + " long, " + plan.size.height + " high";
 		$("raw").textContent = JSON.stringify(Object.assign({}, plan, { cells: "[" + plan.cells.length / 5 + " blocks]", models: "[" + plan.models.length + " models]" }), null, 2);
+		if (walk) {
+			walk.world = walkWorld(plan);
+			sizeGround();
+		}
 		// frame the first station, and again when a station grows or shrinks a lot (a preset, many more tracks), so it fits
 		const reach = Math.max(size.x, size.z);
-		if (!showPlan.framed || reach > showPlan.framed * 1.5 || reach < showPlan.framed / 1.5) {
+		if (!walk && (!showPlan.framed || reach > showPlan.framed * 1.5 || reach < showPlan.framed / 1.5)) {
 			setView(currentView);
 			showPlan.framed = reach;
 		}
@@ -686,7 +700,9 @@
 		// only show the edge of the platforms
 		$("headView").hidden = !plan.head;
 		document.querySelector('[data-view="street"]').hidden = !!plan.head;
-		if (!plan.head && currentView === "head") {
+		if (walk) {
+			// keep walking
+		} else if (!plan.head && currentView === "head") {
 			setView("overview");
 		} else if (plan.head && currentView === "street") {
 			setView("head");
@@ -702,6 +718,7 @@
 		if (/^face:/.test(name) && !face) {
 			name = "overview";
 		}
+		leaveWalk();
 		currentView = name;
 		glide = null;
 		for (const b of document.querySelectorAll("[data-view]")) {
@@ -790,6 +807,11 @@
 	}
 
 	function place() {
+		if (walk) {
+			placeWalk();
+			return;
+		}
+		camera.fov = 45;
 		view.pitch = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.001, view.pitch));
 		camera.position.copy(orbitEye());
 		camera.lookAt(view.target);
@@ -805,12 +827,16 @@
 		pending = true;
 		requestAnimationFrame(() => {
 			pending = false;
-			resize();
-			stepGlide();
-			place();
-			renderer.render(scene, camera);
-			labels();
+			frame();
 		});
+	}
+
+	function frame() {
+		resize();
+		stepGlide();
+		place();
+		renderer.render(scene, camera);
+		labels();
 	}
 
 	function resize() {
@@ -888,6 +914,13 @@
 	let drag = null;
 	canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 	canvas.addEventListener("pointerdown", (e) => {
+		if (walk) {
+			// walking: a click takes the mouse; without pointer lock, dragging turns the head
+			lockMouse();
+			drag = { x: e.clientX, y: e.clientY, walk: true, moved: 0 };
+			canvas.setPointerCapture(e.pointerId);
+			return;
+		}
 		glide = null;
 		canvas.setPointerCapture(e.pointerId);
 		drag = { x: e.clientX, y: e.clientY, pan: e.shiftKey || e.button === 2, moved: 0 };
@@ -901,6 +934,12 @@
 		drag.x = e.clientX;
 		drag.y = e.clientY;
 		drag.moved += Math.abs(dx) + Math.abs(dy);
+		if (drag.walk) {
+			if (walk && document.pointerLockElement !== canvas) {
+				look(dx * 1.6, dy * 1.6);
+			}
+			return;
+		}
 		if (drag.pan) {
 			const scale = view.radius / canvas.clientHeight;
 			const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
@@ -913,13 +952,16 @@
 		draw();
 	});
 	canvas.addEventListener("pointerup", (e) => {
-		if (drag && drag.moved < 4) {
+		if (drag && !drag.walk && drag.moved < 4) {
 			pick(e);
 		}
 		drag = null;
 	});
 	canvas.addEventListener("wheel", (e) => {
 		e.preventDefault();
+		if (walk) {
+			return;
+		}
 		glide = null;
 		view.radius = Math.max(2, Math.min(3000, view.radius * Math.exp(e.deltaY * 0.0012)));
 		draw();
@@ -968,6 +1010,555 @@
 	$("faces").addEventListener("change", draw);
 	$("textures").addEventListener("change", () => current && showPlan(current));
 	window.addEventListener("resize", draw);
+
+	// ---- walk -----------------------------------------------------------------------------------------------------------
+	// First person through the planned station, as a player would walk it in the game: a 0.6 × 1.8 body that collides with
+	// every block's model boxes, steps up half a block (stairs and ramps), falls and jumps, rides escalators and takes the
+	// lifts. Fare gates stand open and lift doors let you through, as they do for a passenger with a card and a lift car.
+
+	const BODY = { half: 0.3, height: 1.8, eye: 1.62, step: 0.6, gravity: 32, jump: 8.9, walk: 4.3, run: 7, fly: 11, flyRun: 24 };
+	const NO_COLLIDE = new Set(["GATE", "RAIL_NODE"]);
+	const ESCALATOR_SPEED = 2.2;
+	/** Falling further than this takes you back to where you last stood. */
+	const FALL = 4.5;
+	let walk = null;
+
+	const cellKey = (x, y, z) => ((x + 4096) * 1024 + (y + 512)) * 8192 + (z + 4096);
+
+	/** A model's collision boxes in block units, after its variant's turn: [x0, y0, z0, x1, y1, z1] (element tilts left out). */
+	function modelBoxes(model) {
+		const out = [];
+		for (const part of model.parts) {
+			const turn = new THREE.Matrix4().makeTranslation(0.5, 0.5, 0.5)
+				.multiply(new THREE.Matrix4().makeRotationY(-part.y * Math.PI / 180))
+				.multiply(new THREE.Matrix4().makeRotationX(-part.x * Math.PI / 180))
+				.multiply(new THREE.Matrix4().makeTranslation(-0.5, -0.5, -0.5));
+			for (const el of part.elements) {
+				const box = new THREE.Box3();
+				for (const cx of [el.from[0], el.to[0]]) {
+					for (const cy of [el.from[1], el.to[1]]) {
+						for (const cz of [el.from[2], el.to[2]]) {
+							box.expandByPoint(new THREE.Vector3(cx / 16, cy / 16, cz / 16).applyMatrix4(turn));
+						}
+					}
+				}
+				// flat decals and hairline trims are not something to bump into
+				if (Math.min(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) < 0.02) {
+					continue;
+				}
+				out.push([box.min.x, box.min.y, box.min.z, box.max.x, box.max.y, box.max.z]);
+			}
+		}
+		return out;
+	}
+
+	/** The walkable world of a plan: boxes by cell, escalator steps and their climbing direction, and the lifts. */
+	function walkWorld(plan) {
+		const shapes = plan.models.map((e) => modelBoxes(e.model));
+		const grid = new Map();
+		const add = (x, y, z, box) => {
+			const k = cellKey(x, y, z);
+			if (!grid.has(k)) {
+				grid.set(k, []);
+			}
+			grid.get(k).push(box);
+		};
+		const cells = plan.cells;
+		const steps = new Map();
+		const liftStops = new Map();
+		for (let i = 0; i < cells.length; i += 5) {
+			const x = cells[i];
+			const y = cells[i + 1];
+			const z = cells[i + 2];
+			const entry = plan.models[cells[i + 3]];
+			const role = plan.roles[cells[i + 4]];
+			if (NO_COLLIDE.has(role) || /lift_door/.test(entry.id)) {
+				continue;
+			}
+			if (/lift_track_floor/.test(entry.id)) {
+				const k = x + "," + z;
+				if (!liftStops.has(k)) {
+					liftStops.set(k, { x, z, stops: [] });
+				}
+				liftStops.get(k).stops.push(y);
+			}
+			const step = /escalator_step/.test(entry.id);
+			if (step) {
+				const turn = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
+				steps.set(cellKey(x, y, z), { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turn / 90) % 4], dir: null });
+			}
+			for (const b of shapes[cells[i + 3]]) {
+				add(x, y, z, { a: [x + b[0], y + b[1], z + b[2], x + b[3], y + b[4], z + b[5]], esc: step ? cellKey(x, y, z) : 0 });
+			}
+		}
+		// Which way each step moves comes from the plan (MTR's step model looks the same both ways along its axis)
+		const moving = plan.moving || [];
+		for (let i = 0; i < moving.length; i += 5) {
+			const s = steps.get(cellKey(moving[i], moving[i + 1], moving[i + 2]));
+			if (s) {
+				s.dir = [moving[i + 3], moving[i + 4]];
+			}
+		}
+		for (const s of steps.values()) {
+			if (!s.dir) {
+				s.dir = s.f;
+			}
+		}
+		// Each lift car is the open cells of its shaft beside the track at a stop. The game's car carries you; here every stop
+		// gets a car floor, so the shaft never swallows you.
+		const occupied = (x, y, z) => grid.has(cellKey(x, y, z));
+		const lifts = [];
+		for (const lift of liftStops.values()) {
+			lift.stops.sort((a, b) => a - b);
+			const at = lift.stops[0];
+			lift.car = [];
+			for (let dx = -1; dx <= 1; dx++) {
+				for (let dz = -1; dz <= 1; dz++) {
+					const cx = lift.x + dx;
+					const cz = lift.z + dz;
+					if ((dx === 0 && dz === 0) || (!occupied(cx, at, cz) && !occupied(cx, at + 1, cz))) {
+						lift.car.push([cx, cz]);
+					}
+				}
+			}
+			for (const y of lift.stops) {
+				for (const [cx, cz] of lift.car) {
+					add(cx, y - 1, cz, { a: [cx, y - 0.0625, cz, cx + 1, y, cz + 1], esc: 0 });
+				}
+			}
+			lifts.push(lift);
+		}
+		return { grid, steps, lifts, ground: bounds.min.y };
+	}
+
+	function bodyBox(p) {
+		return [p.x - BODY.half, p.y, p.z - BODY.half, p.x + BODY.half, p.y + BODY.height, p.z + BODY.half];
+	}
+
+	/** Every box in the cells around a region (models may reach a little past their own cell), and the ground. */
+	function boxesNear(world, r) {
+		const out = [{ a: [-1e6, world.ground - 4, -1e6, 1e6, world.ground, 1e6], esc: 0 }];
+		for (let x = Math.floor(r[0]) - 1; x <= Math.floor(r[3]) + 1; x++) {
+			for (let y = Math.floor(r[1]) - 1; y <= Math.floor(r[4]) + 1; y++) {
+				for (let z = Math.floor(r[2]) - 1; z <= Math.floor(r[5]) + 1; z++) {
+					const list = world.grid.get(cellKey(x, y, z));
+					if (list) {
+						for (const b of list) {
+							out.push(b);
+						}
+					}
+				}
+			}
+		}
+		return out;
+	}
+
+	const EPS = 1e-7;
+	/** How far the box can move along one axis (0 x, 1 y, 2 z) before it hits one of the boxes. */
+	function clip(box, boxes, axis, d) {
+		const o1 = (axis + 1) % 3;
+		const o2 = (axis + 2) % 3;
+		for (const { a } of boxes) {
+			if (a[o1] >= box[o1 + 3] - EPS || a[o1 + 3] <= box[o1] + EPS || a[o2] >= box[o2 + 3] - EPS || a[o2 + 3] <= box[o2] + EPS) {
+				continue;
+			}
+			if (d > 0 && a[axis] >= box[axis + 3] - EPS) {
+				d = Math.min(d, a[axis] - box[axis + 3]);
+			} else if (d < 0 && a[axis + 3] <= box[axis] + EPS) {
+				d = Math.max(d, a[axis + 3] - box[axis]);
+			}
+		}
+		return d;
+	}
+
+	function shift(box, axis, d) {
+		box[axis] += d;
+		box[axis + 3] += d;
+	}
+
+	/** Moves y, then x and z, as the game does; returns what actually moved. */
+	function slide(box, boxes, dx, dy, dz) {
+		const my = clip(box, boxes, 1, dy);
+		shift(box, 1, my);
+		const mx = clip(box, boxes, 0, dx);
+		shift(box, 0, mx);
+		const mz = clip(box, boxes, 2, dz);
+		shift(box, 2, mz);
+		return [mx, my, mz];
+	}
+
+	function moveBody(world, dx, dy, dz) {
+		const p = walk.pos;
+		const box = bodyBox(p);
+		const reach = [Math.min(box[0], box[0] + dx), Math.min(box[1], box[1] + dy) - 1.2, Math.min(box[2], box[2] + dz),
+			Math.max(box[3], box[3] + dx), Math.max(box[4], box[4] + dy) + 1.2, Math.max(box[5], box[5] + dz)];
+		const boxes = boxesNear(world, reach);
+		if (walk.fly && walk.ghost) {
+			p.x += dx;
+			p.y += dy;
+			p.z += dz;
+			return;
+		}
+		const start = box.slice();
+		const moved = slide(box, boxes, dx, dy, dz);
+		const landed = dy < 0 && moved[1] > dy + EPS;
+		const blocked = Math.abs(moved[0] - dx) > EPS || Math.abs(moved[2] - dz) > EPS;
+		// step up onto a stair, a kerb or a ramp; an escalator step is a whole block, so next to one the step is a block
+		if (blocked && (walk.onGround || landed) && !walk.fly) {
+			// the next escalator step: its top a block above the feet, right where the body is heading
+			const ahead = [start[0] + Math.min(0, dx) - 0.05, start[2] + Math.min(0, dz) - 0.05, start[3] + Math.max(0, dx) + 0.05, start[5] + Math.max(0, dz) + 0.05];
+			const tall = boxes.some((b) => b.esc && b.a[4] > start[1] + BODY.step && b.a[4] <= start[1] + 1.05
+				&& b.a[0] < ahead[2] && b.a[3] > ahead[0] && b.a[2] < ahead[3] && b.a[5] > ahead[1]) ? 1.05 : BODY.step;
+			const up = start.slice();
+			const rise = clip(up, boxes, 1, tall);
+			shift(up, 1, rise);
+			const mx = clip(up, boxes, 0, dx);
+			shift(up, 0, mx);
+			const mz = clip(up, boxes, 2, dz);
+			shift(up, 2, mz);
+			const drop = clip(up, boxes, 1, -rise);
+			shift(up, 1, drop);
+			if (mx * mx + mz * mz > moved[0] * moved[0] + moved[2] * moved[2] + EPS) {
+				const climbed = up[1] - box[1];
+				box.splice(0, 6, ...up);
+				if (climbed > 0.2) {
+					walk.lag -= climbed;
+				}
+			}
+		}
+		walk.onGround = dy < 0 && box[1] - start[1] > dy + EPS;
+		if (walk.onGround || (dy > 0 && box[1] - start[1] < dy - EPS)) {
+			walk.vel.y = 0;
+		}
+		p.x = (box[0] + box[3]) / 2;
+		p.y = box[1];
+		p.z = (box[2] + box[5]) / 2;
+	}
+
+	/** The escalator step under the feet, if any. */
+	function stepUnderfoot(world) {
+		const box = bodyBox(walk.pos);
+		for (const b of boxesNear(world, [box[0], box[1] - 0.1, box[2], box[3], box[1], box[5]])) {
+			if (b.esc && Math.abs(b.a[4] - box[1]) < 0.06 && b.a[0] < box[3] && b.a[3] > box[0] && b.a[2] < box[5] && b.a[5] > box[2]) {
+				return world.steps.get(b.esc);
+			}
+		}
+		return null;
+	}
+
+	/** The lift whose car the walker stands in, and the stop it is at. */
+	function liftHere(world) {
+		const cx = Math.floor(walk.pos.x);
+		const cz = Math.floor(walk.pos.z);
+		for (const lift of world.lifts) {
+			if (!lift.car.some(([x, z]) => x === cx && z === cz)) {
+				continue;
+			}
+			const at = lift.stops.findIndex((y) => Math.abs(walk.pos.y - y) < 0.7);
+			if (at >= 0) {
+				return { lift, at };
+			}
+		}
+		return null;
+	}
+
+	function floorName(lift, i) {
+		return lift.stops.length === 2 ? (i === 0 ? "the lower floor" : "the upper floor") : i === 0 ? "the ground floor" : "floor " + i;
+	}
+
+	const keys = new Set();
+
+	function stepWalk(dt) {
+		const world = walk.world;
+		if (walk.ride) {
+			const r = walk.ride;
+			r.t = Math.min(1, r.t + dt / r.ms * 1000);
+			const k = r.t < 0.5 ? 2 * r.t * r.t : 1 - Math.pow(-2 * r.t + 2, 2) / 2;
+			walk.pos.y = r.from + (r.to - r.from) * k;
+			if (r.t >= 1) {
+				walk.pos.y = r.to;
+				walk.ride = null;
+				walk.vel.set(0, 0, 0);
+			}
+			walk.lag *= Math.exp(-dt * 12);
+			return;
+		}
+		const forward = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
+		const right = new THREE.Vector3(Math.cos(walk.yaw), 0, -Math.sin(walk.yaw));
+		const wish = new THREE.Vector3();
+		if (keys.has("KeyW") || keys.has("ArrowUp")) wish.add(forward);
+		if (keys.has("KeyS") || keys.has("ArrowDown")) wish.sub(forward);
+		if (keys.has("KeyD") || keys.has("ArrowRight")) wish.add(right);
+		if (keys.has("KeyA") || keys.has("ArrowLeft")) wish.sub(right);
+		if (wish.lengthSq() > 0) {
+			wish.normalize();
+		}
+		const running = keys.has("ShiftLeft") || keys.has("ShiftRight");
+		if (walk.fly) {
+			const speed = running ? BODY.flyRun : BODY.fly;
+			const up = (keys.has("Space") ? 1 : 0) - (keys.has("KeyC") || keys.has("ControlLeft") ? 1 : 0);
+			const target = wish.multiplyScalar(speed).add(new THREE.Vector3(0, up * speed * 0.7, 0));
+			walk.vel.lerp(target, 1 - Math.exp(-dt * 8));
+		} else {
+			const speed = running ? BODY.run : BODY.walk;
+			const grip = walk.onGround ? 14 : 2.5;
+			const k = 1 - Math.exp(-dt * grip);
+			walk.vel.x += (wish.x * speed - walk.vel.x) * k;
+			walk.vel.z += (wish.z * speed - walk.vel.z) * k;
+			walk.vel.y = Math.max(-60, walk.vel.y - BODY.gravity * dt);
+			if (walk.onGround && keys.has("Space")) {
+				walk.vel.y = BODY.jump;
+				walk.onGround = false;
+			}
+		}
+		let carry = [0, 0];
+		const step = walk.onGround && !walk.fly ? stepUnderfoot(world) : null;
+		if (step) {
+			carry = [step.dir[0] * ESCALATOR_SPEED, step.dir[1] * ESCALATOR_SPEED];
+		}
+		// small steps, so a fast fall or a run never passes through a slab
+		const n = Math.max(1, Math.ceil(Math.max(Math.abs(walk.vel.x), Math.abs(walk.vel.y), Math.abs(walk.vel.z)) * dt / 0.25));
+		for (let i = 0; i < n; i++) {
+			moveBody(world, (walk.vel.x + carry[0]) * dt / n, walk.vel.y * dt / n, (walk.vel.z + carry[1]) * dt / n);
+		}
+		walk.lag *= Math.exp(-dt * 12);
+		// a fall of more than a few blocks (off a footbridge, a roof or the edge of the world) puts you back where you last stood
+		if (walk.onGround && !step) {
+			walk.safe.copy(walk.pos);
+			walk.safeYaw = walk.yaw;
+		}
+		if (!walk.fly && (walk.pos.y < walk.safe.y - FALL || walk.pos.y < world.ground - 1)) {
+			walk.pos.copy(walk.safe);
+			walk.vel.set(0, 0, 0);
+			walk.lag = 0;
+			flash("Back where you were");
+		}
+		showTip(world);
+	}
+
+	/** A short message in the tip line for a moment. */
+	function flash(text) {
+		walk.note = text;
+		walk.noteUntil = performance.now() + 1800;
+	}
+
+	function showTip(world) {
+		const here = walk.fly ? null : liftHere(world);
+		let tip = "";
+		if (performance.now() < walk.noteUntil) {
+			tip = walk.note;
+		} else if (walk.ride) {
+			tip = "Lift going to " + floorName(walk.ride.lift, walk.ride.stop);
+		} else if (here) {
+			const next = here.at + 1 < here.lift.stops.length ? here.at + 1 : here.at - 1;
+			tip = "In the lift · E to go to " + floorName(here.lift, next);
+		} else if (walk.fly) {
+			tip = walk.ghost ? "Flying through walls · G to stop" : "Flying · F to land · G to fly through walls";
+		}
+		if ($("walkTip").textContent !== tip) {
+			$("walkTip").textContent = tip;
+		}
+	}
+
+	function takeLift() {
+		const here = liftHere(walk.world);
+		if (!here || walk.ride) {
+			return;
+		}
+		const next = here.at + 1 < here.lift.stops.length ? here.at + 1 : here.at - 1;
+		if (next < 0) {
+			return;
+		}
+		const from = here.lift.stops[here.at];
+		const to = here.lift.stops[next];
+		walk.ride = { lift: here.lift, stop: next, from: walk.pos.y, to, t: 0, ms: 1600 + Math.abs(to - from) * 250 };
+	}
+
+	/** Stand on the floor at a start spot ({x, z, tx, tz}), looking the way it says; the feet land on whatever is below. */
+	function startAt(spot) {
+		walk.start = spot;
+		const world = walk.world;
+		walk.pos.set(spot.x + 0.5, Math.max(bounds.max.y + 2, 4), spot.z + 0.5);
+		// drop to the floor: the highest surface below eye height of a passenger standing on the platform (y = 1)
+		const top = spot.y !== undefined ? spot.y : 3;
+		walk.pos.y = top;
+		for (let guard = 0; guard < 12 && boxesNear(world, bodyBox(walk.pos)).some(({ a }) => overlaps(a, bodyBox(walk.pos))); guard++) {
+			walk.pos.y += 1;
+		}
+		walk.vel.set(0, 0, 0);
+		walk.onGround = false;
+		walk.ride = null;
+		walk.lag = 0;
+		walk.safe.copy(walk.pos);
+		walk.yaw = Math.atan2(-(spot.tx - spot.x), -(spot.tz - spot.z));
+		walk.pitch = 0;
+	}
+
+	function overlaps(a, b) {
+		return a[0] < b[3] - EPS && a[3] > b[0] + EPS && a[1] < b[4] - EPS && a[4] > b[1] + EPS && a[2] < b[5] - EPS && a[5] > b[2] + EPS;
+	}
+
+	function spotFor(which) {
+		if (!current) {
+			return null;
+		}
+		if (which === "street" && current.street) {
+			return Object.assign({ y: 0.5 }, current.street);
+		}
+		if (current.passenger) {
+			return Object.assign({ y: 1 }, current.passenger);
+		}
+		const c = bounds.getCenter(new THREE.Vector3());
+		return { x: Math.floor(c.x), z: Math.floor(bounds.max.z) + 6, tx: Math.floor(c.x), tz: Math.floor(c.z), y: 0 };
+	}
+
+	function enterWalk(which) {
+		if (!current || $("stage").classList.contains("no-gl")) {
+			return;
+		}
+		glide = null;
+		currentView = "walk";
+		for (const b of document.querySelectorAll("[data-view]")) {
+			b.setAttribute("aria-pressed", "false");
+		}
+		walk = { pos: new THREE.Vector3(), vel: new THREE.Vector3(), yaw: 0, pitch: 0, onGround: false, fly: false, ghost: false, lag: 0,
+			ride: null, world: walkWorld(current), last: performance.now(), start: null, safe: new THREE.Vector3(), note: "", noteUntil: 0 };
+		startAt(spotFor(which || (current.street ? "street" : "platform")));
+		$("walkBtn").setAttribute("aria-pressed", "true");
+		$("walkHud").hidden = false;
+		$("stage").classList.add("walking");
+		$("pick").hidden = true;
+		scene.background = SKY;
+		scene.fog = new THREE.Fog(SKY, 80, 420);
+		sizeGround();
+		lockMouse();
+		requestAnimationFrame(walkLoop);
+	}
+
+	function leaveWalk() {
+		if (!walk) {
+			return;
+		}
+		walk = null;
+		keys.clear();
+		if (document.pointerLockElement === canvas) {
+			document.exitPointerLock();
+		}
+		$("walkBtn").setAttribute("aria-pressed", "false");
+		$("walkHud").hidden = true;
+		$("stage").classList.remove("walking");
+		scene.background = NIGHT;
+		scene.fog = null;
+		sizeGround();
+	}
+
+	function lockMouse() {
+		if (canvas.requestPointerLock) {
+			try {
+				const p = canvas.requestPointerLock();
+				if (p && p.catch) {
+					p.catch(() => {});
+				}
+			} catch (e) {
+				// no pointer lock (an embedded view): dragging still turns the view
+			}
+		}
+	}
+
+	function walkLoop(now) {
+		if (!walk) {
+			return;
+		}
+		// a slow frame still moves at walking speed (the move is split into small steps), up to a tenth of a second
+		const dt = Math.min(0.1, Math.max(0, (now - walk.last) / 1000));
+		walk.last = now;
+		stepWalk(dt);
+		frame();
+		requestAnimationFrame(walkLoop);
+	}
+
+	function placeWalk() {
+		camera.position.set(walk.pos.x, walk.pos.y + BODY.eye + walk.lag, walk.pos.z);
+		camera.rotation.set(walk.pitch, walk.yaw, 0, "YXZ");
+		camera.fov = 70;
+		camera.near = 0.05;
+		camera.updateProjectionMatrix();
+	}
+
+	function look(dx, dy) {
+		walk.yaw -= dx * 0.0025 * (invertX ? -1 : 1);
+		walk.pitch = Math.max(-1.55, Math.min(1.55, walk.pitch - dy * 0.0025 * (invertY ? -1 : 1)));
+	}
+
+	document.addEventListener("pointerlockchange", () => {
+		$("walkHud").classList.toggle("locked", document.pointerLockElement === canvas);
+		if (document.pointerLockElement !== canvas) {
+			keys.clear();
+		}
+	});
+	document.addEventListener("mousemove", (e) => {
+		if (walk && document.pointerLockElement === canvas) {
+			look(e.movementX, e.movementY);
+		}
+	});
+	const typing = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable;
+	window.addEventListener("keydown", (e) => {
+		if (!walk || typing(e)) {
+			return;
+		}
+		if (e.code === "Escape" && document.pointerLockElement !== canvas) {
+			leaveWalk();
+			return;
+		}
+		keys.add(e.code);
+		if (e.code === "KeyF") {
+			walk.fly = !walk.fly;
+			walk.ghost = walk.ghost && walk.fly;
+			walk.vel.set(0, 0, 0);
+		} else if (e.code === "KeyG" && walk.fly) {
+			walk.ghost = !walk.ghost;
+		} else if (e.code === "KeyE") {
+			takeLift();
+		} else if (e.code === "Digit1") {
+			startAt(spotFor("platform"));
+		} else if (e.code === "Digit2") {
+			startAt(spotFor("street"));
+		}
+		if (/^(Space|Arrow|Key[WASDCEFG]$|Digit[12]$)/.test(e.code)) {
+			e.preventDefault();
+		}
+	});
+	window.addEventListener("keyup", (e) => keys.delete(e.code));
+	window.addEventListener("blur", () => keys.clear());
+	$("walkBtn").addEventListener("click", () => (walk ? leaveWalk() : enterWalk()));
+	$("walkClick").addEventListener("click", lockMouse);
+	// read-only state and a teleport, for automated walk checks
+	window.studioWalk = {
+		state: () => walk && { x: walk.pos.x, y: walk.pos.y, z: walk.pos.z, yaw: walk.yaw, onGround: walk.onGround, fly: walk.fly,
+			riding: !!walk.ride, tip: $("walkTip").textContent, feet: [...walk.world.steps.values()].filter((t) => !walk.world.steps.has(cellKey(t.x - t.dir[0], t.y - 1, t.z - t.dir[1]))).map((t) => ({ x: t.x, y: t.y, z: t.z, dir: t.dir })), lifts: walk.world.lifts.map((l) => ({ x: l.x, z: l.z, stops: l.stops, car: l.car })) },
+		face: (yaw, pitch) => {
+			walk.yaw = yaw;
+			walk.pitch = pitch || 0;
+		},
+		boxes: (r) => boxesNear(walk.world, r).filter(({ a }) => overlaps(a, r)).map((b) => b.a.map((v) => +v.toFixed(3)).concat(b.esc ? ["esc"] : [])),
+		// hold these keys for this many seconds of game time, simulated at 60 steps a second
+		run: (held, seconds) => {
+			keys.clear();
+			held.forEach((k) => keys.add(k));
+			for (let t = 0; t < seconds; t += 1 / 60) {
+				stepWalk(1 / 60);
+			}
+			keys.clear();
+		},
+		key: (code) => window.dispatchEvent(new KeyboardEvent("keydown", { code })),
+		go: (x, y, z) => {
+			walk.pos.set(x, y, z);
+			walk.safe.set(x, y, z);
+			walk.vel.set(0, 0, 0);
+			walk.noteUntil = 0;
+		}
+	};
+
 
 	// ---- report ---------------------------------------------------------------------------------------------------------
 

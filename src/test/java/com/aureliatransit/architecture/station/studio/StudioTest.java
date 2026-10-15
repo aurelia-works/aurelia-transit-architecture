@@ -92,6 +92,52 @@ class StudioTest {
 		assertEquals(own, ownWithParts, "every one of the mod's blocks resolves to a model");
 	}
 
+	/**
+	 * Walk mode starts on the street in front of the entrance, outside every block (a side building and a terminus head), and
+	 * knows which way every escalator and travelator step moves, which MTR's model alone does not tell.
+	 */
+	@Test
+	void walksStartOnTheStreetAndKnowWhichWayStepsMove() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final Map<String, String> q : List.of(
+				Map.of("look", "UTRECHT", "tracks", "4", "length", "80", "building", "1"),
+				Map.of("look", "ST_PANCRAS", "mode", "terminus", "tracks", "6", "length", "96", "building", "1"))) {
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			final Map<String, Object> street = Json.object(plan.get("street"));
+			final int x = ((Double) street.get("x")).intValue();
+			final int z = ((Double) street.get("z")).intValue();
+			final List<Object> cells = Json.list(plan.get("cells"));
+			for (int i = 0; i < cells.size(); i += 5) {
+				final int cx = ((Double) cells.get(i)).intValue();
+				final int cy = ((Double) cells.get(i + 1)).intValue();
+				final int cz = ((Double) cells.get(i + 2)).intValue();
+				assertFalse(cx == x && cz == z && cy >= 0 && cy <= 2, q + ": the street start is clear, but a block stands at y " + cy);
+			}
+			assertFalse(street.get("tx").equals(street.get("x")) && street.get("tz").equals(street.get("z")), "it looks somewhere");
+		}
+		final Map<String, Object> none = Json.object(Json.parse(api.plan(Map.of("look", "UTRECHT", "building", "0"))));
+		assertEquals(null, none.get("street"), "no building, no street entrance");
+
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("look", "BERLIN", "tracks", "4", "length", "120",
+				"layout", "ISLAND", "esc", "both", "trav", "1", "building", "1", "text", "island platforms 12 wide, escalators, footbridge"))));
+		final List<Object> moving = Json.list(plan.get("moving"));
+		final List<Object> cells = Json.list(plan.get("cells"));
+		final List<Object> models = Json.list(plan.get("models"));
+		int steps = 0;
+		for (int i = 0; i < cells.size(); i += 5) {
+			if ("mtr:escalator_step".equals(Json.object(models.get(((Double) cells.get(i + 3)).intValue())).get("id"))) {
+				steps++;
+			}
+		}
+		assertTrue(steps > 0, "this station has escalators");
+		assertEquals(steps * 5, moving.size(), "every step says which way it moves");
+		for (int i = 0; i < moving.size(); i += 5) {
+			final int dx = ((Double) moving.get(i + 3)).intValue();
+			final int dz = ((Double) moving.get(i + 4)).intValue();
+			assertEquals(1, Math.abs(dx) + Math.abs(dz), "one block along one axis");
+		}
+	}
+
 	@Test
 	void aGrandTerminusReportsItsBuildingSize() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));

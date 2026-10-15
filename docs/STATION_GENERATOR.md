@@ -204,6 +204,13 @@ client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) a
   Reverse side, Street, Head (a terminus front from the street; only shown for a terminus or hub), Passenger (standing on
   platform 1) and Plan. *Cut* slices the station by height, across or along the
   tracks. Left-drag rotates, Shift + left-drag or right-drag pans, scroll zooms, *Invert X/Y* flips the drag, a click names a block.
+- **Walk:** *Walk* puts you on the street in front of the entrance (or on platform 1 without a building) and lets you walk
+  the station as a player would: a 0.6 × 1.8 body that collides with every block's model boxes, steps up half a block (stairs
+  and ramps), falls and jumps. Fare gates stand open and lift doors let you through. Escalators and travelators carry you the
+  way they run in the game (the plan's `moving` list gives each step's direction, which MTR's model does not show). In a lift
+  car, *E* rides to the next floor. A fall of more than 4.5 blocks, or below the ground, puts you back where you last stood.
+  Keys: WASD or arrows, Shift to run, Space to jump, F to fly (Space up, C down, G through walls), 1 for platform 1, 2 for the
+  street, Esc to free the mouse and Esc again to leave. Changing a setting while walking re-plans around you.
 - **Report:** requested and built side by side, what the parser recognised, filled in or did not understand, and every station
   check and design rule, with *Show raw blueprint JSON* for the plan itself.
 - **In the game:** *Plan in front of me* plans the design in front of you facing the way you look (with the usual particle
