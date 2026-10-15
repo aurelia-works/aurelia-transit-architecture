@@ -202,7 +202,7 @@ public final class StationPreview {
 	 */
 	private static BufferBuilder.BuiltBuffer[] mesh(StationPlan plan, int[] bounds) {
 		final MinecraftClient client = MinecraftClient.getInstance();
-		final Map<Long, String> idAt = new HashMap<>();
+		final Map<Long, PlannedBlock> at = new HashMap<>();
 		int minX = Integer.MAX_VALUE;
 		int minY = Integer.MAX_VALUE;
 		int minZ = Integer.MAX_VALUE;
@@ -212,7 +212,7 @@ public final class StationPreview {
 		for (final PlannedBlock block : plan.blocks()) {
 			final int x = StudioApi.FRAME.x(block.u(), block.v());
 			final int z = StudioApi.FRAME.z(block.u(), block.v());
-			idAt.put(StudioApi.cell(x, block.y(), z), block.blockId());
+			at.put(StudioApi.cell(x, block.y(), z), block);
 			minX = Math.min(minX, x);
 			minY = Math.min(minY, block.y());
 			minZ = Math.min(minZ, z);
@@ -227,6 +227,12 @@ public final class StationPreview {
 		bounds[4] = maxY;
 		bounds[5] = maxZ;
 		final Map<String, Optional<Block>> blocks = new HashMap<>();
+		// a neighbour's solid full side, from its own block state as the game resolves it
+		final com.aureliatransit.architecture.station.studio.Connections.FullFace full = (other, heading, side) ->
+				blocks.computeIfAbsent(other.blockId(), BlockStateResolver::block)
+						.map(b -> BlockStateResolver.withState(BlockStateResolver.state(b, heading), other.state())
+								.isSideSolidFullSquare(EmptyBlockView.INSTANCE, BlockPos.ORIGIN, direction(side)))
+						.orElse(false);
 		final Map<Long, BlockState> states = new HashMap<>();
 		final List<long[]> order = new ArrayList<>();
 		for (final PlannedBlock block : plan.blocks()) {
@@ -237,7 +243,7 @@ public final class StationPreview {
 			final int x = StudioApi.FRAME.x(block.u(), block.v());
 			final int z = StudioApi.FRAME.z(block.u(), block.v());
 			final Heading heading = StudioApi.FRAME.heading(block.front());
-			final BlockState state = BlockStateResolver.withState(BlockStateResolver.state(found.get(), heading), StudioApi.withConnections(block, idAt));
+			final BlockState state = BlockStateResolver.withState(BlockStateResolver.state(found.get(), heading), StudioApi.withConnections(block, at, full));
 			final long key = StudioApi.cell(x, block.y(), z);
 			states.put(key, state);
 			order.add(new long[]{key, x - minX, block.y() - minY, z - minZ});
@@ -382,5 +388,14 @@ public final class StationPreview {
 		zoom = 1;
 		panX = 0;
 		panY = 0;
+	}
+
+	private static Direction direction(Heading side) {
+		return switch (side) {
+			case NORTH -> Direction.NORTH;
+			case EAST -> Direction.EAST;
+			case SOUTH -> Direction.SOUTH;
+			case WEST -> Direction.WEST;
+		};
 	}
 }

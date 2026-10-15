@@ -33,6 +33,7 @@ public final class BlockModels {
 	private final AssetSource assets;
 	private final Map<String, Map<String, Object>> files = new HashMap<>();
 	private final Map<String, String> described = new HashMap<>();
+	private final Map<String, Boolean> full = new HashMap<>();
 
 	public BlockModels(AssetSource assets) {
 		this.assets = assets;
@@ -42,6 +43,58 @@ public final class BlockModels {
 	public synchronized String describe(String blockId, Heading facing, String state) {
 		final String key = key(blockId, facing, state);
 		return described.computeIfAbsent(key, k -> build(blockId, facing, state));
+	}
+
+	/**
+	 * Whether the model shows a solid full square on its {@code side} face, as {@code isSideSolidFullSquare} would see it:
+	 * one element, after the variant's turn, flush with that side and covering it edge to edge. Cached per key and side.
+	 */
+	public synchronized boolean fullFace(String blockId, Heading facing, String state, Heading side) {
+		final String key = key(blockId, facing, state) + "|" + side.name();
+		return full.computeIfAbsent(key, k -> {
+			for (final Object part : Json.list(Json.object(Json.parse(describe(blockId, facing, state))).get("parts"))) {
+				final Map<String, Object> p = Json.object(part);
+				final int rx = (int) Json.number(p.get("x"), 0);
+				final int ry = (int) Json.number(p.get("y"), 0);
+				for (final Object element : Json.list(p.get("elements"))) {
+					final Map<String, Object> e = Json.object(element);
+					final double[] box = turned(Json.list(e.get("from")), Json.list(e.get("to")), rx, ry);
+					if (covers(box, side)) {
+						return true;
+					}
+				}
+			}
+			return false;
+		});
+	}
+
+	/** An element's box [x0, y0, z0, x1, y1, z1] in 16ths after the variant's x then y turn about the block's middle. */
+	private static double[] turned(List<Object> from, List<Object> to, int rx, int ry) {
+		double[] a = {Json.number(from.get(0), 0), Json.number(from.get(1), 0), Json.number(from.get(2), 0)};
+		double[] b = {Json.number(to.get(0), 16), Json.number(to.get(1), 16), Json.number(to.get(2), 16)};
+		for (int i = 0; i < Math.floorMod(rx, 360) / 90; i++) {
+			// x turn: (y, z) -> (z, 16 - y)
+			a = new double[]{a[0], a[2], 16 - a[1]};
+			b = new double[]{b[0], b[2], 16 - b[1]};
+		}
+		for (int i = 0; i < Math.floorMod(ry, 360) / 90; i++) {
+			// y turn, north to east: (x, z) -> (16 - z, x)
+			a = new double[]{16 - a[2], a[1], a[0]};
+			b = new double[]{16 - b[2], b[1], b[0]};
+		}
+		return new double[]{Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2]), Math.max(a[0], b[0]), Math.max(a[1], b[1]),
+				Math.max(a[2], b[2])};
+	}
+
+	private static boolean covers(double[] box, Heading side) {
+		final double e = 0.01;
+		final boolean tall = box[1] <= e && box[4] >= 16 - e;
+		return switch (side) {
+			case NORTH -> box[2] <= e && tall && box[0] <= e && box[3] >= 16 - e;
+			case SOUTH -> box[5] >= 16 - e && tall && box[0] <= e && box[3] >= 16 - e;
+			case WEST -> box[0] <= e && tall && box[2] <= e && box[5] >= 16 - e;
+			case EAST -> box[3] >= 16 - e && tall && box[2] <= e && box[5] >= 16 - e;
+		};
 	}
 
 	public static String key(String blockId, Heading facing, String state) {

@@ -420,6 +420,38 @@ public class AureliaGameTests implements FabricGameTest {
 	}
 
 	/** The three new regional signs behave like the existing station name sign: right-click opens the editor, text is stored. */
+	/**
+	 * The mod's glass panes join the roof and frame blocks in {@code glass_pane_joins} (iron shed legs, girders, canopies),
+	 * though those show no full side: placed next to one, and when one is set beside a standing pane.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void glassPanesJoinIronworkAndRoofs(TestContext context) {
+		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);
+		final List<String> problems = new ArrayList<>();
+		final BlockPos pos = new BlockPos(3, 2, 3);
+		final Block pane = Fixtures.block("clear_float_glass_pane").block();
+		context.setBlockState(pos.down(), Blocks.STONE);
+		context.setBlockState(pos.east(), Fixtures.block("amsterdam_cast_iron_shed_leg").block());
+		Fixtures.place(context, player, pane, pos.down(), Direction.UP);
+		if (!context.getBlockState(pos).isOf(pane) || !context.getBlockState(pos).get(Properties.EAST)) {
+			problems.add("a pane placed by the cast iron leg does not join it: " + context.getBlockState(pos));
+		}
+		final BlockPos girder = pos.west();
+		context.getWorld().setBlockState(context.getAbsolutePos(girder), Fixtures.block("station_girder").block().getDefaultState());
+		if (!context.getBlockState(pos).get(Properties.WEST)) {
+			problems.add("a standing pane does not join a girder set beside it: " + context.getBlockState(pos));
+		}
+		context.setBlockState(girder, Blocks.AIR);
+		if (context.getBlockState(pos).get(Properties.WEST)) {
+			problems.add("the pane still joins after the girder is gone");
+		}
+		if (context.getBlockState(pos).get(Properties.NORTH)) {
+			problems.add("the pane joins thin air to the north");
+		}
+		failIfAny(problems, "glass panes");
+		context.complete();
+	}
+
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
 	public void editableSignsAcceptTextLikeTheStationNameSign(TestContext context) {
 		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);

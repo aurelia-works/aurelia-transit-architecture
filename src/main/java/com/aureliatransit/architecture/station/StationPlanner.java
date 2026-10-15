@@ -18,6 +18,8 @@ import java.util.Set;
 public final class StationPlanner {
 
 	private static final String PIDS = "aurelia_transit_architecture:platform_pids";
+	/** What fills the bed layer under platforms when the station has a track bed. */
+	private static final String PLATFORM_FILL = "minecraft:black_concrete";
 	private static final String HANGING_PIDS = "aurelia_transit_architecture:hanging_platform_pids";
 	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	private static final String CEILING_SPEAKER = "aurelia_transit_architecture:ceiling_speaker";
@@ -414,13 +416,20 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Ballast under every track's clearance (y = -1) for its whole run, with a glowstone strip in the row at the foot of
-		 * each platform wall along that platform.
+		 * One solid layer at y = -1 under the whole railway: ballast under every track's clearance for its whole run and across
+		 * the gaps between neighbouring tracks, with a lit strip in the row at the foot of each platform wall along that
+		 * platform, and black concrete under every platform floor and ramp, so the platforms stand on something and the bed
+		 * has no holes.
 		 */
 		void trackBed() {
 			final TrackBed bed = spec.trackBed();
 			if (bed == TrackBed.NONE) {
 				return;
+			}
+			for (final PlannedBlock block : List.copyOf(cells.values())) {
+				if (block.y() == StationGeometry.PLATFORM_Y && (block.role().platformFloor() || block.role() == Role.RAMP_LOWER || block.role() == Role.RAMP_UPPER)) {
+					put(Role.TRACK_BED, block.u(), -1, block.v(), LocalDir.PLUS_V, PLATFORM_FILL);
+				}
 			}
 			for (final TrackLayout.Track track : layout.tracks()) {
 				for (final int side : new int[]{-1, 1}) {
@@ -437,6 +446,34 @@ public final class StationPlanner {
 					}
 				}
 			}
+			for (final Box gap : bedGaps()) {
+				for (int u = gap.uMin(); u <= gap.uMax(); u++) {
+					for (int v = gap.vMin(); v <= gap.vMax(); v++) {
+						put(Role.TRACK_BED, u, -1, v, LocalDir.PLUS_V, bed.blockId());
+					}
+				}
+			}
+		}
+
+		/**
+		 * The strips between two neighbouring tracks' clearances where no platform stands (y = -1), as far as both tracks run:
+		 * ballast fills them so the bed is one surface from wall to wall.
+		 */
+		private List<Box> bedGaps() {
+			final List<TrackLayout.Track> tracks = new ArrayList<>(layout.tracks());
+			tracks.sort(Comparator.comparingInt(TrackLayout.Track::u));
+			final List<Box> gaps = new ArrayList<>();
+			for (int i = 0; i + 1 < tracks.size(); i++) {
+				final TrackLayout.Track a = tracks.get(i);
+				final TrackLayout.Track b = tracks.get(i + 1);
+				final int u0 = a.u() + StationGeometry.ENVELOPE_HALF_WIDTH + 1;
+				final int u1 = b.u() - StationGeometry.ENVELOPE_HALF_WIDTH - 1;
+				if (u0 > u1 || layout.platforms().stream().anyMatch(band -> band.uMin() <= u1 && band.uMax() >= u0)) {
+					continue;
+				}
+				gaps.add(new Box(u0, -1, layout.vMin(), u1, -1, Math.min(layout.trackEnd(a), layout.trackEnd(b))));
+			}
+			return gaps;
 		}
 
 		/**
@@ -3366,7 +3403,7 @@ public final class StationPlanner {
 				final int from = band.vFrom();
 				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
-					if (!hangScreen(band, target)) {
+					if (!hangScreen(band, target) && !screenOnColumn(band, target)) {
 						onPost(band, target, StationGeometry.WALK_Y, PIDS);
 					}
 				}
@@ -3494,6 +3531,51 @@ public final class StationPlanner {
 							put(Role.FIXTURE, u, y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.BEAM), "kind=" + palette.girderKind());
 						}
 					}
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * Where the roof is too high to hang a screen from (a train shed), a screen two blocks wide fixed to the column nearest
+		 * {@code target} above head height, its middle against the column so the two blocks join into one display; on both
+		 * faces of the column along the platform where there is room, so it reads from either way. True if one was fixed.
+		 */
+		private boolean screenOnColumn(TrackLayout.PlatformBand band, int target) {
+			final int y = StationGeometry.WALK_Y + 2;
+			final List<Cell> posts = new ArrayList<>();
+			for (final PlannedBlock block : cells.values()) {
+				if (block.role() == Role.COLUMN && block.y() == StationGeometry.WALK_Y && band.contains(block.u(), block.v())) {
+					posts.add(new Cell(block.u(), block.y(), block.v()));
+				}
+			}
+			posts.sort(Comparator.comparingInt((Cell post) -> Math.abs(post.v() - target)).thenComparingInt(Cell::v).thenComparingInt(Cell::u));
+			final int middle = (band.uMin() + band.uMax()) / 2;
+			for (final Cell post : posts) {
+				final PlannedBlock behind = cells.get(new Cell(post.u(), y, post.v()));
+				if (behind == null || behind.role() != Role.COLUMN || isEdge(band, post.u())) {
+					continue;
+				}
+				// the second block towards the platform's middle, else away from it
+				final int toward = post.u() <= middle ? 1 : -1;
+				boolean fixed = false;
+				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
+					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
+					if (!band.runs(v) || nearStairs(band, v) || taken(post.u(), y, v)) {
+						continue;
+					}
+					for (final int step : new int[]{toward, -toward}) {
+						final int u = post.u() + step;
+						if (band.contains(u, v) && !isEdge(band, u) && !taken(u, y, v)) {
+							put(Role.FIXTURE, post.u(), y, v, side, PIDS);
+							put(Role.FIXTURE, u, y, v, side, PIDS);
+							fixed = true;
+							break;
+						}
+					}
+				}
+				if (fixed) {
 					return true;
 				}
 			}
@@ -3800,7 +3882,7 @@ public final class StationPlanner {
 			for (final TrackLayout.Track track : layout.tracks()) {
 				supports.add(new Box(track.u(), -1, layout.vMin(), track.u(), -1, layout.trackEnd(track)));
 				if (spec.trackBed().falls()) {
-					// gravel needs a block under it
+					// gravel needs a block under it (here and between tracks)
 					supports.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, -2, layout.vMin(), track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, -2,
 							layout.trackEnd(track)));
 				}
@@ -3808,6 +3890,11 @@ public final class StationPlanner {
 					// the ground under a bay track's buffer stop
 					final int v = layout.trackEnd(track) + 1;
 					supports.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, -1, v, track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, -1, v));
+				}
+			}
+			if (spec.trackBed().falls()) {
+				for (final Box gap : bedGaps()) {
+					supports.add(new Box(gap.uMin(), -2, gap.vMin(), gap.uMax(), -2, gap.vMax()));
 				}
 			}
 			if (layout.terminus()) {

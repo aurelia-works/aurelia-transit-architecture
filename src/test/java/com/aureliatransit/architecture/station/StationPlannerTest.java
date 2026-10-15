@@ -1245,6 +1245,50 @@ class StationPlannerTest {
 		assertTrue(top(mumbai, "minecraft:cut_sandstone") > top(plans.get("mumbai city"), "minecraft:cut_sandstone"), "taller at grand size");
 	}
 
+	/**
+	 * A gravel bed runs wall to wall: every cell across the tracks is ballast, lit strip or black concrete under a platform,
+	 * with no holes between neighbouring tracks; and under a high train shed the platform screens are two blocks joined
+	 * into one display fixed to a column above head height, not one block on the floor.
+	 */
+	@Test
+	void trackBedsAreFullAndShedScreensHangOnColumns() {
+		final ParseResult result = StationDescriptionParser.parse("ten track tokyo terminus, five island platforms, 240 long, gravel bed, train shed, grand building");
+		final StationPlan plan = plan(result.spec());
+		assertTrue(StationAudit.audit(plan).buildable(), StationAudit.audit(plan).problems().toString());
+		final Map<String, PlannedBlock> at = new HashMap<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			at.put(block.u() + "," + block.y() + "," + block.v(), block);
+		}
+		final int uMin = plan.blocks().stream().filter(b -> b.role() == Role.TRACK_BED).mapToInt(PlannedBlock::u).min().orElseThrow();
+		final int uMax = plan.blocks().stream().filter(b -> b.role() == Role.TRACK_BED).mapToInt(PlannedBlock::u).max().orElseThrow();
+		for (final int v : new int[]{20, plan.layout().platformLength() / 2, plan.layout().platformLength() - 20}) {
+			for (int u = uMin; u <= uMax; u++) {
+				final PlannedBlock bed = at.get(u + ",-1," + v);
+				assertTrue(bed != null, "a hole in the bed at u " + u + ", v " + v);
+				final PlannedBlock above = at.get(u + "," + StationGeometry.PLATFORM_Y + "," + v);
+				if (above != null && above.role().platformFloor()) {
+					assertEquals("minecraft:black_concrete", bed.blockId(), "under the platform at u " + u);
+				}
+			}
+		}
+		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":platform_pids")).toList();
+		assertFalse(screens.isEmpty());
+		for (final PlannedBlock screen : screens) {
+			assertTrue(screen.y() > StationGeometry.WALK_Y + 1, "above head height, not on the floor");
+			final long pair = screens.stream().filter(o -> o.y() == screen.y() && o.v() == screen.v() && o.front() == screen.front()
+					&& Math.abs(o.u() - screen.u()) == 1).count();
+			assertEquals(1, pair, "two blocks wide, one display: " + screen);
+		}
+		assertTrue(screens.stream().allMatch(s -> screens.stream().anyMatch(o -> o.v() == s.v() && o.y() == s.y()
+				&& (o.u() == s.u() || Math.abs(o.u() - s.u()) == 1) && isColumnBehind(at, o))), "each display is fixed to a column");
+	}
+
+	private static boolean isColumnBehind(Map<String, PlannedBlock> at, PlannedBlock screen) {
+		final int v = screen.v() + (screen.front() == LocalDir.PLUS_V ? -1 : 1);
+		final PlannedBlock behind = at.get(screen.u() + "," + screen.y() + "," + v);
+		return behind != null && behind.role() == Role.COLUMN;
+	}
+
 	/** The head building's blocks: from the platform ends on. */
 	private static java.util.stream.Stream<PlannedBlock> head(StationPlan plan) {
 		return plan.blocks().stream().filter(b -> b.v() >= plan.layout().platformLength());

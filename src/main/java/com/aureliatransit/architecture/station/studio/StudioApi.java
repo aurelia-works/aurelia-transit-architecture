@@ -171,9 +171,12 @@ public final class StudioApi {
 		final TrackLayout layout = plan.layout();
 
 		final Map<Long, String> idAt = new java.util.HashMap<>();
+		final Map<Long, PlannedBlock> at = new java.util.HashMap<>();
 		for (final PlannedBlock block : plan.blocks()) {
 			idAt.put(cell(FRAME.x(block.u(), block.v()), block.y(), FRAME.z(block.u(), block.v())), block.blockId());
+			at.put(cell(FRAME.x(block.u(), block.v()), block.y(), FRAME.z(block.u(), block.v())), block);
 		}
+		final Connections.FullFace full = (other, heading, side) -> models.fullFace(other.blockId(), heading, other.state(), side);
 		final Map<String, Integer> modelIndex = new LinkedHashMap<>();
 		final List<String> modelJson = new ArrayList<>();
 		final StringBuilder cells = new StringBuilder();
@@ -189,7 +192,7 @@ public final class StudioApi {
 						.append(FRAME.x(block.u() + du, block.v() + dv) - x).append(',').append(FRAME.z(block.u() + du, block.v() + dv) - z);
 			}
 			final Heading heading = FRAME.heading(block.front());
-			final String state = withConnections(block, idAt);
+			final String state = withConnections(block, at, full);
 			final String key = BlockModels.key(block.blockId(), heading, state);
 			final int model = modelIndex.computeIfAbsent(key, k -> {
 				modelJson.add("{\"id\":" + Json.quote(block.blockId()) + ",\"model\":" + models.describe(block.blockId(), heading, state) + "}");
@@ -266,35 +269,9 @@ public final class StudioApi {
 		return out.append('}').toString();
 	}
 
-	/**
-	 * Rails, fences and panes join their neighbours in the game (worked out from the world when placed); the studio joins each
-	 * side that has a block of the same family next to it. {@code idAt} maps {@link #cell} keys in {@link #FRAME} to block ids.
-	 */
-	public static String withConnections(PlannedBlock block, Map<Long, String> idAt) {
-		final String family = family(block.blockId());
-		if (family == null) {
-			return block.state();
-		}
-		final int x = FRAME.x(block.u(), block.v());
-		final int z = FRAME.z(block.u(), block.v());
-		final StringBuilder out = new StringBuilder(block.state());
-		final String[] names = {"north", "east", "south", "west"};
-		final int[][] steps = {{0, -1}, {1, 0}, {0, 1}, {-1, 0}};
-		for (int i = 0; i < 4; i++) {
-			final String other = idAt.get(cell(x + steps[i][0], block.y(), z + steps[i][1]));
-			final boolean joined = other != null && family.equals(family(other));
-			out.append(out.length() == 0 ? "" : ",").append(names[i]).append('=').append(joined);
-		}
-		return out.toString();
-	}
-
-	private static String family(String blockId) {
-		for (final String word : new String[]{"handrail", "railing", "fence", "pane", "wall", "bars", "barrier"}) {
-			if (blockId.contains(word)) {
-				return word;
-			}
-		}
-		return null;
+	/** {@code block}'s state with the joins it gets in the game ({@link Connections}); {@code at} maps {@link #cell} keys to blocks. */
+	public static String withConnections(PlannedBlock block, Map<Long, PlannedBlock> at, Connections.FullFace full) {
+		return Connections.state(block, at, full);
 	}
 
 	public static long cell(int x, int y, int z) {
