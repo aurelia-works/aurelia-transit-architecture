@@ -2649,15 +2649,24 @@ public final class StationPlanner {
 				final CanopyShape shape = spec.canopy();
 				final RoofPiece[] across = acrossProfile(shape, lines, from, to);
 				final int[] lamp = lampsAlong(band.length(), shape);
+				// a butterfly is a thin V on cantilevers: arms at the columns, the valley beam along the line and (wide) a girder
+				// up under each side; braces under its raised edges at the columns alone, so nothing hangs under its eaves
+				final boolean butterfly = shape == CanopyShape.BUTTERFLY;
 				// each line's arms reach towards the roof edge (or halfway to the next line), stopping a cell short of it
 				final int[] armLeft = new int[lines.size()];
 				final int[] armRight = new int[lines.size()];
+				// a butterfly's girder along the platform under each side, only where the roof runs on further than the valley
+				// beam reaches: as far in as it can carry the edge from, so it sits up under the V, not under the eaves
+				final int[] purlinLeft = new int[lines.size()];
+				final int[] purlinRight = new int[lines.size()];
 				for (int i = 0; i < lines.size(); i++) {
 					final int u = lines.get(i);
 					final int left = i == 0 ? u - from : (u - lines.get(i - 1)) / 2;
 					final int right = i == lines.size() - 1 ? to - u : (lines.get(i + 1) - u) / 2;
 					armLeft[i] = Math.max(0, Math.min(StationGeometry.MAX_CANTILEVER, left - 1));
 					armRight[i] = Math.max(0, Math.min(StationGeometry.MAX_CANTILEVER, right - 1));
+					purlinLeft[i] = left > StationGeometry.MAX_CANTILEVER ? Math.min(armLeft[i], left - StationGeometry.MAX_CANTILEVER) : 0;
+					purlinRight[i] = right > StationGeometry.MAX_CANTILEVER ? Math.min(armRight[i], right - StationGeometry.MAX_CANTILEVER) : 0;
 				}
 				for (int v = band.vFrom(); v <= band.vTo(); v++) {
 					// on every column: an arm across the platform on its cap; between columns a girder along the line and an edge
@@ -2700,7 +2709,7 @@ public final class StationPlanner {
 							for (final int a : framed) {
 								put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_U, girder, kind);
 							}
-							for (final int a : new int[]{u, u - armLeft[i], u + armRight[i]}) {
+							for (final int a : butterfly ? new int[]{u, u - purlinLeft[i], u + purlinRight[i]} : new int[]{u, u - armLeft[i], u + armRight[i]}) {
 								if (!framed.contains(a)) {
 									put(Role.BEAM, a, y - 1, v, LocalDir.PLUS_V, girder, kind);
 								}
@@ -2709,6 +2718,11 @@ public final class StationPlanner {
 					}
 					// the roof row: its profile across the platform (butterfly, gable) lifts some cells above y
 					final int along = v - band.vFrom();
+					boolean armRow = false;
+					for (final int line : lines) {
+						final PlannedBlock cap = cells.get(new Cell(line, y - 2, v));
+						armRow |= cap != null && cap.role() == Role.COLUMN_CAP;
+					}
 					for (int u = from; u <= to; u++) {
 						final RoofPiece piece = across[u - from];
 						final boolean edge = u == from || u == to;
@@ -2723,7 +2737,7 @@ public final class StationPlanner {
 							continue;
 						}
 						// a girder under the raised roof, where it meets the sloping blocks
-						if (rise > 0 && piece.braced()) {
+						if (rise > 0 && piece.braced() && (armRow || !butterfly)) {
 							for (int level = y; level < y + rise; level++) {
 								put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.RIB), kind);
 							}

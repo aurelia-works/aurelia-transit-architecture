@@ -72,6 +72,46 @@ class CanopyShapeTest {
 		return loose.isEmpty() ? null : loose.size() + " floating, first " + loose.get(0);
 	}
 
+	/**
+	 * A butterfly is a thin V on cantilevers: between its columns the only girder under a narrow canopy is the valley beam
+	 * on the column line, and the braces under its raised edges stand at the columns alone, so no wall of girders hangs
+	 * under its eaves. It still plans cleanly, every roof cell within reach of a beam.
+	 */
+	@Test
+	void butterflyGirdersStayUpUnderTheV() {
+		for (final String text : List.of("4 tracks island, 160 long, butterfly canopies, no building",
+				"10 tracks hub, island platforms, 201 long, butterfly canopies, grand building, gravel bed")) {
+			final StationPlan plan = plan(text);
+			assertEquals(null, problem(plan), text);
+			final Set<Integer> columnRows = new HashSet<>();
+			final Set<Integer> lines = new HashSet<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.COLUMN_CAP) {
+					columnRows.add(block.v());
+					lines.add(block.u());
+				}
+			}
+			final Set<Integer> framedRows = new HashSet<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.WALL || block.role() == Role.BRIDGE_PIER || block.role() == Role.STAIR || block.role() == Role.ESCALATOR) {
+					for (int d = -1; d <= 1; d++) {
+						framedRows.add(block.v() + d);
+					}
+				}
+			}
+			for (final PlannedBlock block : plan.blocks()) {
+				if (columnRows.contains(block.v()) || block.v() >= plan.layout().platformLength()) {
+					continue;
+				}
+				assertFalse(block.role() == Role.RIB, text + ": a brace between columns " + block);
+				// (a stairwell, lift shaft or footbridge pier in the row has cross beams framed into it)
+				if (block.role() == Role.BEAM && block.y() == StationGeometry.CANOPY_Y - 1 && !framedRows.contains(block.v())) {
+					assertTrue(lines.contains(block.u()), text + ": a girder along the eaves " + block);
+				}
+			}
+		}
+	}
+
 	/** The y of the roof (roof, edge and lamp cells) at each u of one row v, or -1 where there is none. */
 	private static Map<Integer, Integer> roofRow(StationPlan plan, int v) {
 		final Map<Integer, Integer> row = new HashMap<>();
