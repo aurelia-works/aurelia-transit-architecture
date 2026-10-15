@@ -36,18 +36,24 @@ public enum BuildingStyle {
 	/** White walls and glass under one sweeping wave roof, after Hong Kong West Kowloon. */
 	HONG_KONG("white hall with a wave roof (after Hong Kong West Kowloon)", Facade.GLASS_MODERN),
 	/** Pale cladding and a glass band under a deep roof turned up at the edge, after Beijing South. */
-	BEIJING("glass hall with a deep roof (after Beijing South)", Facade.GLASS_MODERN);
+	BEIJING("glass hall with a deep roof (after Beijing South)", Facade.GLASS_MODERN),
+	/** Cream stucco round one great arched window with a clock, between colonnaded wings, after Bangkok's Hua Lamphong. */
+	BANGKOK("cream hall with a great arched window (after Bangkok Hua Lamphong)", Facade.ARCHED_GLASS),
+	/** White walls, arcades and rows of small domed kiosks and corner minarets, after Kuala Lumpur's old railway station. */
+	KUALA_LUMPUR("white hall with domed kiosks (after Kuala Lumpur's old station)", Facade.SCULPTED_ATTIC),
+	/** Sandstone with pale stone bands, a great central dome and corner turrets, after Mumbai's Chhatrapati Shivaji Terminus. */
+	MUMBAI("Gothic stone hall with a great dome (after Mumbai CSMT)", Facade.BRICK_TOWERS);
 
 	/**
 	 * The front of a city or grand terminus head building, one for each kind of real terminal in the photo study: red brick
 	 * with clock towers, masonry round giant arched windows, Beaux-Arts stone with a sculpted attic, or modern glass.
 	 */
 	public enum Facade {
-		/** Red brick with clock towers, gables or domed pavilions and a hipped roof (Amsterdam, St Pancras, Tokyo). */
+		/** Red brick or banded stone with clock towers, gables, domed pavilions or a great dome and a hipped roof (Amsterdam, St Pancras, Tokyo, Mumbai). */
 		BRICK_TOWERS,
-		/** Masonry round one, two or three giant arched windows (Hamburg, Antwerp, Zurich, Frankfurt). */
+		/** Masonry round one, two or three giant arched windows (Hamburg, Antwerp, Zurich, Frankfurt, Bangkok). */
 		ARCHED_GLASS,
-		/** Stone with tall round-headed windows, a flat roof and a raised attic with a clock and statues (Grand Central, Paris, Milan). */
+		/** Stone with tall round-headed windows, a flat roof and a raised attic with a clock and statues (Grand Central, Paris, Milan), or an arcade under domed kiosks (Kuala Lumpur). */
 		SCULPTED_ATTIC,
 		/** A glass curtain wall with a street canopy, a glass tower, a wave roof or a deep overhang (Utrecht, Munich, Berlin, Hong Kong, Beijing). */
 		GLASS_MODERN

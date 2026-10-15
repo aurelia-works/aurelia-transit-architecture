@@ -805,8 +805,8 @@ public final class StationPlanner {
 			}
 			return switch (spec.building()) {
 				case AMSTERDAM, ANTWERP, BEAUX_ARTS -> new String[]{"minecraft:oxidized_cut_copper_stairs", "minecraft:oxidized_cut_copper"};
-				case GOTHIC_BRICK, SANDSTONE, CLINKER, TOKYO, ZURICH -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
-				case NONE, MODERN, CONCRETE, PARIS, MILAN, BERLIN, HONG_KONG, BEIJING -> null;
+				case GOTHIC_BRICK, SANDSTONE, CLINKER, TOKYO, ZURICH, BANGKOK, MUMBAI -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
+				case NONE, MODERN, CONCRETE, PARIS, MILAN, BERLIN, HONG_KONG, BEIJING, KUALA_LUMPUR -> null;
 			};
 		}
 
@@ -821,6 +821,64 @@ public final class StationPlanner {
 		}
 
 		/** How a tower ends: a pyramid, a pyramid with a tall spire, a copper dome, or flat (a glass tower). */
+		/**
+		 * A great dome on a round drum standing on the roof at {@code top}, centred on ({@code cu}, {@code cv}): the drum
+		 * {@code drum} rows high with a window every other cell, a clock on its street side, then a hemisphere of radius
+		 * {@code r} as a shell, and a finial. Its inside is kept clear.
+		 */
+		private void greatDome(int cu, int top, int cv, int r, int drum) {
+			final StylePalette.Building b = palette.building();
+			for (int du = -r; du <= r; du++) {
+				for (int dv = -r; dv <= r; dv++) {
+					final double d = Math.hypot(du, dv);
+					if (d > r + 0.5) {
+						continue;
+					}
+					final boolean ring = d > r - 0.5;
+					final LocalDir front = Math.abs(du) >= Math.abs(dv) ? (du < 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U) : (dv < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V);
+					for (int y = top + 1; y <= top + drum; y++) {
+						if (!ring) {
+							keepClear(cu + du, y, cv + dv);
+						} else if (y == top + 1 || y == top + drum) {
+							put(Role.WALL, cu + du, y, cv + dv, front, b.trim());
+						} else {
+							put((du + dv) % 2 == 0 ? Role.WINDOW : Role.WALL, cu + du, y, cv + dv, front, (du + dv) % 2 == 0 ? b.window() : b.wall());
+						}
+					}
+				}
+			}
+			put(Role.FIXTURE, cu, top + drum, cv + r + 1, LocalDir.PLUS_V, ata("amsterdam_clock_face_panel"));
+			// the shell: at each height above the drum, the cells between the dome's radius there and one less
+			for (int k = 1; k <= r; k++) {
+				final double outer = Math.sqrt(Math.max(0, (r + 0.5) * (r + 0.5) - (k - 0.5) * (k - 0.5)));
+				for (int du = -r; du <= r; du++) {
+					for (int dv = -r; dv <= r; dv++) {
+						final double d = Math.hypot(du, dv);
+						if (d > outer) {
+							continue;
+						}
+						final double above = Math.sqrt(Math.max(0, (r + 0.5) * (r + 0.5) - (k + 0.5) * (k + 0.5)));
+						if (d > above - 1 || k == r) {
+							put(Role.BUILDING_ROOF, cu + du, top + drum + k, cv + dv, LocalDir.PLUS_V, domeBlock());
+						} else {
+							keepClear(cu + du, top + drum + k, cv + dv);
+						}
+					}
+				}
+			}
+			put(Role.BUILDING_ROOF, cu, top + drum + r + 1, cv, LocalDir.PLUS_V, ata("antwerp_gilded_ornament_trim"));
+			put(Role.BUILDING_ROOF, cu, top + drum + r + 2, cv, LocalDir.PLUS_V, "minecraft:lightning_rod");
+		}
+
+		/** Copper domes, except white ones in Kuala Lumpur and stone ones in Mumbai. */
+		private String domeBlock() {
+			return switch (spec.building()) {
+				case KUALA_LUMPUR -> "minecraft:calcite";
+				case MUMBAI -> "minecraft:cut_sandstone";
+				default -> DOME;
+			};
+		}
+
 		private enum Cap {
 			PYRAMID, SPIRE, DOME, FLAT
 		}
@@ -910,14 +968,14 @@ public final class StationPlanner {
 						for (int v = v0; v <= v1; v++) {
 							final boolean corner = (u == u0 || u == u1) && (v == v0 || v == v1);
 							if (!corner) {
-								put(Role.BUILDING_ROOF, u, crown + 1, v, LocalDir.PLUS_V, DOME);
+								put(Role.BUILDING_ROOF, u, crown + 1, v, LocalDir.PLUS_V, domeBlock());
 							}
 							if (u > u0 && u < u1 && v > v0 && v < v1) {
-								put(Role.BUILDING_ROOF, u, crown + 2, v, LocalDir.PLUS_V, DOME);
+								put(Role.BUILDING_ROOF, u, crown + 2, v, LocalDir.PLUS_V, domeBlock());
 							}
 						}
 					}
-					put(Role.BUILDING_ROOF, u0 + 2, crown + 3, vC, LocalDir.PLUS_V, DOME);
+					put(Role.BUILDING_ROOF, u0 + 2, crown + 3, vC, LocalDir.PLUS_V, domeBlock());
 					put(Role.BUILDING_ROOF, u0 + 2, crown + 4, vC, LocalDir.PLUS_V, "minecraft:lightning_rod");
 				}
 				case FLAT -> {
@@ -1302,7 +1360,20 @@ public final class StationPlanner {
 				case ARCHED_GLASS -> {
 					final int arches = look == BuildingStyle.SANDSTONE && width >= 40 ? 3 : look == BuildingStyle.CLINKER && width >= 28 ? 2 : 1;
 					if (arches == 1) {
-						giantArch(door, Math.min(top - 4, Math.max(2, width / 6)), top, vE, u0, u1);
+						// Bangkok's great window fills the middle third of the front
+						final int h = look == BuildingStyle.BANGKOK ? Math.min(top - 3, Math.max(3, width / 5)) : Math.min(top - 4, Math.max(2, width / 6));
+						giantArch(door, h, top, vE, u0, u1);
+						if (look == BuildingStyle.BANGKOK) {
+							// white columns: a pair at each side of the great window and one every six cells along the wings
+							columnPair(door - h - 1, -1, top, vE, u0, u1);
+							columnPair(door + h + 1, 1, top, vE, u0, u1);
+							for (int c = door - h - 7; c > u0 + 1; c -= 6) {
+								columnPair(c, -1, StationGeometry.BUILDING_ROOF_Y - 1, vE, u0, u1);
+							}
+							for (int c = door + h + 7; c < u1 - 1; c += 6) {
+								columnPair(c, 1, StationGeometry.BUILDING_ROOF_Y - 1, vE, u0, u1);
+							}
+						}
 					} else if (arches == 2) {
 						final int h = Math.min(top - 4, width / 8);
 						giantArch(u0 + width / 4, h, top, vE, u0, u1);
@@ -1315,7 +1386,17 @@ public final class StationPlanner {
 					}
 				}
 				case SCULPTED_ATTIC -> {
-					if (look == BuildingStyle.PARIS || width < 30) {
+					if (look == BuildingStyle.KUALA_LUMPUR) {
+						// an arcade of round arches along the ground floor, and one taller arch over the entrance
+						final int h = Math.min(top - 4, Math.max(2, width / 8));
+						giantArch(door, h, top, vE, u0, u1);
+						for (int c = door - h - 4; c - 2 > u0; c -= 5) {
+							giantArch(c, 2, StationGeometry.UPPER_FLOOR_Y - 1, vE, u0, u1);
+						}
+						for (int c = door + h + 4; c + 2 < u1; c += 5) {
+							giantArch(c, 2, StationGeometry.UPPER_FLOOR_Y - 1, vE, u0, u1);
+						}
+					} else if (look == BuildingStyle.PARIS || width < 30) {
 						// one great window over the entrance between pairs of columns
 						final int h = Math.min(top - 4, Math.max(2, width / 6));
 						giantArch(door, h, top, vE, u0, u1);
@@ -1363,6 +1444,7 @@ public final class StationPlanner {
 			final String frame = switch (spec.building()) {
 				case SANDSTONE -> ata("antwerp_ornate_limestone");
 				case CLINKER, ANTWERP, ZURICH -> ata("frankfurt_sandstone_rusticated");
+				case BANGKOK -> "minecraft:smooth_quartz";
 				default -> b.trim();
 			};
 			for (int u = cu - h; u <= cu + h; u++) {
@@ -1415,7 +1497,12 @@ public final class StationPlanner {
 			final int towerV = vE - 4;
 			switch (look.facade()) {
 				case BRICK_TOWERS -> {
-					if (look == BuildingStyle.TOKYO && width >= 20) {
+					if (look == BuildingStyle.MUMBAI && width >= 20) {
+						// a great stone dome on a drum over the entrance, and Gothic turrets at both ends of the front
+						greatDome(door, top, vE - 5, grand ? 5 : 4, grand ? 4 : 2);
+						tower(top, u0, towerV, 3, LocalDir.MINUS_V, Cap.SPIRE, false, false);
+						tower(top, u1 - 4, towerV, 3, LocalDir.MINUS_V, Cap.SPIRE, false, false);
+					} else if (look == BuildingStyle.TOKYO && width >= 20) {
 						// domed corner pavilions, and over the entrance a domed clock tower or a gable
 						tower(top, u0, towerV, 5, LocalDir.MINUS_V, Cap.DOME, false, false);
 						tower(top, u1 - 4, towerV, 5, LocalDir.MINUS_V, Cap.DOME, false, false);
@@ -1440,6 +1527,9 @@ public final class StationPlanner {
 				case ARCHED_GLASS -> {
 					if (look == BuildingStyle.ZURICH) {
 						attic(door, Math.max(3, Math.min(6, width / 8)), 2, top, vE, u0, u1, true);
+					} else if (look == BuildingStyle.BANGKOK) {
+						// a clock in a low pediment over the great window, no statues
+						attic(door, Math.max(3, Math.min(6, width / 8)), 2, top, vE, u0, u1, false);
 					} else if (grand && look == BuildingStyle.CLINKER) {
 						// the clock tower near one end of the front, a cell in so its side clock stays over the building
 						tower(top, u1 - 5, towerV, TOWER_HEIGHT + 2, LocalDir.MINUS_V, Cap.PYRAMID, true, false);
@@ -1452,7 +1542,19 @@ public final class StationPlanner {
 				}
 				case SCULPTED_ATTIC -> {
 					final int half = Math.max(3, Math.min(9, width / 6));
-					if (look == BuildingStyle.MILAN && grand) {
+					if (look == BuildingStyle.KUALA_LUMPUR) {
+						// a white domed tower over the entrance, minarets at the corners and small domed kiosks along the parapet
+						if (width >= 20) {
+							greatDome(door, top, vE - 4, 3, grand ? 4 : 2);
+							minaret(u0 + 1, vE - 1, top, grand ? 9 : 6);
+							minaret(u1 - 1, vE - 1, top, grand ? 9 : 6);
+						}
+						for (int u = u0 + 7; u <= u1 - 7; u += 5) {
+							if (Math.abs(u - door) > 4) {
+								chhatri(u, top + 1, vE - 1);
+							}
+						}
+					} else if (look == BuildingStyle.MILAN && grand) {
 						// a stepped centre: a wide attic and a taller narrow one on it
 						attic(door, half, 3, top, vE, u0, u1, false);
 						attic(door, Math.max(2, half / 2), 3, top + 4, vE, u0, u1, true);
@@ -1525,6 +1627,52 @@ public final class StationPlanner {
 					statue(u, capY + 1, vE - 1);
 				}
 			}
+		}
+
+		/**
+		 * A small domed kiosk (a chhatri) three cells across standing on the roof at {@code y}: four white posts, a slab, a
+		 * stepped dome and a finial, centred on cell ({@code cu}, {@code cv}).
+		 */
+		private void chhatri(int cu, int y, int cv) {
+			for (int du = -1; du <= 1; du++) {
+				for (int dv = -1; dv <= 1; dv++) {
+					final boolean corner = du != 0 && dv != 0;
+					if (corner) {
+						put(Role.WALL, cu + du, y, cv + dv, LocalDir.PLUS_V, "minecraft:quartz_pillar", "axis=y");
+						put(Role.WALL, cu + du, y + 1, cv + dv, LocalDir.PLUS_V, "minecraft:quartz_pillar", "axis=y");
+					}
+					put(Role.BUILDING_ROOF, cu + du, y + 2, cv + dv, LocalDir.PLUS_V, "minecraft:smooth_quartz_slab", "type=bottom");
+				}
+			}
+			put(Role.BUILDING_ROOF, cu, y + 2, cv, LocalDir.PLUS_V, "minecraft:smooth_quartz");
+			put(Role.BUILDING_ROOF, cu, y + 3, cv, LocalDir.PLUS_V, "minecraft:smooth_quartz");
+			put(Role.BUILDING_ROOF, cu, y + 4, cv, LocalDir.PLUS_V, "minecraft:end_rod", "facing=up");
+		}
+
+		/**
+		 * A slender minaret on the roof at {@code top}: a shaft three cells across with an open gallery, {@code height} high,
+		 * with a domed kiosk on top; centred on ({@code cu}, {@code cv}).
+		 */
+		private void minaret(int cu, int cv, int top, int height) {
+			final StylePalette.Building b = palette.building();
+			for (int y = top + 1; y <= top + height; y++) {
+				for (int du = -1; du <= 1; du++) {
+					for (int dv = -1; dv <= 1; dv++) {
+						if (du == 0 && dv == 0) {
+							keepClear(cu, y, cv);
+							continue;
+						}
+						final LocalDir front = Math.abs(du) >= Math.abs(dv) ? (du < 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U) : (dv < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V);
+						put(Role.WALL, cu + du, y, cv + dv, front, y % 3 == 0 ? b.trim() : b.wall());
+					}
+				}
+			}
+			for (int du = -1; du <= 1; du++) {
+				for (int dv = -1; dv <= 1; dv++) {
+					put(Role.BUILDING_ROOF, cu + du, top + height + 1, cv + dv, LocalDir.PLUS_V, b.cornice());
+				}
+			}
+			chhatri(cu, top + height + 2, cv);
 		}
 
 		/** A statue two cells high from {@code y}: a carved base and a pillar figure. */

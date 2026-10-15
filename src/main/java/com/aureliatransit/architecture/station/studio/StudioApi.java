@@ -148,6 +148,9 @@ public final class StudioApi {
 			case BERLIN -> StationRecipe.Look.BERLIN;
 			case HONG_KONG -> StationRecipe.Look.HONG_KONG;
 			case BEIJING -> StationRecipe.Look.BEIJING;
+			case BANGKOK -> StationRecipe.Look.BANGKOK;
+			case KUALA_LUMPUR -> StationRecipe.Look.KUALA_LUMPUR;
+			case MUMBAI -> StationRecipe.Look.MUMBAI;
 			case MODERN -> StationRecipe.Look.UTRECHT;
 			case NONE -> StationRecipe.Look.AUTO;
 		};

@@ -74,7 +74,11 @@ public final class StationDescriptionParser {
 			Map.entry("italy", StationStyle.MODERN), Map.entry("hong kong", StationStyle.MODERN), Map.entry("kowloon", StationStyle.MODERN),
 			Map.entry("hongkong", StationStyle.MODERN), Map.entry("hk", StationStyle.MODERN), Map.entry("beijing", StationStyle.MODERN),
 			Map.entry("peking", StationStyle.MODERN), Map.entry("china", StationStyle.MODERN), Map.entry("chinese", StationStyle.MODERN),
-			Map.entry("shanghai", StationStyle.MODERN));
+			Map.entry("shanghai", StationStyle.MODERN), Map.entry("bangkok", StationStyle.MODERN), Map.entry("thailand", StationStyle.MODERN),
+			Map.entry("thai", StationStyle.MODERN), Map.entry("krungthep", StationStyle.MODERN), Map.entry("kuala lumpur", StationStyle.MODERN),
+			Map.entry("malaysia", StationStyle.MODERN), Map.entry("malaysian", StationStyle.MODERN), Map.entry("kl", StationStyle.MODERN),
+			Map.entry("moorish", StationStyle.MODERN), Map.entry("mumbai", StationStyle.MODERN), Map.entry("bombay", StationStyle.MODERN),
+			Map.entry("india", StationStyle.MODERN), Map.entry("indian", StationStyle.MODERN));
 	private static final Set<String> UNDERGROUND_WORDS = Set.of("underground", "subway", "tunnel", "tube");
 	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct");
 	/** City words that pick a station building's look when a building is asked for (some also pick the platform style). */
@@ -100,10 +104,15 @@ public final class StationDescriptionParser {
 			Map.entry("milan", BuildingStyle.MILAN), Map.entry("milano", BuildingStyle.MILAN), Map.entry("italian", BuildingStyle.MILAN),
 			Map.entry("italy", BuildingStyle.MILAN), Map.entry("kowloon", BuildingStyle.HONG_KONG), Map.entry("hongkong", BuildingStyle.HONG_KONG),
 			Map.entry("hk", BuildingStyle.HONG_KONG), Map.entry("beijing", BuildingStyle.BEIJING), Map.entry("peking", BuildingStyle.BEIJING),
-			Map.entry("china", BuildingStyle.BEIJING), Map.entry("chinese", BuildingStyle.BEIJING), Map.entry("shanghai", BuildingStyle.BEIJING));
+			Map.entry("china", BuildingStyle.BEIJING), Map.entry("chinese", BuildingStyle.BEIJING), Map.entry("shanghai", BuildingStyle.BEIJING),
+			Map.entry("bangkok", BuildingStyle.BANGKOK), Map.entry("thailand", BuildingStyle.BANGKOK), Map.entry("thai", BuildingStyle.BANGKOK),
+			Map.entry("lamphong", BuildingStyle.BANGKOK), Map.entry("krungthep", BuildingStyle.BANGKOK), Map.entry("malaysia", BuildingStyle.KUALA_LUMPUR),
+			Map.entry("malaysian", BuildingStyle.KUALA_LUMPUR), Map.entry("kl", BuildingStyle.KUALA_LUMPUR), Map.entry("moorish", BuildingStyle.KUALA_LUMPUR),
+			Map.entry("mumbai", BuildingStyle.MUMBAI), Map.entry("bombay", BuildingStyle.MUMBAI), Map.entry("india", BuildingStyle.MUMBAI),
+			Map.entry("indian", BuildingStyle.MUMBAI), Map.entry("csmt", BuildingStyle.MUMBAI), Map.entry("shivaji", BuildingStyle.MUMBAI));
 	/** Famous stations: naming one asks for its building. */
 	private static final Set<String> LANDMARKS = Set.of("pancras", "antwerp", "antwerpen", "philadelphia", "washington", "chicago", "marunouchi",
-			"kowloon");
+			"kowloon", "lamphong", "csmt", "shivaji");
 	/** Words that ask for a station building with a furnished interior. */
 	private static final Set<String> BUILDING_WORDS = Set.of("building", "buildings", "concourse", "interior", "interiors", "interiorized",
 			"interiorised", "furnished", "ticket", "tickets", "entrance", "centraal", "central", "centrale", "hauptbahnhof", "hbf", "terminal",
@@ -815,6 +824,15 @@ public final class StationDescriptionParser {
 				return true;
 			}
 			if ((token.equals("st") || token.equals("saint")) && at(i + 1).equals("pancras")) {
+				use(i, i);
+				return true;
+			}
+			if (token.equals("kuala") && at(i + 1).equals("lumpur")) {
+				cityLook(i, "kuala lumpur", BuildingStyle.KUALA_LUMPUR);
+				use(i, i + 1);
+				return true;
+			}
+			if (token.equals("hua") && at(i + 1).equals("lamphong")) {
 				use(i, i);
 				return true;
 			}

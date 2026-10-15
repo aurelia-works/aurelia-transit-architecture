@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 class StationSweepTest {
 	static final String[] LOOKS = {"utrecht", "amsterdam", "st pancras", "antwerp", "frankfurt", "hamburg", "munich", "grand central", "tokyo", "zurich",
-			"paris", "milan", "berlin", "hong kong", "beijing", ""};
+			"paris", "milan", "berlin", "hong kong", "beijing", "bangkok", "kuala lumpur", "mumbai", ""};
 	static final String[] MODES = {"", "terminus", "hub"};
 	static final String[] LAYOUTS = {"side", "island", ""};
 	static final String[] ROOFS = {"", "canopies", "hall roof", "open", "flat canopy", "butterfly canopy", "gable canopy", "arched shed", "pointed shed", "train shed"};

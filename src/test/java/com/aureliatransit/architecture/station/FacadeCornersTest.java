@@ -17,7 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class FacadeCornersTest {
 
 	private static final String[] LOOKS = {"utrecht", "amsterdam", "st pancras", "antwerp", "frankfurt", "hamburg", "munich", "grand central",
-			"tokyo", "zurich", "paris", "milan", "berlin", "hong kong", "beijing"};
+			"tokyo", "zurich", "paris", "milan", "berlin", "hong kong", "beijing", "bangkok", "kuala lumpur", "mumbai"};
 	private static final String[] KINDS = {"station building", "city station building", "grand station building", "terminus", "city terminus",
 			"grand terminus", "hub"};
 

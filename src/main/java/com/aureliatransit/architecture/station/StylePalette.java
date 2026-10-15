@@ -121,6 +121,24 @@ public final class StylePalette {
 						ata("metro_steel_cladding"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
 						ata("grey_tinted_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
 						ata("metro_pale_concrete"));
+				// cream render with banded sandstone trim, white columns and arch, a grey stone plinth and polished floors
+				case BANGKOK -> new Building("minecraft:smooth_sandstone", "minecraft:sandstone", "minecraft:smooth_stone",
+						"minecraft:smooth_quartz", ata("clear_float_glass_pane"), ata("roma_polished_floor"), ata("roma_polished_floor"),
+						"minecraft:smooth_stone", ata("metro_recessed_light"), ata("station_stair"), ata("roma_polished_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
+						"minecraft:smooth_sandstone");
+				// white throughout, with quartz bands and carved cornices, and warm quarry-tile floors
+				case KUALA_LUMPUR -> new Building("minecraft:smooth_quartz", "minecraft:quartz_bricks", "minecraft:smooth_stone",
+						"minecraft:chiseled_quartz_block", ata("clear_float_glass_pane"), ata("metro_quarry_floor"), ata("metro_quarry_floor"),
+						"minecraft:smooth_quartz", ata("metro_recessed_light"), ata("station_stair"), ata("metro_quarry_floor"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
+						"minecraft:smooth_quartz");
+				// golden sandstone banded with pale limestone, a granite plinth, Gothic arched windows and marble inside
+				case MUMBAI -> new Building(ata("frankfurt_sandstone_ashlar"), ata("antwerp_ornate_limestone"), "minecraft:polished_granite",
+						ata("frankfurt_sandstone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"),
+						ata("antwerp_marble_floor_tile"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"), ata("station_stair"),
+						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
+						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
 			};
 		}
 	}
@@ -173,8 +191,9 @@ public final class StylePalette {
 		return switch (buildingStyle) {
 			case GOTHIC_BRICK -> "blue";
 			case ANTWERP, BEAUX_ARTS, AMSTERDAM, PARIS -> "green";
-			case SANDSTONE, CLINKER, CONCRETE, TOKYO, ZURICH, MILAN -> "steel";
-			case MODERN, BERLIN, HONG_KONG, BEIJING -> "white";
+			case SANDSTONE, CLINKER, CONCRETE, TOKYO, ZURICH, MILAN, BANGKOK -> "steel";
+			case MODERN, BERLIN, HONG_KONG, BEIJING, KUALA_LUMPUR -> "white";
+			case MUMBAI -> "green";
 			case NONE -> switch (style) {
 				case MODERN, DUTCH -> "white";
 				case GERMAN_SBAHN, METRO -> "steel";
@@ -189,9 +208,9 @@ public final class StylePalette {
 	public com.aureliatransit.architecture.live.DisplayStyle screenStyle() {
 		return switch (buildingStyle) {
 			case MODERN, AMSTERDAM, ANTWERP -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;
-			case GOTHIC_BRICK -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
+			case GOTHIC_BRICK, MUMBAI -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
 			case SANDSTONE, CONCRETE, BERLIN, CLINKER, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_DB;
-			case BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
+			case BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
 			case NONE -> switch (style) {
 				case MODERN, METRO -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
 				case DUTCH -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;

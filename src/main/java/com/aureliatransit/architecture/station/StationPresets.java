@@ -48,7 +48,13 @@ public final class StationPresets {
 			new Preset("hong_kong", BuildingStyle.HONG_KONG,
 					"eight track hong kong terminus, four island platforms, 200 long, named West Kowloon"),
 			new Preset("beijing", BuildingStyle.BEIJING,
-					"eight track beijing terminus, four island platforms, 200 long, named Beijing South"));
+					"eight track beijing terminus, four island platforms, 200 long, named Beijing South"),
+			new Preset("bangkok", BuildingStyle.BANGKOK,
+					"ten track bangkok terminus, five island platforms, 200 long, train shed, named Krung Thep"),
+			new Preset("kuala_lumpur", BuildingStyle.KUALA_LUMPUR,
+					"four track kuala lumpur station, two island platforms, 160 long, station building with footbridge, named Kuala Lumpur"),
+			new Preset("mumbai", BuildingStyle.MUMBAI,
+					"ten track mumbai terminus, five island platforms, 280 long, train shed, named Mumbai CSMT"));
 
 	private StationPresets() {
 	}

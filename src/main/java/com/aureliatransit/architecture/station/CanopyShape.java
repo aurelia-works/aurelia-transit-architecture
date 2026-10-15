@@ -13,7 +13,7 @@ public enum CanopyShape {
 	public static CanopyShape forLook(BuildingStyle building, StationStyle style) {
 		return switch (building) {
 			case BERLIN, CONCRETE, SANDSTONE, CLINKER -> BUTTERFLY;
-			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, PARIS, BEAUX_ARTS, TOKYO, ZURICH, MILAN -> GABLE;
+			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, PARIS, BEAUX_ARTS, TOKYO, ZURICH, MILAN, BANGKOK, KUALA_LUMPUR, MUMBAI -> GABLE;
 			case MODERN, HONG_KONG, BEIJING -> FLAT;
 			case NONE -> switch (style) {
 				case GERMAN_SBAHN -> BUTTERFLY;

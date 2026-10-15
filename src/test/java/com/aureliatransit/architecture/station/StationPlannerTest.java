@@ -1211,6 +1211,40 @@ class StationPlannerTest {
 				> head(plans.get("munich")).filter(b -> b.role() == Role.BUILDING_ROOF).mapToInt(PlannedBlock::y).max().orElse(0) + 3);
 	}
 
+	/**
+	 * The Asian heritage looks read as their stations: Bangkok's great arched window with white colonnades and a clock but no
+	 * statues, Kuala Lumpur's white domes, kiosks and ground-floor arcade, Mumbai's stone dome between two Gothic turrets.
+	 */
+	@Test
+	void asianHeritageFrontsFollowTheirStations() {
+		final Map<String, StationPlan> plans = new HashMap<>();
+		for (final String look : List.of("bangkok", "kuala lumpur", "mumbai")) {
+			for (final String size : List.of("city", "grand")) {
+				final ParseResult result = StationDescriptionParser.parse("eight track " + look + " terminus, four island platforms, 160 long, " + size + " building");
+				assertEquals(List.of(), result.warnings(), look);
+				final StationPlan plan = plan(result.spec());
+				assertEquals(List.of(), LayoutValidator.validate(plan), look + " " + size);
+				assertTrue(StationAudit.audit(plan).buildable(), look + " " + size + " " + StationAudit.audit(plan).problems());
+				plans.put(look + " " + size, plan);
+			}
+		}
+		final StationPlan bangkok = plans.get("bangkok grand");
+		assertEquals(1, archRuns(bangkok));
+		assertTrue(count(bangkok, "minecraft:quartz_pillar") > 20, "colonnades");
+		assertEquals(0, count(bangkok, "minecraft:chiseled_quartz_block"), "no statues");
+		assertTrue(head(bangkok).anyMatch(b -> b.blockId().endsWith("clock_face_panel")));
+		final StationPlan kl = plans.get("kuala lumpur grand");
+		assertTrue(count(kl, "minecraft:end_rod") >= 4, "domed kiosks on the minarets and along the parapet");
+		assertEquals(1, count(kl, "minecraft:lightning_rod"), "one great dome");
+		assertTrue(count(kl, "minecraft:calcite") > 20, "a white dome");
+		assertTrue(top(kl, "minecraft:end_rod") > top(kl, "minecraft:calcite"), "the minarets rise above the dome");
+		assertTrue(head(kl).anyMatch(b -> b.role() == Role.WINDOW && b.y() < StationGeometry.UPPER_FLOOR_Y && b.v() == kl.layout().headEnd()), "arcade");
+		final StationPlan mumbai = plans.get("mumbai grand");
+		assertEquals(3, count(mumbai, "minecraft:lightning_rod"), "a dome and two turrets");
+		assertTrue(count(mumbai, "minecraft:cut_sandstone") > 10, "the stone dome");
+		assertTrue(top(mumbai, "minecraft:cut_sandstone") > top(plans.get("mumbai city"), "minecraft:cut_sandstone"), "taller at grand size");
+	}
+
 	/** The head building's blocks: from the platform ends on. */
 	private static java.util.stream.Stream<PlannedBlock> head(StationPlan plan) {
 		return plan.blocks().stream().filter(b -> b.v() >= plan.layout().platformLength());

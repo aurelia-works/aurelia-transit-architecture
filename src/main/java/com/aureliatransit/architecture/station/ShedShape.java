@@ -14,8 +14,8 @@ public enum ShedShape {
 	/** The shed that suits a building look (or, without a building, a platform style). */
 	public static ShedShape forLook(BuildingStyle building, StationStyle style) {
 		return switch (building) {
-			case CLINKER, AMSTERDAM, ANTWERP, ZURICH, PARIS, BERLIN -> ARCH;
-			case GOTHIC_BRICK -> POINTED;
+			case CLINKER, AMSTERDAM, ANTWERP, ZURICH, PARIS, BERLIN, BANGKOK, KUALA_LUMPUR -> ARCH;
+			case GOTHIC_BRICK, MUMBAI -> POINTED;
 			case SANDSTONE, MILAN -> MULTI_ARCH;
 			case MODERN, CONCRETE, BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING -> FLAT;
 			case NONE -> style == StationStyle.GERMAN_SBAHN ? ARCH : FLAT;
