@@ -155,16 +155,17 @@ def noise_barrier(kind):
 
 
 def fare_gate(kind, open_=False):
-    """Closed paddles reach into the passage; open ones are folded into the cabinet (not drawn)."""
+    """A cabinet with a glass paddle that reaches into the passage while shut and is not drawn while open. The cabinet is
+    a full block tall (24 px collision), so a fare gate cannot be jumped. An end cabinet is a solid panel across the cell."""
     t = {"particle": "steel", "body": "steel", "top": "gate_top", "go": "gate_indicator_go", "stop": "gate_indicator_stop", "glass": "glass_clear"}
-    faces = {"up": "#top"}
-    if kind != "end":
-        faces |= {"north": ("#go", [0, 0, 4, 14]), "south": ("#stop", [0, 0, 4, 14])}
-    els = [g.el([0, 0, 1], [4, 14, 15], "#body", faces=faces)]
+    if kind == "end":
+        return g.model(t, [g.el([0, 0, 4], [16, 16, 12], "#body", faces={"up": "#top"})])
+    faces = {"up": "#top", "north": ("#go", [0, 0, 4, 16]), "south": ("#stop", [0, 0, 4, 16])}
+    els = [g.el([0, 0, 1], [4, 16, 15], "#body", faces=faces)]
     if kind == "gate" and not open_:
-        els.append(g.el([4, 5, 7], [9, 12, 9], "#glass", faces={"west": None}))
+        els.append(g.el([4, 3, 7], [9, 16, 9], "#glass", faces={"west": None}))
     elif kind == "wide" and not open_:
-        els.append(g.el([4, 5, 7], [13, 12, 9], "#glass", faces={"west": None}))
+        els.append(g.el([4, 3, 7], [13, 16, 9], "#glass", faces={"west": None}))
     return g.model(t, els)
 
 
@@ -258,6 +259,7 @@ def lang():
         CARD + "loaded": "Loaded $%s for %s emeralds. Balance: $%s",
         CARD + "not_enough": "You need %s emeralds but carry %s.",
         CARD + "unavailable": "Fares are unavailable with this MTR version",
+        f"message.{MOD}.maximum_fare": "Incomplete journey: maximum fare $%s",
         CARD + "need_card": "Carry a transit card (/card)",
         CARD + "welcome": "Welcome! You have a transit card; see /card",
         TIP + "lift_status": "Shows lift levels and status; right-click to edit",

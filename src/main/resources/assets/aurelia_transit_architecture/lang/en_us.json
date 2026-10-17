@@ -239,6 +239,7 @@
   "message.aurelia_transit_architecture.hand.left": "Left-hand piece",
   "message.aurelia_transit_architecture.hand.right": "Right-hand piece",
   "message.aurelia_transit_architecture.help_point": "Help point: ask staff or find an information desk",
+  "message.aurelia_transit_architecture.maximum_fare": "Incomplete journey: maximum fare $%s",
   "message.aurelia_transit_architecture.style.card_reader.post": "Post",
   "message.aurelia_transit_architecture.style.card_reader.wall": "Wall",
   "message.aurelia_transit_architecture.style.cctv_camera.dome": "Dome",

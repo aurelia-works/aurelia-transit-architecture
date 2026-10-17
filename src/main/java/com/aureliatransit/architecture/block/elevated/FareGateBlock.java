@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.block.elevated;
 
+import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.FareGateKind;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.FareGateOpen;
@@ -13,6 +14,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -22,7 +25,9 @@ import net.minecraft.util.shape.VoxelShapes;
 import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 import static net.minecraft.block.Block.createCuboidShape;
 
@@ -53,6 +58,26 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 	private static final Map<Direction, VoxelShape> PROP = Shapes.horizontalMap(createCuboidShape(0, 0, 1, 4, 14, 15));
 	/** An end cabinet closes the bank: a solid panel across the whole cell, so nobody walks through the end of a gate line. */
 	private static final Map<Direction, VoxelShape> END_PANEL = Shapes.horizontalMap(createCuboidShape(0, 0, 4, 16, 24, 12));
+	/** How long an open gate remembers the passenger it opened for. */
+	private static final long PAYER_WINDOW_TICKS = 60;
+	private static final int MAX_TRACKED_GATES = 512;
+
+	/** The passenger a gate last opened for, so anyone else slipping through the open paddles is charged the maximum fare. */
+	private record Payer(UUID id, long until) {
+	}
+
+	private static final Map<Long, Payer> PAYER = new HashMap<>();
+
+	private static void rememberPayer(BlockPos pos, PlayerEntity player, long now) {
+		if (PAYER.size() >= MAX_TRACKED_GATES) {
+			PAYER.clear();
+		}
+		PAYER.put(pos.asLong(), new Payer(player.getUuid(), now + PAYER_WINDOW_TICKS));
+	}
+
+	private static void forgetPayer(BlockPos pos) {
+		PAYER.remove(pos.asLong());
+	}
 
 	public FareGateBlock(Settings settings) {
 		super(settings, "fare_gate", Placement.TOWARD_PLAYER, FareGateKind.class, kind -> switch (kind) {
@@ -95,9 +120,21 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 		final Direction facing = state.get(FACING);
 		final double off = Math.abs((player.getX() - pos.getX() - 0.5) * facing.getOffsetX() + (player.getZ() - pos.getZ() - 0.5) * facing.getOffsetZ());
 		final FareGateOpen open = state.get(OPEN);
+		if (open == FareGateOpen.OPEN) {
+			// someone else slipping through while the paddles stand open for their payer: an incomplete journey
+			final Payer payer = PAYER.get(pos.asLong());
+			if (payer != null && world.getTime() <= payer.until() && !payer.id().equals(player.getUuid())) {
+				PAYER.remove(pos.asLong());
+				final int charged = MtrFareContract.chargeMaximumFare(world, player);
+				if (charged > 0) {
+					player.sendMessage(Text.translatable("message." + AureliaTransitArchitecture.MOD_ID + ".maximum_fare", charged).formatted(Formatting.RED), true);
+				}
+			}
+		}
 		if (open == FareGateOpen.OPEN && off > CLEAR_OF_PADDLES) {
 			// through (or backed out): the paddles shut behind the player
 			world.setBlockState(pos, state.with(OPEN, FareGateOpen.CLOSED));
+			forgetPayer(pos);
 		} else if (open == FareGateOpen.CLOSED && off < AT_PADDLES) {
 			// The pos handed to onEntityCollision is a mutable cursor that the caller moves on to other blocks; MTR answers
 			// later, so its callback must hold a copy.
@@ -110,6 +147,7 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 				final BlockState now = world.getBlockState(gatePos);
 				if (opened && now.isOf(this)) {
 					world.setBlockState(gatePos, now.with(OPEN, FareGateOpen.OPEN));
+					rememberPayer(gatePos, player, world.getTime());
 				}
 			});
 		}
@@ -124,6 +162,7 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 			world.scheduleBlockTick(pos, this, CLOSE_DELAY_TICKS);
 		} else {
 			world.setBlockState(pos, state.with(OPEN, FareGateOpen.CLOSED));
+			forgetPayer(pos);
 		}
 	}
 }
