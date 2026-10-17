@@ -135,7 +135,8 @@ public final class StationDescriptionParser {
 	private static final Map<String, ShedShape> SHED_WORDS = Map.ofEntries(Map.entry("arch", ShedShape.ARCH), Map.entry("arched", ShedShape.ARCH),
 			Map.entry("barrel", ShedShape.ARCH), Map.entry("vault", ShedShape.ARCH), Map.entry("vaulted", ShedShape.ARCH), Map.entry("curved", ShedShape.ARCH),
 			Map.entry("pointed", ShedShape.POINTED), Map.entry("arches", ShedShape.MULTI_ARCH), Map.entry("vaults", ShedShape.MULTI_ARCH),
-			Map.entry("multispan", ShedShape.MULTI_ARCH));
+			Map.entry("multispan", ShedShape.MULTI_ARCH), Map.entry("ridge", ShedShape.GABLED),
+			Map.entry("furrow", ShedShape.GABLED));
 	/** Canopy shapes; each also asks for platform canopies (unless a roof was given). */
 	private static final Map<String, CanopyShape> CANOPY_SHAPE_WORDS = Map.ofEntries(Map.entry("butterfly", CanopyShape.BUTTERFLY), Map.entry("gable", CanopyShape.GABLE),
 			Map.entry("gabled", CanopyShape.GABLE), Map.entry("pitched", CanopyShape.GABLE), Map.entry("heritage", CanopyShape.GABLE));
@@ -856,12 +857,7 @@ public final class StationDescriptionParser {
 			if (shape != null) {
 				if (shed == null) {
 					shed = shape;
-					note(i, switch (shape) {
-						case ARCH -> "arched train shed";
-						case POINTED -> "pointed-arch train shed";
-						case MULTI_ARCH -> "train shed of several arches";
-						case FLAT -> "flat train shed";
-					});
+					note(i, shape.label());
 				}
 				if (roof == null) {
 					roof = RoofType.HALL;
@@ -964,11 +960,7 @@ public final class StationDescriptionParser {
 				}
 				if (shed == null) {
 					shed = ShedShape.forLook(shedLook.building(), shedLook.style() == null ? StationStyle.MODERN : shedLook.style());
-					note(shedLook.at(), switch (shed) {
-						case POINTED -> "pointed-arch train shed";
-						case MULTI_ARCH -> "train shed of several arches";
-						default -> "arched glass train shed";
-					});
+					note(shedLook.at(), shed == ShedShape.ARCH ? "arched glass train shed" : shed.label());
 				}
 			}
 			if (looks.size() > 1 || mixing) {

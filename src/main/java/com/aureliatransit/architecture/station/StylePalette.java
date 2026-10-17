@@ -133,9 +133,9 @@ public final class StylePalette {
 						"minecraft:smooth_quartz", ata("metro_recessed_light"), ata("station_stair"), ata("metro_quarry_floor"),
 						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
 						"minecraft:smooth_quartz");
-				// golden sandstone banded with pale limestone, a granite plinth, Gothic arched windows and marble inside
-				case MUMBAI -> new Building(ata("frankfurt_sandstone_ashlar"), ata("antwerp_ornate_limestone"), "minecraft:polished_granite",
-						ata("frankfurt_sandstone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"),
+				// golden sandstone banded with pale limestone on a dark basalt plinth, plain glazing in the pointed arches, marble inside
+				case MUMBAI -> new Building(ata("frankfurt_sandstone_ashlar"), ata("antwerp_ornate_limestone"), "minecraft:polished_andesite",
+						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"),
 						ata("antwerp_marble_floor_tile"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"), ata("station_stair"),
 						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
 						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));

@@ -1181,11 +1181,12 @@ class StationPlannerTest {
 			assertTrue(StationAudit.audit(plan).buildable(), look + " " + StationAudit.audit(plan).problems());
 			plans.put(look, plan);
 		}
-		// brick: two towers for Amsterdam, a spire higher than any pyramid for St Pancras, three copper domes for Tokyo
+		// brick: two towers for Amsterdam, a spire higher than any pyramid for St Pancras, three dark slate domes (not copper)
+		// for Tokyo
 		assertEquals(2, count(plans.get("amsterdam"), "minecraft:lightning_rod"));
 		assertTrue(top(plans.get("st pancras"), "minecraft:lightning_rod") > top(plans.get("amsterdam"), "minecraft:lightning_rod") + 2);
 		assertEquals(3, count(plans.get("tokyo"), "minecraft:lightning_rod"));
-		assertTrue(count(plans.get("tokyo"), "minecraft:oxidized_cut_copper") > 30);
+		assertEquals(0, count(plans.get("tokyo"), "minecraft:oxidized_cut_copper"));
 		// arches: one, one, two and three runs of arch glass across the front at head height
 		assertEquals(1, archRuns(plans.get("zurich")));
 		assertEquals(1, archRuns(plans.get("antwerp")));
@@ -1212,8 +1213,10 @@ class StationPlannerTest {
 	}
 
 	/**
-	 * The Asian heritage looks read as their stations: Bangkok's great arched window with white colonnades and a clock but no
-	 * statues, Kuala Lumpur's white domes, kiosks and ground-floor arcade, Mumbai's stone dome between two Gothic turrets.
+	 * The Asian heritage looks read as their stations: Bangkok's great segmental window rising over the roof with a white
+	 * colonnade and a clock but no statues; Kuala Lumpur's flat-topped centre, corner pavilions high over the parapet, kiosks,
+	 * pinnacles and ground-floor arcade; Mumbai's onion-domed clock tower between spired Gothic towers, its red tile roof and
+	 * its banded pointed arches.
 	 */
 	@Test
 	void asianHeritageFrontsFollowTheirStations() {
@@ -1228,21 +1231,26 @@ class StationPlannerTest {
 				plans.put(look + " " + size, plan);
 			}
 		}
+		final int grandRoof = StationGeometry.BUILDING_ROOF_Y + 4 * StationScale.GRAND.extraStoreys();
 		final StationPlan bangkok = plans.get("bangkok grand");
-		assertEquals(1, archRuns(bangkok));
-		assertTrue(count(bangkok, "minecraft:quartz_pillar") > 20, "colonnades");
+		final int bangkokFront = bangkok.layout().headEnd();
+		assertTrue(head(bangkok).filter(b -> b.v() == bangkokFront && b.y() > grandRoof && b.blockId().endsWith(":clear_float_glass")).count() > 20,
+				"the great window rises over the roof");
+		assertTrue(count(bangkok, "minecraft:quartz_pillar") > 20, "colonnade");
 		assertEquals(0, count(bangkok, "minecraft:chiseled_quartz_block"), "no statues");
 		assertTrue(head(bangkok).anyMatch(b -> b.blockId().endsWith("clock_face_panel")));
 		final StationPlan kl = plans.get("kuala lumpur grand");
-		assertTrue(count(kl, "minecraft:end_rod") >= 4, "domed kiosks on the minarets and along the parapet");
-		assertEquals(1, count(kl, "minecraft:lightning_rod"), "one great dome");
-		assertTrue(count(kl, "minecraft:calcite") > 20, "a white dome");
-		assertTrue(top(kl, "minecraft:end_rod") > top(kl, "minecraft:calcite"), "the minarets rise above the dome");
+		assertTrue(count(kl, "minecraft:end_rod") >= 4, "pinnacles and kiosks along the parapet");
+		assertEquals(2, count(kl, "minecraft:lightning_rod"), "a dome on each corner pavilion, none over the centre");
+		assertTrue(count(kl, "minecraft:calcite") > 20, "white domes");
+		assertTrue(top(kl, "minecraft:calcite") > grandRoof + 12, "the corner pavilions rise high over the parapet");
 		assertTrue(head(kl).anyMatch(b -> b.role() == Role.WINDOW && b.y() < StationGeometry.UPPER_FLOOR_Y && b.v() == kl.layout().headEnd()), "arcade");
 		final StationPlan mumbai = plans.get("mumbai grand");
-		assertEquals(3, count(mumbai, "minecraft:lightning_rod"), "a dome and two turrets");
+		assertTrue(count(mumbai, "minecraft:lightning_rod") >= 3, "an onion dome over the clock tower and two spired towers");
 		assertTrue(count(mumbai, "minecraft:cut_sandstone") > 10, "the stone dome");
 		assertTrue(top(mumbai, "minecraft:cut_sandstone") > top(plans.get("mumbai city"), "minecraft:cut_sandstone"), "taller at grand size");
+		assertTrue(count(mumbai, "minecraft:brick_stairs") > 20, "a red tile roof");
+		assertTrue(count(mumbai, "minecraft:smooth_red_sandstone") > 5, "banded pointed arches");
 	}
 
 	/**

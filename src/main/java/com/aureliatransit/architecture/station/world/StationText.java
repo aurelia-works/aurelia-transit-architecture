@@ -56,12 +56,7 @@ final class StationText {
 		final String roof = switch (spec.roof()) {
 			case NONE -> "no roof";
 			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "canopies" : spec.canopy().label() + " canopies";
-			case HALL -> switch (spec.shed()) {
-				case FLAT -> "flat train shed";
-				case ARCH -> "arched train shed";
-				case POINTED -> "pointed-arch train shed";
-				case MULTI_ARCH -> "train shed of several arches";
-			};
+			case HALL -> spec.shed().label();
 		};
 		return spec.trackCount() + (spec.trackCount() == 1 ? " track, " : " tracks, ") + lower(spec.platformLayout().name()) + " platforms, "
 				+ spec.platformLength() + " long, " + roof + (spec.hasBuilding() ? ", " + spec.building().label() : "")
