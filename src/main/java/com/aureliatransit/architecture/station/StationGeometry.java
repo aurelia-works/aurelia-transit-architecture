@@ -105,41 +105,16 @@ public final class StationGeometry {
 	}
 
 	/**
-	 * Clear width a footbridge corridor of this spec is built at: its {@link StationScale} width, narrowed (still odd,
-	 * still centred) when a platform it serves has too little run for its stair landing and lift.
+	 * Clear width a footbridge corridor of this spec is built at. Every scale builds {@link #BRIDGE_WIDTH} today; the
+	 * accessor is kept so a wider corridor can be introduced in one place.
 	 */
 	public static int bridgeWidth(StationSpec spec, TrackLayout layout) {
-		int width = bridgeWidth(spec.buildingScale());
-		while (width > BRIDGE_WIDTH && !bridgeFits(layout, width)) {
-			width -= 2;
-		}
-		return width;
+		return bridgeWidth(spec.buildingScale());
 	}
 
 	/** The corridor's long walls stand this many rows from its centre line: the clear half-width plus the wall itself. */
 	public static int bridgeWallOffset(int width) {
 		return width / 2 + 1;
-	}
-
-	/**
-	 * True when every platform the footbridge serves has room on its run for a stair landing and a lift on either side of
-	 * the bridge line at this corridor width. Every served platform reserves {@link #BRIDGE_REACH} rows around that line, so
-	 * a width whose stairs and lift reach no further always fits.
-	 */
-	private static boolean bridgeFits(TrackLayout layout, int width) {
-		final int length = layout.platformLength();
-		final int line = StationLayout.entranceV(layout.buildingWidth() > 0, length);
-		// the stair's landing (a step per storey) and the lift's back wall reach this far past the corridor wall
-		final int reach = bridgeWallOffset(width) + STAIR_STEPS + 1;
-		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			if (layout.buildingWidth() > 0 && band.uMin() == layout.buildingWidth()) {
-				continue;
-			}
-			if (!band.runs(Math.max(0, line - reach)) || !band.runs(Math.min(length - 1, line + reach))) {
-				return false;
-			}
-		}
-		return true;
 	}
 
 	/** The cross-section and length for a spec. */

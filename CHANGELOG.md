@@ -2,6 +2,12 @@
 
 ## 1.6.0
 
+### Passenger experience
+
+- **Fare gates stand a full block and seal their ends:** the cabinet and paddle are a block tall (with a 1.5-block collision, like a fence, so they cannot be jumped) and an end cabinet is a solid panel, so no end of a bank is a hole to walk through. Slipping through an open gate behind the passenger it opened for is charged a modest maximum fare, through MTR's own balance.
+- **Announcements always speak:** a station or route name with no recorded clip no longer silences the whole sentence; the voice says every part it has a clip for and the full sentence is shown as a subtitle.
+- **Station Studio walk mode has sound:** it speaks a departure announcement and plays short cues when a fare gate opens and when a lift arrives.
+
 ### Station generator
 
 - **Describe a station and it is built:** plain English in, ATA blocks out. 1 to 10 tracks (up to 20 with platforms one by one), 16 to 300 blocks long, side or island platforms, roofs, ramps, name signs, rail nodes at the platform ends. `/ata_station plan` shows an outline, `/ata_station confirm` builds it; cancel and undo work at any point. Fully offline, operators only. Terrain is only changed after you approve it, and existing MTR rail nodes are never touched. See docs/STATION_GENERATOR.md.

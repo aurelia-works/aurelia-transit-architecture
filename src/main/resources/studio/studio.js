@@ -1335,6 +1335,17 @@
 		if (!walk || !walk.world) {
 			return;
 		}
+		// nothing to do between a gate opening and shutting: skip the per-frame matrix work entirely
+		let animating = false;
+		for (const g of walk.world.gates) {
+			if (g.paddle && g.slide !== (g.open ? 1 : 0)) {
+				animating = true;
+				break;
+			}
+		}
+		if (!animating) {
+			return;
+		}
 		const dirty = new Set();
 		for (const g of walk.world.gates) {
 			if (!g.paddle) {
