@@ -80,10 +80,6 @@ public final class StationSessions {
 		return PREVIEWS.get(player);
 	}
 
-	public static void stopPreview(UUID player) {
-		PREVIEWS.remove(player);
-	}
-
 	/** A player left: their pending plan and preview go, a running job keeps going. */
 	public static void forgetPlayer(UUID player) {
 		discard(player);

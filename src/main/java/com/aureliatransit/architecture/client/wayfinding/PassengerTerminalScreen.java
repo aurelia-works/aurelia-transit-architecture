@@ -262,8 +262,8 @@ public class PassengerTerminalScreen extends Screen {
 		context.drawText(textRenderer, clock, left + panelW - 8 - textRenderer.getWidth(clock), top + 7, ACCENT, false);
 
 		switch (page) {
-			case HOME -> drawHome(context, name);
-			case DEPARTURES -> drawDepartures(context, contentY, name);
+			case HOME -> drawHome(context);
+			case DEPARTURES -> drawDepartures(context, contentY);
 			case MAP -> drawMap(context);
 			default -> {
 				for (int i = 0; i < textRows.size(); i++) {
@@ -278,11 +278,11 @@ public class PassengerTerminalScreen extends Screen {
 		super.render(context, mouseX, mouseY, delta);
 	}
 
-	private void drawHome(DrawContext context, String name) {
+	private void drawHome(DrawContext context) {
 		int y = contentY;
 		context.drawText(textRenderer, Text.translatable(KEY + "term_next"), contentX, y, DIM, false);
 		y += 12;
-		drawDepartures(context, y, name);
+		drawDepartures(context, y);
 		if (!homeMessages.isEmpty()) {
 			// the current notice follows the wall clock; the list itself only changes when the server syncs it
 			final int index = MessageRotation.index(System.currentTimeMillis(), homeSlots);
@@ -315,7 +315,7 @@ public class PassengerTerminalScreen extends Screen {
 		}
 	}
 
-	private void drawDepartures(DrawContext context, int startY, String name) {
+	private void drawDepartures(DrawContext context, int startY) {
 		if (departureRows.isEmpty()) {
 			final String empty = snapshot.station() == null ? Tr.t(TerminalText.NO_STATION_KEY) : Tr.t("term_no_departures");
 			context.drawText(textRenderer, empty, contentX, startY + 2, DIM, false);

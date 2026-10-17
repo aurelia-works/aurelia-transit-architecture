@@ -96,7 +96,6 @@ public final class StationBuildJob {
 	private int restored;
 	private int skipped;
 	private int keptNodes;
-	private String stopReason = "";
 
 	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out,
 							StationZone zone) {
@@ -211,10 +210,6 @@ public final class StationBuildJob {
 	/** Undo only: rail nodes left in place because the player connected them in MTR after the build. */
 	public int keptNodes() {
 		return keptNodes;
-	}
-
-	public String stopReason() {
-		return stopReason;
 	}
 
 	public UndoLog undoLog() {
@@ -360,7 +355,6 @@ public final class StationBuildJob {
 	private void stop(String reason, boolean undoHint) {
 		state = State.STOPPED;
 		paused = false;
-		stopReason = reason;
 		final String tail = mode == Mode.BUILD
 				? done + " of " + total + " ops done." + (undoHint && !log.isEmpty() ? " /ata_station undo reverts them." : "")
 				: restored + " restored, " + skipped + " skipped, " + (total - done) + " left; /ata_station undo continues.";
@@ -547,11 +541,6 @@ public final class StationBuildJob {
 		}
 	}
 
-	/**
-	 * True when a cell still holds the block the build wrote. Join states (sign rows) change as neighbours come and go, so the
-	 * block counts, not the exact state; but a rail node the player connected in MTR ({@code is_connected} set) stays, because
-	 * removing it with setBlockState would orphan MTR's rail data.
-	 */
 	/** A rail node the build placed unconnected that MTR has connected since. */
 	static boolean connectedNode(BlockState current, BlockState placed) {
 		if (current.getBlock() != placed.getBlock()) {
@@ -561,12 +550,13 @@ public final class StationBuildJob {
 		return connected != null && !current.get(connected).equals(placed.get(connected));
 	}
 
+	/**
+	 * True when a cell still holds the block the build wrote. Join states (sign rows) change as neighbours come and go, so the
+	 * block counts, not the exact state; but a rail node the player connected in MTR ({@code is_connected} set) stays, because
+	 * removing it with setBlockState would orphan MTR's rail data.
+	 */
 	static boolean stillPlaced(BlockState current, BlockState placed) {
-		if (current.getBlock() != placed.getBlock()) {
-			return false;
-		}
-		final Property<?> connected = current.getBlock().getStateManager().getProperty("is_connected");
-		return connected == null || current.get(connected).equals(placed.get(connected));
+		return current.getBlock() == placed.getBlock() && !connectedNode(current, placed);
 	}
 
 	private void say(Formatting colour, String message) {

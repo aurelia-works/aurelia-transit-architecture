@@ -233,16 +233,6 @@ public final class StationGeometry {
 		};
 	}
 
-	/** Some platform has a canopy. */
-	public static boolean anyCanopy(StationSpec spec) {
-		for (int i = 1; i <= platformCount(spec); i++) {
-			if (roof(spec, i) == RoofType.CANOPY) {
-				return true;
-			}
-		}
-		return false;
-	}
-
 	/** How many platforms the station has. */
 	public static int platformCount(StationSpec spec) {
 		return spec.listed() ? spec.platforms().size() : (int) bandPattern(spec).chars().filter(c -> c == 'P').count();

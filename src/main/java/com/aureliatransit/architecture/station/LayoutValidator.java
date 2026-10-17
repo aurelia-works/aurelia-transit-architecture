@@ -432,10 +432,6 @@ public final class LayoutValidator {
 			return true;
 		}
 
-		private static long key(int u, int v) {
-			return ((long) u << 32) ^ (v & 0xFFFFFFFFL);
-		}
-
 		List<Violation> roofSpans() {
 			// Beam lines: BEAM cells with the same y and v, as u -> block, in u order.
 			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();

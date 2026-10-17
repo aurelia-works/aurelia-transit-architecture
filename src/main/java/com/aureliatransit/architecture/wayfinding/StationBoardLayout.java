@@ -27,8 +27,6 @@ public final class StationBoardLayout {
 	private static final int HEADER_FILL = 0xFF2B6CB0;
 	private static final int HEADER_TEXT = 0xFFFFFFFF;
 	private static final int DIM = 0xFF9AA5AE;
-	private static final int ROW_BAND = 0xFF20252B;
-
 	private StationBoardLayout() {
 	}
 

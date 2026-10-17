@@ -10,7 +10,6 @@ import com.aureliatransit.architecture.terminal.StationInfoBuilder;
 import com.aureliatransit.architecture.terminal.SystemMap;
 import com.aureliatransit.architecture.terminal.SystemMapBuilder;
 import com.aureliatransit.architecture.terminal.TerminalSource;
-import com.aureliatransit.architecture.transit.StationAssociation;
 import com.aureliatransit.architecture.transit.StationData;
 import com.aureliatransit.architecture.transit.StationNames;
 import com.aureliatransit.architecture.transit.StationSnapshot;

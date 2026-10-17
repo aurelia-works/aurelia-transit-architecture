@@ -31,10 +31,6 @@ public record SpeakerConfig(StationAssociation association, int radius, int volu
 		categories &= AnnouncementCategory.ALL_MASK;
 	}
 
-	public SpeakerConfig withCategoryToggled(AnnouncementCategory category) {
-		return new SpeakerConfig(association, radius, volume, categories ^ category.bit(), style);
-	}
-
 	public void writeNbt(NbtCompound nbt) {
 		association.writeNbt(nbt, "Association");
 		nbt.putInt("Radius", radius);

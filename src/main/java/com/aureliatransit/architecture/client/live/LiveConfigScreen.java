@@ -38,7 +38,6 @@ abstract class LiveConfigScreen extends Screen {
 	private int pageCount = 1;
 	private boolean platformsHint;
 	private final List<ClickableWidget> listWidgets = new ArrayList<>();
-	private ButtonWidget modeButton;
 	private TextFieldWidget filterField;
 	private int rightX;
 	private int listY;
@@ -78,7 +77,7 @@ abstract class LiveConfigScreen extends Screen {
 	protected void buildAssociationWidgets() {
 		rightX = width / 2 + 6;
 		final int y = topY();
-		modeButton = add(ButtonWidget.builder(modeText(), button -> {
+		add(ButtonWidget.builder(modeText(), button -> {
 			mode = mode == StationAssociationMode.AUTO ? StationAssociationMode.MANUAL : StationAssociationMode.AUTO;
 			button.setMessage(modeText());
 			refreshLists();

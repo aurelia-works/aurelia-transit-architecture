@@ -64,7 +64,6 @@ public final class ModBlocks {
 	/** Eases from the height where {@link #WAVE_RISE} ends (8) into the next block's flat canopy (16) with a horizontal tangent. */
 	public static final DoubleUnaryOperator WAVE_FLAT = z -> 8 + z - z * z / 32;
 
-	private static final VoxelShape FULL = box(0, 0, 0, 16, 16, 16);
 	private static final VoxelShape EDGE = union(box(0, 12, 0, 16, 16, 16), box(0, 0, 2, 16, 12, 16));
 	private static final VoxelShape PLATE = box(0, 0, 0, 16, 2, 16);
 	private static final VoxelShape POLE = box(7, 0, 7, 9, 16, 9);

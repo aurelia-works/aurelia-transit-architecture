@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.client;
 
+import com.aureliatransit.architecture.block.elevated.StyleCycle;
 import com.aureliatransit.architecture.client.interactive.EditorWidgets;
 import com.aureliatransit.architecture.network.ModPackets;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
@@ -225,11 +226,11 @@ public class StationWrenchScreen extends Screen {
 		addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> change(recipe.withTracks(recipe.tracks() + trackStep)))
 				.dimensions(left + HALF - 20, y, 20, 20).build());
 		addDrawableChild(cycle(left + HALF + 4, y, HALF, "platforms", Text.literal(recipe.platforms().label()),
-				() -> recipe.withPlatforms(next(recipe.platforms()))));
+				() -> recipe.withPlatforms(StyleCycle.next(recipe.platforms()))));
 		y += ROW;
 		addDrawableChild(cycle(left, y, HALF, "length", Text.literal(Integer.toString(recipe.length())),
 				() -> recipe.withLength(nextLength(recipe.length()))));
-		final ButtonWidget roof = cycle(left + HALF + 4, y, HALF, "roof", Text.literal(recipe.roof().label()), () -> recipe.withRoof(next(recipe.roof())));
+		final ButtonWidget roof = cycle(left + HALF + 4, y, HALF, "roof", Text.literal(recipe.roof().label()), () -> recipe.withRoof(StyleCycle.next(recipe.roof())));
 		roof.setTooltip(Tooltip.of(Text.translatable(KEY + "roof.tip")));
 		addDrawableChild(roof);
 		y += ROW;
@@ -380,7 +381,7 @@ public class StationWrenchScreen extends Screen {
 	private StationRecipe nextBuilding() {
 		if (recipe.terminus()) {
 			// a terminus always has its head building: only its size changes
-			return recipe.withSize(next(recipe.size()));
+			return recipe.withSize(StyleCycle.next(recipe.size()));
 		}
 		if (!recipe.building()) {
 			return recipe.withBuilding(true).withSize(StationRecipe.Size.AUTO);
@@ -388,12 +389,7 @@ public class StationWrenchScreen extends Screen {
 		if (recipe.size() == StationRecipe.Size.GRAND) {
 			return recipe.withBuilding(false).withSize(StationRecipe.Size.AUTO);
 		}
-		return recipe.withSize(next(recipe.size()));
-	}
-
-	private static <E extends Enum<E>> E next(E value) {
-		final E[] all = value.getDeclaringClass().getEnumConstants();
-		return all[(value.ordinal() + 1) % all.length];
+		return recipe.withSize(StyleCycle.next(recipe.size()));
 	}
 
 	// ---- advanced page --------------------------------------------------------------------------------------------

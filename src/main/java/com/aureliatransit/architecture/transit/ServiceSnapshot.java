@@ -48,10 +48,6 @@ public record ServiceSnapshot(
 				terminating, callingAt, 0, List.of(), "");
 	}
 
-	public long secondsUntilArrival(long nowMillis) {
-		return Math.max(0, (arrivalMillis - nowMillis) / 1000);
-	}
-
 	public boolean isStanding(long nowMillis) {
 		return arrivalMillis <= nowMillis && nowMillis < departureMillis;
 	}

@@ -14,7 +14,6 @@ import com.aureliatransit.architecture.live.display.Pagination;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
-import com.aureliatransit.architecture.wayfinding.MessageSeverity;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import net.minecraft.client.font.TextRenderer;
@@ -155,13 +154,13 @@ final class BoardBuilder {
 		final int c = b.style.text();
 		b.put(DisplayStyle.ordinal(n), Font.LED, left, y, 1, c);
 		b.put(hhmm(scheduled(s)), Font.LED, timeX, y, 1, c);
-		final String status = ukStatus(s, b.now);
+		final String status = ukStatus(s);
 		final float statusW = b.w(status, Font.LED, 1);
 		b.put(status, Font.LED, right - statusW, y, 1, c);
 		b.put(b.trim(b.place(s.destination()), Font.LED, 1, right - statusW - 6 - destX), Font.LED, destX, y, 1, c);
 	}
 
-	private static String ukStatus(ServiceSnapshot s, long now) {
+	private static String ukStatus(ServiceSnapshot s) {
 		final int delay = DepartureText.delayMinutes(s);
 		return delay > 0 ? Tr.t("board_expected", hhmm(expected(s))) : Tr.t("board_on_time");
 	}
@@ -241,7 +240,7 @@ final class BoardBuilder {
 				b.put(hhmm(scheduled(s)), Font.LED, left, y, 1, c);
 				b.put(b.trim(b.place(b.arrivals ? s.origin() : s.destination()), Font.LED, 1, platX - 6 - destX), Font.LED, destX, y, 1, c);
 				b.put(b.trim(s.platformName(), Font.LED, 1, platW + 4), Font.LED, platX, y, 1, c);
-				final String status = ukStatus(s, b.now);
+				final String status = ukStatus(s);
 				b.put(status, Font.LED, right - b.w(status, Font.LED, 1), y, 1, c);
 				y += LED_LINE;
 			}
@@ -767,7 +766,7 @@ final class BoardBuilder {
 			if (!out.isEmpty()) {
 				out.append("   ");
 			}
-			out.append(message.severity() == MessageSeverity.INFO ? message.text() : stripText(message));
+			out.append(stripText(message));
 		}
 		return out.toString();
 	}
@@ -823,7 +822,6 @@ final class BoardBuilder {
 
 		final BoardModel m;
 		final TextRenderer tr;
-		final DisplayKind kind;
 		final DisplayConfig config;
 		final DisplayStyle style;
 		final StationSnapshot snapshot;
@@ -843,7 +841,6 @@ final class BoardBuilder {
 			  long now) {
 			this.m = m;
 			this.tr = tr;
-			this.kind = kind;
 			this.config = config;
 			this.style = config.style();
 			this.snapshot = snapshot;

@@ -208,7 +208,6 @@ public final class StationDescriptionParser {
 		private Boolean building;
 		private int buildingAt = -1;
 		private BuildingStyle buildingStyle;
-		private int buildingStyleAt = -1;
 		private Boolean footbridge;
 		private boolean terminus;
 		private int terminusAt = -1;
@@ -418,10 +417,7 @@ public final class StationDescriptionParser {
 				if (ROOF_NOUNS.contains(word)) {
 					roofNone = true;
 					note(i, "no roof");
-				} else if (word.equals("ramp") || word.equals("ramps")) {
-					stepFree = false;
-					note(i, "no ramps");
-				} else if (word.equals("accessible")) {
+				} else if (word.equals("ramp") || word.equals("ramps") || word.equals("accessible")) {
 					stepFree = false;
 					note(i, "no ramps");
 				} else if (word.equals("tactile")) {
@@ -605,7 +601,7 @@ public final class StationDescriptionParser {
 					return false;
 				case "new":
 					if (next.equals("york")) {
-						setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
+						setBuildingStyle(BuildingStyle.BEAUX_ARTS);
 						if (looks.stream().noneMatch(look -> look.building() == BuildingStyle.BEAUX_ARTS)) {
 							looks.add(new Look(i, "new york", BuildingStyle.BEAUX_ARTS, null));
 						}
@@ -707,7 +703,7 @@ public final class StationDescriptionParser {
 				islandMention(i);
 			} else if (token.equals("side")) {
 				sideMention(i);
-			} else if (HALL_WORDS.contains(token) || token.equals("trainshed")) {
+			} else if (HALL_WORDS.contains(token)) {
 				setRoof(RoofType.HALL, i);
 			} else if (CANOPY_WORDS.contains(token)) {
 				setRoof(RoofType.CANOPY, i);
@@ -808,7 +804,7 @@ public final class StationDescriptionParser {
 		private boolean buildingWord(int i, String token) {
 			if (token.equals("grand") && at(i + 1).equals("central") || token.equals("union") && at(i + 1).equals("station")
 					|| token.equals("30th") && at(i + 1).equals("street")) {
-				setBuildingStyle(BuildingStyle.BEAUX_ARTS, i);
+				setBuildingStyle(BuildingStyle.BEAUX_ARTS);
 				askBuilding(i);
 				if (scale == null) {
 					// the landmark's own size; a size word said before or after it wins without a warning
@@ -907,7 +903,7 @@ public final class StationDescriptionParser {
 
 		/** A city or look word at {@code i}: the building look, a landmark's building, and the look list for mixing. */
 		private void cityLook(int i, String word, BuildingStyle city) {
-			setBuildingStyle(city, i);
+			setBuildingStyle(city);
 			if (LANDMARKS.contains(word)) {
 				askBuilding(i);
 			}
@@ -979,12 +975,12 @@ public final class StationDescriptionParser {
 			return word.length() <= 3 ? word.toUpperCase(Locale.ROOT) : Character.toUpperCase(word.charAt(0)) + word.substring(1);
 		}
 
-		/** The first size word wins; a later one is ignored. */
 		/** A terminus not asked to be small: it defaults to a main station's size. */
 		private boolean bigTerminus() {
 			return terminus && !small && scale != StationScale.COMPACT;
 		}
 
+		/** The first size word wins over a later one; a size taken from a landmark gives way to one written out. */
 		private void setScale(StationScale value, int i) {
 			if (scale == null || scaleFromLandmark) {
 				scaleFromLandmark = false;
@@ -1002,10 +998,9 @@ public final class StationDescriptionParser {
 			}
 		}
 
-		private void setBuildingStyle(BuildingStyle value, int i) {
+		private void setBuildingStyle(BuildingStyle value) {
 			if (buildingStyle == null) {
 				buildingStyle = value;
-				buildingStyleAt = i;
 			}
 		}
 

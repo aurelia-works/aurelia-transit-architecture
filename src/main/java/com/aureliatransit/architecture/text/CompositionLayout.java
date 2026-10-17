@@ -21,7 +21,6 @@ public final class CompositionLayout {
 	public static final int CAR_TEXT = 0xFF1A1F24;
 	public static final int FIRST = 0xFFF2C230;
 	public static final int ACCESSIBLE = 0xFF2F6FD1;
-	public static final int SECTOR = 0xFF9AA5AE;
 	private static final float PAD = 0.6F;
 	private static final float GAP = 0.4F;
 	private static final float UNIT_GAP = 1.2F;

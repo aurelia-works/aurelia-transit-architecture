@@ -77,11 +77,6 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return layout.buildingWidth() - 1;
 	}
 
-	/** The building's platform-side doorways open straight onto platform 1. */
-	public static boolean platformBesideBuilding(TrackLayout layout) {
-		return layout.buildingWidth() > 0 && !layout.platforms().isEmpty() && layout.platforms().get(0).uMin() == layout.buildingWidth();
-	}
-
 	public static StationLayout of(StationSpec spec, TrackLayout layout) {
 		final int length = layout.platformLength();
 		final boolean building = spec.sideBuilding();

@@ -596,7 +596,6 @@ public final class StationAudit {
 			final List<Flight> flights = new ArrayList<>();
 			final StationLayout site = StationLayout.of(spec, layout);
 			if (site.building()) {
-				final int uS = StationLayout.streetWall();
 				final int uP = site.platformWall(layout);
 				boolean intact = true;
 				for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
@@ -813,10 +812,6 @@ public final class StationAudit {
 					}
 				}
 			}
-			if (upper == null) {
-				return seen;
-			}
-			// fold the upper reach back so callers grading ground cells see stair-fed ground as reached
 			return seen;
 		}
 

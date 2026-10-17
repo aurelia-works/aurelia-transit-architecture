@@ -41,10 +41,6 @@ public record ServiceMessage(int id, MessageScope scope, String station, Message
 		return ServiceMessages.key(station);
 	}
 
-	ServiceMessage withId(int newId) {
-		return new ServiceMessage(newId, scope, station, severity, text);
-	}
-
 	public NbtCompound toNbt() {
 		final NbtCompound tag = new NbtCompound();
 		tag.putInt("Id", id);

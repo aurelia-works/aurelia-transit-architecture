@@ -1543,7 +1543,7 @@ public final class StationPlanner {
 							put(Role.BUILDING_ROOF, u, top + k, v, LocalDir.PLUS_V, v == vE ? "minecraft:smooth_quartz" : "minecraft:smooth_stone");
 						} else if (end) {
 							final boolean bar = v == vE && (du % 3 == 0 || k == rise / 2);
-							put(bar ? Role.WALL : Role.WINDOW, u, top + k, v, end && v == vL ? LocalDir.MINUS_V : LocalDir.PLUS_V,
+							put(bar ? Role.WALL : Role.WINDOW, u, top + k, v, v == vL ? LocalDir.MINUS_V : LocalDir.PLUS_V,
 									bar ? "minecraft:smooth_quartz" : ARCH_GLASS);
 						} else {
 							keepClear(u, top + k, v);
@@ -2606,19 +2606,6 @@ public final class StationPlanner {
 			return left && right;
 		}
 
-		/** Column v along one platform: the station's spacing, or the same spacing along a shorter platform's own run. */
-		private List<Integer> columnV(TrackLayout.PlatformBand band) {
-			if (band.vFrom() == 0 && band.vTo() == length - 1) {
-				return columnV;
-			}
-			final List<Integer> positions = new ArrayList<>();
-			for (final int v : columnPositions(band.length())) {
-				positions.add(band.vFrom() + v);
-			}
-			return positions;
-		}
-
-		/** Column v for one column line: the platform's spacing minus cells where stairs, railings or piers stand, with gaps of at most 9. */
 		private List<Integer> canopyV(TrackLayout.PlatformBand band) {
 			final List<Integer> positions = new ArrayList<>();
 			for (final int v : canopyPositions(band.length())) {
@@ -2627,6 +2614,7 @@ public final class StationPlanner {
 			return positions;
 		}
 
+		/** Column v for one column line: the platform's spacing minus cells where stairs, railings or piers stand, with gaps of at most 9. */
 		private List<Integer> columnVForLine(TrackLayout.PlatformBand band, int line) {
 			if (!site.bridge()) {
 				return canopyV(band);
@@ -3287,7 +3275,7 @@ public final class StationPlanner {
 							final boolean glazed = palette.roofMaterialGlass() || (ridgeLights ? rise[i] >= peak - 1 : y - roofY >= Math.max(1, peak / 3));
 							final boolean eaves = edge && y == top[i];
 							put(eaves ? Role.ROOF_EDGE : Role.ROOF, u, y, v, i == 0 ? LocalDir.MINUS_U : i == n - 1 ? LocalDir.PLUS_U : LocalDir.PLUS_V,
-									glazed && !eaves ? glass : vaultCladding());
+									glazed && !eaves ? glass : ata("metro_steel_cladding"));
 						}
 					}
 				}
@@ -3363,11 +3351,6 @@ public final class StationPlanner {
 				previousBand = band;
 			}
 			return out;
-		}
-
-		/** The vault's solid lower band: the style's roof when that is a full block, otherwise steel cladding. */
-		private String vaultCladding() {
-			return ata("metro_steel_cladding");
 		}
 
 		/** Height of a round vault over its span. */
@@ -3704,8 +3687,6 @@ public final class StationPlanner {
 				return;
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				final int run = band.length();
-				final int from = band.vFrom();
 				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
 					if (!hangScreen(band, target) && !screenOnColumn(band, target)) {
@@ -3736,8 +3717,6 @@ public final class StationPlanner {
 				return;
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				final int run = band.length();
-				final int from = band.vFrom();
 				for (final int target : screenTargets(band).stream().map(t -> t + 3).toList()) {
 					if (!hangSpeaker(band, target)) {
 						onPost(band, target, StationGeometry.WALK_Y, WALL_SPEAKER);

@@ -55,25 +55,6 @@ public final class StationPreview {
 		return player;
 	}
 
-	/** Ticks lived so far. */
-	public int age() {
-		return age;
-	}
-
-	/** Particle count the next refresh would send, and advances the sampling. For tests. */
-	int nextRefreshSize() {
-		int count = 0;
-		for (final Layer layer : Layer.values()) {
-			count += geometry.sample(layer, refreshes).size();
-		}
-		refreshes++;
-		return count;
-	}
-
-	PreviewGeometry geometry() {
-		return geometry;
-	}
-
 	/** One server tick; false when the preview is over (30 s, player gone). */
 	public boolean tick(MinecraftServer server) {
 		age++;
