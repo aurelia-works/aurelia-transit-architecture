@@ -27,7 +27,7 @@ public final class BlockModels {
 		byte[] read(String namespace, String path) throws IOException;
 	}
 
-	private static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine");
+	private static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine", "mtr:tactile_map");
 	private static final String[] FACES = {"down", "up", "north", "south", "west", "east"};
 
 	private final AssetSource assets;

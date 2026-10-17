@@ -114,9 +114,9 @@ public final class BlockStateResolver {
 		return new Resolution(prepared, List.copyOf(missing), railSkipped);
 	}
 
-	/** Blocks whose front (the ticket machine's screen) faces against their FACING property: MTR sets FACING to the way the
+	/** Blocks whose front (the ticket machine's screen, the tactile map's sloped face) faces against their FACING property: MTR sets FACING to the way the
 	 * placing player looks, so the screen faces the player. */
-	static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine");
+	static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine", "mtr:tactile_map");
 
 	/**
 	 * The state for a block facing {@code facing}: FACING for facing-shaped blocks, the facing's axis for axis blocks, and for
