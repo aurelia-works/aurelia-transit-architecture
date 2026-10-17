@@ -100,6 +100,10 @@ final class BoardModel {
 	float[] sv = new float[4];
 	/** True to move in whole font pixels, as an LED board steps column by column. */
 	boolean[] sq = new boolean[4];
+	/** The characters last drawn of each line ({@code first} to {@code end}), kept until the window moves past a character. */
+	int[] sFirst = new int[4];
+	int[] sEnd = new int[4];
+	OrderedText[] sDrawn = new OrderedText[4];
 
 	void reset() {
 		rectCount = 0;
@@ -111,6 +115,7 @@ final class BoardModel {
 		Arrays.fill(ts, null);
 		Arrays.fill(ss, null);
 		Arrays.fill(sa, null);
+		Arrays.fill(sDrawn, null);
 	}
 
 	void rect(float x, float y, float w, float h, int argb, int layer) {
@@ -184,6 +189,9 @@ final class BoardModel {
 			sc = Arrays.copyOf(sc, n);
 			sv = Arrays.copyOf(sv, n);
 			sq = Arrays.copyOf(sq, n);
+			sFirst = Arrays.copyOf(sFirst, n);
+			sEnd = Arrays.copyOf(sEnd, n);
+			sDrawn = Arrays.copyOf(sDrawn, n);
 		}
 		ss[scrollCount] = text;
 		sf[scrollCount] = font;
@@ -195,6 +203,7 @@ final class BoardModel {
 		sc[scrollCount] = argb;
 		sv[scrollCount] = speed;
 		sq[scrollCount] = stepped;
+		sDrawn[scrollCount] = null;
 		scrollCount++;
 	}
 

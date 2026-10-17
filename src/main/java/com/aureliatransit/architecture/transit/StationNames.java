@@ -14,6 +14,9 @@ public final class StationNames {
 		if (raw == null || raw.isEmpty()) {
 			return "";
 		}
+		if (raw.indexOf('|') < 0) {
+			return raw.trim(); // one segment: every rule below picks it
+		}
 		final String[] segments = raw.split("\\|");
 		for (final String segment : segments) {
 			if (!segment.isBlank() && segment.codePoints().anyMatch(StationNames::isLatinLetter) && segment.codePoints().noneMatch(StationNames::isOtherScriptLetter)) {

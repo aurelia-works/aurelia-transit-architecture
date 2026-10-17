@@ -65,6 +65,10 @@ public class PassengerTerminalScreen extends Screen {
 	private long nextDepartures;
 	private long nextInfo;
 	private boolean dirty = true;
+	/** The notice last wrapped on the home page, kept while it and its width stay the same. */
+	private ServiceMessage wrappedMessage;
+	private int wrappedWidth;
+	private List<OrderedText> wrappedLines = List.of();
 
 	// geometry (set in init)
 	private int left;
@@ -292,8 +296,13 @@ public class PassengerTerminalScreen extends Screen {
 			context.fill(contentX - 2, stripY, contentX + contentW + 2, stripY + 22, ROW_BAND);
 			final String counter = homeMessages.size() > 1 ? (index + 1) + "/" + homeMessages.size() : "";
 			final int textW = contentW - 4 - (counter.isEmpty() ? 0 : textRenderer.getWidth(counter) + 4);
+			if (homeMessage != wrappedMessage || textW != wrappedWidth) {
+				wrappedLines = textRenderer.wrapLines(Text.literal(TerminalText.severityPrefix(homeMessage.severity()) + homeMessage.text()), textW);
+				wrappedMessage = homeMessage;
+				wrappedWidth = textW;
+			}
 			int line = 0;
-			for (final OrderedText wrapped : textRenderer.wrapLines(Text.literal(TerminalText.severityPrefix(homeMessage.severity()) + homeMessage.text()), textW)) {
+			for (final OrderedText wrapped : wrappedLines) {
 				if (line >= 2) {
 					break;
 				}

@@ -217,9 +217,13 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		if (end <= first) {
 			return;
 		}
-		final String visible = model.ss[i].substring(first, end);
+		if (model.sDrawn[i] == null || model.sFirst[i] != first || model.sEnd[i] != end) {
+			model.sDrawn[i] = model.sf[i].ordered(model.ss[i].substring(first, end));
+			model.sFirst[i] = first;
+			model.sEnd[i] = end;
+		}
 		scratch.set(position).translate(start + at[first] * k, model.sy[i], z).scale(k, k, 1);
-		textRenderer.draw(model.sf[i].ordered(visible), 0, 0, model.sc[i], false, scratch, vertexConsumers, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, LIGHT);
+		textRenderer.draw(model.sDrawn[i], 0, 0, model.sc[i], false, scratch, vertexConsumers, TextRenderer.TextLayerType.POLYGON_OFFSET, 0, LIGHT);
 	}
 
 	private static void quad(VertexConsumer vc, Matrix4f position, Matrix3f normal, float x1, float y1, float x2, float y2, float z, int argb) {
