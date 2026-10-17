@@ -647,12 +647,15 @@
 	}
 
 	let meshes = [];
+	/** Fare gate paddles by cell, so walk mode can swing each one open and shut as the game's gate does. */
+	let paddleAt = new Map();
 	function showPlan(plan) {
 		for (const m of meshes) {
 			station.remove(m);
 			m.geometry.dispose();
 		}
 		meshes = [];
+		paddleAt = new Map();
 		materials.clear();
 		const cells = plan.cells;
 		const byModel = new Map();
@@ -676,6 +679,12 @@
 					matrix.makeTranslation(cells[at], cells[at + 1], cells[at + 2]);
 					mesh.setMatrixAt(n, matrix);
 				});
+				// a fare gate's paddle is its own glass mesh: remember it so walk mode can swing it open and shut
+				if (entry.id === "aurelia_transit_architecture:fare_gate" && /glass_clear/.test(texPath)) {
+					geo.computeBoundingBox();
+					const centre = geo.boundingBox.getCenter(new THREE.Vector3());
+					list.forEach((at, n) => paddleAt.set(cellKey(cells[at], cells[at + 1], cells[at + 2]), { mesh, n: n, centre: centre }));
+				}
 				mesh.userData = { model: index, cells: list };
 				mesh.frustumCulled = false;
 				station.add(mesh);
@@ -1020,9 +1029,13 @@
 
 	const BODY = { half: 0.3, height: 1.8, eye: 1.62, step: 0.6, gravity: 32, jump: 8.9, walk: 4.3, run: 7, fly: 11, flyRun: 24 };
 	const NO_COLLIDE = new Set(["RAIL_NODE"]);
+	/** Roles that stand fence-high in the game (1.5 blocks of collision) although their model is one block tall. */
+	const FENCE_ROLES = new Set(["RAILING", "BARRIER"]);
 	/** The game's fare gate collision, facing north (FareGateBlock): the cabinet, and the paddle while shut. */
 	const GATE_CABINET = [0, 0, 1 / 16, 4 / 16, 1.5, 15 / 16];
 	const GATE_PADDLE = [4 / 16, 0, 7 / 16, 1, 1.5, 9 / 16];
+	/** An end cabinet's collision: a solid panel across the whole cell (FareGateBlock END_PANEL), so no end is a free gap. */
+	const GATE_END = [0, 0, 4 / 16, 1, 1.5, 12 / 16];
 	/** As in the game: the centre this close to the paddle line is walking into them, this far has cleared them; a gate left
 	 * alone shuts after 2 s. */
 	const GATE_AT = 0.45;
@@ -1088,12 +1101,13 @@
 			}
 			if (role === "GATE") {
 				const turnY = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
-				const gate = { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turnY / 90) % 4], open: false, leftAt: 0 };
+				const gate = { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turnY / 90) % 4], open: false, leftAt: 0, angle: 0,
+					paddle: paddleAt.get(cellKey(x, y, z)) || null };
 				const turn = new THREE.Matrix4().makeTranslation(0.5, 0, 0.5)
 					.multiply(new THREE.Matrix4().makeRotationY(-turnY * Math.PI / 180))
 					.multiply(new THREE.Matrix4().makeTranslation(-0.5, 0, -0.5));
 				const end = /kind=end/.test(entry.state || "");
-				for (const [b, paddle] of end ? [[GATE_CABINET, false]] : [[GATE_CABINET, false], [GATE_PADDLE, true]]) {
+				for (const [b, paddle] of end ? [[GATE_END, false]] : [[GATE_CABINET, false], [GATE_PADDLE, true]]) {
 					const box = new THREE.Box3().setFromPoints([new THREE.Vector3(b[0], b[1], b[2]), new THREE.Vector3(b[3], b[4], b[5])]
 						.map((v) => v.applyMatrix4(turn)));
 					add(x, y, z, { a: [x + box.min.x, y + box.min.y, z + box.min.z, x + box.max.x, y + box.max.y, z + box.max.z], esc: 0,
@@ -1102,6 +1116,11 @@
 				if (!end) {
 					gates.push(gate);
 				}
+				continue;
+			}
+			// a railing or a glass barrier stands fence-high in the game though its model is one block tall: no jumping over
+			if (FENCE_ROLES.has(role)) {
+				add(x, y, z, { a: [x, y, z, x + 1, y + 1.5, z + 1], esc: 0 });
 				continue;
 			}
 			if (/lift_track_floor/.test(entry.id)) {
@@ -1194,6 +1213,44 @@
 
 	function bodyBox(p) {
 		return [p.x - BODY.half, p.y, p.z - BODY.half, p.x + BODY.half, p.y + BODY.height, p.z + BODY.half];
+	}
+
+	// ---- fare gate paddle animation ----
+	// The gate the game draws is a body plus a glass paddle; here the paddle is a mesh of its own, so walking into a gate
+	// swings it open about its hinged end and it swings shut once you are clear, exactly as the collision already does.
+	const _gateMat = new THREE.Matrix4();
+	const _gateStep = new THREE.Matrix4();
+	function gateInstanceMatrix(gate) {
+		const c = gate.paddle.centre;
+		const m = _gateMat;
+		m.makeTranslation(gate.x, gate.y, gate.z);
+		m.multiply(_gateStep.makeTranslation(c.x, c.y, c.z));
+		m.multiply(_gateStep.makeRotationY(gate.angle || 0));
+		m.multiply(_gateStep.makeTranslation(-c.x, -c.y, -c.z));
+		return m;
+	}
+
+	function animateGates(dt) {
+		if (!walk || !walk.world) {
+			return;
+		}
+		const dirty = new Set();
+		for (const g of walk.world.gates) {
+			if (!g.paddle) {
+				continue;
+			}
+			const target = g.open ? Math.PI / 2 : 0;
+			const k = Math.min(1, dt * 12);
+			g.angle += (target - g.angle) * k;
+			if (Math.abs(g.angle - target) < 0.003) {
+				g.angle = target;
+			}
+			g.paddle.mesh.setMatrixAt(g.paddle.n, gateInstanceMatrix(g));
+			dirty.add(g.paddle.mesh);
+		}
+		for (const m of dirty) {
+			m.instanceMatrix.needsUpdate = true;
+		}
 	}
 
 	/** Every box in the cells around a region (models may reach a little past their own cell), and the ground. */
@@ -1537,6 +1594,7 @@
 		const dt = Math.min(0.1, Math.max(0, (now - walk.last) / 1000));
 		walk.last = now;
 		stepWalk(dt);
+		animateGates(dt);
 		frame();
 		requestAnimationFrame(walkLoop);
 	}

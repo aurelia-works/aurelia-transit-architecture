@@ -51,12 +51,14 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 	private static final Map<Direction, VoxelShape> CABINET = Shapes.horizontalMap(createCuboidShape(0, 0, 1, 4, 24, 15));
 	private static final Map<Direction, VoxelShape> SHUT = Shapes.horizontalMap(VoxelShapes.union(createCuboidShape(0, 0, 1, 4, 24, 15), createCuboidShape(4, 0, 7, 16, 24, 9)));
 	private static final Map<Direction, VoxelShape> PROP = Shapes.horizontalMap(createCuboidShape(0, 0, 1, 4, 14, 15));
+	/** An end cabinet closes the bank: a solid panel across the whole cell, so nobody walks through the end of a gate line. */
+	private static final Map<Direction, VoxelShape> END_PANEL = Shapes.horizontalMap(createCuboidShape(0, 0, 4, 16, 24, 12));
 
 	public FareGateBlock(Settings settings) {
 		super(settings, "fare_gate", Placement.TOWARD_PLAYER, FareGateKind.class, kind -> switch (kind) {
 			case GATE -> VoxelShapes.union(createCuboidShape(0, 0, 1, 4, 14, 15), createCuboidShape(4, 5, 7, 9, 12, 9));
 			case WIDE -> VoxelShapes.union(createCuboidShape(0, 0, 1, 4, 14, 15), createCuboidShape(4, 5, 7, 13, 12, 9));
-			case END -> createCuboidShape(0, 0, 1, 4, 14, 15);
+			case END -> createCuboidShape(0, 0, 4, 16, 16, 12);
 		});
 		setDefaultState(getDefaultState().with(OPEN, FareGateOpen.CLOSED));
 	}
@@ -78,7 +80,10 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 		if (!MtrFareContract.available()) {
 			return PROP.get(facing);
 		}
-		return state.get(KIND) == FareGateKind.END || state.get(OPEN) == FareGateOpen.OPEN ? CABINET.get(facing) : SHUT.get(facing);
+		if (state.get(KIND) == FareGateKind.END) {
+			return END_PANEL.get(facing);
+		}
+		return state.get(OPEN) == FareGateOpen.OPEN ? CABINET.get(facing) : SHUT.get(facing);
 	}
 
 	@Override
