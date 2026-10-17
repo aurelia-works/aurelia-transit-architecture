@@ -211,9 +211,9 @@ final class AnnouncementEngine {
 	}
 
 	/**
-	 * A help point was used at {@code pos}: say the station and MTR's nearest platform there, at the help point. The station
-	 * name is only spoken when the voice packs have it; otherwise the voice says just the platform. The full sentence is
-	 * always shown, since the player asked. Away from any station the help point's plain message is shown.
+	 * A help point was used at {@code pos}: say the station and MTR's nearest platform there, at the help point. The
+	 * sentence is spoken as fully as the voice packs allow (an unknown station name is simply skipped), and the full
+	 * sentence is always shown, since the player asked. Away from any station the help point's plain message is shown.
 	 */
 	void playHelpPoint(MinecraftClient client, BlockPos pos) {
 		if (client.player == null) {
@@ -235,12 +235,10 @@ final class AnnouncementEngine {
 			client.player.sendMessage(Text.translatable(HelpPointBlock.MESSAGE), true);
 			return;
 		}
-		final AnnouncementText.Announcement spoken = voicePacks.stack().resolveAll(full.fragments(), null) != null ? full
-				: java.util.Objects.requireNonNullElse(AnnouncementText.helpPoint(stationName, platformName, false, named), full);
 		final long now = System.currentTimeMillis();
 		// keeps the idle reset (no speakers loaded) from cutting the sentence off
 		lastActive = now;
-		player.start(client, spoken, voicePacks.stack(), pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 1F, now, full.subtitle());
+		player.start(client, full, voicePacks.stack(), pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 1F, now, full.subtitle());
 	}
 
 	String describe() {

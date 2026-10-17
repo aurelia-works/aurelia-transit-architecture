@@ -2,7 +2,7 @@
 
 Station announcements are built from **fragments** (short phrases, numbers, station and route names). A voice pack maps fragment keys to sound events. Packs are ordinary resource-pack content: no code, no network, no text-to-speech at runtime.
 
-The mod ships three original synthesised chimes (`chime.info`, `chime.alert`, `chime.delay`, made by `tools/make_live_sounds.py`) and a **built-in English voice** for every phrase below and the numbers 0 to 99: Piper (MIT) with the voice "cori" (Bryce Beattie, trained on public-domain LibriVox recordings), rendered by `tools/make_voice.py`. It sits at priority -100, under every resource pack. It cannot know your station and route names, so sentences that name them (approaching, standing, delay) fall back to chime and text until a pack adds the names; help points ("This is platform 3."), safety and terminating announcements are spoken out of the box. `tools/make_voice.py --pack "<name>" --stations "A,B" --routes "Red Line"` builds such a names pack in the same voice, which you may share with your players. Announcements use the **Voice** sound category, so the player's Voice volume slider controls them.
+The mod ships three original synthesised chimes (`chime.info`, `chime.alert`, `chime.delay`, made by `tools/make_live_sounds.py`) and a **built-in English voice** for every phrase below and the numbers 0 to 99: Piper (MIT) with the voice "cori" (Bryce Beattie, trained on public-domain LibriVox recordings), rendered by `tools/make_voice.py`. It sits at priority -100, under every resource pack. It cannot know your station and route names, so sentences that name them (approaching, standing, delay) speak every other fragment and skip the unknown names until a pack adds them; help points ("This is Station, platform 3."), safety and terminating announcements are spoken out of the box. `tools/make_voice.py --pack "<name>" --stations "A,B" --routes "Red Line"` builds such a names pack in the same voice, which you may share with your players. Announcements use the **Voice** sound category, so the player's Voice volume slider controls them.
 
 ## Adding a voice to a resource pack
 
@@ -32,7 +32,7 @@ The mod ships three original synthesised chimes (`chime.info`, `chime.alert`, `c
 
 All packs are stacked: highest `priority` first, then pack id. A key is looked up in each pack in turn, and the built-in chimes are always at the bottom. So a small pack with only station names can sit on top of a fuller one.
 
-An announcement is spoken **only if every fragment of the sentence has a sound**. A half-spoken sentence never plays: if anything is missing, the chime plays and the full sentence is shown as an action-bar message instead. Start with the phrases and numbers, then add station and route names; `/aurelia_live test <category> [standard|british]` plays a sample sentence at your position ("Test Central", platform 3, "Test Line", destination "Test Junction", stops "Alpha Street", "Beta Park", "Test Junction", 4 minute delay) so you can hear what your pack covers. Use `-Daurelia.live.subtitles=true` to always show the text too.
+An announcement speaks **as much of the sentence as the packs can**: fragments with a sound are voiced in order and any fragment without one is skipped, so a sentence is partly spoken rather than silent. Whenever a fragment was skipped the full sentence is still shown as an action-bar message, so the missing word stays readable. Start with the phrases and numbers, then add station and route names; `/aurelia_live test <category> [standard|british]` plays a sample sentence at your position ("Test Central", platform 3, "Test Line", destination "Test Junction", stops "Alpha Street", "Beta Park", "Test Junction", 4 minute delay) so you can hear what your pack covers. Use `-Daurelia.live.subtitles=true` to always show the text too.
 
 ## Fragment keys
 
@@ -102,7 +102,7 @@ Each speaker has a **Wording** setting. The table above is *Standard*. *British*
 
 **With Aurelia Transit Utilities:** ATU announces on the train you ride; ATA announces on the platforms. While you ride an MTR train with ATU's Announcer on, the station speakers hold off (their announcements expire unplayed), so nothing is said twice. Without ATU, or with its Announcer off, speakers play as always.
 
-**Help points:** right-click one with an empty hand and it says "This is **station**, platform **N**." (MTR's nearest platform to the help point). If the voice packs have no clip for the station it says "This is platform **N**." instead; the full sentence is always shown in the action bar. Away from any station it shows its plain help message.
+**Help points:** right-click one with an empty hand and it says "This is **station**, platform **N**." (MTR's nearest platform to the help point). If the voice packs have no clip for the station, that fragment is skipped and the voice says the rest; the full sentence is always shown in the action bar. Away from any station it shows its plain help message.
 
 The route part is skipped when a route has no name; "Calling at" lists at most 5 stops and always ends on the final stop. Priority when several are waiting: safety, delay, terminating, approaching, standing.
 

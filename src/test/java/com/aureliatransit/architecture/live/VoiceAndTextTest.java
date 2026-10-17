@@ -124,6 +124,22 @@ class VoiceAndTextTest {
 	}
 
 	@Test
+	void partialResolutionSpeaksEveryKnownFragmentAndSkipsTheUnknownOne() {
+		final VoicePack low = VoicePack.parse("a", JsonParser.parseString("{\"priority\":1,\"fragments\":{\"phrase.the\":\"a:the\",\"number.3\":\"a:three\"}}").getAsJsonObject());
+		final VoicePack.Stack stack = new VoicePack.Stack(List.of(low, VoicePack.builtin("mod")));
+		final List<AnnouncementText.Fragment> sentence = List.of(new AnnouncementText.Fragment("phrase.the", "The"),
+				new AnnouncementText.Fragment("station.nowhere", "Nowhere"),
+				new AnnouncementText.Fragment("number.3", "3"));
+		final List<String> missing = new ArrayList<>();
+		final List<VoicePack.FragmentSound> spoken = stack.resolvePartial(sentence, missing);
+		assertNotNull(spoken, "a partial sentence is still playable");
+		assertEquals(List.of("a:the", "a:three"), spoken.stream().map(VoicePack.FragmentSound::soundId).toList(),
+				"known fragments are returned in order; the unknown station is skipped");
+		assertEquals(List.of("station.nowhere"), missing);
+		assertNull(stack.resolveAll(sentence, null), "resolveAll stays all-or-nothing");
+	}
+
+	@Test
 	void closestSpeakerInRangeWithTheCategoryEnabledWins() {
 		final SpeakerPicker.Point near = new SpeakerPicker.Point("near", 2, 0, 0, 16, AnnouncementCategory.ALL_MASK);
 		final SpeakerPicker.Point far = new SpeakerPicker.Point("far", 10, 0, 0, 16, AnnouncementCategory.ALL_MASK);

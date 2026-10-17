@@ -155,6 +155,27 @@ public final class VoicePack {
 			return complete ? sounds : null;
 		}
 
+		/**
+		 * Resolves as much of the sentence as the packs allow: fragments that have a sound are returned in order and the
+		 * ones without are skipped, so a sentence is spoken as fully as the packs can. Always returns a list (never null);
+		 * an empty list means nothing at all could be spoken. Unlike {@link #resolveAll}, a half-spoken sentence still
+		 * plays. {@code missing} (optional) collects the skipped keys.
+		 */
+		public List<FragmentSound> resolvePartial(List<AnnouncementText.Fragment> fragments, List<String> missing) {
+			final List<FragmentSound> sounds = new ArrayList<>(fragments.size());
+			for (final AnnouncementText.Fragment fragment : fragments) {
+				final FragmentSound sound = find(fragment.key());
+				if (sound == null) {
+					if (missing != null) {
+						missing.add(fragment.key());
+					}
+				} else {
+					sounds.add(sound);
+				}
+			}
+			return sounds;
+		}
+
 		public List<VoicePack> packs() {
 			return packs;
 		}

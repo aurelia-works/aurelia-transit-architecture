@@ -15,9 +15,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Plays one announcement at a time as a timed sequence of sound events (chime first). If the active voice packs cannot
- * speak every fragment, only the chime plays and the text goes to the action bar instead. All sounds use
- * {@link SoundCategory#VOICE}, so the player's Voice volume slider controls them.
+ * Plays one announcement at a time as a timed sequence of sound events (chime first). The sentence is spoken as fully as
+ * the active voice packs allow: fragments with a sound play in order and missing ones are skipped, while the full text
+ * goes to the action bar so the missing word stays readable. All sounds use {@link SoundCategory#VOICE}, so the player's
+ * Voice volume slider controls them.
  */
 final class AnnouncementPlayer {
 
@@ -68,15 +69,15 @@ final class AnnouncementPlayer {
 		if (chime != null) {
 			steps.add(chime);
 		}
-		final List<VoicePack.FragmentSound> spoken = stack.resolveAll(announcement.fragments(), null);
-		if (spoken != null) {
-			steps.addAll(spoken);
-		} else {
+		final List<String> missing = new ArrayList<>();
+		final List<VoicePack.FragmentSound> spoken = stack.resolvePartial(announcement.fragments(), missing);
+		steps.addAll(spoken);
+		if (spoken.isEmpty()) {
 			LiveDebug.count(LiveDebug.Counter.ANNOUNCEMENTS_FALLBACK);
 		}
 		if (subtitle != null && client.inGameHud != null) {
 			client.inGameHud.setOverlayMessage(Text.literal(subtitle), false);
-		} else if ((spoken == null || ALWAYS_SUBTITLE) && client.inGameHud != null) {
+		} else if ((!missing.isEmpty() || ALWAYS_SUBTITLE) && client.inGameHud != null) {
 			client.inGameHud.setOverlayMessage(Text.literal(announcement.subtitle()), false);
 		}
 		LiveDebug.count(LiveDebug.Counter.ANNOUNCEMENTS_PLAYED);
