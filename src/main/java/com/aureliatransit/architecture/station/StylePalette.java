@@ -17,6 +17,10 @@ public final class StylePalette {
 	/** MTR's escalator: a step, with its handrail block in the cell above. */
 	public static final String MTR_ESCALATOR_STEP = "mtr:escalator_step";
 	public static final String MTR_ESCALATOR_SIDE = "mtr:escalator_side";
+	/** MTR's name panel over a station entrance: it shows the name of the MTR station whose area it stands in. */
+	public static final String MTR_STATION_NAME = "mtr:station_name_entrance";
+	/** MTR's tactile map, two blocks tall. */
+	public static final String MTR_TACTILE_MAP = "mtr:tactile_map";
 
 	private static final String FOUNDATION = "minecraft:stone_bricks";
 	private static final String ATA = "aurelia_transit_architecture:";

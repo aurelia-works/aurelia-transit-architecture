@@ -41,6 +41,8 @@ public final class StationPlanner {
 	private static final int TOWER_HEIGHT = 11;
 	/** The state of every stair in a pitched roof. */
 	private static final String PITCH_STATE = "half=bottom,shape=straight";
+	/** Height of MTR's station name panel over a street door: on the lintel, one row over the three-high doorway. */
+	private static final int MTR_NAME_Y = 4;
 	/** Copper for domes, and glass for giant arched windows (whole blocks, so the arch reads from the street). */
 	private static final String DOME = "minecraft:oxidized_cut_copper";
 	private static final String ARCH_GLASS = "aurelia_transit_architecture:clear_float_glass";
@@ -2097,6 +2099,11 @@ public final class StationPlanner {
 					}
 				}
 			}
+			// MTR's station name over the street door and its tactile map inside beside it
+			for (int u = door - 1; u <= door + 1; u++) {
+				put(Role.FIXTURE, u, MTR_NAME_Y, vE + 1, LocalDir.PLUS_V, StylePalette.MTR_STATION_NAME);
+			}
+			tallFixture(door + 2, 1, vE - 1, LocalDir.MINUS_V, StylePalette.MTR_TACTILE_MAP);
 		}
 
 		/**
@@ -3627,6 +3634,11 @@ public final class StationPlanner {
 			}
 			// clock above the entrance, facing into the hall
 			put(Role.FIXTURE, uS + 1, 4, vEntr, LocalDir.PLUS_U, "aurelia_transit_architecture:wall_digital_clock");
+			// MTR's station name over the street door and its tactile map inside beside it
+			for (int v = vEntr - 1; v <= vEntr + 1; v++) {
+				put(Role.FIXTURE, uS - 1, MTR_NAME_Y, v, LocalDir.MINUS_U, StylePalette.MTR_STATION_NAME);
+			}
+			tallFixture(uS + 1, 1, vEntr - 2, LocalDir.PLUS_U, StylePalette.MTR_TACTILE_MAP);
 			// departure boards on both end walls, facing into the hall
 			put(Role.FIXTURE, (uS + uP) / 2, 2, vS + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
 			put(Role.FIXTURE, (uS + uP) / 2, 2, vE - 1, LocalDir.MINUS_V, "aurelia_transit_architecture:concourse_board");

@@ -1254,6 +1254,26 @@ class StationPlannerTest {
 	}
 
 	/**
+	 * Every street door gets MTR's station name panel, three cells over the doorway on the street side, and MTR's tactile map
+	 * just inside: on a terminus head building and on a building beside the tracks.
+	 */
+	@Test
+	void streetDoorsCarryMtrNameAndTactileMap() {
+		final StationPlan head = plan(StationDescriptionParser.parse("four track utrecht terminus, two island platforms, 96 long, city building").spec());
+		final int front = head.layout().headEnd();
+		assertEquals(3, head.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME) && b.v() == front + 1
+				&& b.front() == LocalDir.PLUS_V).count());
+		assertEquals(2, count(head, StylePalette.MTR_TACTILE_MAP));
+		final StationPlan side = plan(StationDescriptionParser.parse("two track station with a station building, side platforms, 96 long").spec());
+		assertEquals(3, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME)
+				&& b.u() == StationLayout.streetWall() - 1 && b.front() == LocalDir.MINUS_U).count());
+		assertEquals(2, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_TACTILE_MAP)).count());
+		for (final StationPlan plan : List.of(head, side)) {
+			assertEquals(List.of(), LayoutValidator.validate(plan));
+		}
+	}
+
+	/**
 	 * A gravel bed runs wall to wall: every cell across the tracks is ballast, lit strip or black concrete under a platform,
 	 * with no holes between neighbouring tracks; and under a high train shed the platform screens are two blocks joined
 	 * into one display fixed to a column above head height, not one block on the floor.
