@@ -574,7 +574,7 @@
   "tooltip.aurelia_transit_architecture.drop_barrier_edge": "Barrier drops when a train stops",
   "tooltip.aurelia_transit_architecture.editable": "Right-click with an empty hand to edit",
   "tooltip.aurelia_transit_architecture.faces_you": "Faces you when placed",
-  "tooltip.aurelia_transit_architecture.fare_gate": "Walk through to pay from your MTR balance",
+  "tooltip.aurelia_transit_architecture.fare_gate": "Walk into the paddles to pay from your MTR balance",
   "tooltip.aurelia_transit_architecture.girder_joins": "Joins girders on every side, and walls",
   "tooltip.aurelia_transit_architecture.glass_brick": "Thick, wavy glass block",
   "tooltip.aurelia_transit_architecture.glass_float": "Standard glass with a faint green tint",
