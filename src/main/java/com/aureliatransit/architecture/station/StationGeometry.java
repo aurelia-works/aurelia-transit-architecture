@@ -43,6 +43,18 @@ public final class StationGeometry {
 	public static final int HIGH_HALL_BEAM_Y = 8;
 	/** The frame of a shed over a footbridge or beside a station building: above the bridge roof and the building's cornice. */
 	public static final int TALL_HALL_BEAM_Y = 11;
+	/** A city flat hall's frame: higher than the compact one so the hall reads as a real volume, not a lid on the trains. */
+	public static final int CITY_HALL_BEAM_Y = 8;
+	/** A grand flat hall's frame: a real high hall. */
+	public static final int GRAND_HALL_BEAM_Y = 12;
+	/** A city wide vault's springing. */
+	public static final int CITY_HIGH_HALL_BEAM_Y = 11;
+	/** A grand wide vault's springing: a real train-shed springing height. */
+	public static final int GRAND_HIGH_HALL_BEAM_Y = 15;
+	/** A city shed over a footbridge or building: clears a taller building. */
+	public static final int CITY_TALL_HALL_BEAM_Y = 14;
+	/** A grand shed over a footbridge or building: about 20 m to the roof, the height of a real monumental train shed. */
+	public static final int GRAND_TALL_HALL_BEAM_Y = 18;
 	/** Columns stand every this many cells along a platform. */
 	public static final int COLUMN_SPACING = 8;
 	/** A roof cell must be within this many cells (along u and along v) of a column top or a beam carried by columns. */
@@ -132,6 +144,39 @@ public final class StationGeometry {
 	/** The corridor's long walls stand this many rows from its centre line: the clear half-width plus the wall itself. */
 	public static int bridgeWallOffset(int width) {
 		return width / 2 + 1;
+	}
+
+	/**
+	 * y of a flat hall's girder frame at {@code scale}: just above the track envelopes, {@link #HALL_BEAM_Y} compact and
+	 * higher for a bigger station, so a city or grand hall is a real volume rather than a lid on the trains.
+	 */
+	public static int hallBeamY(StationScale scale) {
+		return switch (scale) {
+			case COMPACT -> HALL_BEAM_Y;
+			case CITY -> CITY_HALL_BEAM_Y;
+			case GRAND -> GRAND_HALL_BEAM_Y;
+		};
+	}
+
+	/** y of a wide vaulted shed's springing at {@code scale}: {@link #HIGH_HALL_BEAM_Y} compact, higher when grander. */
+	public static int highHallBeamY(StationScale scale) {
+		return switch (scale) {
+			case COMPACT -> HIGH_HALL_BEAM_Y;
+			case CITY -> CITY_HIGH_HALL_BEAM_Y;
+			case GRAND -> GRAND_HIGH_HALL_BEAM_Y;
+		};
+	}
+
+	/**
+	 * y of a shed's frame over a footbridge or a station building at {@code scale}: {@link #TALL_HALL_BEAM_Y} compact, up to
+	 * a real monumental train-shed height for a grand station.
+	 */
+	public static int tallHallBeamY(StationScale scale) {
+		return switch (scale) {
+			case COMPACT -> TALL_HALL_BEAM_Y;
+			case CITY -> CITY_TALL_HALL_BEAM_Y;
+			case GRAND -> GRAND_TALL_HALL_BEAM_Y;
+		};
 	}
 
 	/** The cross-section and length for a spec. */

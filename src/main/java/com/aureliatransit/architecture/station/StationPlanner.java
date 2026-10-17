@@ -3165,20 +3165,21 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * y of the hall's girder frame: just above the track envelopes; higher under a wide vault; and above the footbridge
-		 * and a building beside the tracks when the station has them.
+		 * y of the hall's girder frame: just above the track envelopes; higher under a wide vault; above the footbridge
+		 * and a building beside the tracks when the station has them; and higher again for a city or grand station, whose
+		 * shed is a real train-shed height rather than the compact frame (see {@link StationGeometry#hallBeamY}).
 		 */
 		private int hallBeamY() {
 			if (scale == StationScale.GRAND) {
-				return StationGeometry.TALL_HALL_BEAM_Y + 3;
+				return StationGeometry.tallHallBeamY(scale);
 			}
 			if (site.bridge() || spec.sideBuilding()) {
-				return StationGeometry.TALL_HALL_BEAM_Y;
+				return StationGeometry.tallHallBeamY(scale);
 			}
 			if (spec.shed().arched() && layout.width() - layout.buildingWidth() >= 16) {
-				return StationGeometry.HIGH_HALL_BEAM_Y;
+				return StationGeometry.highHallBeamY(scale);
 			}
-			return StationGeometry.HALL_BEAM_Y;
+			return StationGeometry.hallBeamY(scale);
 		}
 
 		/**

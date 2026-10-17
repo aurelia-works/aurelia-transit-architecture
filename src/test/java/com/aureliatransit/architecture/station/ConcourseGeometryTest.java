@@ -41,6 +41,22 @@ class ConcourseGeometryTest {
 	}
 
 	@Test
+	void shedHeightsGrowWithTheScale() {
+		assertEquals(StationGeometry.HALL_BEAM_Y, StationGeometry.hallBeamY(StationScale.COMPACT));
+		assertEquals(StationGeometry.HIGH_HALL_BEAM_Y, StationGeometry.highHallBeamY(StationScale.COMPACT));
+		assertEquals(StationGeometry.TALL_HALL_BEAM_Y, StationGeometry.tallHallBeamY(StationScale.COMPACT));
+		for (final StationScale scale : StationScale.values()) {
+			assertTrue(StationGeometry.hallBeamY(scale) >= StationGeometry.ENVELOPE_HEIGHT, scale + ": hall clears the trains");
+			if (scale != StationScale.COMPACT) {
+				assertTrue(StationGeometry.hallBeamY(scale) > StationGeometry.hallBeamY(StationScale.COMPACT), scale + ": taller flat hall");
+				assertTrue(StationGeometry.highHallBeamY(scale) > StationGeometry.highHallBeamY(StationScale.COMPACT), scale + ": higher vault");
+				assertTrue(StationGeometry.tallHallBeamY(scale) > StationGeometry.tallHallBeamY(StationScale.COMPACT), scale + ": taller shed");
+			}
+		}
+		assertTrue(StationGeometry.tallHallBeamY(StationScale.GRAND) >= 18, "a grand shed is about 20 m to the roof");
+	}
+
+	@Test
 	void eachScaleGetsARealHallDepth() {
 		// compact keeps the original block; city and grand are real halls, deeper than the one before
 		assertEquals(StationGeometry.BUILDING_DEPTH, StationGeometry.buildingDepth(StationScale.COMPACT));
