@@ -195,7 +195,7 @@ public final class StudioApi {
 			final String state = withConnections(block, at, full);
 			final String key = BlockModels.key(block.blockId(), heading, state);
 			final int model = modelIndex.computeIfAbsent(key, k -> {
-				modelJson.add("{\"id\":" + Json.quote(block.blockId()) + ",\"model\":" + models.describe(block.blockId(), heading, state) + "}");
+				modelJson.add("{\"id\":" + Json.quote(block.blockId()) + ",\"state\":" + Json.quote(state) + ",\"model\":" + models.describe(block.blockId(), heading, state) + "}");
 				return modelJson.size() - 1;
 			});
 			if (cells.length() > 0) {

@@ -667,9 +667,10 @@ public final class StationAudit {
 
 		/**
 		 * Every lift with a stop at the walk level and one at the upper walk level, landing doors at both and walkable landings:
-		 * one link per car column, from the ground landing in front of the doors to the upper one. A stop cell's front points at
-		 * the shaft's back wall, so the doors are two cells the other way and the landing three; the car's other column is
-		 * clockwise of the stop seen facing the back wall.
+		 * one link per car column, from the ground landing in front of the doors to the upper one. A stop cell stands in the
+		 * car's back row with its front at the side glass, so the doors are two cells along the glass and the landing three; the
+		 * car's other column is away from the glass. A car with doors at the back too (a cell the other way) links the landing
+		 * behind it to the upper landing as well.
 		 */
 		private List<Flight> lifts(Ground[] ground, Ground[] upper) {
 			final List<Flight> found = new ArrayList<>();
@@ -681,15 +682,28 @@ public final class StationAudit {
 				if (top == null || !top.blockId().equals(StylePalette.MTR_LIFT_FLOOR)) {
 					continue;
 				}
-				final int[] back = step(stop.front());
-				final int[] beside = step(clockwise(stop.front()));
-				for (int k = 0; k <= 1; k++) {
-					final int u = stop.u() + k * beside[0] - 3 * back[0];
-					final int v = stop.v() + k * beside[1] - 3 * back[1];
-					final boolean doors = isDoor(u + back[0], StationGeometry.WALK_Y, v + back[1])
-							&& isDoor(u + back[0], StationGeometry.UPPER_WALK_Y, v + back[1]);
-					if (doors && inGrid(u, v) && ground[index(u, v)] != Ground.BLOCKED && upper[index(u, v)] != Ground.BLOCKED) {
-						found.add(new Flight(u, v, u, v));
+				final int[] away = step(stop.front().opposite());
+				for (final LocalDir along : new LocalDir[]{clockwise(stop.front()), clockwise(stop.front()).opposite()}) {
+					final int[] d = step(along);
+					for (int k = 0; k <= 1; k++) {
+						final int u = stop.u() + k * away[0];
+						final int v = stop.v() + k * away[1];
+						if (!isDoor(u + 2 * d[0], StationGeometry.WALK_Y, v + 2 * d[1]) || !isDoor(u + 2 * d[0], StationGeometry.UPPER_WALK_Y, v + 2 * d[1])) {
+							continue;
+						}
+						final int lu = u + 3 * d[0];
+						final int lv = v + 3 * d[1];
+						if (!inGrid(lu, lv) || upper[index(lu, lv)] == Ground.BLOCKED) {
+							continue;
+						}
+						if (ground[index(lu, lv)] != Ground.BLOCKED) {
+							found.add(new Flight(lu, lv, lu, lv));
+						}
+						final int bu = u - 2 * d[0];
+						final int bv = v - 2 * d[1];
+						if (isDoor(u - d[0], StationGeometry.WALK_Y, v - d[1]) && inGrid(bu, bv) && ground[index(bu, bv)] != Ground.BLOCKED) {
+							found.add(new Flight(bu, bv, lu, lv));
+						}
 					}
 				}
 			}

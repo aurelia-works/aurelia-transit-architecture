@@ -1015,10 +1015,19 @@
 	// ---- walk -----------------------------------------------------------------------------------------------------------
 	// First person through the planned station, as a player would walk it in the game: a 0.6 × 1.8 body that collides with
 	// every block's model boxes, steps up half a block (stairs and ramps), falls and jumps, rides escalators and takes the
-	// lifts. Fare gates stand open and lift doors let you through, as they do for a passenger with a card and a lift car.
+	// lifts. Fare gates work as in the game: shut and 1.5 high, they open when you walk into the paddles (either way) and
+	// close once you are past them. Lift doors let you through, as a lift car would.
 
 	const BODY = { half: 0.3, height: 1.8, eye: 1.62, step: 0.6, gravity: 32, jump: 8.9, walk: 4.3, run: 7, fly: 11, flyRun: 24 };
-	const NO_COLLIDE = new Set(["GATE", "RAIL_NODE"]);
+	const NO_COLLIDE = new Set(["RAIL_NODE"]);
+	/** The game's fare gate collision, facing north (FareGateBlock): the cabinet, and the paddle while shut. */
+	const GATE_CABINET = [0, 0, 1 / 16, 4 / 16, 1.5, 15 / 16];
+	const GATE_PADDLE = [4 / 16, 0, 7 / 16, 1, 1.5, 9 / 16];
+	/** As in the game: the centre this close to the paddle line is walking into them, this far has cleared them; a gate left
+	 * alone shuts after 2 s. */
+	const GATE_AT = 0.45;
+	const GATE_CLEAR = 0.4;
+	const GATE_CLOSE_MS = 2000;
 	const ESCALATOR_SPEED = 2.2;
 	/** Falling further than this takes you back to where you last stood. */
 	const FALL = 4.5;
@@ -1067,6 +1076,7 @@
 		const cells = plan.cells;
 		const steps = new Map();
 		const liftStops = new Map();
+		const gates = [];
 		for (let i = 0; i < cells.length; i += 5) {
 			const x = cells[i];
 			const y = cells[i + 1];
@@ -1076,10 +1086,30 @@
 			if (NO_COLLIDE.has(role) || /lift_door/.test(entry.id)) {
 				continue;
 			}
+			if (role === "GATE") {
+				const turnY = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
+				const gate = { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turnY / 90) % 4], open: false, leftAt: 0 };
+				const turn = new THREE.Matrix4().makeTranslation(0.5, 0, 0.5)
+					.multiply(new THREE.Matrix4().makeRotationY(-turnY * Math.PI / 180))
+					.multiply(new THREE.Matrix4().makeTranslation(-0.5, 0, -0.5));
+				const end = /kind=end/.test(entry.state || "");
+				for (const [b, paddle] of end ? [[GATE_CABINET, false]] : [[GATE_CABINET, false], [GATE_PADDLE, true]]) {
+					const box = new THREE.Box3().setFromPoints([new THREE.Vector3(b[0], b[1], b[2]), new THREE.Vector3(b[3], b[4], b[5])]
+						.map((v) => v.applyMatrix4(turn)));
+					add(x, y, z, { a: [x + box.min.x, y + box.min.y, z + box.min.z, x + box.max.x, y + box.max.y, z + box.max.z], esc: 0,
+						gate: paddle ? gate : null });
+				}
+				if (!end) {
+					gates.push(gate);
+				}
+				continue;
+			}
 			if (/lift_track_floor/.test(entry.id)) {
 				const k = x + "," + z;
 				if (!liftStops.has(k)) {
-					liftStops.set(k, { x, z, stops: [] });
+					// the track's plate faces the glass it is fixed to; the car reaches away from it
+					const turn = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
+					liftStops.set(k, { x, z, stops: [], f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turn / 90) % 4] });
 				}
 				liftStops.get(k).stops.push(y);
 			}
@@ -1105,19 +1135,20 @@
 				s.dir = s.f;
 			}
 		}
-		// Each lift car is the open cells of its shaft beside the track at a stop. The game's car carries you; here every stop
-		// gets a car floor, so the shaft never swallows you.
+		// Each lift car is the track's own cell and the open cells of its shaft beside it, away from the glass the track is
+		// fixed to. The game's car carries you; here every stop gets a car floor, so the shaft never swallows you.
 		const occupied = (x, y, z) => grid.has(cellKey(x, y, z));
 		const lifts = [];
 		for (const lift of liftStops.values()) {
 			lift.stops.sort((a, b) => a - b);
 			const at = lift.stops[0];
 			lift.car = [];
-			for (let dx = -1; dx <= 1; dx++) {
-				for (let dz = -1; dz <= 1; dz++) {
-					const cx = lift.x + dx;
-					const cz = lift.z + dz;
-					if ((dx === 0 && dz === 0) || (!occupied(cx, at, cz) && !occupied(cx, at + 1, cz))) {
+			const [fx, fz] = lift.f;
+			for (let away = 0; away <= 1; away++) {
+				for (let side = -1; side <= 1; side++) {
+					const cx = lift.x - fx * away - fz * side;
+					const cz = lift.z - fz * away + fx * side;
+					if ((away === 0 && side === 0) || (!occupied(cx, at, cz) && !occupied(cx, at + 1, cz))) {
 						lift.car.push([cx, cz]);
 					}
 				}
@@ -1129,7 +1160,36 @@
 			}
 			lifts.push(lift);
 		}
-		return { grid, steps, lifts, ground: bounds.min.y };
+		return { grid, steps, lifts, gates, ground: bounds.min.y };
+	}
+
+	/** Opens a shut gate you walk into and shuts it once you are clear of the paddles, as the game does. */
+	function updateGates(world) {
+		const p = walk.pos;
+		const box = bodyBox(p);
+		const now = performance.now();
+		for (const g of world.gates) {
+			if (Math.abs(g.x + 0.5 - p.x) > 2 || Math.abs(g.z + 0.5 - p.z) > 2 || Math.abs(g.y - p.y) > 2) {
+				if (g.open && now - g.leftAt > GATE_CLOSE_MS) {
+					g.open = false;
+				}
+				continue;
+			}
+			const inCell = box[0] < g.x + 1 && box[3] > g.x && box[2] < g.z + 1 && box[5] > g.z && box[1] < g.y + 1.5 && box[4] > g.y;
+			const off = Math.abs((p.x - g.x - 0.5) * g.f[0] + (p.z - g.z - 0.5) * g.f[1]);
+			if (!inCell) {
+				if (g.open && now - g.leftAt > GATE_CLOSE_MS) {
+					g.open = false;
+				}
+				continue;
+			}
+			g.leftAt = now;
+			if (!g.open && off < GATE_AT) {
+				g.open = true;
+			} else if (g.open && off > GATE_CLEAR) {
+				g.open = false;
+			}
+		}
 	}
 
 	function bodyBox(p) {
@@ -1145,7 +1205,9 @@
 					const list = world.grid.get(cellKey(x, y, z));
 					if (list) {
 						for (const b of list) {
-							out.push(b);
+							if (!(b.gate && b.gate.open)) {
+								out.push(b);
+							}
 						}
 					}
 				}
@@ -1317,6 +1379,7 @@
 		if (step) {
 			carry = [step.dir[0] * ESCALATOR_SPEED, step.dir[1] * ESCALATOR_SPEED];
 		}
+		updateGates(world);
 		// small steps, so a fast fall or a run never passes through a slab
 		const n = Math.max(1, Math.ceil(Math.max(Math.abs(walk.vel.x), Math.abs(walk.vel.y), Math.abs(walk.vel.z)) * dt / 0.25));
 		for (let i = 0; i < n; i++) {

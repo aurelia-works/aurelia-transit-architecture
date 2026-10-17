@@ -495,10 +495,10 @@ class StationPlannerTest {
 		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
 		// per platform: two 2-wide hanging departure screens, each with a cross beam over the cell off the girder line, a help
-		// point and two speakers
-		expected.put(Role.FIXTURE, 18);
+		// point and three speakers (one every 16 blocks)
+		expected.put(Role.FIXTURE, 20);
 		assertEquals(expected, counts);
-		assertEquals(1254, plan(spec).blocks().size());
+		assertEquals(1256, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -589,7 +589,13 @@ class StationPlannerTest {
 		// v = 4, 12, 20, 28 on each of the two side platforms
 		assertEquals(8, lamps.size());
 		for (final PlannedBlock lamp : lamps) {
-			assertEquals(1, lamp.y());
+			// a lamp standard: the lamp three blocks up, on a pole
+			assertEquals(StationGeometry.WALK_Y + 3, lamp.y());
+			for (int y = StationGeometry.WALK_Y; y < lamp.y(); y++) {
+				final int at = y;
+				assertTrue(plan.blocks().stream().anyMatch(b -> b.u() == lamp.u() && b.v() == lamp.v() && b.y() == at && b.blockId().equals(StationPlanner.LAMP_POLE)),
+						"a pole under " + lamp);
+			}
 			assertTrue(Set.of(4, 12, 20, 28).contains(lamp.v()), "lamp at v=" + lamp.v());
 			if (lamp.u() == 0) {
 				assertEquals(LocalDir.PLUS_U, lamp.front());
@@ -998,7 +1004,8 @@ class StationPlannerTest {
 				for (final PlannedBlock unit : units) {
 					final int behind = unit.v() + (unit.front() == LocalDir.PLUS_V ? -1 : 1);
 					assertTrue(unit.front().alongTrack() && plan.blocks().stream().anyMatch(b -> b.u() == unit.u() && b.v() == behind
-							&& b.y() == StationGeometry.WALK_Y && (b.role() == Role.COLUMN || b.role() == Role.LAMP)), "nothing behind " + unit + " in " + describe(spec));
+							&& b.y() == StationGeometry.WALK_Y && (b.role() == Role.COLUMN || b.role() == Role.LAMP || b.blockId().equals(StationPlanner.LAMP_POLE))),
+							"nothing behind " + unit + " in " + describe(spec));
 				}
 			}
 		}
@@ -1012,7 +1019,7 @@ class StationPlannerTest {
 				final StationPlan plan = plan(spec);
 				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
 					final List<PlannedBlock> speakers = plan.blocks().stream().filter(b -> b.blockId().endsWith("_speaker") && band.contains(b.u(), b.v())).toList();
-					assertEquals(2, speakers.size(), "a speaker by each screen of a 48 long platform: " + describe(spec));
+					assertEquals(3, speakers.size(), "a speaker every 16 blocks of a 48 long platform: " + describe(spec));
 					for (final PlannedBlock speaker : speakers) {
 						if (speaker.blockId().endsWith(":ceiling_speaker")) {
 							assertTrue(speaker.y() >= StationGeometry.WALK_Y + 2, "over head height: " + speaker + " in " + describe(spec));
@@ -1299,16 +1306,36 @@ class StationPlannerTest {
 				}
 			}
 		}
-		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith(":platform_pids")).toList();
+		// on a column, or hung across the gap between two
+		final List<PlannedBlock> screens = plan.blocks().stream().filter(b -> b.blockId().endsWith("platform_pids")).toList();
 		assertFalse(screens.isEmpty());
+		final Map<String, List<Integer>> displays = new TreeMap<>();
 		for (final PlannedBlock screen : screens) {
 			assertTrue(screen.y() > StationGeometry.WALK_Y + 1, "above head height, not on the floor");
-			final long pair = screens.stream().filter(o -> o.y() == screen.y() && o.v() == screen.v() && o.front() == screen.front()
-					&& Math.abs(o.u() - screen.u()) == 1).count();
-			assertEquals(1, pair, "two blocks wide, one display: " + screen);
+			displays.computeIfAbsent(screen.y() + "," + screen.v() + "," + screen.front(), k -> new ArrayList<>()).add(screen.u());
 		}
-		assertTrue(screens.stream().allMatch(s -> screens.stream().anyMatch(o -> o.v() == s.v() && o.y() == s.y()
-				&& (o.u() == s.u() || Math.abs(o.u() - s.u()) == 1) && isColumnBehind(at, o))), "each display is fixed to a column");
+		// a display is a run of blocks side by side: two fixed to a column behind them, or the whole gap from one column to the next
+		for (final Map.Entry<String, List<Integer>> row : displays.entrySet()) {
+			final List<Integer> us = row.getValue().stream().sorted().toList();
+			final String[] key = row.getKey().split(",");
+			final int y = Integer.parseInt(key[0]);
+			final int v = Integer.parseInt(key[1]);
+			int start = 0;
+			for (int i = 1; i <= us.size(); i++) {
+				if (i < us.size() && us.get(i) == us.get(i - 1) + 1) {
+					continue;
+				}
+				final List<Integer> run = us.subList(start, i);
+				start = i;
+				assertTrue(run.size() >= 2, "one display, at least two blocks wide: " + row.getKey() + " " + run);
+				final boolean onColumn = run.size() == 2 && run.stream().anyMatch(u -> screens.stream()
+						.anyMatch(o -> o.y() == y && o.v() == v && o.u() == u && isColumnBehind(at, o)));
+				final PlannedBlock left = at.get((run.get(0) - 1) + "," + y + "," + v);
+				final PlannedBlock right = at.get((run.get(run.size() - 1) + 1) + "," + y + "," + v);
+				final boolean between = left != null && left.role() == Role.COLUMN && right != null && right.role() == Role.COLUMN;
+				assertTrue(onColumn || between, "each display is fixed to a column or spans between two: " + row.getKey() + " " + run);
+			}
+		}
 	}
 
 	private static boolean isColumnBehind(Map<String, PlannedBlock> at, PlannedBlock screen) {

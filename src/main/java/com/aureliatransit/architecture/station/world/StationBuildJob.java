@@ -434,9 +434,11 @@ public final class StationBuildJob {
 	}
 
 	/**
-	 * Forms an MTR lift from every column of built stops, as the Lift Refresher would, and links the call buttons. A stop's
-	 * FACING points at the shaft's back wall; the car is the 2×2 in front of the stop and clockwise of it, which puts its
-	 * centre half a cell back from the stop's centre and half a cell clockwise.
+	 * Forms an MTR lift from every column of built stops, as the Lift Refresher would, and links the call buttons. A stop
+	 * stands in a corner of the car against the side glass, its FACING towards the glass: the car is the 2×2 reaching from
+	 * the stop away from the glass and one row towards the landing doors, which stand two cells along from the stop. So the
+	 * car's centre is half a cell from the stop's centre away from the glass and half a cell towards the doors. A stop with
+	 * no doors there is an older shaft's, against the back wall with the car in front of it and clockwise.
 	 */
 	private void lifts() {
 		final Map<Long, TreeMap<Integer, BlockPos>> columns = new HashMap<>();
@@ -462,13 +464,26 @@ public final class StationBuildJob {
 			if (!stop.contains(Properties.HORIZONTAL_FACING)) {
 				continue;
 			}
-			final Direction back = stop.get(Properties.HORIZONTAL_FACING);
-			final Direction beside = back.rotateYClockwise();
-			// a door in the back wall beside the bottom stop: the car opens there too (MTR opens a side only where it finds doors)
-			final boolean doubleSided = Registries.BLOCK.getId(world.getBlockState(stops.firstEntry().getValue().offset(back)).getBlock()).toString()
-					.equals(StylePalette.MTR_LIFT_DOOR);
-			shafts.add(new MtrLiftContract.Shaft(List.copyOf(stops.values()), BlockStateResolver.heading(back.getOpposite()),
-					0.5 + (beside.getOffsetX() - back.getOffsetX()) / 2.0, 0.5 + (beside.getOffsetZ() - back.getOffsetZ()) / 2.0, doubleSided));
+			final Direction facing = stop.get(Properties.HORIZONTAL_FACING);
+			final BlockPos bottom = stops.firstEntry().getValue();
+			Direction doors = null;
+			for (final Direction side : new Direction[]{facing.rotateYClockwise(), facing.rotateYCounterclockwise()}) {
+				if (liftDoor(bottom.offset(side, 2))) {
+					doors = side;
+				}
+			}
+			if (doors != null) {
+				// a door one cell the other way from the stop: the car opens at the back too (MTR opens a side only where it
+				// finds doors)
+				shafts.add(new MtrLiftContract.Shaft(List.copyOf(stops.values()), BlockStateResolver.heading(doors),
+						0.5 + 0.5 * (doors.getOffsetX() - facing.getOffsetX()), 0.5 + 0.5 * (doors.getOffsetZ() - facing.getOffsetZ()),
+						liftDoor(bottom.offset(doors.getOpposite()))));
+			} else {
+				final Direction beside = facing.rotateYClockwise();
+				shafts.add(new MtrLiftContract.Shaft(List.copyOf(stops.values()), BlockStateResolver.heading(facing.getOpposite()),
+						0.5 + (beside.getOffsetX() - facing.getOffsetX()) / 2.0, 0.5 + (beside.getOffsetZ() - facing.getOffsetZ()) / 2.0,
+						liftDoor(bottom.offset(facing))));
+			}
 		}
 		if (shafts.isEmpty()) {
 			return;
@@ -557,6 +572,10 @@ public final class StationBuildJob {
 	 */
 	static boolean stillPlaced(BlockState current, BlockState placed) {
 		return current.getBlock() == placed.getBlock() && !connectedNode(current, placed);
+	}
+
+	private boolean liftDoor(BlockPos pos) {
+		return Registries.BLOCK.getId(world.getBlockState(pos).getBlock()).toString().equals(StylePalette.MTR_LIFT_DOOR);
 	}
 
 	private void say(Formatting colour, String message) {

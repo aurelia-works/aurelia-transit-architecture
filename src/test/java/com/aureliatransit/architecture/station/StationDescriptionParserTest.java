@@ -145,8 +145,8 @@ class StationDescriptionParserTest {
 		assertEquals(5, spec("5 wide").platformWidth());
 		assertEquals(6, spec("6 block wide platforms").platformWidth());
 		assertEquals(7, spec("platform width of 7").platformWidth());
-		assertEquals(6, spec("wide platforms").platformWidth());
-		assertEquals(8, spec("wide island platform").platformWidth());
+		assertEquals(12, spec("wide platforms").platformWidth());
+		assertEquals(14, spec("wide island platform").platformWidth());
 		assertEquals(3, spec("narrow platforms").platformWidth());
 	}
 
@@ -324,7 +324,8 @@ class StationDescriptionParserTest {
 	void emptyBlankAndNullGiveDefaults() {
 		for (final String text : new String[]{null, "", "   "}) {
 			final ParseResult result = StationDescriptionParser.parse(text);
-			assertEquals(StationSpec.defaults(), result.spec());
+			// the defaults, with platforms as wide as a description gets them
+			assertEquals(StationSpec.builder().platformWidth(StationSpec.DEFAULT_SIDE_WIDTH).build(), result.spec());
 			assertEquals("no description: using defaults", result.defaulted().get(0));
 			assertTrue(result.understood().isEmpty());
 			assertTrue(result.ignored().isEmpty());
@@ -380,7 +381,7 @@ class StationDescriptionParserTest {
 		assertEquals(PlatformLayout.ISLAND, metro.platformLayout());
 		assertEquals(SurfaceMaterial.TERRAZZO, metro.surface());
 		assertEquals(120, metro.platformLength());
-		assertEquals(8, metro.platformWidth());
+		assertEquals(14, metro.platformWidth());
 
 		final StationSpec hall = spec("modern station hall over 2 tracks, side platforms 6 wide, dark paving, timber roof");
 		assertEquals(RoofType.HALL, hall.roof());

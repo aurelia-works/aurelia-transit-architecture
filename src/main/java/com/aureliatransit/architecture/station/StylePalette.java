@@ -111,17 +111,17 @@ public final class StylePalette {
 						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("steel_bench"),
 						ata("antwerp_polished_marble_wall"));
 				case BERLIN -> new Building(ata("metro_steel_cladding"), ata("metro_steel_cladding"), ata("metro_steel_cladding"),
-						ata("metro_steel_cladding"), ata("blue_tinted_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						ata("metro_steel_cladding"), ata("blue_tinted_glass_pane"), ata("metro_granite_floor"), ata("metro_granite_floor"),
 						ata("metro_steel_cladding"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
 						ata("blue_tinted_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
 						ata("metro_pale_concrete"));
 				case HONG_KONG -> new Building("minecraft:white_concrete", "minecraft:smooth_quartz", "minecraft:smooth_quartz",
-						"minecraft:smooth_quartz", ata("low_iron_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						"minecraft:smooth_quartz", ata("low_iron_glass_pane"), ata("metro_granite_floor"), ata("metro_granite_floor"),
 						"minecraft:smooth_quartz", ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
 						ata("low_iron_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("utrecht_tree_column_white"), ata("steel_bench"),
 						"minecraft:white_concrete");
 				case BEIJING -> new Building(ata("metro_pale_concrete"), ata("metro_steel_cladding"), ata("metro_steel_cladding"),
-						ata("metro_steel_cladding"), ata("grey_tinted_glass"), ata("metro_granite_floor"), ata("metro_granite_floor"),
+						ata("metro_steel_cladding"), ata("grey_tinted_glass_pane"), ata("metro_granite_floor"), ata("metro_granite_floor"),
 						ata("metro_steel_cladding"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
 						ata("grey_tinted_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
 						ata("metro_pale_concrete"));

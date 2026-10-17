@@ -38,7 +38,9 @@ class ShedLogicTest {
 				}
 				int joined = 0;
 				for (final int[] o : new int[][]{{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}}) {
-					if (girder(at.get((block.u() + o[0]) + "," + (block.y() + o[1]) + "," + (block.v() + o[2])))) {
+					// a girder may also end on a column (a screen's girder runs from one column to the next)
+					final PlannedBlock next = at.get((block.u() + o[0]) + "," + (block.y() + o[1]) + "," + (block.v() + o[2]));
+					if (girder(next) || next != null && next.role() == Role.COLUMN) {
 						joined++;
 					}
 				}

@@ -1311,7 +1311,7 @@ public final class StationDescriptionParser {
 			} else if (narrow) {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
 			} else if (wide) {
-				builder.platformWidth(layout == PlatformLayout.ISLAND ? 8 : 6);
+				builder.platformWidth(layout == PlatformLayout.ISLAND ? 14 : 12);
 			} else if (small) {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
 			} else {

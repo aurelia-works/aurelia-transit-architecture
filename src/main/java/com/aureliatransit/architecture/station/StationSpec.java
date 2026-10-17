@@ -46,10 +46,17 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 
 	public static final int DEFAULT_TRACKS = 2;
 	public static final int DEFAULT_LENGTH = 48;
-	public static final int DEFAULT_SIDE_WIDTH = 4;
-	public static final int DEFAULT_ISLAND_WIDTH = 6;
-	/** Side platforms of a footbridge station: wide enough for a two-column stair, so each gets a lift. */
-	public static final int DEFAULT_FOOTBRIDGE_SIDE_WIDTH = 6;
+	/**
+	 * Platforms are wide by default, as at a main station: room to walk past a lift, a stair and an up escalator
+	 * ({@link StationLayout#MIN_ESCALATOR_SIDE}, {@link StationLayout#MIN_ESCALATOR_ISLAND}) and for a travelator lane.
+	 * "narrow" or a width in blocks still gives a smaller one.
+	 */
+	public static final int DEFAULT_SIDE_WIDTH = 10;
+	public static final int DEFAULT_ISLAND_WIDTH = 11;
+	/** Side platforms of a footbridge station: as wide as any other side platform. */
+	public static final int DEFAULT_FOOTBRIDGE_SIDE_WIDTH = DEFAULT_SIDE_WIDTH;
+	/** The width a spec built in code starts with; a description always gets one of the defaults above. */
+	public static final int BUILDER_WIDTH = 4;
 
 	public StationSpec {
 		Objects.requireNonNull(platformLayout, "platformLayout");
@@ -146,7 +153,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private int trackCount = DEFAULT_TRACKS;
 		private PlatformLayout platformLayout = PlatformLayout.SIDE;
 		private int platformLength = DEFAULT_LENGTH;
-		private int platformWidth = DEFAULT_SIDE_WIDTH;
+		private int platformWidth = BUILDER_WIDTH;
 		private StationStyle style = StationStyle.MODERN;
 		private RoofType roof = RoofType.CANOPY;
 		private SurfaceMaterial surface = SurfaceMaterial.STYLE_DEFAULT;

@@ -91,6 +91,14 @@ class CanopyShapeTest {
 					lines.add(block.u());
 				}
 			}
+			// on a wide island the V has more girders than column lines: those beside the line rest on the cross beams of
+			// the column rows
+			final Set<Integer> carried = new HashSet<>(lines);
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.BEAM && block.y() == StationGeometry.CANOPY_Y - 1 && columnRows.contains(block.v())) {
+					carried.add(block.u());
+				}
+			}
 			final Set<Integer> framedRows = new HashSet<>();
 			for (final PlannedBlock block : plan.blocks()) {
 				if (block.role() == Role.WALL || block.role() == Role.BRIDGE_PIER || block.role() == Role.STAIR || block.role() == Role.ESCALATOR) {
@@ -106,7 +114,7 @@ class CanopyShapeTest {
 				assertFalse(block.role() == Role.RIB, text + ": a brace between columns " + block);
 				// (a stairwell, lift shaft or footbridge pier in the row has cross beams framed into it)
 				if (block.role() == Role.BEAM && block.y() == StationGeometry.CANOPY_Y - 1 && !framedRows.contains(block.v())) {
-					assertTrue(lines.contains(block.u()), text + ": a girder along the eaves " + block);
+					assertTrue(carried.contains(block.u()), text + ": a girder along the eaves " + block);
 				}
 			}
 		}

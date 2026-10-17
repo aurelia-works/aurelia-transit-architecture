@@ -264,6 +264,9 @@ public final class LayoutValidator {
 		List<Violation> edgeClearway() {
 			final List<Violation> found = new ArrayList<>();
 			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() == Role.RAILING && platformEnd(block.u(), block.v())) {
+					continue; // the fence across a platform's end runs to the edge, so nobody steps off onto the tracks there
+				}
 				if (block.role().obstructsWalkway() && block.y() >= StationGeometry.WALK_Y
 						&& block.y() <= StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1
 						&& has(block.u(), StationGeometry.PLATFORM_Y, block.v(), Role.PLATFORM_EDGE)) {
@@ -271,6 +274,22 @@ public final class LayoutValidator {
 				}
 			}
 			return found;
+		}
+
+		/** A lamp standard's head, on top of its pole. */
+		private boolean onLampPole(PlannedBlock lamp) {
+			final List<PlannedBlock> below = cells.get(new Cell(lamp.u(), lamp.y() - 1, lamp.v()));
+			return below != null && below.stream().anyMatch(block -> block.blockId().equals(StationPlanner.LAMP_POLE));
+		}
+
+		/** The first or last row of a platform. */
+		private boolean platformEnd(int u, int v) {
+			for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+				if (u >= band.uMin() && u <= band.uMax() && (v == band.vFrom() || v == band.vTo())) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		List<Violation> unsupportedColumns() {
@@ -570,7 +589,7 @@ public final class LayoutValidator {
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
 				if ((role == Role.LAMP || role == Role.BENCH || role == Role.BIN || role == Role.NAME_SIGN)
-						&& !isFlatFloor(block.u(), block.y() - 1, block.v())) {
+						&& !isFlatFloor(block.u(), block.y() - 1, block.v()) && !(role == Role.LAMP && onLampPole(block))) {
 					found.add(at(Violation.Kind.FLOATING_FIXTURE, block, where(block) + " does not stand on a flat floor"));
 				}
 			}

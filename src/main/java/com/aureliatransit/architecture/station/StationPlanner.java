@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Builds a {@link StationPlan} from a spec: railway geometry from {@link StationGeometry}, then roles for every cell, then
@@ -78,6 +79,7 @@ public final class StationPlanner {
 		planning.nameSigns();
 		planning.speakers();
 		planning.liftButtons();
+		planning.endFences();
 		planning.cornerPosts();
 		return planning.finish();
 	}
@@ -194,6 +196,12 @@ public final class StationPlanner {
 	/** Platforms at least this long (rows, both ends included) get travelators along them. */
 	static final int TRAVELATOR_PLATFORM = 72;
 
+	/** One announcement speaker per this many blocks of platform. */
+	static final int SPEAKER_SPACING = 16;
+	/** A speaker fixed to a post sits this high: above the screens. */
+	static final int SPEAKER_Y = StationGeometry.WALK_Y + 3;
+	/** The pole an open platform's lamp stands on. */
+	static final String LAMP_POLE = "aurelia_transit_architecture:sign_pole";
 	/** Roughly how many blocks of platform each departure screen serves. */
 	static final int SCREEN_SPACING = 30;
 
@@ -402,6 +410,27 @@ public final class StationPlanner {
 					if (!layout.terminus()) { // a terminus's platforms run level into its concourse
 						put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, band.vTo() + 1, LocalDir.PLUS_V);
 						put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, band.vTo() + 2, LocalDir.PLUS_V);
+					}
+				}
+			}
+		}
+
+		/**
+		 * A handrail across each end of every platform that has no ramp there, edge cells too, so nobody walks off the end
+		 * onto the tracks; a terminus's platforms run on into its concourse at the head end and stay open there. Planned last,
+		 * so it only takes cells nothing else wanted.
+		 */
+		void endFences() {
+			final Set<TrackLayout.PlatformBand> ramped = new HashSet<>(layout.rampLength() == 0 ? List.of()
+					: site.street() != null ? site.bridgeBands(layout) : layout.platforms());
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (ramped.contains(band)) {
+					continue;
+				}
+				for (int u = band.uMin(); u <= band.uMax(); u++) {
+					put(Role.RAILING, u, StationGeometry.WALK_Y, band.vFrom(), LocalDir.MINUS_V);
+					if (!layout.terminus()) {
+						put(Role.RAILING, u, StationGeometry.WALK_Y, band.vTo(), LocalDir.PLUS_V);
 					}
 				}
 			}
@@ -1138,9 +1167,10 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * One shaft: a track column against the back wall with a stop at the walk level and at the upper walk level, a pair of
-		 * landing doors at each stop with a call button beside them, walls, and a roof unless {@code roofId} is null. The car
-		 * space stays empty from the walk level to the roof. With {@code backDoor} the back wall also has a pair of doors at the
+		 * One shaft: a track column fixed to the inside of the side glass on the left as you step in (in the car's back row, out
+		 * of the way of the doors, the glass wall left whole), with a stop at the walk level and at the upper walk
+		 * level, a pair of landing doors at each stop with a call button beside them, walls, and a roof unless {@code roofId}
+		 * is null. The car space stays empty from the walk level to the roof. With {@code backDoor} the back wall also has a pair of doors at the
 		 * walk level only, and the car is formed double-sided: MTR opens each side only where it finds doors at that floor.
 		 */
 		private void shaft(StationLayout.Lift lift, String wallId, boolean farWall, String roofId, boolean backDoor) {
@@ -1150,14 +1180,20 @@ public final class StationPlanner {
 			final int c1 = c0 + 1;
 			final int vD = lift.doorV();
 			final int vBack = vD + 3 * o;
-			// MTR centres the car on the track cell's corner; the track goes in the column whose clockwise neighbour (seen
-			// facing the back wall) is the car's other column, so the car lies in front of it
+			// seen from the landing, facing in, the left door leaf is c0 facing +v and c1 facing -v
 			final int cT = in == LocalDir.PLUS_V ? c0 : c1;
 			final int low = StationGeometry.WALK_Y;
 			final int high = StationGeometry.UPPER_WALK_Y;
 			final int roof = StationGeometry.BUILDING_ROOF_Y;
+			// u is to the right of v, so the left wall is c0 - 1 facing +v and c1 + 1 facing -v; a shaft without a far wall
+			// (the building's wall closes it) keeps its track against its own glass wall
+			final boolean left = !farWall || o > 0;
+			// the track is fixed to the inside of the side glass, in the car's back row, out of the way of both door pairs; its
+			// plate is on the side it faces, so it faces the glass, and the stop's build finds the doors two cells along it
+			final int cTrack = left ? c0 : c1;
+			final LocalDir toGlass = left ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 			for (int y = low; y <= high + 1; y++) {
-				put(Role.LIFT, cT, y, vD + 2 * o, in, y == low || y == high ? StylePalette.MTR_LIFT_FLOOR : StylePalette.MTR_LIFT_TRACK);
+				put(Role.LIFT, cTrack, y, vD + 2 * o, toGlass, y == low || y == high ? StylePalette.MTR_LIFT_FLOOR : StylePalette.MTR_LIFT_TRACK);
 			}
 			for (int c = c0; c <= c1; c++) {
 				for (int v = vD + o; v != vBack; v += o) {
@@ -3460,6 +3496,9 @@ public final class StationPlanner {
 			return "aurelia_transit_architecture:" + id;
 		}
 
+		/** The height of an open platform's lamp head, on its pole. */
+		private static final int LAMP_HEAD_Y = StationGeometry.WALK_Y + 3;
+
 		void lamps() {
 			if (!spec.furniture()) {
 				return;
@@ -3471,7 +3510,17 @@ public final class StationPlanner {
 				final int u = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
 				final LocalDir front = band.island() ? LocalDir.MINUS_U : towardTrack(band);
 				for (int v = band.vFrom() + 4; v <= band.vTo(); v += 8) {
-					put(Role.LAMP, u, StationGeometry.WALK_Y, v, front);
+					// a lamp standard where there is room: the lamp on a pole, high enough to carry a speaker above head height
+					boolean room = true;
+					for (int y = StationGeometry.WALK_Y; y <= LAMP_HEAD_Y; y++) {
+						room &= !taken(u, y, v);
+					}
+					if (room) {
+						for (int y = StationGeometry.WALK_Y; y < LAMP_HEAD_Y; y++) {
+							put(Role.FIXTURE, u, y, v, front, LAMP_POLE);
+						}
+					}
+					put(Role.LAMP, u, room ? LAMP_HEAD_Y : StationGeometry.WALK_Y, v, front);
 				}
 			}
 		}
@@ -3689,7 +3738,7 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
-					if (!hangScreen(band, target) && !screenOnColumn(band, target)) {
+					if (!hangScreen(band, target) && !screenBetweenColumns(band, target) && !screenOnColumn(band, target)) {
 						onPost(band, target, StationGeometry.WALK_Y, PIDS);
 					}
 				}
@@ -3709,17 +3758,20 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * An announcement speaker near each departure screen: under the roof, or on a post where the platform is open. Planned
-		 * after the name signs, so it only takes a cell nothing else wanted.
+		 * Announcement speakers along every platform, one per {@link #SPEAKER_SPACING} blocks: under a low roof hung from the
+		 * ceiling, otherwise fixed high on a column or lamp post (under a train shed too high to hang from, or in the open), never
+		 * at floor level. Planned after the name signs, so they only take cells nothing else wanted.
 		 */
 		void speakers() {
 			if (!spec.furniture()) {
 				return;
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				for (final int target : screenTargets(band).stream().map(t -> t + 3).toList()) {
-					if (!hangSpeaker(band, target)) {
-						onPost(band, target, StationGeometry.WALK_Y, WALL_SPEAKER);
+				final int count = Math.max(1, Math.round(band.length() / (float) SPEAKER_SPACING));
+				for (int i = 0; i < count; i++) {
+					final int target = band.vFrom() + band.length() * (2 * i + 1) / (2 * count) + 3;
+					if (!hangSpeaker(band, target) && !onPost(band, target, SPEAKER_Y, WALL_SPEAKER)) {
+						onPost(band, target, SPEAKER_Y - 1, WALL_SPEAKER);
 					}
 				}
 			}
@@ -3822,6 +3874,56 @@ public final class StationPlanner {
 		}
 
 		/**
+		 * Where the roof is too high to hang a screen from (a train shed) and the platform has two column lines, one
+		 * double-sided screen across the whole gap between a pair of columns, in their own row, under a girder from column to
+		 * column it hangs from: a single display read from both ways, like a screen on a gantry. The pair nearest {@code target}
+		 * with the gap clear is taken. True if hung.
+		 */
+		private boolean screenBetweenColumns(TrackLayout.PlatformBand band, int target) {
+			final int y = StationGeometry.WALK_Y + 2;
+			final Map<Integer, List<Integer>> rows = new TreeMap<>();
+			for (final PlannedBlock block : cells.values()) {
+				if (block.role() == Role.COLUMN && block.y() == StationGeometry.WALK_Y && band.contains(block.u(), block.v())) {
+					rows.computeIfAbsent(block.v(), v -> new ArrayList<>()).add(block.u());
+				}
+			}
+			final List<Integer> order = new ArrayList<>(rows.keySet());
+			order.sort(Comparator.comparingInt((Integer v) -> Math.abs(v - target)).thenComparingInt(v -> v));
+			for (final int v : order) {
+				final List<Integer> us = rows.get(v);
+				if (us.size() < 2 || nearStairs(band, v)) {
+					continue;
+				}
+				us.sort(null);
+				for (int i = 0; i + 1 < us.size(); i++) {
+					final int a = us.get(i);
+					final int b = us.get(i + 1);
+					if (b - a < 3 || !column(a, y + 1, v) || !column(b, y + 1, v)) {
+						continue;
+					}
+					boolean clear = true;
+					for (int u = a + 1; u < b && clear; u++) {
+						clear = !isEdge(band, u) && !taken(u, y, v) && !taken(u, y + 1, v);
+					}
+					if (!clear) {
+						continue;
+					}
+					for (int u = a + 1; u < b; u++) {
+						put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, HANGING_PIDS);
+						put(Role.FIXTURE, u, y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.BEAM), "kind=" + palette.girderKind());
+					}
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private boolean column(int u, int y, int v) {
+			final PlannedBlock block = cells.get(new Cell(u, y, v));
+			return block != null && block.role() == Role.COLUMN;
+		}
+
+		/**
 		 * Where the roof is too high to hang a screen from (a train shed), a screen two blocks wide fixed to the column nearest
 		 * {@code target} above head height, its middle against the column so the two blocks join into one display; on both
 		 * faces of the column along the platform where there is room, so it reads from either way. True if one was fixed.
@@ -3884,8 +3986,8 @@ public final class StationPlanner {
 		private boolean onPost(TrackLayout.PlatformBand band, int target, int y, String blockId) {
 			final List<Cell> posts = new ArrayList<>();
 			for (final PlannedBlock block : cells.values()) {
-				if ((block.role() == Role.COLUMN || block.role() == Role.LAMP) && block.y() == StationGeometry.WALK_Y
-						&& band.contains(block.u(), block.v())) {
+				final boolean post = block.role() == Role.COLUMN || block.role() == Role.LAMP || block.blockId().equals(LAMP_POLE);
+				if (post && block.y() == StationGeometry.WALK_Y && band.contains(block.u(), block.v())) {
 					posts.add(new Cell(block.u(), block.y(), block.v()));
 				}
 			}
@@ -3893,7 +3995,9 @@ public final class StationPlanner {
 			for (final Cell post : posts) {
 				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
 					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
-					if (band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), y, v)
+					// above the floor the unit needs the post itself at that height to be fixed to
+					final boolean held = y == StationGeometry.WALK_Y || cells.containsKey(new Cell(post.u(), y, post.v()));
+					if (held && band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), y, v)
 							&& put(Role.FIXTURE, post.u(), y, v, side, blockId)) {
 						return true;
 					}
