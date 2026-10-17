@@ -3,8 +3,9 @@ package com.aureliatransit.architecture.station;
 /**
  * How grand the station building is. A compact building is the two-storey block beside the entrance; a city station adds
  * a storey and wings along the platform; a grand station adds two storeys, wings along almost the whole platform, a pitched
- * roof on masonry looks, a clock tower over the entrance and a taller train shed. Only a side building grows; platforms,
- * tracks and footbridges are the same at every scale.
+ * roof on masonry looks, a clock tower over the entrance and a taller train shed. A side building grows deeper and taller
+ * ({@link StationGeometry#buildingDepth}, {@link StationGeometry#headDepth}); platforms, tracks and footbridges are the
+ * same at every scale.
  */
 public enum StationScale {
 	/** The two-storey building block only. */

@@ -7,7 +7,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The scale-aware concourse: how deep a side building or a terminus head building is, how wide the over-track corridor
- * is, and that the railway layout agrees with it. The depths stay the compact block; the corridor widens with the scale.
+ * is, and that the railway layout agrees with it. The depths grow with the scale, so a city or grand station gets a real
+ * hall rather than only more storeys; the corridor stays the compact width for now.
  */
 class ConcourseGeometryTest {
 
@@ -40,17 +41,22 @@ class ConcourseGeometryTest {
 	}
 
 	@Test
-	void buildingDepthIsTheOneBlockAtEveryScale() {
-		for (final StationScale scale : StationScale.values()) {
-			assertEquals(StationGeometry.BUILDING_DEPTH, StationGeometry.buildingDepth(scale), scale.toString());
-		}
+	void eachScaleGetsARealHallDepth() {
+		// compact keeps the original block; city and grand are real halls, deeper than the one before
+		assertEquals(StationGeometry.BUILDING_DEPTH, StationGeometry.buildingDepth(StationScale.COMPACT));
+		assertEquals(StationGeometry.CITY_BUILDING_DEPTH, StationGeometry.buildingDepth(StationScale.CITY));
+		assertEquals(StationGeometry.GRAND_BUILDING_DEPTH, StationGeometry.buildingDepth(StationScale.GRAND));
+		assertTrue(StationGeometry.buildingDepth(StationScale.CITY) > StationGeometry.buildingDepth(StationScale.COMPACT));
+		assertTrue(StationGeometry.buildingDepth(StationScale.GRAND) > StationGeometry.buildingDepth(StationScale.CITY));
 	}
 
 	@Test
-	void headDepthIsTheOneBlockAtEveryScale() {
-		for (final StationScale scale : StationScale.values()) {
-			assertEquals(StationGeometry.HEAD_DEPTH, StationGeometry.headDepth(scale), scale.toString());
-		}
+	void eachScaleGetsARealHeadDepth() {
+		assertEquals(StationGeometry.HEAD_DEPTH, StationGeometry.headDepth(StationScale.COMPACT));
+		assertEquals(StationGeometry.CITY_HEAD_DEPTH, StationGeometry.headDepth(StationScale.CITY));
+		assertEquals(StationGeometry.GRAND_HEAD_DEPTH, StationGeometry.headDepth(StationScale.GRAND));
+		assertTrue(StationGeometry.headDepth(StationScale.CITY) > StationGeometry.headDepth(StationScale.COMPACT));
+		assertTrue(StationGeometry.headDepth(StationScale.GRAND) > StationGeometry.headDepth(StationScale.CITY));
 	}
 
 	@Test

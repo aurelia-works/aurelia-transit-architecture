@@ -2,7 +2,7 @@
 
 Commons file pages below were fetched and returned HTTP 200 on 17 October 2026; each page links to the original image and states its own attribution and licence. The author and licence are transcribed from the file page. Link to the file page rather than hot-linking an image when reusing it, and retain the indicated attribution/licence terms.
 
-**Scale key:** treat a block as roughly a metre for proportion, not exact survey. The generator's entrance building is 9 blocks deep; compact/city/grand buildings are two/three/four storeys (about 4 blocks per storey). Standard platform canopies keep 4 blocks clear below girders at y=4 and roof at y=5; hall-shed ribs use station girders, roof spans are kept to 8 blocks or less, and an arched shed rises to about y=8 (about y=11 over a footbridge or building). Adapt references to the straight ground-level footprints the generator actually builds.
+**Scale key:** treat a block as roughly a metre for proportion, not exact survey. The generator's entrance building is 9 blocks deep when compact, 15 for a city station and 21 for a grand one (a terminus head building 12, 20 and 30); compact/city/grand buildings are two/three/four storeys (about 4 blocks per storey). Standard platform canopies keep 4 blocks clear below girders at y=4 and roof at y=5; hall-shed ribs use station girders, roof spans are kept to 8 blocks or less, and an arched shed rises to about y=8 (about y=11 over a footbridge or building). Adapt references to the straight ground-level footprints the generator actually builds.
 
 ## Utrecht
 

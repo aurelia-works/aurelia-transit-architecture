@@ -57,6 +57,10 @@ public final class StationGeometry {
 	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall); the compact depth
 	 * ({@link #buildingDepth}). */
 	public static final int BUILDING_DEPTH = 9;
+	/** A city building's depth (street wall to platform wall): the compact block grown to a real ticket hall, about 15 m. */
+	public static final int CITY_BUILDING_DEPTH = 15;
+	/** A grand building's depth: a real monumental hall, about 21 m, the depth a Beaux-Arts or Gothic front really has. */
+	public static final int GRAND_BUILDING_DEPTH = 21;
 	/** Ground storey: floor at y = 0, rooms y = 1..4, upper slab (and footbridge deck) at y = UPPER_FLOOR_Y ... */
 	public static final int UPPER_FLOOR_Y = ENVELOPE_HEIGHT;
 	/** ... upper storey walking level ... */
@@ -70,6 +74,10 @@ public final class StationGeometry {
 	/** Terminus head building along v past the platform ends: buffer row, paid row, gate line, concourse, street wall; the
 	 * compact depth ({@link #headDepth}). */
 	public static final int HEAD_DEPTH = 12;
+	/** A city terminus head building's depth: a real concourse behind the gate line, about 20 m. */
+	public static final int CITY_HEAD_DEPTH = 20;
+	/** A grand terminus head building's depth: a monumental concourse, about 30 m, with room for a real hall. */
+	public static final int GRAND_HEAD_DEPTH = 30;
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
 	/** Narrowest island with a two-column stair and room for a lift beside the walkway. */
@@ -81,19 +89,28 @@ public final class StationGeometry {
 	}
 
 	/**
-	 * Depth of a station building beside the tracks at {@code scale}: the block's walls included. {@link #BUILDING_DEPTH}
-	 * is the compact block; a city or grand building is deeper for a wider concourse and more interior.
+	 * Depth of a station building beside the tracks at {@code scale}: the block's walls included, at roughly a block a
+	 * metre. {@link #BUILDING_DEPTH} is the compact block; a city or grand building is deeper, so a bigger station gets a
+	 * hall the depth of a real one rather than only more storeys over the same footprint.
 	 */
 	public static int buildingDepth(StationScale scale) {
-		return BUILDING_DEPTH;
+		return switch (scale) {
+			case COMPACT -> BUILDING_DEPTH;
+			case CITY -> CITY_BUILDING_DEPTH;
+			case GRAND -> GRAND_BUILDING_DEPTH;
+		};
 	}
 
 	/**
 	 * Depth of a terminus head building along v at {@code scale}, past the platform ends, its street wall included.
-	 * {@link #HEAD_DEPTH} is the compact head; a city or grand one is deeper for a bigger concourse.
+	 * {@link #HEAD_DEPTH} is the compact head; a city or grand one is deeper for a real concourse.
 	 */
 	public static int headDepth(StationScale scale) {
-		return HEAD_DEPTH;
+		return switch (scale) {
+			case COMPACT -> HEAD_DEPTH;
+			case CITY -> CITY_HEAD_DEPTH;
+			case GRAND -> GRAND_HEAD_DEPTH;
+		};
 	}
 
 	/**
