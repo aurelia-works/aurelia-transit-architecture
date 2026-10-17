@@ -15,7 +15,8 @@ import java.util.List;
  * @param entranceV     centre of the street entrance, the gate bank and the footbridge exit
  * @param innerStairSide +1 when the building's stairs run from the entrance towards vEnd, -1 towards vStart
  * @param bridge        a footbridge crosses the tracks
- * @param bridgeV       centre line of the footbridge corridor ({@link StationGeometry#BRIDGE_WIDTH} wide)
+ * @param bridgeV       centre line of the footbridge corridor
+ * @param bridgeWidth   clear width of the footbridge corridor ({@link StationGeometry#bridgeWidth}, always odd)
  * @param deckFrom      first u of the footbridge deck
  * @param deckTo        last u of the footbridge deck (the far platform's back)
  * @param stairSide     +1 when platform stairs leave the footbridge towards higher v, -1 towards lower v; 0 when there is no
@@ -27,7 +28,7 @@ import java.util.List;
  *                      a side platform with no track of its own (number 0); null without one
  */
 public record StationLayout(boolean building, int bays, int vStart, int vEnd, int entranceV, int innerStairSide, boolean bridge, int bridgeV,
-		int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays, TrackLayout.PlatformBand street) {
+		int bridgeWidth, int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays, TrackLayout.PlatformBand street) {
 
 	/**
 	 * One stair flight down from the footbridge corridor to a platform.
@@ -102,10 +103,13 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		boolean bridge = (spec.footbridge() || building || outerIslands(layout)) && !served.isEmpty()
 				&& (building || street || layout.platforms().size() >= 2);
 		final int bridgeV = entranceV;
+		final int bridgeWidth = StationGeometry.bridgeWidth(spec, layout);
 		int stairSide = 0;
-		if (bridgeV + 1 + 7 <= length - 1) {
+		// the landing at the foot of a stair reaches this far from the bridge line: the wall plus the steps down
+		final int stairReach = StationGeometry.bridgeWallOffset(bridgeWidth) + StationGeometry.STAIR_STEPS + 1;
+		if (bridgeV + stairReach <= length - 1) {
 			stairSide = 1;
-		} else if (bridgeV - 1 - 7 >= 0) {
+		} else if (bridgeV - stairReach >= 0) {
 			stairSide = -1;
 		}
 		int deckFrom = 0;
@@ -122,7 +126,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 				? new TrackLayout.PlatformBand(0, 0, StationGeometry.STREET_WIDTH - 1, false, true, Math.max(0, bridgeV - StationGeometry.BRIDGE_REACH),
 						Math.min(length - 1, bridgeV + StationGeometry.BRIDGE_REACH), false)
 				: null;
-		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, deckFrom, deckTo, stairSide,
+		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, bridgeWidth, deckFrom, deckTo, stairSide,
 				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays(), streetBand);
 	}
 
@@ -155,7 +159,8 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	/** v of the corridor's long wall that the platform stairs leave through. */
 	public int stairWallV() {
-		return stairSide > 0 ? bridgeV + 2 : bridgeV - 2;
+		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);
+		return stairSide > 0 ? bridgeV + offset : bridgeV - offset;
 	}
 
 	/** v of the step at height y (1..{@link StationGeometry#STAIR_STEPS}) of a platform stair; the top step is next to the wall. */
@@ -245,7 +250,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	}
 
 	private Flight reverseFlight(TrackLayout.PlatformBand band, List<Integer> columns) {
-		return new Flight(columns, -stairSide, bridgeV - 2 * stairSide);
+		return new Flight(columns, -stairSide, bridgeV - StationGeometry.bridgeWallOffset(bridgeWidth) * stairSide);
 	}
 
 	/** Stair and escalator columns together: every column that opens out of the corridor and is kept clear down to the platform. */
@@ -358,7 +363,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			return null;
 		}
 		final int out = -stairSide;
-		final Lift lift = new Lift(c0, bridgeV + 2 * out, out);
+		final Lift lift = new Lift(c0, bridgeV + StationGeometry.bridgeWallOffset(bridgeWidth) * out, out);
 		return band.runs(lift.vMin()) && band.runs(lift.vMax()) ? lift : null;
 	}
 

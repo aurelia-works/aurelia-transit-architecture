@@ -54,7 +54,7 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	/** Last v of a terminus head building (its street wall). */
 	public int headEnd() {
-		return platformLength + StationGeometry.HEAD_DEPTH - 1;
+		return platformLength + headDepth - StationGeometry.HEAD_APRON - 1;
 	}
 
 	/** Last v the platforms (and a terminus's bay tracks) run to: the platform end at a terminus, the footprint end otherwise. */

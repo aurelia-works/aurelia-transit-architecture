@@ -54,7 +54,8 @@ public final class StationGeometry {
 
 	/** Station building: entrance apron (the entrance ramp's two cells) on the street side ... */
 	public static final int APRON = 2;
-	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall). */
+	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall); the compact depth
+	 * ({@link #buildingDepth}). */
 	public static final int BUILDING_DEPTH = 9;
 	/** Ground storey: floor at y = 0, rooms y = 1..4, upper slab (and footbridge deck) at y = UPPER_FLOOR_Y ... */
 	public static final int UPPER_FLOOR_Y = ENVELOPE_HEIGHT;
@@ -64,9 +65,10 @@ public final class StationGeometry {
 	public static final int BUILDING_ROOF_Y = UPPER_WALK_Y + HEADROOM;
 	/** Facade bay width along the tracks, pilaster to pilaster. */
 	public static final int BAY = 6;
-	/** Footbridge corridor: clear width inside its walls. */
+	/** Footbridge corridor: clear width inside its walls ({@link #bridgeWidth}); the compact width. */
 	public static final int BRIDGE_WIDTH = 3;
-	/** Terminus head building along v past the platform ends: buffer row, paid row, gate line, concourse, street wall. */
+	/** Terminus head building along v past the platform ends: buffer row, paid row, gate line, concourse, street wall; the
+	 * compact depth ({@link #headDepth}). */
 	public static final int HEAD_DEPTH = 12;
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
@@ -76,6 +78,68 @@ public final class StationGeometry {
 	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
 
 	private StationGeometry() {
+	}
+
+	/**
+	 * Depth of a station building beside the tracks at {@code scale}: the block's walls included. {@link #BUILDING_DEPTH}
+	 * is the compact block; a city or grand building is deeper for a wider concourse and more interior.
+	 */
+	public static int buildingDepth(StationScale scale) {
+		return BUILDING_DEPTH;
+	}
+
+	/**
+	 * Depth of a terminus head building along v at {@code scale}, past the platform ends, its street wall included.
+	 * {@link #HEAD_DEPTH} is the compact head; a city or grand one is deeper for a bigger concourse.
+	 */
+	public static int headDepth(StationScale scale) {
+		return HEAD_DEPTH;
+	}
+
+	/**
+	 * Clear width of a footbridge corridor at {@code scale}: {@link #BRIDGE_WIDTH} compact, wider where the platforms
+	 * allow it. Always odd, so its centre line is a whole column and a stair or lift can leave through each wall.
+	 */
+	public static int bridgeWidth(StationScale scale) {
+		return BRIDGE_WIDTH;
+	}
+
+	/**
+	 * Clear width a footbridge corridor of this spec is built at: its {@link StationScale} width, narrowed (still odd,
+	 * still centred) when a platform it serves has too little run for its stair landing and lift.
+	 */
+	public static int bridgeWidth(StationSpec spec, TrackLayout layout) {
+		int width = bridgeWidth(spec.buildingScale());
+		while (width > BRIDGE_WIDTH && !bridgeFits(layout, width)) {
+			width -= 2;
+		}
+		return width;
+	}
+
+	/** The corridor's long walls stand this many rows from its centre line: the clear half-width plus the wall itself. */
+	public static int bridgeWallOffset(int width) {
+		return width / 2 + 1;
+	}
+
+	/**
+	 * True when every platform the footbridge serves has room on its run for a stair landing and a lift on either side of
+	 * the bridge line at this corridor width. Every served platform reserves {@link #BRIDGE_REACH} rows around that line, so
+	 * a width whose stairs and lift reach no further always fits.
+	 */
+	private static boolean bridgeFits(TrackLayout layout, int width) {
+		final int length = layout.platformLength();
+		final int line = StationLayout.entranceV(layout.buildingWidth() > 0, length);
+		// the stair's landing (a step per storey) and the lift's back wall reach this far past the corridor wall
+		final int reach = bridgeWallOffset(width) + STAIR_STEPS + 1;
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			if (layout.buildingWidth() > 0 && band.uMin() == layout.buildingWidth()) {
+				continue;
+			}
+			if (!band.runs(Math.max(0, line - reach)) || !band.runs(Math.min(length - 1, line + reach))) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/** The cross-section and length for a spec. */
@@ -121,10 +185,11 @@ public final class StationGeometry {
 			previousTrack = track;
 		}
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
-		final int shift = spec.sideBuilding() ? APRON + BUILDING_DEPTH : streetEntrance(spec) ? STREET_WIDTH : 0;
+		final StationScale scale = spec.buildingScale();
+		final int shift = spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0;
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
-					spec.terminus() ? HEAD_DEPTH + HEAD_APRON : 0, hubThrough(spec));
+					spec.terminus() ? headDepth(scale) + HEAD_APRON : 0, hubThrough(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {

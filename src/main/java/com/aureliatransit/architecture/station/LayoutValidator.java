@@ -630,6 +630,8 @@ public final class LayoutValidator {
 		private void checkDeckRun(List<Violation> found, PlannedBlock first, int uStart, int uEnd) {
 			final int y = first.y();
 			final int v = first.v();
+			// a pier carries the whole corridor slab across it: its own row and up to the corridor's half-width either side
+			final int reach = StationGeometry.bridgeWallOffset(StationGeometry.bridgeWidth(plan.spec(), layout));
 			final List<Integer> piers = new ArrayList<>();
 			for (int u = uStart; u <= uEnd; u++) {
 				// a wall standing under the slab (a stairwell's side) carries it where it stands
@@ -637,8 +639,7 @@ public final class LayoutValidator {
 					piers.add(u);
 					continue;
 				}
-				// a pier carries the whole corridor slab across it: its own row and up to two rows either side
-				for (int dv = -2; dv <= 2; dv++) {
+				for (int dv = -reach; dv <= reach; dv++) {
 					if (has(u, y - 1, v + dv, Role.BRIDGE_PIER)) {
 						piers.add(u);
 						break;
@@ -646,7 +647,7 @@ public final class LayoutValidator {
 				}
 			}
 			// the building wall and slab carry the deck where they meet (same row or next to it)
-			for (int dv = -2; dv <= 2; dv++) {
+			for (int dv = -reach; dv <= reach; dv++) {
 				if (has(uStart - 1, y, v + dv, Role.FLOOR) || has(uStart - 1, y, v + dv, Role.LIGHT_PANEL) || has(uStart - 1, y, v + dv, Role.WALL)
 						|| has(uStart - 1, y, v + dv, Role.BRIDGE_PIER) || has(uStart - 1, y - 1, v + dv, Role.BRIDGE_PIER)) {
 					piers.add(0, uStart - 1);

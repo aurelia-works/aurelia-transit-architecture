@@ -330,6 +330,16 @@ public final class StationPlanner {
 			return null;
 		}
 
+		/** Clear half-width of the footbridge corridor: the walkway either side of its centre line. */
+		private int bridgeHalf() {
+			return (site.bridgeWidth() - 1) / 2;
+		}
+
+		/** Row offset from the corridor's centre line to its long wall. */
+		private int bridgeWall() {
+			return StationGeometry.bridgeWallOffset(site.bridgeWidth());
+		}
+
 		/** A platform's colour at the gate line. */
 		private static String platformColour(TrackLayout.PlatformBand band) {
 			return PLATFORM_COLOURS.get((band.number() - 1) % PLATFORM_COLOURS.size());
@@ -560,7 +570,7 @@ public final class StationPlanner {
 				}
 			}
 			if (site.bridge()) {
-				for (int v = site.bridgeV() - 1; v <= site.bridgeV() + 1; v++) {
+				for (int v = site.bridgeV() - bridgeHalf(); v <= site.bridgeV() + bridgeHalf(); v++) {
 					for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
 						keepClear(uP, y, v);
 					}
@@ -628,7 +638,7 @@ public final class StationPlanner {
 				}
 				// band at the slab level (leaving the bridge doorway open)
 				put(Role.WALL, uS, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.MINUS_U, b.trim());
-				if (!(site.bridge() && v >= site.bridgeV() - 1 && v <= site.bridgeV() + 1)) {
+				if (!(site.bridge() && v >= site.bridgeV() - bridgeHalf() && v <= site.bridgeV() + bridgeHalf())) {
 					put(Role.WALL, uP, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_U, b.trim());
 				}
 				// upper storey y=6..8, windows in the middle row
@@ -2154,8 +2164,8 @@ public final class StationPlanner {
 			final int vB = site.bridgeV();
 			final int from = site.building() ? site.platformWall(layout) : site.deckFrom();
 			final int to = site.deckTo();
-			final int wallLo = vB - 2;
-			final int wallHi = vB + 2;
+			final int wallLo = vB - bridgeWall();
+			final int wallHi = vB + bridgeWall();
 			// keep the stair corridors and landings clear before the deck and walls go up
 			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
@@ -2177,7 +2187,7 @@ public final class StationPlanner {
 				for (int v = wallLo; v <= wallHi; v++) {
 					// lights only under the walkway: in a wall row one sits under the glass, or in a lift's doorway, half seen
 					// through the glass from the platform
-					if ((u + v) % 5 == 0 && Math.abs(v - vB) <= 1) {
+					if ((u + v) % 5 == 0 && Math.abs(v - vB) <= bridgeHalf()) {
 						// the building's recessed light: a full block with the light underneath, so the walkway has no pit
 						put(Role.BRIDGE_DECK, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
 					} else {
@@ -3671,7 +3681,7 @@ public final class StationPlanner {
 					if (v >= site.innerStairMin() - 1 && v <= site.innerStairMax() + 1) {
 						continue;
 					}
-					if (v >= site.bridgeV() - 2 && v <= site.bridgeV() + 2) {
+					if (v >= site.bridgeV() - bridgeWall() && v <= site.bridgeV() + bridgeWall()) {
 						continue;
 					}
 					put(Role.BENCH, uS + 3, StationGeometry.UPPER_WALK_Y, v, LocalDir.PLUS_V, b.bench());
@@ -3710,7 +3720,7 @@ public final class StationPlanner {
 			final int to = Math.max(hi, partition);
 			final StationLayout.Lift lift = site.buildingLift(layout);
 			if (to >= site.innerStairMin() - 1 && from <= site.innerStairMax() + 1
-					|| site.bridge() && to >= site.bridgeV() - 2 && from <= site.bridgeV() + 2
+					|| site.bridge() && to >= site.bridgeV() - bridgeWall() && from <= site.bridgeV() + bridgeWall()
 					|| lift != null && to >= lift.vMin() - 1 && from <= lift.vMax() + 1) {
 				return null;
 			}

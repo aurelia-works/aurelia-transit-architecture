@@ -679,11 +679,18 @@
 					matrix.makeTranslation(cells[at], cells[at + 1], cells[at + 2]);
 					mesh.setMatrixAt(n, matrix);
 				});
-				// a fare gate's paddle is its own glass mesh: remember it so walk mode can swing it open and shut
+				// a fare gate's paddle is its own glass mesh: remember it so walk mode can slide it in and out of the cabinet
 				if (entry.id === "aurelia_transit_architecture:fare_gate" && /glass_clear/.test(texPath)) {
 					geo.computeBoundingBox();
-					const centre = geo.boundingBox.getCenter(new THREE.Vector3());
-					list.forEach((at, n) => paddleAt.set(cellKey(cells[at], cells[at + 1], cells[at + 2]), { mesh, n: n, centre: centre }));
+					const bb = geo.boundingBox;
+					const ex = bb.max.x - bb.min.x;
+					const ez = bb.max.z - bb.min.z;
+					const axis = ex >= ez ? "x" : "z";
+					const centre = bb.getCenter(new THREE.Vector3());
+					// the cabinet is on the far side of the block centre from the paddle; retract by the paddle's own length
+					const dir = centre[axis] < 0.5 ? -1 : 1;
+					const move = axis === "x" ? ex : ez;
+					list.forEach((at, n) => paddleAt.set(cellKey(cells[at], cells[at + 1], cells[at + 2]), { mesh, n: n, axis, dir, move }));
 				}
 				mesh.userData = { model: index, cells: list };
 				mesh.frustumCulled = false;
@@ -1021,6 +1028,103 @@
 	$("textures").addEventListener("change", () => current && showPlan(current));
 	window.addEventListener("resize", draw);
 
+	// ---- walk audio ----------------------------------------------------------------------------------------------------
+	// Spoken announcements (Web Speech) plus short cues (Web Audio): a fare gate beep, a lift chime. Optional, and started
+	// on the Walk click because browsers only allow sound after a user gesture.
+	const AUDIO = { enabled: true, volume: 0.9 };
+	let audioCtx = null;
+	let voice = null;
+
+	function audioReady() {
+		try {
+			if (!audioCtx) {
+				const Ctx = window.AudioContext || window.webkitAudioContext;
+				if (Ctx) {
+					audioCtx = new Ctx();
+				}
+			}
+			if (audioCtx && audioCtx.state === "suspended") {
+				audioCtx.resume();
+			}
+		} catch (e) {
+			audioCtx = null;
+		}
+	}
+
+	function pickVoice() {
+		const voices = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+		for (const re of [/en[-_]GB/i, /Daniel/i, /Serena/i, /Google UK English/i, /\bKate\b/i, /^en/i]) {
+			const found = voices.find((v) => re.test(v.name) || re.test(v.lang));
+			if (found) {
+				return found;
+			}
+		}
+		return voices[0] || null;
+	}
+
+	/** Speak a line through the browser's own voice (the game uses Piper clips; the Studio has no audio files of its own). */
+	function speak(text) {
+		if (!AUDIO.enabled || !text || !window.speechSynthesis) {
+			return;
+		}
+		audioReady();
+		try {
+			speechSynthesis.cancel();
+			const line = new SpeechSynthesisUtterance(text);
+			if (!voice) {
+				voice = pickVoice();
+			}
+			if (voice) {
+				line.voice = voice;
+			}
+			line.volume = AUDIO.volume;
+			line.rate = 0.95;
+			speak.last = text;
+		} catch (e) {
+			// no speech available: stay silent
+		}
+	}
+
+	/** A short synthesised cue; {@code at} is an offset in seconds. */
+	function tone(freq, ms, at, type, gain) {
+		if (!AUDIO.enabled || !audioCtx) {
+			return;
+		}
+		const t0 = audioCtx.currentTime + (at || 0);
+		const osc = audioCtx.createOscillator();
+		const g = audioCtx.createGain();
+		osc.type = type || "sine";
+		osc.frequency.value = freq;
+		g.gain.setValueAtTime(0.0001, t0);
+		g.gain.linearRampToValueAtTime((gain || 0.1) * AUDIO.volume, t0 + 0.015);
+		g.gain.exponentialRampToValueAtTime(0.0001, t0 + ms / 1000);
+		osc.connect(g).connect(audioCtx.destination);
+		osc.start(t0);
+		osc.stop(t0 + ms / 1000 + 0.03);
+	}
+
+	function cueGate() {
+		tone(880, 80, 0, "square", 0.07);
+		tone(1320, 90, 0.07, "square", 0.07);
+	}
+
+	function cueLift() {
+		tone(660, 150, 0, "sine", 0.09);
+		tone(990, 200, 0.15, "sine", 0.09);
+	}
+
+	/** A platform departure announcement, as the Studio cannot read the game's live service data. */
+	function announce() {
+		speak("Attention please. The next train is approaching. Please stand clear of the platform edge.");
+		flash("Announcement");
+	}
+
+	if (window.speechSynthesis && speechSynthesis.addEventListener) {
+		speechSynthesis.addEventListener("voiceschanged", () => {
+			voice = pickVoice();
+		});
+	}
+
 	// ---- walk -----------------------------------------------------------------------------------------------------------
 	// First person through the planned station, as a player would walk it in the game: a 0.6 × 1.8 body that collides with
 	// every block's model boxes, steps up half a block (stairs and ramps), falls and jumps, rides escalators and takes the
@@ -1101,7 +1205,7 @@
 			}
 			if (role === "GATE") {
 				const turnY = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
-				const gate = { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turnY / 90) % 4], open: false, leftAt: 0, angle: 0,
+				const gate = { x, y, z, f: [[0, -1], [1, 0], [0, 1], [-1, 0]][Math.round(turnY / 90) % 4], open: false, leftAt: 0, slide: 0,
 					paddle: paddleAt.get(cellKey(x, y, z)) || null };
 				const turn = new THREE.Matrix4().makeTranslation(0.5, 0, 0.5)
 					.multiply(new THREE.Matrix4().makeRotationY(-turnY * Math.PI / 180))
@@ -1216,18 +1320,15 @@
 	}
 
 	// ---- fare gate paddle animation ----
-	// The gate the game draws is a body plus a glass paddle; here the paddle is a mesh of its own, so walking into a gate
-	// swings it open about its hinged end and it swings shut once you are clear, exactly as the collision already does.
+	// The gate the game draws is a body plus a glass paddle that slides into the cabinet when the gate opens (its open
+	// model drops the paddle). Here the paddle is a mesh of its own, so walking into a gate slides it in and it slides
+	// back out once you are clear, matching the collision the game already applies.
 	const _gateMat = new THREE.Matrix4();
-	const _gateStep = new THREE.Matrix4();
 	function gateInstanceMatrix(gate) {
-		const c = gate.paddle.centre;
-		const m = _gateMat;
-		m.makeTranslation(gate.x, gate.y, gate.z);
-		m.multiply(_gateStep.makeTranslation(c.x, c.y, c.z));
-		m.multiply(_gateStep.makeRotationY(gate.angle || 0));
-		m.multiply(_gateStep.makeTranslation(-c.x, -c.y, -c.z));
-		return m;
+		const p = gate.paddle;
+		const dx = p.axis === "x" ? p.dir * p.move * gate.slide : 0;
+		const dz = p.axis === "z" ? p.dir * p.move * gate.slide : 0;
+		return _gateMat.makeTranslation(gate.x + dx, gate.y, gate.z + dz);
 	}
 
 	function animateGates(dt) {
@@ -1239,11 +1340,11 @@
 			if (!g.paddle) {
 				continue;
 			}
-			const target = g.open ? Math.PI / 2 : 0;
-			const k = Math.min(1, dt * 12);
-			g.angle += (target - g.angle) * k;
-			if (Math.abs(g.angle - target) < 0.003) {
-				g.angle = target;
+			const target = g.open ? 1 : 0;
+			const k = Math.min(1, dt * 14);
+			g.slide += (target - g.slide) * k;
+			if (Math.abs(g.slide - target) < 0.004) {
+				g.slide = target;
 			}
 			g.paddle.mesh.setMatrixAt(g.paddle.n, gateInstanceMatrix(g));
 			dirty.add(g.paddle.mesh);

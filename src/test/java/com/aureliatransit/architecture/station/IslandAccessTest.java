@@ -92,7 +92,7 @@ class IslandAccessTest {
 	void aBuildingNeedsNoStreetEntrance() {
 		final StationSpec spec = StationDescriptionParser.parse("4 tracks island, 96 long, station building, named Halt").spec();
 		assertFalse(StationGeometry.streetEntrance(spec));
-		assertEquals(StationGeometry.APRON + StationGeometry.BUILDING_DEPTH, StationGeometry.layout(spec).buildingWidth());
+		assertEquals(StationGeometry.APRON + StationGeometry.buildingDepth(spec.buildingScale()), StationGeometry.layout(spec).buildingWidth());
 	}
 
 	@Test
