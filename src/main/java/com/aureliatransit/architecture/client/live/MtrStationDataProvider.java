@@ -29,7 +29,11 @@ import org.mtr.mod.data.ArrivalsCacheClient;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.LongSupplier;
 
 /**
@@ -250,16 +254,19 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 		final ObjectArrayList<ArrivalResponse> arrivals = ArrivalsCacheClient.INSTANCE.requestArrivals(ids);
 		final long offset = serverOffset.stabilize(ArrivalsCacheClient.INSTANCE.getMillisOffset());
 		final long now = clock.getAsLong();
-		final List<CallingTimes.Arrival> all = new ArrayList<>(withTimes ? arrivals.size() : 0);
+		// every arrival of one trip (route and departure index), so each service matches its calling times against its own trip only
+		final Map<Trip, List<CallingTimes.Arrival>> trips = new HashMap<>();
 		if (withTimes) {
 			for (final ArrivalResponse arrival : arrivals) {
-				all.add(new CallingTimes.Arrival(arrival.getRouteId(), arrival.getDepartureIndex(), arrival.getPlatformId(),
-						ServerClockOffset.toLocalSecond(arrival.getArrival(), offset)));
+				trips.computeIfAbsent(new Trip(arrival.getRouteId(), arrival.getDepartureIndex()), trip -> new ArrayList<>())
+						.add(new CallingTimes.Arrival(arrival.getRouteId(), arrival.getDepartureIndex(), arrival.getPlatformId(),
+								ServerClockOffset.toLocalSecond(arrival.getArrival(), offset)));
 			}
 		}
+		final Set<Long> own = withTimes ? new HashSet<>(platformIds) : Set.of();
 		final List<ServiceSnapshot> out = new ArrayList<>(arrivals.size());
 		for (final ArrivalResponse arrival : arrivals) {
-			if (withTimes && !platformIds.contains(arrival.getPlatformId())) {
+			if (withTimes && !own.contains(arrival.getPlatformId())) {
 				continue; // a calling point's platform, requested only for its times
 			}
 			// to local client time with a held offset, quantised to whole seconds, so jitter does not change snapshot content
@@ -284,11 +291,15 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 					arrival.getIsTerminating(),
 					calling.names(),
 					arrival.getDepartureIndex(),
-					withTimes ? CallingTimes.match(arrival.getRouteId(), arrival.getDepartureIndex(), departureMillis, calling.platformIds(), all) : List.of(),
+					withTimes ? CallingTimes.match(arrival.getRouteId(), arrival.getDepartureIndex(), departureMillis, calling.platformIds(),
+							trips.getOrDefault(new Trip(arrival.getRouteId(), arrival.getDepartureIndex()), List.of())) : List.of(),
 					origin(data, arrival.getRouteId())));
 		}
 		out.sort(ServiceOrder.COMPARATOR);
 		return out.size() > StationSnapshot.MAX_SERVICES ? List.copyOf(out.subList(0, StationSnapshot.MAX_SERVICES)) : List.copyOf(out);
+	}
+
+	private record Trip(long routeId, long departureIndex) {
 	}
 
 	/**
