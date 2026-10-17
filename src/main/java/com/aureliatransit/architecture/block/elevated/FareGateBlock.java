@@ -1,11 +1,9 @@
 package com.aureliatransit.architecture.block.elevated;
 
-import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.FareGateKind;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.FareGateOpen;
 import com.aureliatransit.architecture.block.mtr.MtrFareContract;
-import com.aureliatransit.architecture.fare.TransitCardItem;
 import com.aureliatransit.architecture.util.Shapes;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -15,7 +13,6 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.EnumProperty;
-import net.minecraft.text.Text;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Direction;
@@ -30,9 +27,9 @@ import java.util.Map;
 import static net.minecraft.block.Block.createCuboidShape;
 
 /**
- * Fare gate unit (A10) that charges fares through MTR's own fare system, like MTR's ticket barrier: walk into the
- * passage from the front (green arrow) carrying a transit card, MTR charges the entry or exit fare from its balance and
- * the paddles open for one passage. The gate closes once the player is clear of the paddles, or two seconds after the
+ * Fare gate unit that charges fares through MTR's own fare system and behaves like MTR's ticket barrier: walk into the
+ * passage from the front (green arrow), MTR charges the entry or exit fare from the player's MTR balance and the paddles
+ * open for one passage. No item is needed; the transit card only shows and tops up that balance. The gate closes once the player is clear of the paddles, or two seconds after the
  * last player left the gate; it never closes on a player standing in it, so a pause in the gate is never charged twice.
  * MTR decides entry or exit from the player's record and only charges inside an MTR station area; outside one, or with
  * too little balance, the paddles stay shut (MTR says why). An {@code END} cabinet has no passage.
@@ -92,10 +89,6 @@ public class FareGateBlock extends FacingKindBlock<FareGateKind> {
 		if (open == FareGateOpen.OPEN && ahead < -CLEAR_OF_PADDLES) {
 			world.setBlockState(pos, state.with(OPEN, FareGateOpen.CLOSED));
 		} else if (open == FareGateOpen.CLOSED && ahead > 0) {
-			if (!TransitCardItem.carriedBy(player)) {
-				player.sendMessage(Text.translatable("message." + AureliaTransitArchitecture.MOD_ID + ".card.need_card"), true);
-				return;
-			}
 			// The pos handed to onEntityCollision is a mutable cursor that the caller moves on to other blocks; MTR answers
 			// later, so its callback must hold a copy.
 			final BlockPos gatePos = pos.toImmutable();

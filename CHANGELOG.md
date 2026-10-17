@@ -38,6 +38,7 @@
 
 ### Fixes
 
+- Fare gates work like MTR's ticket barriers: no card needed, the fare comes from your MTR balance and MTR says why when the gate stays shut. The transit card still shows and tops up the balance. Before, a player without a card got the "carry a card" message and an inventory search on every tick in front of the gate.
 - A platform built 200 long now shows as 200 in MTR.
 - Joined signs and screens no longer keep invisible hit boxes in the middle of the row.
 - A seated player can move straight to another seat, as you can hop between boats.
