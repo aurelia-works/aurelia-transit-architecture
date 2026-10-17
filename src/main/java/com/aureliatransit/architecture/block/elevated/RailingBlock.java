@@ -91,7 +91,11 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 
 	/** Whether a railing joins the block at {@code neighbour}, whose {@code side} faces this railing. */
 	public static boolean joins(BlockView world, BlockPos neighbour, Direction side) {
-		final BlockState state = world.getBlockState(neighbour);
+		return joins(world.getBlockState(neighbour), world, neighbour, side);
+	}
+
+	/** As above, on the state the caller already holds (so a build sees a neighbour placed earlier in the same tick). */
+	public static boolean joins(BlockState state, BlockView world, BlockPos neighbour, Direction side) {
 		return state.getBlock() instanceof RailingBlock || state.isSideSolidFullSquare(world, neighbour, side);
 	}
 
@@ -111,7 +115,8 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 	@Override
 	public BlockState getStateForNeighborUpdate(BlockState state, Direction direction, BlockState neighborState, WorldAccess world, BlockPos pos, BlockPos neighborPos) {
 		if (direction.getAxis().isHorizontal()) {
-			return state.with(property(direction), joins(world, neighborPos, direction.getOpposite()));
+			// the state handed in, not a fresh world read: during a station build the neighbour is placed in the same tick
+			return state.with(property(direction), joins(neighborState, world, neighborPos, direction.getOpposite()));
 		}
 		return state;
 	}

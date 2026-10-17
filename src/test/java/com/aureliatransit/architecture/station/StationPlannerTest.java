@@ -495,10 +495,10 @@ class StationPlannerTest {
 		expected.put(Role.BENCH, 12);
 		expected.put(Role.BIN, 6);
 		// per platform: two 2-wide hanging departure screens, each with a cross beam over the cell off the girder line, a help
-		// point and three speakers (one every 16 blocks)
-		expected.put(Role.FIXTURE, 20);
+		// point and two speakers (one every 32 blocks)
+		expected.put(Role.FIXTURE, 18);
 		assertEquals(expected, counts);
-		assertEquals(1256, plan(spec).blocks().size());
+		assertEquals(1254, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -1002,13 +1002,39 @@ class StationPlannerTest {
 				assertEquals(plan.layout().platforms().size(), units.stream().filter(b -> b.blockId().endsWith(":help_point")).count(),
 						"one help point per platform: " + describe(spec));
 				for (final PlannedBlock unit : units) {
-					final int behind = unit.v() + (unit.front() == LocalDir.PLUS_V ? -1 : 1);
-					assertTrue(unit.front().alongTrack() && plan.blocks().stream().anyMatch(b -> b.u() == unit.u() && b.v() == behind
-							&& b.y() == StationGeometry.WALK_Y && (b.role() == Role.COLUMN || b.role() == Role.LAMP || b.blockId().equals(StationPlanner.LAMP_POLE))),
+					assertTrue(unit.front().alongTrack(), "faces along the platform: " + unit + " in " + describe(spec));
+					// a wall unit backs onto a post; a two-wide standing screen has its first block on the post and the
+					// second joined to it along the platform
+					assertTrue(backsOntoPost(plan, unit) || joinedToAPost(plan, unit),
 							"nothing behind " + unit + " in " + describe(spec));
 				}
 			}
 		}
+	}
+
+	/** The unit's cell along the platform backs onto a column or lamp post. */
+	private static boolean backsOntoPost(StationPlan plan, PlannedBlock unit) {
+		final int behind = unit.v() + (unit.front() == LocalDir.PLUS_V ? -1 : 1);
+		return plan.blocks().stream().anyMatch(b -> b.u() == unit.u() && b.v() == behind && b.y() == StationGeometry.WALK_Y
+				&& (b.role() == Role.COLUMN || b.role() == Role.LAMP || b.blockId().equals(StationPlanner.LAMP_POLE)));
+	}
+
+	/** The unit is one block of a screen whose neighbouring block backs onto a post. */
+	private static boolean joinedToAPost(StationPlan plan, PlannedBlock unit) {
+		for (final int du : new int[]{1, -1}) {
+			final int u = unit.u() + du;
+			final boolean neighbour = plan.blocks().stream().anyMatch(b -> b.u() == u && b.v() == unit.v() && b.y() == unit.y()
+					&& b.blockId().equals(unit.blockId()));
+			if (neighbour) {
+				for (final PlannedBlock other : plan.blocks()) {
+					if (other.u() == u && other.v() == unit.v() && other.y() == unit.y() && other.blockId().equals(unit.blockId())
+							&& backsOntoPost(plan, other)) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
 	}
 
 	@Test
@@ -1019,7 +1045,7 @@ class StationPlannerTest {
 				final StationPlan plan = plan(spec);
 				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
 					final List<PlannedBlock> speakers = plan.blocks().stream().filter(b -> b.blockId().endsWith("_speaker") && band.contains(b.u(), b.v())).toList();
-					assertEquals(3, speakers.size(), "a speaker every 16 blocks of a 48 long platform: " + describe(spec));
+					assertEquals(2, speakers.size(), "a speaker every 32 blocks of a 48 long platform: " + describe(spec));
 					for (final PlannedBlock speaker : speakers) {
 						if (speaker.blockId().endsWith(":ceiling_speaker")) {
 							assertTrue(speaker.y() >= StationGeometry.WALK_Y + 2, "over head height: " + speaker + " in " + describe(spec));

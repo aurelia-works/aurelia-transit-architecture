@@ -63,13 +63,13 @@ public final class StylePalette {
 				case GOTHIC_BRICK -> new Building(ata("hamburg_clinker_brick"), ata("hamburg_stone_trim"), ata("frankfurt_sandstone_rusticated"),
 						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"), ata("antwerp_marble_floor_tile"),
 						ata("hamburg_clinker_brick"), ata("metro_recessed_light"), ata("station_stair"), ata("antwerp_marble_floor_tile"),
-						ata("wired_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						ata("wired_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
 						ata("hamburg_stone_trim"));
 				case ANTWERP -> new Building(ata("antwerp_ornate_limestone"), ata("roma_travertine"), ata("frankfurt_sandstone_rusticated"),
 						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"),
 						ata("antwerp_marble_floor_tile"), ata("antwerp_ornate_limestone"), ata("metro_recessed_light"), ata("station_stair"),
 						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
-						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
+						ata("steel_column_round"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
 				case SANDSTONE -> new Building(ata("frankfurt_sandstone_ashlar"), ata("frankfurt_sandstone_rusticated"),
 						ata("frankfurt_sandstone_rusticated"), ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"),
 						ata("munich_terrazzo_floor"), ata("munich_terrazzo_floor"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"),
@@ -93,7 +93,7 @@ public final class StylePalette {
 				case TOKYO -> new Building("minecraft:bricks", ata("amsterdam_brick_sandstone_band"), ata("frankfurt_sandstone_rusticated"),
 						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("antwerp_marble_floor_tile"), ata("antwerp_marble_floor_tile"),
 						"minecraft:deepslate_tiles", ata("metro_recessed_light"), ata("station_stair"), ata("antwerp_marble_floor_tile"),
-						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
 						"minecraft:smooth_quartz");
 				case ZURICH -> new Building("minecraft:smooth_sandstone", "minecraft:cut_sandstone", ata("frankfurt_sandstone_rusticated"),
 						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("munich_terrazzo_floor"), ata("munich_terrazzo_floor"),
@@ -103,7 +103,7 @@ public final class StylePalette {
 				case PARIS -> new Building(ata("roma_travertine"), ata("antwerp_ornate_limestone"), ata("frankfurt_sandstone_rusticated"),
 						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"), ata("roma_polished_floor"),
 						ata("roma_travertine"), ata("metro_recessed_light"), ata("station_stair"), ata("roma_polished_floor"),
-						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"),
+						ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
 						"minecraft:calcite");
 				case MILAN -> new Building("minecraft:polished_diorite", ata("roma_travertine"), "minecraft:polished_andesite",
 						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"), ata("roma_polished_floor"),
@@ -142,7 +142,7 @@ public final class StylePalette {
 						ata("frankfurt_sandstone_cornice"), ata("clear_float_glass_pane"), ata("antwerp_marble_floor_tile"),
 						ata("antwerp_marble_floor_tile"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"), ata("station_stair"),
 						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
-						ata("amsterdam_cast_iron_shed_leg"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
+						ata("steel_column_round"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
 			};
 		}
 	}

@@ -1,11 +1,14 @@
 package com.aureliatransit.architecture.block.elevated;
 
+import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.elevated.ElevatedKinds.GirderKind;
 import com.aureliatransit.architecture.util.Shapes;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemPlacementContext;
+import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.state.StateManager;
 import net.minecraft.state.property.BooleanProperty;
 import net.minecraft.state.property.EnumProperty;
@@ -43,6 +46,9 @@ public class GirderBlock extends StateShapedBlock {
 	public static final BooleanProperty DOWN = Properties.DOWN;
 	public static final EnumProperty<Direction.Axis> AXIS = Properties.HORIZONTAL_AXIS;
 
+	/** Structural blocks a girder frames into although they are not full cubes (columns, piers, trusses, other girders). */
+	public static final TagKey<Block> JOINS = TagKey.of(RegistryKeys.BLOCK, AureliaTransitArchitecture.id("girder_joins"));
+
 	/** The centre: a 4 px web post with flange plates top and bottom (always drawn). */
 	private static final VoxelShape NODE = union(box(6, 0, 6, 10, 16, 10), box(4, 0, 4, 12, 2, 12), box(4, 14, 4, 12, 16, 12));
 	/** An I-section arm toward the north neighbour: web plus top and bottom flanges. */
@@ -76,6 +82,10 @@ public class GirderBlock extends StateShapedBlock {
 	/** Whether a girder joins {@code neighbourState} at {@code neighbour}, whose {@code side} faces the girder. */
 	public static boolean joins(BlockState neighbourState, BlockView world, BlockPos neighbour, Direction side) {
 		if (neighbourState.getBlock() instanceof GirderBlock) {
+			return true;
+		}
+		// the mod's own structural blocks (columns, piers, trusses) are not full cubes, but a girder still frames into them
+		if (neighbourState.isIn(JOINS)) {
 			return true;
 		}
 		return side.getAxis().isHorizontal() && neighbourState.isSideSolidFullSquare(world, neighbour, side);

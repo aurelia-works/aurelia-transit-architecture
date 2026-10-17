@@ -197,7 +197,7 @@ public final class StationPlanner {
 	static final int TRAVELATOR_PLATFORM = 72;
 
 	/** One announcement speaker per this many blocks of platform. */
-	static final int SPEAKER_SPACING = 16;
+	static final int SPEAKER_SPACING = 32;
 	/** A speaker fixed to a post sits this high: above the screens. */
 	static final int SPEAKER_Y = StationGeometry.WALK_Y + 3;
 	/** The pole an open platform's lamp stands on. */
@@ -2482,9 +2482,10 @@ public final class StationPlanner {
 					final boolean plus = target >= 0 ? target > middle : middle > (band.vFrom() + band.vTo()) / 2;
 					final LocalDir way = plus ? LocalDir.PLUS_V : LocalDir.MINUS_V;
 					for (int w = v; w <= end; w++) {
-						// MTR's right half is on the right looking along the way it moves; +U is right of +V
-						travelatorStep(c, StationGeometry.PLATFORM_Y, w, way, plus ? "left" : "right");
-						travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, way, plus ? "right" : "left");
+						// two lanes side by side, one each way, as real paired walkways run: the balustrades meet in the
+						// middle (both "right" of their own direction) and passengers step on from the outside
+						travelatorStep(c, StationGeometry.PLATFORM_Y, w, way, "right");
+						travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, way.opposite(), "right");
 					}
 				}
 				// a gap of three to cross before the next stretch
@@ -3541,8 +3542,9 @@ public final class StationPlanner {
 						u = backColumn(band);
 						front = towardTrack(band);
 					}
-					// never by or under a stair flight; a two-seat bench (two benches side by side) with a bin beside it
+					// never by or under a stair flight or a travelator; a two-seat bench (two benches side by side) with a bin beside it
 					if (u < 0 || isEdge(band, u) || nearStairs(band, v) || nearStairs(band, v + 1)
+							|| nearTravelator(band, u, v) || nearTravelator(band, u, v + 1)
 							|| taken(u, StationGeometry.WALK_Y, v) || taken(u, StationGeometry.WALK_Y, v + 1)) {
 						continue;
 					}
@@ -3570,6 +3572,17 @@ public final class StationPlanner {
 				}
 			}
 			return -1;
+		}
+
+		/** True within two cells (each way) of a travelator step on this platform, so furniture never crowds the walkway. */
+		private boolean nearTravelator(TrackLayout.PlatformBand band, int u, int v) {
+			for (final PlannedBlock block : cells.values()) {
+				if (block.role() == Role.ESCALATOR && block.y() == StationGeometry.PLATFORM_Y && band.contains(block.u(), block.v())
+						&& Math.abs(block.v() - v) <= 2 && Math.abs(block.u() - u) <= 2) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		/**
@@ -3738,8 +3751,10 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
+					// a screen is always a proper board: hung, across a column pair, fixed to a column, or two blocks on a post.
+					// Never a lone single block on the floor.
 					if (!hangScreen(band, target) && !screenBetweenColumns(band, target) && !screenOnColumn(band, target)) {
-						onPost(band, target, StationGeometry.WALK_Y, PIDS);
+						screenOnPost(band, target);
 					}
 				}
 				onPost(band, targets.get(0), StationGeometry.WALK_Y, HELP_POINT);
@@ -3963,6 +3978,59 @@ public final class StationPlanner {
 				}
 				if (fixed) {
 					return true;
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * A standing departure screen two blocks wide against the back of a column or lamp post, at the free cell nearest
+		 * {@code target} (an open platform with no roof or columns to hang from). The two blocks join into one display, as a
+		 * wall unit does. True if placed.
+		 */
+		private boolean screenOnPost(TrackLayout.PlatformBand band, int target) {
+			final List<Cell> posts = new ArrayList<>();
+			for (final PlannedBlock block : cells.values()) {
+				final boolean post = block.role() == Role.COLUMN || block.role() == Role.LAMP || block.blockId().equals(LAMP_POLE);
+				if (post && block.y() == StationGeometry.WALK_Y && band.contains(block.u(), block.v())) {
+					posts.add(new Cell(block.u(), block.y(), block.v()));
+				}
+			}
+			posts.sort(Comparator.comparingInt((Cell post) -> Math.abs(post.v() - target)).thenComparingInt(Cell::v).thenComparingInt(Cell::u));
+			final int middle = (band.uMin() + band.uMax()) / 2;
+			for (final Cell post : posts) {
+				if (isEdge(band, post.u())) {
+					continue;
+				}
+				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
+					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
+					if (!band.runs(v) || nearStairs(band, v)) {
+						continue;
+					}
+					final int toward = post.u() <= middle ? 1 : -1;
+					for (final int step : new int[]{toward, -toward}) {
+						final int other = post.u() + step;
+						if (!band.contains(other, v) || isEdge(band, other) || taken(post.u(), StationGeometry.WALK_Y, v)
+								|| taken(other, StationGeometry.WALK_Y, v)) {
+							continue;
+						}
+						put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS);
+						put(Role.FIXTURE, other, StationGeometry.WALK_Y, v, side, PIDS);
+						return true;
+					}
+				}
+			}
+			// a platform too narrow for two blocks side by side still gets one standing screen rather than none
+			for (final Cell post : posts) {
+				if (isEdge(band, post.u())) {
+					continue;
+				}
+				for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
+					final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
+					if (band.runs(v) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
+							&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS)) {
+						return true;
+					}
 				}
 			}
 			return false;

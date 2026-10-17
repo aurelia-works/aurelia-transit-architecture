@@ -43,6 +43,8 @@ public final class Connections {
 	private static final Set<String> RAILINGS = Set.of(ATA + "handrail", ATA + "station_fence");
 	private static final String GIRDER = ATA + "station_girder";
 	private static final String SIGN_POLE = ATA + "sign_pole";
+	/** The {@code girder_joins} block tag: structural blocks (columns, piers, trusses) a girder frames into. */
+	private static final Set<String> GIRDER_JOINS = tag("girder_joins");
 	/** The {@code pole_mounts} block tag: signs a pole runs into. */
 	private static final Set<String> POLE_MOUNTS = tag("pole_mounts");
 	/** The {@code glass_pane_joins} block tag: roof and frame blocks the mod's glass panes join (ArchGlassPaneBlock). */
@@ -77,7 +79,7 @@ public final class Connections {
 		} else if (id.equals(GIRDER)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (other.blockId().equals(GIRDER) || solid(other, side, full)));
+				add(out, name(side), other != null && (other.blockId().equals(GIRDER) || girderJoins(other) || solid(other, side, full)));
 			}
 			add(out, "up", girder(at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", girder(at.get(StudioApi.cell(x, y - 1, z))));
@@ -143,7 +145,12 @@ public final class Connections {
 	}
 
 	private static boolean girder(PlannedBlock other) {
-		return other != null && other.blockId().equals(GIRDER);
+		return other != null && (other.blockId().equals(GIRDER) || girderJoins(other));
+	}
+
+	/** A structural block (a column, pier or truss) a girder frames into although it has no solid full side. */
+	private static boolean girderJoins(PlannedBlock other) {
+		return other != null && GIRDER_JOINS.contains(other.blockId());
 	}
 
 	private static boolean pane(String id) {
