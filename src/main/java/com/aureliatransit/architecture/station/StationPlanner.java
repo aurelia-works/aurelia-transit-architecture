@@ -81,6 +81,7 @@ public final class StationPlanner {
 		planning.liftButtons();
 		planning.endFences();
 		planning.cornerPosts();
+		planning.parking();
 		return planning.finish();
 	}
 
@@ -556,7 +557,7 @@ public final class StationPlanner {
 				return;
 			}
 			final StylePalette.Building b = palette.building();
-			final int uS = StationLayout.streetWall();
+			final int uS = streetWall();
 			final int uP = site.platformWall(layout);
 			final int vS = site.vStart();
 			final int vE = site.vEnd();
@@ -611,11 +612,11 @@ public final class StationPlanner {
 				}
 			}
 			for (int v = vEntr - 1; v <= vEntr + 1; v++) {
-				put(Role.RAMP_LOWER, 0, StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
-				put(Role.RAMP_UPPER, 1, StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
+				put(Role.RAMP_LOWER, apronU(), StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
+				put(Role.RAMP_UPPER, apronU() + 1, StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
 				for (int y = 1; y <= 3; y++) {
-					keepClear(0, y, v);
-					keepClear(1, y, v);
+					keepClear(apronU(), y, v);
+					keepClear(apronU() + 1, y, v);
 				}
 			}
 			// perimeter walls, ground storey y=1..4
@@ -1034,7 +1035,7 @@ public final class StationPlanner {
 				return;
 			}
 			final StylePalette.Building b = palette.building();
-			final int uS = StationLayout.streetWall();
+			final int uS = streetWall();
 			final int uP = site.platformWall(layout);
 			final boolean pavilions = scale == StationScale.GRAND && wingBays >= 2;
 			for (final int side : new int[]{-1, 1}) {
@@ -3606,7 +3607,7 @@ public final class StationPlanner {
 				return;
 			}
 			final StylePalette.Building b = palette.building();
-			final int uS = StationLayout.streetWall();
+			final int uS = streetWall();
 			final int uP = site.platformWall(layout);
 			final int vS = site.vStart();
 			final int vE = site.vEnd();
@@ -3710,7 +3711,7 @@ public final class StationPlanner {
 		 * @return the room's lowest and highest v including the partition, or null when there is no room
 		 */
 		private int[] waitingRoom(StylePalette.Building b) {
-			final int uS = StationLayout.streetWall();
+			final int uS = streetWall();
 			final int uP = site.platformWall(layout);
 			final boolean atStart = site.innerStairSide() > 0;
 			final int partition = atStart ? site.vStart() + StationGeometry.BAY : site.vEnd() - StationGeometry.BAY;
@@ -4300,6 +4301,52 @@ public final class StationPlanner {
 				put(Role.NAME_SIGN, u, StationGeometry.WALK_Y, v + i, front);
 			}
 			return true;
+		}
+
+		/** A car park: two rows of five-deep bays either side of a three-wide aisle, half its length along the front. */
+		private static final int LOT_HALF = 14;
+		private static final int LOT_BAY = 5;
+		private static final int LOT_AISLE = 3;
+		private static final int LOT_BAY_PITCH = 3;
+		private static final String LOT_PAVING = "aurelia_transit_architecture:platform_paving_light";
+		private static final String LOT_MARK = "aurelia_transit_architecture:platform_paving_dark";
+		private static final String LOT_KERB = "aurelia_transit_architecture:bus_curb";
+
+		/** u of the building's entrance apron (its two ramp cells on the street side): past a car park band when there is one. */
+		private int apronU() {
+			return spec.parking() && spec.sideBuilding() ? StationGeometry.PARKING_DEPTH : 0;
+		}
+
+		/** u of the building's street wall: a car park stands in front of it (see {@link StationGeometry#PARKING_DEPTH}). */
+		private int streetWall() {
+			return apronU() + StationGeometry.APRON;
+		}
+
+		/**
+		 * A surface car park in front of the street wall (the "parking" / "car park" word): a paved lot with a bay marked every
+		 * few cells either side of a central aisle, a kerb round the outside and a driveway onto the street at the entrance,
+		 * built from the platform paving and bus kerb blocks already in the mod. It fills the band the layout leaves in front of
+		 * the building ({@link StationGeometry#PARKING_DEPTH} cells, u = 0..depth-1), so nothing stands outside the footprint.
+		 */
+		void parking() {
+			if (!spec.parking() || !spec.sideBuilding()) {
+				return;
+			}
+			final int front = site.entranceV();
+			final int vFrom = Math.max(layout.vMin(), front - LOT_HALF);
+			final int vTo = Math.min(layout.vMax(), front + LOT_HALF);
+			for (int a = 0; a < StationGeometry.PARKING_DEPTH; a++) {
+				final boolean street = a == 0;
+				final boolean aisle = a >= LOT_BAY && a < LOT_BAY + LOT_AISLE;
+				for (int v = vFrom; v <= vTo; v++) {
+					final boolean edge = v == vFrom || v == vTo;
+					final boolean driveway = street && Math.abs(v - front) <= 1;
+					final String block = (street || edge) && !driveway ? LOT_KERB
+							: aisle || (!street && !edge && Math.floorMod(v - vFrom, LOT_BAY_PITCH) == 0) ? LOT_MARK : LOT_PAVING;
+					// the lot is at street level, the ground the approach comes in on, so it is the flat ground the apron ramps rise from
+					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block);
+				}
+			}
 		}
 
 		/**

@@ -202,6 +202,7 @@ public final class StationDescriptionParser {
 		private boolean bothWays;
 		private boolean enclosedStairs;
 		private boolean travelators;
+		private boolean parking;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -351,6 +352,8 @@ public final class StationDescriptionParser {
 		private static String[] tokenize(String text) {
 			String normal = SEPARATORS.matcher(text.toLowerCase(Locale.ROOT)).replaceAll(" ");
 			normal = DIGITS_THEN_LETTERS.matcher(normal).replaceAll("$1 $2");
+			// two-word names of one thing, so a single token carries them
+			normal = normal.replace("car park", "carpark").replace("park and ride", "parkandride");
 			normal = normal.trim();
 			return normal.isEmpty() ? new String[0] : normal.split("\\s+");
 		}
@@ -553,6 +556,12 @@ public final class StationDescriptionParser {
 						return true;
 					}
 					return false;
+				case "parking":
+				case "carpark":
+				case "parkandride":
+					setParking(i);
+					use(i, i);
+					return true;
 				case "leidsche":
 					setStyle(StationStyle.DUTCH, i);
 					use(i, next.equals("rijn") ? i + 1 : i);
@@ -1004,6 +1013,14 @@ public final class StationDescriptionParser {
 			}
 		}
 
+		/** A surface car park beside the street entrance (built from the paving and kerb blocks already in the mod). */
+		private void setParking(int i) {
+			if (!parking) {
+				parking = true;
+				note(i, "a surface car park beside the street entrance");
+			}
+		}
+
 		private List<String> ignoredWords() {
 			final List<String> ignored = new ArrayList<>();
 			for (int i = 0; i < tokens.length; i++) {
@@ -1415,7 +1432,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
-			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking);
 			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
 				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
 			}
@@ -1465,6 +1482,11 @@ public final class StationDescriptionParser {
 			} else if (terminus) {
 				builder.terminus(true);
 				note(terminusAt, "terminus: the tracks end at buffer stops in front of the head building");
+			}
+			if (parking && !builder.build().sideBuilding()) {
+				// a terminus's street is beyond its head building, and a buildingless station has no street wall to park in front of
+				warn("a car park is only built in front of a station building beside the platforms; it is left out here");
+				builder.parking(false);
 			}
 			final boolean bridge = Boolean.TRUE.equals(footbridge);
 			if (bridge && terminus) {

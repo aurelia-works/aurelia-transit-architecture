@@ -18,9 +18,11 @@ import java.util.List;
  *                       entrance apron (0 for a through station, whose tracks run on past both platform ends)
  * @param hubThrough     a hub: how many tracks on each side run on through, past the head building, which then only spans
  *                       the platforms beside a bay track (0 for any other station; see {@link StationGeometry#hubThrough})
+ * @param parkingWidth   columns at the low-u edge taken by a car park in front of the building ({@link StationGeometry#PARKING_DEPTH},
+ *                       0 without one); they are outside the building, so not indoor
  */
 public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
-		int headDepth, int hubThrough) {
+		int headDepth, int hubThrough, int parkingWidth) {
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -31,6 +33,11 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 					platformLength - 1, band.deadEnd()) : band);
 		}
 		platforms = List.copyOf(bands);
+	}
+
+	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
+			int headDepth, int hubThrough) {
+		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, hubThrough, 0);
 	}
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
@@ -168,7 +175,8 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	/** Inside a station building: the side building's columns, or a terminus head building's rows. */
 	public boolean indoor(int u, int v) {
-		return u >= 0 && u < width && (u < buildingWidth || terminus() && u >= headFrom() && u <= headTo() && v >= platformLength && v <= headEnd());
+		return u >= parkingWidth && u < width
+				&& (u < buildingWidth || terminus() && u >= headFrom() && u <= headTo() && v >= platformLength && v <= headEnd());
 	}
 
 	/** First v of the footprint (start of the ramps, or 0). */

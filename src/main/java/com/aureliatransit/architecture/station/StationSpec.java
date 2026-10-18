@@ -32,7 +32,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, CanopyShape canopy, StationScale scale, boolean hub,
 		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
-		boolean stairsBothWays, boolean enclosedStairs, boolean travelators) {
+		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -130,7 +130,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).canopy(canopy).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
-				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators);
+				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking);
 	}
 
 	public boolean hasBuilding() {
@@ -176,6 +176,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean stairsBothWays;
 		private boolean enclosedStairs;
 		private boolean travelators;
+		private boolean parking;
 
 		private Builder() {
 		}
@@ -295,6 +296,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder parking(boolean value) {
+			parking = value;
+			return this;
+		}
+
 		public Builder shed(ShedShape value) {
 			shed = value;
 			return this;
@@ -313,7 +319,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
 					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, canopy, scale, hub, platforms, trackBed, escalators,
-					stairsBothWays, enclosedStairs, travelators);
+					stairsBothWays, enclosedStairs, travelators, parking);
 		}
 	}
 }

@@ -66,6 +66,8 @@ public final class StationGeometry {
 
 	/** Station building: entrance apron (the entrance ramp's two cells) on the street side ... */
 	public static final int APRON = 2;
+	/** A car park in front of a station building's street wall: its depth across u (two bay rows either side of an aisle). */
+	public static final int PARKING_DEPTH = 13;
 	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall); the compact depth
 	 * ({@link #buildingDepth}). */
 	public static final int BUILDING_DEPTH = 9;
@@ -87,8 +89,7 @@ public final class StationGeometry {
 	 * compact depth ({@link #headDepth}). */
 	public static final int HEAD_DEPTH = 12;
 	/** A city terminus head building's depth: a real concourse behind the gate line, about 20 m. */
-	public static final int CITY_HEAD_DEPTH = 20;
-	/** A grand terminus head building's depth: a monumental concourse, about 30 m, with room for a real hall. */
+	public static final int CITY_HEAD_DEPTH = 20;	/** A grand terminus head building's depth: a monumental concourse, about 30 m, with room for a real hall. */
 	public static final int GRAND_HEAD_DEPTH = 30;
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
@@ -223,7 +224,8 @@ public final class StationGeometry {
 		}
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
 		final StationScale scale = spec.buildingScale();
-		final int shift = spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0;
+		final int parking = spec.parking() && spec.sideBuilding() ? PARKING_DEPTH : 0;
+		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0);
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
 					spec.terminus() ? headDepth(scale) + HEAD_APRON : 0, hubThrough(spec));
@@ -238,7 +240,7 @@ public final class StationGeometry {
 					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
 		return new TrackLayout(railWidth + shift, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms,
-				spec.sideBuilding() ? shift : 0, 0);
+				spec.sideBuilding() ? shift : 0, 0, 0, parking);
 	}
 
 	/** Columns of the street entrance beside the first track: a side platform's width, so its stair and lift fit as on one. */
