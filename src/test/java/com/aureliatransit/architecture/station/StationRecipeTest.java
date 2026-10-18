@@ -83,7 +83,7 @@ class StationRecipeTest {
 						}
 						final RoofType wantedRoof = switch (roof) {
 							case AUTO -> null;
-							case CANOPIES, BUTTERFLY, GABLE -> RoofType.CANOPY;
+							case CANOPIES, FLAT_CANOPIES, BUTTERFLY, GABLE -> RoofType.CANOPY;
 							case OPEN -> RoofType.NONE;
 							default -> RoofType.HALL;
 						};

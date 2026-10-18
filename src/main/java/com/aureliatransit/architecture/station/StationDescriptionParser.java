@@ -614,6 +614,12 @@ public final class StationDescriptionParser {
 					}
 					return false;
 				case "flat":
+					// "flat canopies": level platform canopies, whatever the look's own canopy is
+					if (next.equals("canopy") || next.equals("canopies")) {
+						setCanopyShape(CanopyShape.FLAT, i);
+						use(i, i + 1);
+						return true;
+					}
 					if (next.equals("roof") || HALL_WORDS.contains(next)) {
 						if (shed == null) {
 							shed = ShedShape.FLAT;

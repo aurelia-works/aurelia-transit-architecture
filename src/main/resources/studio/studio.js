@@ -54,6 +54,8 @@
 		if (saved.seeds) {
 			Object.assign(seeds, saved.seeds);
 			seeds.locks = Object.assign({}, saved.seeds.locks);
+			// there was a Details lock before Look took the planner's seed
+			delete seeds.locks.details;
 		}
 		for (const f of fields) {
 			if (saved[f] !== undefined && $(f)) {
@@ -442,8 +444,9 @@
 	// ---- seed --------------------------------------------------------------------------------------------------------------
 	// One seed, two jobs. The page rolls every setting that is not locked from it (Look, Shape, Building), so typing a seed
 	// gives the same settings again; and it goes to the planner as the words "seed k7f2ra", which vary what the settings
-	// leave open (canopy profile, floors, roof material, platform colours, benches). Locking Details keeps the planner's seed
-	// while the rest re-rolls.
+	// leave open (canopy profile, floors, roof material, platform colours, benches). Each part of the station belongs to one
+	// lock: Look keeps the city and the planner's seed (its choices are part of how the station looks), Shape the type, tracks,
+	// length and platforms, Building whether there is one, its size and roof form, the stairs, travelators and track bed.
 
 	const SEED_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
 	const SEED_LENGTH = 6;
@@ -477,6 +480,26 @@
 	const choose = (rand, list) => list[Math.floor(rand() * list.length)];
 	const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+	const GROUPS = { look: ["look", "mix"], shape: ["mode", "tracks", "length", "layout"], building: ["building", "size", "roof", "esc", "walls", "trav", "bed"] };
+
+	/**
+	 * A locked Building keeps what the station shows, not the word "Auto": an Auto roof or size follows the city, which an
+	 * unlocked Look re-rolls, so they become the roof and size the last plan was built with.
+	 */
+	function holdBuilding() {
+		if (!current || !current.resolved) {
+			return;
+		}
+		if ($("roof").value === "AUTO" || $("roof").value === "CANOPIES") {
+			$("roof").value = current.resolved.roof;
+			touched.add("roof");
+		}
+		if ($("size").value === "AUTO" && current.resolved.size !== "AUTO") {
+			$("size").value = current.resolved.size;
+			touched.add("size");
+		}
+	}
+
 	/** Sets every unlocked setting from the seed. Writes the hidden selects directly; the caller plans once afterwards. */
 	function rollSettings(seed) {
 		if (!seeds.locks.look) {
@@ -489,7 +512,9 @@
 		if (!seeds.locks.shape) {
 			const r = stream(seed, "shape");
 			const p = r();
-			const mode = p < 0.55 ? "through" : p < 0.85 ? "terminus" : "hub";
+			// a terminus or hub always has its head building, so a Building locked to none keeps the rolls to through stations
+			const noBuilding = seeds.locks.building && $("building").value === "0";
+			const mode = p < 0.55 || noBuilding ? "through" : p < 0.85 ? "terminus" : "hub";
 			const [lo, hi] = options.tracks;
 			const tracks = mode === "hub" ? choose(r, [4, 6, 8]) : mode === "terminus" ? choose(r, [3, 4, 6, 8]) : choose(r, [1, 2, 2, 3, 4, 4, 6]);
 			const length = choose(r, mode === "through" ? [32, 48, 64, 64, 80, 96, 120] : [80, 96, 120, 140, 160]);
@@ -511,6 +536,15 @@
 			$("trav").value = r() < 0.25 ? "1" : "";
 			$("bed").value = choose(r, ["", "gravel", "andesite"]);
 		}
+		if (seeds.locks.building) {
+			holdBuilding();
+		}
+		// what the dice set is pinned like a hand-set control, so a typed description never overrides the rolled station
+		for (const [group, ids] of Object.entries(GROUPS)) {
+			if (!seeds.locks[group]) {
+				ids.forEach((id) => touched.add(id));
+			}
+		}
 		if ($("listOn").checked && !seeds.locks.shape) {
 			rebuildPlats();
 		}
@@ -519,7 +553,8 @@
 	/** Rolls the settings from a seed and plans the station; the letters flip like a departure board while it builds. */
 	function applySeed(seed) {
 		seeds.value = seed;
-		if (!seeds.locks.details || !seeds.detail) {
+		// the planner's seed follows the dice unless Look is locked (its canopy, floor and roof-deck choices are the look)
+		if (!seeds.locks.look || !seeds.detail) {
 			seeds.detail = seed;
 		}
 		rolling = true;
@@ -585,7 +620,7 @@
 		const note = $("seedNote");
 		note.classList.toggle("seed-note-edited", seeds.edited);
 		note.textContent = seeds.edited ? "Changed since the roll, so this seed alone no longer makes this station."
-			: seeds.locks.details && seeds.detail !== seeds.value ? "Details kept from seed " + seeds.detail + "."
+			: seeds.locks.look && seeds.detail !== seeds.value ? "The look is kept from seed " + seeds.detail + "."
 				: "The same seed makes the same station. Press R to roll.";
 	}
 
@@ -619,13 +654,14 @@
 		for (const b of document.querySelectorAll("[data-lock]")) {
 			b.addEventListener("click", () => {
 				seeds.locks[b.dataset.lock] = !seeds.locks[b.dataset.lock];
-				if (!seeds.locks.details) {
-					// unlocking Details brings the planner back to the seed on show
-					const was = seeds.detail;
+				if (b.dataset.lock === "building" && seeds.locks.building) {
+					holdBuilding();
+					updateOutputs();
+				}
+				if (!seeds.locks.look && seeds.detail !== seeds.value) {
+					// unlocking Look brings the planner back to the seed on show
 					seeds.detail = seeds.value;
-					if (was !== seeds.detail) {
-						changed();
-					}
+					changed();
 				}
 				showSeed();
 				remember();
@@ -633,7 +669,8 @@
 		}
 		document.addEventListener("keydown", (e) => {
 			const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
-			if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "r" || e.key === "R")) {
+			// R is the dice, but not while walking the station (the keys are the walker's then)
+			if (!typing && !walk && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "r" || e.key === "R")) {
 				e.preventDefault();
 				roll();
 			}

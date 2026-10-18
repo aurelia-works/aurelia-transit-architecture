@@ -169,7 +169,7 @@ public final class StudioServer {
 		}
 		final Map<String, String> q = form(body(exchange));
 		final String action = q.getOrDefault("action", "");
-		final String answer = sender.send(action, StudioApi.recipe(q).text(StudioApi.typed(q)), StudioApi.recipe(q).encode());
+		final String answer = sender.send(action, StudioApi.description(q), StudioApi.recipe(q).encode());
 		reply(exchange, 200, "text/plain; charset=utf-8", answer);
 	}
 

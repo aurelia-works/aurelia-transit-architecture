@@ -96,11 +96,6 @@ public final class StudioApi {
 		if (q.getOrDefault("trav", "").equals("1")) {
 			text = "travelators " + text;
 		}
-		// the dice's seed, in front so a long description never cuts it off
-		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
-		if (seed.matches("[a-z0-9]{1,12}")) {
-			text = "seed " + seed + " " + text;
-		}
 		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}
@@ -123,6 +118,17 @@ public final class StudioApi {
 			}
 		}
 		return pinned;
+	}
+
+	/**
+	 * The whole description a request plans and builds: the controls (only the pinned ones once there are typed words), the
+	 * typed words, then the dice's seed. The seed is not typed words: it must never make the controls give way to them.
+	 * The studio's preview and its Plan and Build buttons all use this, so the game builds the station the page showed.
+	 */
+	public static String description(Map<String, String> q) {
+		final String text = recipe(q).text(typed(q), pinned(q));
+		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
+		return seed.matches("[a-z0-9]{1,12}") ? text + ", seed " + seed : text;
 	}
 
 	/** The choices the page offers and their limits. */
@@ -187,7 +193,7 @@ public final class StudioApi {
 	public String plan(Map<String, String> q) {
 		final StationRecipe recipe = recipe(q);
 		final String typed = typed(q);
-		final String text = recipe.text(typed, pinned(q));
+		final String text = description(q);
 		final long started = System.nanoTime();
 		final ParseResult parse = StationDescriptionParser.parse(text);
 		final StationPlan plan = StationPlanner.plan(parse.spec());
@@ -240,6 +246,9 @@ public final class StudioApi {
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
 		out.append(",\"seed\":").append(Json.quote(spec.seed() == 0 ? "" : Long.toString(spec.seed(), 36)));
+		// the roof and building size this station was planned with, as the page's options, so a locked "Auto" can keep them
+		out.append(",\"resolved\":{\"roof\":").append(Json.quote(resolvedRoof(spec).name())).append(",\"size\":")
+				.append(Json.quote(spec.hasBuilding() ? resolvedSize(spec).name() : "AUTO")).append('}');
 		out.append(",\"encoded\":").append(Json.quote(recipe.encode()));
 		out.append(",\"typed\":").append(Json.quote(typed));
 		out.append(",\"understood\":").append(Json.strings(parse.understood()));
@@ -417,6 +426,33 @@ public final class StudioApi {
 			}
 		}
 		return true;
+	}
+
+	/** The roof option that plans this station's roof exactly, whatever look or seed chose it. */
+	static StationRecipe.Roof resolvedRoof(StationSpec spec) {
+		return switch (spec.roof()) {
+			case NONE -> StationRecipe.Roof.OPEN;
+			case CANOPY -> switch (spec.canopy()) {
+				case FLAT -> StationRecipe.Roof.FLAT_CANOPIES;
+				case BUTTERFLY -> StationRecipe.Roof.BUTTERFLY;
+				case GABLE -> StationRecipe.Roof.GABLE;
+			};
+			case HALL -> switch (spec.shed()) {
+				case FLAT -> StationRecipe.Roof.FLAT_SHED;
+				case ARCH -> StationRecipe.Roof.ARCHED;
+				case POINTED -> StationRecipe.Roof.POINTED;
+				case MULTI_ARCH -> StationRecipe.Roof.ARCHES;
+				case GABLED -> StationRecipe.Roof.RIDGE;
+			};
+		};
+	}
+
+	static StationRecipe.Size resolvedSize(StationSpec spec) {
+		return switch (spec.buildingScale()) {
+			case COMPACT -> StationRecipe.Size.COMPACT;
+			case CITY -> StationRecipe.Size.CITY;
+			case GRAND -> StationRecipe.Size.GRAND;
+		};
 	}
 
 	private static String roof(StationSpec spec) {
