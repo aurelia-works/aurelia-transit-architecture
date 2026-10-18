@@ -29,12 +29,18 @@ import java.util.Objects;
  * @param travelators    moving walkways along long platforms where there is room
  * @param seed           the generator seed ("seed k7f2ra" in the words): varies what the words left open, such as the canopy
  *                       profile, the materials and where the benches stand; 0 for none, which plans as before
+ * @param stationClass   the class the player asked for ("city class"), which filled in what the words left open;
+ *                       {@link StationClass#AUTO} when none was asked (the plan then reports {@link StationClass#of})
+ * @param era            the era asked for ("postwar era"), which chose the look; {@link StationEra#AUTO} when none was asked
+ * @param facing         the compass direction the entrance faces ("facing north"); {@link Facing#AUTO} to leave it to the way the
+ *                       player looks. It places the station and changes no block of the plan
  */
 public record StationSpec(int trackCount, PlatformLayout platformLayout, int platformLength, int platformWidth, StationStyle style,
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, CanopyShape canopy, StationScale scale, boolean hub,
 		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
-		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, long seed) {
+		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, long seed, StationClass stationClass, StationEra era,
+		Facing facing) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -72,6 +78,9 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(canopy, "canopy");
 		Objects.requireNonNull(scale, "scale");
 		Objects.requireNonNull(trackBed, "trackBed");
+		Objects.requireNonNull(stationClass, "stationClass");
+		Objects.requireNonNull(era, "era");
+		Objects.requireNonNull(facing, "facing");
 		platforms = List.copyOf(platforms);
 		check(trackCount, MIN_TRACKS, platforms.isEmpty() ? MAX_TRACKS : MAX_LISTED_TRACKS, "trackCount");
 		if (platforms.size() > PlatformSpec.MAX_PLATFORMS) {
@@ -132,7 +141,8 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).canopy(canopy).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
-				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).seed(seed);
+				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).seed(seed)
+				.stationClass(stationClass).era(era).facing(facing);
 	}
 
 	public boolean hasBuilding() {
@@ -180,6 +190,9 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean travelators;
 		private boolean parking;
 		private long seed;
+		private StationClass stationClass = StationClass.AUTO;
+		private StationEra era = StationEra.AUTO;
+		private Facing facing = Facing.AUTO;
 
 		private Builder() {
 		}
@@ -309,6 +322,21 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder stationClass(StationClass value) {
+			stationClass = value;
+			return this;
+		}
+
+		public Builder era(StationEra value) {
+			era = value;
+			return this;
+		}
+
+		public Builder facing(Facing value) {
+			facing = value;
+			return this;
+		}
+
 		public Builder shed(ShedShape value) {
 			shed = value;
 			return this;
@@ -327,7 +355,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
 					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, canopy, scale, hub, platforms, trackBed, escalators,
-					stairsBothWays, enclosedStairs, travelators, parking, seed);
+					stairsBothWays, enclosedStairs, travelators, parking, seed, stationClass, era, facing);
 		}
 	}
 }

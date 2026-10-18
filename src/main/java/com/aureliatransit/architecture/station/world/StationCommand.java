@@ -54,6 +54,8 @@ public final class StationCommand {
 						.then(CommandManager.literal(REPLACE_TERRAIN).executes(context -> run(context, player -> StationActions.confirm(player, true)))))
 				.then(CommandManager.literal("cancel").executes(context -> run(context, StationActions::cancel)))
 				.then(CommandManager.literal("undo").executes(context -> run(context, StationActions::undo)))
+				.then(CommandManager.literal("verify").executes(context -> run(context, player -> StationActions.verify(player, false)))
+						.then(CommandManager.literal("paste").executes(context -> run(context, player -> StationActions.verify(player, true)))))
 				.then(CommandManager.literal("status").executes(context -> run(context, StationActions::status))));
 	}
 
@@ -129,6 +131,7 @@ public final class StationCommand {
 		source.sendFeedback(() -> Text.literal("ATA station generator").formatted(Formatting.GOLD), false);
 		source.sendFeedback(() -> Text.literal("/ata_station plan <description>: plan a station in front of you and preview it"), false);
 		source.sendFeedback(() -> Text.literal("/ata_station confirm [" + REPLACE_TERRAIN + "]: build it (the token approves terrain changes)"), false);
+		source.sendFeedback(() -> Text.literal("/ata_station verify [paste]: read the world back against the plan (paste: a schematic pasted at your feet)"), false);
 		source.sendFeedback(() -> Text.literal("/ata_station preview | cancel | undo | status"), false);
 		source.sendFeedback(() -> Text.literal("Or use the Station Wrench: right-click a block to plan, sneak + right-click the air to edit").formatted(Formatting.GRAY), false);
 		source.sendFeedback(() -> Text.literal("Examples:").formatted(Formatting.GRAY), false);

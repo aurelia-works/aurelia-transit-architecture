@@ -31,6 +31,11 @@ import com.aureliatransit.architecture.station.SurveyReport;
 import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.WorldOp;
 import com.aureliatransit.architecture.station.world.BlockStateResolver;
+import com.aureliatransit.architecture.station.studio.BlockModels;
+import com.aureliatransit.architecture.station.studio.SchematicExport;
+import com.aureliatransit.architecture.station.StationPlacement;
+import com.aureliatransit.architecture.station.StationPlan;
+import com.aureliatransit.architecture.station.world.StationVerify;
 import com.aureliatransit.architecture.station.world.StationBuildJob;
 import com.aureliatransit.architecture.station.world.StationCommand;
 import com.aureliatransit.architecture.station.world.StationPreview;
@@ -43,6 +48,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.SlabBlock;
+import net.minecraft.command.argument.BlockArgumentParser;
 import net.minecraft.block.enums.SlabType;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.command.CommandManager;
@@ -748,6 +754,33 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * "facing south" builds the station that way round whatever way the player looks: a through station's building is on the left of
+	 * its forward direction, a terminus's head building across it. Without the words the player's own heading is used.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 100)
+	public void facingWordsTurnTheStationNotThePlayer(TestContext context) {
+		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+		final BlockPos feet = context.getAbsolutePos(FEET_Z);
+		player.refreshPositionAndAngles(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, Direction.SOUTH.asRotation(), 0.0F);
+		final UUID id = player.getUuid();
+		check(StationActions.plan(player, SMALL, null), "plan refused");
+		check(StationSessions.pending(id).frame().forward() == Heading.SOUTH, "no facing words: the player's heading, got " + StationSessions.pending(id).frame().forward());
+		for (final Heading facing : Heading.values()) {
+			final String words = SMALL + ", facing " + facing.name().toLowerCase();
+			check(StationActions.plan(player, words, null), "plan refused: " + words);
+			final StationSessions.Pending pending = StationSessions.pending(id);
+			check(pending.spec().facing().direction() == facing, "facing read as " + pending.spec().facing());
+			check(pending.frame().forward() == StationPlacement.heading(pending.spec()), "built facing " + pending.frame().forward());
+			check(pending.frame().forward() == facing.right(), "a through station faces " + facing + " with its building on the left of " + pending.frame().forward());
+		}
+		check(StationActions.plan(player, TERMINUS + ", facing west", null), "plan refused");
+		check(StationSessions.pending(id).frame().forward() == Heading.WEST, "a terminus faces the way its head building does");
+		StationSessions.forgetPlayer(id);
+		Fixtures.removePlayer(context, player);
+		context.complete();
+	}
+
 	// ---- station wrench --------------------------------------------------------------------------------------------
 
 	/**
@@ -981,6 +1014,181 @@ public class StationGameTests implements FabricGameTest {
 			}
 		}
 		Fixtures.failIfAny(problems, "station palettes");
+		context.complete();
+	}
+
+
+	// ---- schematic export ------------------------------------------------------------------------------------------
+
+	/** The mod's, MTR's and Minecraft's own assets as the studio reads them, from the classpath. */
+	private static final BlockModels.AssetSource CLASSPATH_ASSETS = (namespace, path) -> {
+		try (java.io.InputStream in = StationGameTests.class.getClassLoader().getResourceAsStream("assets/" + namespace + "/" + path)) {
+			return in == null ? null : in.readAllBytes();
+		}
+	};
+
+	private static BlockState parseState(String state) {
+		try {
+			return BlockArgumentParser.block(Registries.BLOCK.getReadOnlyWrapper(), state, false).blockState();
+		} catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+			throw fail("Minecraft cannot read the schematic's block state \"" + state + "\": " + e.getMessage());
+		}
+	}
+
+	private static SchematicExport.Result export(StationPlan plan, StationSpec spec, LocalFrame frame) {
+		return SchematicExport.export(plan, frame, new BlockModels(CLASSPATH_ASSETS), StationPlacement.pasteOrigin(spec, plan), spec.name(), java.util.Map.of());
+	}
+
+	/**
+	 * Every block state the exporter writes for every preset must be one Minecraft itself reads (so WorldEdit, which parses the same
+	 * strings, reads it), and what the exporter decides alone (the facing, the axis, the plan's own properties) must be what
+	 * {@link BlockStateResolver} gives the game's own build, for all four ways round.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void schematicStatesAreMinecraftsAndFollowTheBuild(TestContext context) {
+		final List<String> problems = new ArrayList<>();
+		final java.util.Set<String> blocks = new java.util.TreeSet<>();
+		int cells = 0;
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			final StationSpec spec = StationDescriptionParser.parse(preset.description()).spec();
+			final StationPlan plan = StationPlanner.plan(spec);
+			final int[] origin = StationPlacement.pasteOrigin(spec, plan);
+			for (final Heading heading : Heading.values()) {
+				final LocalFrame frame = new LocalFrame(0, 0, 0, heading);
+				final SchematicExport.Parsed schematic = SchematicExport.read(export(plan, spec, frame).bytes());
+				for (final PlannedBlock block : plan.blocks()) {
+					final String text = schematic.of(block, frame, origin);
+					final BlockState pasted = parseState(text);
+					cells++;
+					blocks.add(block.blockId());
+					final Block wanted = BlockStateResolver.block(block.blockId()).orElse(null);
+					if (wanted == null || pasted.getBlock() != wanted) {
+						problems.add(preset.key() + " " + block.blockId() + " came back as " + text);
+						continue;
+					}
+					final BlockState built = BlockStateResolver.withState(BlockStateResolver.state(wanted, frame.heading(block.front())), block.state());
+					final BlockState plain = wanted.getDefaultState();
+					for (final Property<?> property : wanted.getStateManager().getProperties()) {
+						// what the build sets away from the block's default must be in the file; a join the file adds on top is checked against a built station
+						if (!built.get(property).equals(plain.get(property)) && !built.get(property).equals(pasted.get(property))) {
+							problems.add(preset.key() + " " + heading + " " + block.blockId() + " " + property.getName() + ": build " + built.get(property) + ", file "
+									+ pasted.get(property) + " (" + text + ")");
+						}
+					}
+				}
+			}
+		}
+		check(cells > 100_000, "the check ran on only " + cells + " cells");
+		AureliaTransitArchitecture.LOGGER.info("[gametest] schematic states: {} cells of {} block ids read back", cells, blocks.size());
+		Fixtures.failIfAny(problems.size() > 40 ? problems.subList(0, 40) : problems, "schematic states (" + problems.size() + " in all)");
+		context.complete();
+	}
+
+	/** A built station, read back, is exactly its plan; and every property its schematic names has the value the game ended up with. */
+	private static void builtStationMatchesItsSchematic(StationSessions.Pending pending, ServerWorld world, String what) {
+		final StationVerify.Report report = StationVerify.verify(world, pending.plan(), pending.frame());
+		check(report.exact(), what + ": the built station differs from its plan in " + report.differing() + " blocks (" + report.unloaded() + " unloaded): "
+				+ report.mismatches());
+		final SchematicExport.Parsed schematic = SchematicExport.read(export(pending.plan(), pending.spec(), pending.frame()).bytes());
+		final int[] origin = StationPlacement.pasteOrigin(pending.spec(), pending.plan());
+		final LocalFrame frame = pending.frame();
+		final List<String> problems = new ArrayList<>();
+		final java.util.Map<String, Integer> kinds = new java.util.TreeMap<>();
+		int compared = 0;
+		for (final PlannedBlock block : pending.plan().blocks()) {
+			final String text = schematic.of(block, frame, origin);
+			final BlockState pasted = parseState(text);
+			final BlockState world1 = world.getBlockState(cellPos(pending, block));
+			compared++;
+			if (pasted.getBlock() != world1.getBlock()) {
+				problems.add(block + ": file " + text + ", world " + StationVerify.describe(world1));
+				continue;
+			}
+			for (final Property<?> property : world1.getBlock().getStateManager().getProperties()) {
+				if (!pasted.get(property).equals(world1.get(property))) {
+					if (kinds.merge(block.blockId() + " " + property.getName(), 1, Integer::sum) <= 3) {
+						problems.add(cellPos(pending, block).toShortString() + " " + property.getName() + ": file " + pasted.get(property) + ", world " + world1.get(property) + " ("
+								+ text + " vs " + StationVerify.describe(world1) + ")");
+					}
+				}
+			}
+		}
+		check(compared > 500, what + ": compared only " + compared);
+		if (!kinds.isEmpty()) {
+			problems.add(0, "differing properties by block: " + kinds);
+		}
+		Fixtures.failIfAny(problems, what + ": the schematic differs from the built world");
+	}
+
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void builtTerminusMatchesItsSchematic(TestContext context) {
+		buildsEveryPlannedBlock(context, TERMINUS, new UUID(0, 21), (pending, job) -> builtStationMatchesItsSchematic(pending, context.getWorld(), "terminus"));
+	}
+
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void builtSideBuildingMatchesItsSchematic(TestContext context) {
+		buildsEveryPlannedBlock(context, SIDE_BUILDING, new UUID(0, 22), (pending, job) -> builtStationMatchesItsSchematic(pending, context.getWorld(), "side building"));
+	}
+
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void builtLiftStationMatchesItsSchematic(TestContext context) {
+		buildsEveryPlannedBlock(context, LIFTS, new UUID(0, 23), (pending, job) -> builtStationMatchesItsSchematic(pending, context.getWorld(), "lift station"));
+	}
+
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void builtEscalatorStationMatchesItsSchematic(TestContext context) {
+		buildsEveryPlannedBlock(context, ESCALATORS, new UUID(0, 24), (pending, job) -> builtStationMatchesItsSchematic(pending, context.getWorld(), "escalator station"));
+	}
+
+	/**
+	 * The paste check: a schematic pasted with its paste origin on a spot (what WorldEdit does with the file) puts every block where
+	 * {@code /ata_station verify paste} looks for it, and the check reports a block changed afterwards.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 200)
+	public void pastedSchematicVerifiesAtItsOrigin(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final BlockPos anchor = context.getAbsolutePos(new BlockPos(2, 12, 2));
+		for (final String words : new String[]{"2 tracks, length 24, width 6, footbridge, station building, named Test", TERMINUS}) {
+			final StationSpec spec = StationDescriptionParser.parse(words).spec();
+			final StationPlan plan = StationPlanner.plan(spec);
+			final Heading heading = StationPlacement.heading(spec);
+			final LocalFrame zero = new LocalFrame(0, 0, 0, heading);
+			final SchematicExport.Parsed schematic = SchematicExport.read(export(plan, spec, zero).bytes());
+			// paste: the file's cell (i, j, k) goes to anchor + WEOffset + (i, j, k), as WorldEdit does
+			final java.util.Set<BlockPos> pasted = new java.util.HashSet<>();
+			for (int y = 0; y < schematic.height(); y++) {
+				for (int z = 0; z < schematic.length(); z++) {
+					for (int x = 0; x < schematic.width(); x++) {
+						final String text = schematic.at(x, y, z);
+						if (!text.equals("minecraft:air")) {
+							final BlockPos at = anchor.add(schematic.weOffsetX() + x, schematic.weOffsetY() + y, schematic.weOffsetZ() + z);
+							world.setBlockState(at, parseState(text), Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
+							pasted.add(at);
+						}
+					}
+				}
+			}
+			check(pasted.size() == plan.blocks().size(), "pasted " + pasted.size() + " of " + plan.blocks().size() + " blocks");
+			final LocalFrame frame = StationPlacement.frameAt(spec, plan, heading, anchor.getX(), anchor.getY(), anchor.getZ());
+			final StationVerify.Report exact = StationVerify.verify(world, plan, frame);
+			check(exact.exact(), "\"" + words + "\": the pasted station differs from its plan in " + exact.differing() + " blocks: " + exact.mismatches());
+			// one block changed: found, at the right place
+			final PlannedBlock first = plan.blocks().get(plan.blocks().size() / 2);
+			final BlockPos where = new BlockPos(frame.x(first.u(), first.v()), frame.y(first.y()), frame.z(first.u(), first.v()));
+			final BlockState was = world.getBlockState(where);
+			world.setBlockState(where, Blocks.GLOWSTONE.getDefaultState(), Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
+			final StationVerify.Report one = StationVerify.verify(world, plan, frame);
+			check(one.differing() == 1 && one.mismatches().get(0).pos().equals(where), "one changed block reported as " + one);
+			world.setBlockState(where, was, Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
+			// one block of facing changed
+			// a station pasted a block off is mostly wrong, and says so
+			final StationVerify.Report off = StationVerify.verify(world, plan, new LocalFrame(frame.ox() + 1, frame.oy(), frame.oz(), frame.forward()));
+			check(off.differing() > off.planned() / 10, "a pasted station one block off should differ widely: " + off.differing() + " of " + off.planned());
+			// clear the plot for the next
+			for (final BlockPos at : pasted) {
+				world.setBlockState(at, Blocks.AIR.getDefaultState(), Block.NOTIFY_LISTENERS | Block.FORCE_STATE);
+			}
+		}
 		context.complete();
 	}
 

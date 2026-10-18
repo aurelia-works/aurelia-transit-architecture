@@ -179,6 +179,29 @@ final class StationText {
 	}
 
 	/** One line of what was measured, then every warning and failure of the station checks. */
+	/** What {@code /ata_station verify} found: the counts, then the first blocks that differ. */
+	static void verify(StationVerify.Report report, boolean paste, Consumer<Text> out) {
+		final String where = paste ? "the pasted station" : "the station";
+		if (report.exact()) {
+			out.accept(Text.literal("[ATA Station] Exact: all " + report.planned() + " blocks of " + where + " are as planned"
+					+ (report.skipped() > 0 ? " (" + report.skipped() + " MTR rail nodes left out, MTR is not loaded)" : "") + ".").formatted(Formatting.GREEN));
+			return;
+		}
+		out.accept(Text.literal("[ATA Station] " + report.matched() + " of " + report.planned() + " blocks of " + where + " are as planned; "
+				+ report.differing() + " differ" + (report.unloaded() > 0 ? ", " + report.unloaded() + " are in unloaded chunks" : "") + ".").formatted(Formatting.YELLOW));
+		for (final StationVerify.Mismatch mismatch : report.mismatches()) {
+			out.accept(Text.literal("  " + mismatch.pos().getX() + " " + mismatch.pos().getY() + " " + mismatch.pos().getZ() + ": "
+					+ mismatch.expected() + " planned, " + mismatch.found() + " there").formatted(Formatting.GRAY));
+		}
+		if (report.differing() > report.mismatches().size()) {
+			out.accept(Text.literal("  ... and " + (report.differing() - report.mismatches().size()) + " more").formatted(Formatting.GRAY));
+		}
+		if (paste && report.matched() == 0) {
+			out.accept(Text.literal("  Nothing matches: stand on the paste origin (the block in front of the street entrance) with the same facing the schematic"
+					+ " was exported with.").formatted(Formatting.GRAY));
+		}
+	}
+
 	static void checks(StationAudit.Result audit, Consumer<Text> out) {
 		final long passed = audit.count(StationAudit.Status.PASS);
 		final long warned = audit.count(StationAudit.Status.WARN);

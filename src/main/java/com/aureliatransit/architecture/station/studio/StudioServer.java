@@ -92,8 +92,13 @@ public final class StudioServer {
 
 	/** As {@link #start(BlockModels.AssetSource, Sender)}, with the player shown on the page's profile card (null for none). */
 	public static StudioServer start(BlockModels.AssetSource assets, Sender sender, Player player) throws IOException {
+		return start(assets, sender, player, FIRST_PORT);
+	}
+
+	/** As above, on the first free port from {@code firstPort} (tests use a port of their own, so a running studio is left alone). */
+	static StudioServer start(BlockModels.AssetSource assets, Sender sender, Player player, int firstPort) throws IOException {
 		IOException last = null;
-		for (int port = FIRST_PORT; port < FIRST_PORT + PORTS; port++) {
+		for (int port = firstPort; port < firstPort + PORTS; port++) {
 			try {
 				final HttpServer http = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 16);
 				final StudioServer studio = new StudioServer(http, new StudioApi(new BlockModels(assets)), assets, sender, player);
@@ -144,6 +149,8 @@ public final class StudioServer {
 					return;
 				}
 				reply(exchange, 200, "application/json", api.plan(form(body(exchange))));
+			} else if (path.equals("/api/export") && (method.equals("GET") || method.equals("POST"))) {
+				export(exchange, method.equals("GET"));
 			} else if (path.equals("/api/send") && method.equals("POST")) {
 				send(exchange);
 			} else if (path.matches("/thumbs/[A-Z_]{1,32}\\.jpg")) {
@@ -156,6 +163,61 @@ public final class StudioServer {
 		} catch (RuntimeException e) {
 			reply(exchange, 500, "text/plain", "Station Studio could not do that: " + e);
 		}
+	}
+
+	/**
+	 * The station of a plan request as a Sponge schematic file (see {@link SchematicExport}). A POST carries the studio token like
+	 * {@code /api/plan}. A GET is a link or a typed address, which cannot carry a header: it needs {@code token=} among its fields, or
+	 * the browser's own word that it came from this page ({@code Sec-Fetch-Site: same-origin}) or from nowhere ({@code none}, a typed
+	 * address), so a web page elsewhere cannot make the studio plan in a loop.
+	 * An unbuildable or invalid request is a 400 with {@code {"error": "..."}}.
+	 */
+	private void export(HttpExchange exchange, boolean get) throws IOException {
+		final Map<String, String> q;
+		try {
+			q = exportRequest(exchange, get);
+		} catch (IllegalArgumentException e) {
+			reply(exchange, 400, "application/json", "{\"error\":" + Json.quote(e.getMessage() == null ? "invalid request" : e.getMessage()) + "}");
+			return;
+		}
+		if (q == null) {
+			return;
+		}
+		final StudioApi.Export export;
+		try {
+			export = api.export(q);
+		} catch (IllegalArgumentException e) {
+			reply(exchange, 400, "application/json", "{\"error\":" + Json.quote(e.getMessage() == null ? "invalid request" : e.getMessage()) + "}");
+			return;
+		}
+		exchange.getResponseHeaders().set("Content-Disposition", "attachment; filename=\"" + export.filename() + "\"");
+		exchange.getResponseHeaders().set("X-ATA-Blocks", Integer.toString(export.blocks()));
+		exchange.getResponseHeaders().set("X-ATA-Fingerprint", export.fingerprint());
+		exchange.getResponseHeaders().set("Cache-Control", "no-store");
+		reply(exchange, 200, "application/octet-stream", export.bytes());
+	}
+
+	/** The export request's fields, or null after answering 403 for a request that is not the studio page's own. */
+	private Map<String, String> exportRequest(HttpExchange exchange, boolean get) throws IOException {
+		if (get) {
+			final String query = exchange.getRequestURI().getRawQuery();
+			final Map<String, String> q = form(query == null ? "" : query);
+			// a link on the page carries the token; an address typed in the bar has no token but the browser says it came from nowhere
+			// ("none"), and a link followed on this page says "same-origin". Anything else, or no word at all, needs the token.
+			final String site = exchange.getRequestHeaders().getFirst("Sec-Fetch-Site");
+			final boolean ownPage = "same-origin".equals(site) || "none".equals(site);
+			if (!token.equals(q.get("token")) && !ownPage) {
+				reply(exchange, 403, "text/plain", "Open the export from the studio page, or add its token.");
+				return null;
+			}
+			return q;
+		}
+		final Map<String, String> q = form(body(exchange));
+		if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token")) && !token.equals(q.get("token"))) {
+			reply(exchange, 403, "text/plain", "Reload the studio page.");
+			return null;
+		}
+		return q;
 	}
 
 	private void send(HttpExchange exchange) throws IOException {

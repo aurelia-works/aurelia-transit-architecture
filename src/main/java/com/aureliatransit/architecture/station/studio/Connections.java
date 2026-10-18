@@ -1,7 +1,9 @@
 package com.aureliatransit.architecture.station.studio;
 
 import com.aureliatransit.architecture.station.Heading;
+import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.StylePalette;
 
 import java.util.Locale;
 import java.util.Map;
@@ -59,56 +61,130 @@ public final class Connections {
 	 * the planned blocks.
 	 */
 	public static String state(PlannedBlock block, Map<Long, PlannedBlock> at, FullFace full) {
+		return state(block, at, full, StudioApi.FRAME);
+	}
+
+	/** As {@link #state(PlannedBlock, Map, FullFace)}, for a station placed in {@code frame} ({@code at} is keyed in that frame too). */
+	public static String state(PlannedBlock block, Map<Long, PlannedBlock> at, FullFace full, LocalFrame frame) {
 		final String id = block.blockId();
-		final int x = StudioApi.FRAME.x(block.u(), block.v());
+		final int x = frame.x(block.u(), block.v());
 		final int y = block.y();
-		final int z = StudioApi.FRAME.z(block.u(), block.v());
-		final Heading facing = StudioApi.FRAME.heading(block.front());
+		final int z = frame.z(block.u(), block.v());
+		final Heading facing = frame.heading(block.front());
 		final StringBuilder out = new StringBuilder(block.state());
 		if (SCREENS.contains(id)) {
-			add(out, "left", same(block, facing, beside(at, x, y, z, facing.right())));
-			add(out, "right", same(block, facing, beside(at, x, y, z, facing.left())));
-			add(out, "up", same(block, facing, at.get(StudioApi.cell(x, y + 1, z))));
-			add(out, "down", same(block, facing, at.get(StudioApi.cell(x, y - 1, z))));
+			add(out, "left", same(frame, block, facing, beside(at, x, y, z, facing.right())));
+			add(out, "right", same(frame, block, facing, beside(at, x, y, z, facing.left())));
+			add(out, "up", same(frame, block, facing, at.get(StudioApi.cell(x, y + 1, z))));
+			add(out, "down", same(frame, block, facing, at.get(StudioApi.cell(x, y - 1, z))));
 		} else if (JOINING_SIGNS.contains(id)) {
-			add(out, "left", same(block, facing, beside(at, x, y, z, facing.left())));
-			add(out, "right", same(block, facing, beside(at, x, y, z, facing.right())));
+			add(out, "left", same(frame, block, facing, beside(at, x, y, z, facing.left())));
+			add(out, "right", same(frame, block, facing, beside(at, x, y, z, facing.right())));
 		} else if (id.equals(SIGN_POLE)) {
 			add(out, "up", mounts(at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", mounts(at.get(StudioApi.cell(x, y - 1, z))));
 		} else if (id.equals(GIRDER)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (other.blockId().equals(GIRDER) || girderJoins(other) || solid(other, side, full)));
+				add(out, name(side), other != null && (other.blockId().equals(GIRDER) || girderJoins(other) || solid(frame, other, side, full)));
 			}
 			add(out, "up", girder(at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", girder(at.get(StudioApi.cell(x, y - 1, z))));
 		} else if (pane(id)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (pane(other.blockId()) || wall(other.blockId()) || solid(other, side, full)
+				add(out, name(side), other != null && (pane(other.blockId()) || wall(other.blockId()) || solid(frame, other, side, full)
 						|| id.startsWith(ATA) && PANE_JOINS.contains(other.blockId())));
 			}
 		} else if (RAILINGS.contains(id)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (RAILINGS.contains(other.blockId()) || solid(other, side, full)));
+				add(out, name(side), other != null && (RAILINGS.contains(other.blockId()) || solid(frame, other, side, full)));
 			}
 		} else if (fence(id)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (fence(other.blockId()) || other.blockId().endsWith("_fence_gate") || solid(other, side, full)));
+				add(out, name(side), other != null && (fence(other.blockId()) || other.blockId().endsWith("_fence_gate") || solid(frame, other, side, full)));
 			}
 		} else if (wall(id)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				final boolean joined = other != null && (wall(other.blockId()) || pane(other.blockId()) || solid(other, side, full));
+				final boolean joined = other != null && (wall(other.blockId()) || pane(other.blockId()) || solid(frame, other, side, full));
 				if (!out.toString().contains(name(side) + "=")) {
 					out.append(out.length() == 0 ? "" : ",").append(name(side)).append('=').append(joined ? "low" : "none");
 				}
 			}
 		}
 		return out.toString();
+	}
+
+	private static final String ESCALATOR_STEP = StylePalette.MTR_ESCALATOR_STEP;
+	private static final String ESCALATOR_SIDE = StylePalette.MTR_ESCALATOR_SIDE;
+
+	/**
+	 * The state the finished station holds, for a schematic: {@link #state} plus the shapes MTR's own blocks take from their
+	 * neighbours once the station stands (the preview does not draw these, so its models are unchanged):
+	 * <ul>
+	 *     <li>an escalator step or side takes its {@code orientation} from the flight round it, by MTR's rule
+	 *     ({@code BlockEscalatorBase.getOrientation}): with a same block ahead and behind it is flat; a block one up ahead and one down
+	 *     behind, a slope; one up ahead and one behind, the bottom transition; one ahead and one down behind, the top transition;
+	 *     otherwise the top landing when there is one behind and the bottom landing when not;</li>
+	 *     <li>a lift door's {@code end} is true only when the block on its far side is a glass end piece, which the planner never
+	 *     puts there ({@code BlockPSDAPGDoorBase.getStateForNeighborUpdate2}), so it is false.</li>
+	 * </ul>
+	 * States the plan already sets are kept.
+	 */
+	public static String finishedState(PlannedBlock block, Map<Long, PlannedBlock> at, FullFace full, LocalFrame frame) {
+		final String joined = state(block, at, full, frame);
+		final String id = block.blockId();
+		if (id.equals(ESCALATOR_STEP) || id.equals(ESCALATOR_SIDE)) {
+			return append(joined, "orientation", escalatorOrientation(block, at, frame));
+		}
+		if (id.equals(StylePalette.MTR_LIFT_DOOR)) {
+			return append(joined, "end", "false");
+		}
+		return joined;
+	}
+
+	/**
+	 * {@code models} with MTR's escalators answered by their own rule: an escalator block's outline ({@code BlockEscalatorBase.getOutlineShape2})
+	 * is a full cube except in a slope or the top transition, so a handrail or pane beside a landing joins it and one beside a slope does
+	 * not, whatever its model's boxes say.
+	 */
+	public static FullFace withMtrShapes(FullFace models, Map<Long, PlannedBlock> at, LocalFrame frame) {
+		return (other, heading, side) -> {
+			if (other.blockId().equals(ESCALATOR_STEP) || other.blockId().equals(ESCALATOR_SIDE)) {
+				final String orientation = escalatorOrientation(other, at, frame);
+				return !orientation.equals("slope") && !orientation.equals("transition_top");
+			}
+			return models.test(other, heading, side);
+		};
+	}
+
+	private static String escalatorOrientation(PlannedBlock block, Map<Long, PlannedBlock> at, LocalFrame frame) {
+		final String id = block.blockId();
+		final Heading facing = frame.heading(block.front());
+		final int x = frame.x(block.u(), block.v());
+		final int z = frame.z(block.u(), block.v());
+		final int y = block.y();
+		final boolean ahead = sameBlock(at, x + facing.dx(), y, z + facing.dz(), id);
+		final boolean aheadUp = sameBlock(at, x + facing.dx(), y + 1, z + facing.dz(), id);
+		final boolean behind = sameBlock(at, x - facing.dx(), y, z - facing.dz(), id);
+		final boolean behindDown = sameBlock(at, x - facing.dx(), y - 1, z - facing.dz(), id);
+		return ahead && behind ? "flat" : aheadUp && behindDown ? "slope" : aheadUp && behind ? "transition_bottom"
+				: ahead && behindDown ? "transition_top" : behind ? "landing_top" : "landing_bottom";
+	}
+
+	private static boolean sameBlock(Map<Long, PlannedBlock> at, int x, int y, int z, String id) {
+		final PlannedBlock other = at.get(StudioApi.cell(x, y, z));
+		return other != null && other.blockId().equals(id);
+	}
+
+	private static String append(String state, String key, String value) {
+		if (state.contains(key + "=") ) {
+			return state;
+		}
+		return state.isEmpty() ? key + "=" + value : state + "," + key + "=" + value;
 	}
 
 	/** A block tag of the mod, read from its data file on the classpath (the game's own list). */
@@ -131,13 +207,13 @@ public final class Connections {
 		return at.get(StudioApi.cell(x + side.dx(), y, z + side.dz()));
 	}
 
-	private static boolean same(PlannedBlock block, Heading facing, PlannedBlock other) {
-		return other != null && other.blockId().equals(block.blockId()) && StudioApi.FRAME.heading(other.front()) == facing;
+	private static boolean same(LocalFrame frame, PlannedBlock block, Heading facing, PlannedBlock other) {
+		return other != null && other.blockId().equals(block.blockId()) && frame.heading(other.front()) == facing;
 	}
 
 	/** {@code other}, beside a block on its {@code side}, shows a solid full square towards it. */
-	private static boolean solid(PlannedBlock other, Heading side, FullFace full) {
-		return full.test(other, StudioApi.FRAME.heading(other.front()), side.opposite());
+	private static boolean solid(LocalFrame frame, PlannedBlock other, Heading side, FullFace full) {
+		return full.test(other, frame.heading(other.front()), side.opposite());
 	}
 
 	private static boolean mounts(PlannedBlock other) {

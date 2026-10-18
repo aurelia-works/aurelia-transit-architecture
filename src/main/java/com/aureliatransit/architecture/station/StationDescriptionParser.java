@@ -40,6 +40,13 @@ public final class StationDescriptionParser {
 	/** Shortest platforms of a hub: its footbridge's stairs and lifts down to the outer islands need this much room. */
 	static final int HUB_LENGTH = 20;
 	static final int LARGE_TERMINUS_LENGTH = 200;
+	/** What the station classes default to when nothing says otherwise (blocks, 1.5 to the metre): see docs/STATION_GENERATOR.md. */
+	static final int HALT_LENGTH = 75;
+	static final int HALT_WIDTH = 5;
+	static final int REGIONAL_LENGTH = 180;
+	static final int CITY_LENGTH = 200;
+	static final int GRAND_TRACKS = 6;
+	static final int GRAND_LENGTH = 210;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");
@@ -47,8 +54,18 @@ public final class StationDescriptionParser {
 	private static final Pattern NAME_STOP = Pattern.compile("(?i)\\s+\\b(?:with|and|having|style|styled|in|using)\\b.*$");
 	/** One platform of a platform list: "platform 2: island 12 wide 120 long open;" (Station Studio writes these). */
 	private static final Pattern PLATFORM_CLAUSE = Pattern.compile("(?i)\\bplatform\\s+(\\d{1,2})\\s*:\\s*([^;]*);?");
-	/** "seed k7f2ra": the generator seed, base 36 (Station Studio's dice), up to twelve letters and digits. */
-	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\s+([a-z0-9]{1,12})\\b");
+	/**
+	 * "seed k7f2ra": the generator seed ({@link StationSeed}: base 36, Station Studio's dice, one to twelve letters and digits).
+	 * Whatever stands after the word is taken and checked, so a seed that is too long or has other characters in it is reported
+	 * and left out instead of being half read.
+	 */
+	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\b(?:\\s*[:=]?\\s*([^\\s,;!?:()\"]+))?");
+	/** "city class": the station's class (see {@link StationClass}); the bare size words "city", "halt" ... keep their older meaning. */
+	private static final Pattern CLASS = Pattern.compile("(?i)\\b(halt|regional|town|city|grand)\\s+class\\b");
+	/** "postwar era": the station's era (see {@link StationEra}); "modern" on its own stays the modern platform style. */
+	private static final Pattern ERA = Pattern.compile("(?i)\\b(historic|interwar|postwar|modern)\\s+era\\b");
+	/** "facing north": the way the entrance faces. */
+	private static final Pattern FACING = Pattern.compile("(?i)\\b(?:facing|faces)\\s+(north|east|south|west)\\b");
 	private static final Pattern SEPARATORS = Pattern.compile("[-_/,.;:!?()\"]+");
 	private static final Pattern DIGITS_THEN_LETTERS = Pattern.compile("(\\d+)([a-z]+)");
 
@@ -236,6 +253,9 @@ public final class StationDescriptionParser {
 		private int scaleAt = -1;
 		private long seed;
 		private String seedText = "";
+		private StationClass stationClass = StationClass.AUTO;
+		private StationEra era = StationEra.AUTO;
+		private Facing facing = Facing.AUTO;
 		/** What the seed chose, for the understood list. */
 		private final List<String> seeded = new ArrayList<>();
 
@@ -258,6 +278,7 @@ public final class StationDescriptionParser {
 			text = extractPlatforms(text);
 			text = extractName(text);
 			text = extractSeed(text);
+			text = extractClassEraFacing(text);
 			tokens = tokenize(text);
 			used = new boolean[tokens.length];
 			for (int i = 0; i < tokens.length; i++) {
@@ -265,6 +286,7 @@ public final class StationDescriptionParser {
 					scan(i);
 				}
 			}
+			applyClassAndEra();
 			final StationSpec spec = resolve(description.isBlank());
 			final List<String> ignored = new ArrayList<>(new LinkedHashSet<>(ignoredWords()));
 			understood.sort(Comparator.comparingInt(Note::at));
@@ -341,15 +363,240 @@ public final class StationDescriptionParser {
 		// ---- name -------------------------------------------------------------------------------------------------------
 
 		/** Takes the station name out of the text so words inside it are never read as keywords. */
-		/** Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). */
+		/**
+		 * Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). A seed that is not one
+		 * to twelve letters or digits is ignored with a warning, never an error; the first valid one wins.
+		 */
 		private String extractSeed(String text) {
 			final Matcher matcher = SEED.matcher(text);
-			if (!matcher.find()) {
-				return text;
+			final StringBuilder rest = new StringBuilder();
+			int last = 0;
+			boolean taken = false;
+			while (matcher.find()) {
+				rest.append(text, last, matcher.start()).append(' ');
+				last = matcher.end();
+				// a full stop ends the sentence, not the seed; one inside ("3.5") makes it invalid
+				final String given = matcher.group(1) == null ? null : matcher.group(1).replaceAll("\\.+$", "");
+				if (given == null || given.isEmpty()) {
+					warn("\"seed\" needs 1 to " + StationSeed.MAX_CHARS + " letters or digits after it, like \"seed k7f2ra\"; no seed was used");
+				} else if (!StationSeed.valid(given)) {
+					final String shown = given.length() > 20 ? given.substring(0, 20) + "..." : given;
+					warn("seed \"" + shown + "\" ignored: a seed is 1 to " + StationSeed.MAX_CHARS + " letters or digits (a-z, 0-9)");
+				} else if (taken) {
+					warn("seed given twice; using the first (" + seedText + ")");
+				} else {
+					seedText = given.toLowerCase(Locale.ROOT);
+					seed = StationSeed.parse(seedText);
+					taken = true;
+				}
 			}
-			seed = Long.parseLong(matcher.group(1).toLowerCase(Locale.ROOT), 36);
-			seedText = matcher.group(1).toLowerCase(Locale.ROOT);
-			return text.substring(0, matcher.start()) + " " + text.substring(matcher.end());
+			rest.append(text.substring(last));
+			return rest.toString();
+		}
+
+		/**
+		 * Takes "city class", "postwar era" and "facing north" out of the text before anything else reads it, so the older meaning of
+		 * the bare words ("city" a building size, "modern" a platform style) is not triggered by them. The first of each wins.
+		 */
+		private String extractClassEraFacing(String text) {
+			String rest = text;
+			Matcher matcher = CLASS.matcher(rest);
+			final StringBuilder cleaned = new StringBuilder();
+			int last = 0;
+			while (matcher.find()) {
+				cleaned.append(rest, last, matcher.start()).append(' ');
+				last = matcher.end();
+				final StationClass given = StationClass.of(matcher.group(1));
+				if (stationClass == StationClass.AUTO) {
+					stationClass = given;
+				} else if (stationClass != given) {
+					warn("class given twice; using " + stationClass.label().toLowerCase(Locale.ROOT));
+				}
+			}
+			rest = cleaned.append(rest.substring(last)).toString();
+			matcher = ERA.matcher(rest);
+			final StringBuilder eras = new StringBuilder();
+			last = 0;
+			while (matcher.find()) {
+				eras.append(rest, last, matcher.start()).append(' ');
+				last = matcher.end();
+				final StationEra given = StationEra.of(matcher.group(1));
+				if (era == StationEra.AUTO) {
+					era = given;
+				} else if (era != given) {
+					warn("era given twice; using " + era.label().toLowerCase(Locale.ROOT));
+				}
+			}
+			rest = eras.append(rest.substring(last)).toString();
+			matcher = FACING.matcher(rest);
+			final StringBuilder facings = new StringBuilder();
+			last = 0;
+			while (matcher.find()) {
+				facings.append(rest, last, matcher.start()).append(' ');
+				last = matcher.end();
+				final Facing given = Facing.of(matcher.group(1));
+				if (facing == Facing.AUTO) {
+					facing = given;
+				} else if (facing != given) {
+					warn("facing given twice; using " + facing.key());
+				}
+			}
+			rest = facings.append(rest.substring(last)).toString();
+			if (facing != Facing.AUTO) {
+				note(-1, "the entrance faces " + facing.key());
+			}
+			return rest;
+		}
+
+		/** The default era of each class, when the words and the era control said none. */
+		private static StationEra defaultEra(StationClass value) {
+			return switch (value) {
+				case HALT -> StationEra.POSTWAR;
+				case REGIONAL, TOWN, GRAND, AUTO -> StationEra.HISTORIC;
+				case CITY -> StationEra.MODERN;
+			};
+		}
+
+		/**
+		 * Fills in what the words left open from the class and the era. A class sets the tracks, length, layout, building and its
+		 * size and roof (a halt: one track, 75 long, 5 wide, open, no building; regional: a compact building; town and city: a
+		 * city-sized one; grand: a grand building under a train shed); an era chooses the look when none was named. Anything the
+		 * text said stays as it was said.
+		 */
+		private void applyClassAndEra() {
+			if (stationClass == StationClass.AUTO && era == StationEra.AUTO) {
+				return;
+			}
+			final StationClass c = stationClass;
+			final StationEra e = era != StationEra.AUTO ? era : defaultEra(c);
+			final List<String> set = new ArrayList<>();
+			final boolean tracksSaid = tracks != null || islandPlatforms != null || !listed.isEmpty() || large;
+			final boolean layoutSaid = islandAt >= 0 || sidePlatforms || !listed.isEmpty() || hub;
+			final boolean lengthSaid = length != null || lengthAdjective != null || small || large;
+			final boolean widthSaid = width != null || narrow || wide || small;
+			final boolean buildingSaid = building != null || !looks.isEmpty() || buildingStyle != null || scale != null || terminus;
+			final boolean roofSaid = roof != null || roofNone || weakRoof || canopy != null || shed != null;
+			if (c != StationClass.AUTO) {
+				final boolean modern = e == StationEra.MODERN;
+				switch (c) {
+					case HALT -> {
+						if (!tracksSaid && !terminus) {
+							tracks = 1;
+							set.add("1 track");
+						}
+						if (!lengthSaid) {
+							length = HALT_LENGTH;
+							set.add(HALT_LENGTH + " long");
+						}
+						if (!widthSaid) {
+							width = HALT_WIDTH;
+							set.add(HALT_WIDTH + " wide");
+						}
+						if (!buildingSaid) {
+							building = false;
+							set.add("no building");
+						}
+						if (!roofSaid) {
+							roofNone = true;
+							set.add("open platform");
+						}
+					}
+					case REGIONAL, TOWN, CITY -> {
+						final int classTracks = c == StationClass.REGIONAL ? 2 : c == StationClass.TOWN ? 3 : 4;
+						if (!tracksSaid && !terminus) {
+							tracks = classTracks;
+							set.add(classTracks + " tracks");
+						}
+						if (!lengthSaid && !terminus) {
+							length = c == StationClass.CITY ? CITY_LENGTH : REGIONAL_LENGTH;
+							set.add(length + " long");
+						}
+						if (!layoutSaid && !terminus && c == StationClass.REGIONAL) {
+							if (modern) {
+								islandAt = Integer.MAX_VALUE - 1;
+								set.add("an island platform");
+							} else {
+								sidePlatforms = true;
+								sideAt = Integer.MAX_VALUE - 1;
+								if (footbridge == null) {
+									footbridge = true;
+								}
+								set.add("side platforms and a footbridge");
+							}
+						}
+						if (!buildingSaid) {
+							building = true;
+							buildingAt = -1;
+						}
+						if (scale == null) {
+							scale = c == StationClass.REGIONAL ? StationScale.COMPACT : StationScale.CITY;
+							set.add(scale.label() + " station building");
+						}
+						if (!roofSaid && e == StationEra.HISTORIC) {
+							canopy = CanopyShape.GABLE;
+							roof = RoofType.CANOPY;
+							set.add("gable canopies");
+						} else if (!roofSaid && modern && c == StationClass.REGIONAL && roofMaterial == null) {
+							roofMaterial = RoofMaterial.GLASS;
+							set.add("glass canopies");
+						}
+					}
+					case GRAND -> {
+						if (!tracksSaid && !terminus) {
+							tracks = GRAND_TRACKS;
+							set.add(GRAND_TRACKS + " tracks");
+						}
+						if (!lengthSaid && !terminus) {
+							length = GRAND_LENGTH;
+							set.add(GRAND_LENGTH + " long");
+						}
+						if (building == null) {
+							building = true;
+							buildingAt = -1;
+						}
+						if (scale == null || scaleFromLandmark) {
+							scale = StationScale.GRAND;
+							scaleFromLandmark = false;
+							set.add("a grand station building");
+						}
+						if (!roofSaid) {
+							roof = RoofType.HALL;
+							shed = e == StationEra.HISTORIC ? ShedShape.MULTI_ARCH : ShedShape.ARCH;
+							set.add(e == StationEra.HISTORIC ? "a train shed of several arches" : "an arched train shed");
+						}
+						if (modern && !escalators) {
+							escalators = true;
+							set.add("escalators");
+						}
+					}
+					case AUTO -> {
+					}
+				}
+			}
+			// the era chooses the look when none was named
+			if (looks.isEmpty() && buildingStyle == null && style == null) {
+				final boolean grand = c == StationClass.GRAND;
+				final BuildingStyle lookBuilding = switch (e) {
+					case HISTORIC, AUTO -> BuildingStyle.SANDSTONE;
+					case INTERWAR -> grand ? BuildingStyle.MILAN : BuildingStyle.CLINKER;
+					case POSTWAR -> BuildingStyle.CONCRETE;
+					case MODERN -> grand ? BuildingStyle.BERLIN : BuildingStyle.MODERN;
+				};
+				final StationStyle platforms = switch (e) {
+					case HISTORIC, AUTO, POSTWAR -> StationStyle.GERMAN_SBAHN;
+					case INTERWAR -> grand ? StationStyle.MODERN : StationStyle.GERMAN_SBAHN;
+					case MODERN -> grand ? StationStyle.GERMAN_SBAHN : c == StationClass.HALT ? StationStyle.MODERN : StationStyle.DUTCH;
+				};
+				style = platforms;
+				if (c != StationClass.HALT) {
+					buildingStyle = lookBuilding;
+				}
+				set.add(e.label().toLowerCase(Locale.ROOT) + " look (" + styleName(platforms) + " platforms"
+						+ (c == StationClass.HALT ? "" : ", " + lookBuilding.label() + " for a building") + ")");
+			}
+			final String name = (c == StationClass.AUTO ? "" : c.label().toLowerCase(Locale.ROOT) + " class") + (c != StationClass.AUTO && era != StationEra.AUTO ? ", " : "")
+					+ (era == StationEra.AUTO ? "" : era.label().toLowerCase(Locale.ROOT) + " era");
+			note(-1, name + (set.isEmpty() ? ": everything was said already" : ": " + String.join(", ", set)));
 		}
 
 		private String extractName(String text) {
@@ -1574,6 +1821,10 @@ public final class StationDescriptionParser {
 				}
 			}
 			builder.name(name);
+			builder.stationClass(stationClass).era(era).facing(facing);
+			if (seed == 0 && !seedText.isEmpty()) {
+				note(Integer.MAX_VALUE, "seed " + seedText + ": no variation, the plain plan");
+			}
 			if (seed != 0) {
 				builder.seed(seed);
 				understood.add(new Note(Integer.MAX_VALUE, "seed " + seedText + (seeded.isEmpty() ? ": benches and platform colours"

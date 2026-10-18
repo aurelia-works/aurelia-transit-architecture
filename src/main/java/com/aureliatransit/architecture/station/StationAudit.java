@@ -24,7 +24,19 @@ public final class StationAudit {
 	}
 
 	public enum Topic {
-		TRACKS, FACES, RAIL_NODES, ROOF, HEADROOM, ACCESS, NAME_SIGNS, GROUNDED, SIZE, LIGHTING, FURNISHING
+		TRACKS("Tracks"), FACES("Boarding edges"), RAIL_NODES("Rail nodes"), ROOF("Roof cover"), HEADROOM("Headroom"), ACCESS("Step-free access"),
+		NAME_SIGNS("Name signs"), GROUNDED("Nothing floating"), SIZE("Size"), LIGHTING("Lighting"), FURNISHING("Furnishing");
+
+		private final String title;
+
+		Topic(String title) {
+			this.title = title;
+		}
+
+		/** A short human name for the topic, as the studio lists it. */
+		public String title() {
+			return title;
+		}
 	}
 
 	/** How a passenger arriving beside the station reaches a platform. */
@@ -40,7 +52,28 @@ public final class StationAudit {
 		UNREACHABLE
 	}
 
-	public record Check(Topic topic, Status status, String message) {
+	/**
+	 * One finding. {@code fix} is a short plain-English next step for the player, empty for a pass; a check made without one gets the
+	 * topic's general advice so a warning or failure never reaches the page without a next step.
+	 */
+	public record Check(Topic topic, Status status, String message, String fix) {
+
+		public Check {
+			if (status == Status.PASS) {
+				fix = "";
+			} else if (fix == null || fix.isBlank()) {
+				fix = "Change the station's settings and plan again; if it stays, copy the description and report it.";
+			}
+		}
+
+		public Check(Topic topic, Status status, String message) {
+			this(topic, status, message, "");
+		}
+
+		/** The topic's short human name. */
+		public String title() {
+			return topic.title();
+		}
 	}
 
 	/** One measured boarding face: the run of platform edge cells facing a track. */
@@ -154,12 +187,12 @@ public final class StationAudit {
 			checks.add(new Check(topic, Status.PASS, message));
 		}
 
-		private void warn(Topic topic, String message) {
-			checks.add(new Check(topic, Status.WARN, message));
+		private void warn(Topic topic, String message, String fix) {
+			checks.add(new Check(topic, Status.WARN, message, fix));
 		}
 
-		private void fail(Topic topic, String message) {
-			checks.add(new Check(topic, Status.FAIL, message));
+		private void fail(Topic topic, String message, String fix) {
+			checks.add(new Check(topic, Status.FAIL, message, fix));
 		}
 
 		Result run() {
@@ -181,7 +214,7 @@ public final class StationAudit {
 			if (reserved == spec.trackCount()) {
 				pass(Topic.TRACKS, reserved + (reserved == 1 ? " track corridor" : " track corridors") + " reserved, as requested");
 			} else {
-				fail(Topic.TRACKS, reserved + " track corridors reserved; " + spec.trackCount() + " requested");
+				fail(Topic.TRACKS, reserved + " track corridors reserved; " + spec.trackCount() + " requested", "Change the number of tracks or the platform layout and plan again; if it stays, report the description.");
 			}
 		}
 
@@ -227,16 +260,16 @@ public final class StationAudit {
 			}
 			if (!wanted) {
 				if (!runs.isEmpty()) {
-					fail(Topic.FACES, side + " has boarding edge cells where no platform was planned");
+					fail(Topic.FACES, side + " has boarding edge cells where no platform was planned", "Change the platform layout (side or island) or the platform length, then plan again.");
 				}
 				return;
 			}
 			if (runs.isEmpty()) {
-				fail(Topic.FACES, side + " has no boarding face");
+				fail(Topic.FACES, side + " has no boarding face", "Give this track a platform: choose side or island platforms, or change the number of tracks.");
 				return;
 			}
 			if (runs.size() > 1) {
-				fail(Topic.FACES, side + " is broken into " + runs.size() + " pieces (first gap at v=" + (runs.get(0)[0] + runs.get(0)[1]) + ")");
+				fail(Topic.FACES, side + " is broken into " + runs.size() + " pieces (first gap at v=" + (runs.get(0)[0] + runs.get(0)[1]) + ")", "Something cuts across the platform edge: make the platform longer, or switch off travelators and extra stairs, then plan again.");
 				return;
 			}
 			final int[] run = runs.get(0);
@@ -244,7 +277,7 @@ public final class StationAudit {
 			faces.add(new Face(track.number(), band == null ? 0 : band.number(), left, run[0], run[1]));
 			final int requested = band == null ? StationGeometry.builtLength(spec.platformLength()) : band.length();
 			if (run[1] != requested) {
-				fail(Topic.FACES, side + " measures " + run[1] + " blocks of boarding edge; " + requested + " requested");
+				fail(Topic.FACES, side + " measures " + run[1] + " blocks of boarding edge; " + requested + " requested", "Make the platform longer, or ask for the length it can actually fit.");
 			}
 		}
 
@@ -268,7 +301,7 @@ public final class StationAudit {
 				if (present == 0) {
 					pass(Topic.RAIL_NODES, "No rail nodes, as requested");
 				} else {
-					fail(Topic.RAIL_NODES, present + " rail nodes planned although none were requested");
+					fail(Topic.RAIL_NODES, present + " rail nodes planned although none were requested", "Turn rail nodes back on, or report the description: they should not appear unasked.");
 				}
 				return;
 			}
@@ -285,7 +318,7 @@ public final class StationAudit {
 				}
 				for (final int v : new int[]{first, last}) {
 					if (!has(track.u(), StationGeometry.PLATFORM_Y, v, Role.RAIL_NODE)) {
-						fail(Topic.RAIL_NODES, "track " + track.number() + " has no rail node at the platform end v=" + v);
+						fail(Topic.RAIL_NODES, "track " + track.number() + " has no rail node at the platform end v=" + v, "Something blocks the rail node at the platform end: make the platform longer or plan again with fewer extras at its ends.");
 					}
 				}
 			}
@@ -336,14 +369,14 @@ public final class StationAudit {
 			}
 			final String what = spec.roof() == RoofType.HALL ? "hall roof" : "canopies";
 			if (openCovered > 0) {
-				fail(Topic.ROOF, "A roof covers " + (openCovered * 100 / openFloor) + "% of the open platforms although none was requested");
+				fail(Topic.ROOF, "A roof covers " + (openCovered * 100 / openFloor) + "% of the open platforms although none was requested", "Choose \"no roof\" or open platforms for the roof, or set each platform's roof in the platform list.");
 			} else if (floor == 0) {
 				pass(Topic.ROOF, "Open platforms, no roof, as requested");
 			} else if (covered == floor) {
 				pass(Topic.ROOF, "The " + what + " cover 100% of the " + (openFloor > 0 ? "roofed " : "") + "platform area"
 						+ (openFloor > 0 ? "; the others are open, as requested" : ""));
 			} else {
-				fail(Topic.ROOF, "The " + what + " cover " + (covered * 100 / floor) + "% of the platform area; all of it requested");
+				fail(Topic.ROOF, "The " + what + " cover " + (covered * 100 / floor) + "% of the platform area; all of it requested", "Pick a roof that covers the whole platform, such as a train shed, or make the platform narrower.");
 			}
 		}
 
@@ -398,7 +431,7 @@ public final class StationAudit {
 			}
 			if (tooLow > 0) {
 				fail(Topic.HEADROOM, tooLow + " walkable cells have less than " + StationGeometry.HEADROOM + " blocks of headroom, e.g. under "
-						+ example.role() + " at u=" + example.u() + " y=" + example.y() + " v=" + example.v());
+						+ example.role() + " at u=" + example.u() + " y=" + example.y() + " v=" + example.v(), "Raise the roof: choose a bigger building size or a taller train shed, or move whatever hangs low over that spot.");
 			} else if (lowest == Integer.MAX_VALUE) {
 				pass(Topic.HEADROOM, "Open sky over every walkable platform cell");
 			} else {
@@ -896,7 +929,7 @@ public final class StationAudit {
 				access.add(edges == 0 ? Access.UNREACHABLE : worst);
 				final String name = "Platform " + band.number();
 				if (edges == 0) {
-					fail(Topic.ACCESS, name + " has no free boarding edge to stand on");
+					fail(Topic.ACCESS, name + " has no free boarding edge to stand on", "Make the platform longer, or remove travelators and stairs from its edge.");
 					continue;
 				}
 				final String which = atWorst == edges ? name + " is"
@@ -906,20 +939,20 @@ public final class StationAudit {
 					case STAIRS -> {
 						if (spec.stepFree()) {
 							// step-free is the default, so this is not always something the description asked for
-							warn(Topic.ACCESS, which + " only reached by stairs, so not step-free (no room for a lift)");
+							warn(Topic.ACCESS, which + " only reached by stairs, so not step-free (no room for a lift)", "Widen the platform to 10 blocks (islands 11) so a lift fits, or turn step-free off.");
 						} else {
 							pass(Topic.ACCESS, which + " reached by stairs (no ramps, as requested)");
 						}
 					}
 					case STEP -> {
 						if (spec.stepFree()) {
-							fail(Topic.ACCESS, which + " only reached by a one-block step although step-free access was requested");
+							fail(Topic.ACCESS, which + " only reached by a one-block step although step-free access was requested", "Turn step-free ramps on (do not say \"no ramps\"), or add a footbridge with a lift.");
 						} else {
 							pass(Topic.ACCESS, which + " reached by a one-block step (no ramps, as requested)");
 						}
 					}
-					case AT_GRADE -> warn(Topic.ACCESS, which + " only reached by walking across a track; it needs a footbridge or underpass");
-					case UNREACHABLE -> fail(Topic.ACCESS, which + " cut off and cannot be reached on foot");
+					case AT_GRADE -> warn(Topic.ACCESS, which + " only reached by walking across a track; it needs a footbridge or underpass", "Add a footbridge or a station building so nobody has to cross a track.");
+					case UNREACHABLE -> fail(Topic.ACCESS, which + " cut off and cannot be reached on foot", "Add a footbridge or ramps so this platform can be reached on foot.");
 				}
 			}
 		}
@@ -994,12 +1027,12 @@ public final class StationAudit {
 				if (total == 0) {
 					pass(Topic.NAME_SIGNS, "No name given, so no name signs");
 				} else {
-					fail(Topic.NAME_SIGNS, total + " name signs planned without a name");
+					fail(Topic.NAME_SIGNS, total + " name signs planned without a name", "Give the station a name, or report the description: no signs should appear unnamed.");
 				}
 				return;
 			}
 			if (wrongText > 0) {
-				fail(Topic.NAME_SIGNS, wrongText + " name signs do not carry the name \"" + spec.name() + "\"");
+				fail(Topic.NAME_SIGNS, wrongText + " name signs do not carry the name \"" + spec.name() + "\"", "Plan again; if the signs still carry another name, report the description.");
 				return;
 			}
 			final List<Integer> missing = new ArrayList<>();
@@ -1011,7 +1044,7 @@ public final class StationAudit {
 			if (missing.isEmpty()) {
 				pass(Topic.NAME_SIGNS, "\"" + spec.name() + "\" signed on every platform");
 			} else {
-				warn(Topic.NAME_SIGNS, (missing.size() == 1 ? "Platform " : "Platforms ") + join(missing) + " had no free place for a name sign");
+				warn(Topic.NAME_SIGNS, (missing.size() == 1 ? "Platform " : "Platforms ") + join(missing) + " had no free place for a name sign", "Make the platform longer or wider so a name sign fits, or accept signs on the other platforms only.");
 			}
 		}
 
@@ -1093,7 +1126,7 @@ public final class StationAudit {
 				pass(Topic.GROUNDED, "No floating parts: all " + plan.blocks().size() + " blocks are joined to the ground");
 			} else {
 				fail(Topic.GROUNDED, floating + (floating == 1 ? " block is" : " blocks are") + " not joined to the ground, e.g. " + example.role()
-						+ " at u=" + example.u() + " y=" + example.y() + " v=" + example.v());
+						+ " at u=" + example.u() + " y=" + example.y() + " v=" + example.v(), "A part of the station would float: change the roof, size or look and plan again, and report the description if it keeps happening.");
 			}
 		}
 
@@ -1112,7 +1145,7 @@ public final class StationAudit {
 				}
 			}
 			if (lights.isEmpty()) {
-				fail(Topic.LIGHTING, "The station building has no lights");
+				fail(Topic.LIGHTING, "The station building has no lights", "Choose another building size or look so the building gets lights, then plan again.");
 				return;
 			}
 			int dark = 0;
@@ -1142,7 +1175,7 @@ public final class StationAudit {
 				}
 			}
 			if (dark > 0) {
-				fail(Topic.LIGHTING, dark + " indoor cells are too far from any light, e.g. u=" + example.u() + " v=" + example.v());
+				fail(Topic.LIGHTING, dark + " indoor cells are too far from any light, e.g. u=" + example.u() + " v=" + example.v(), "Choose a smaller building or another look so every indoor spot is near a light.");
 			} else {
 				pass(Topic.LIGHTING, "Every indoor cell is near a light (" + lights.size() + " lights)");
 			}
@@ -1194,7 +1227,7 @@ public final class StationAudit {
 			if (missing.isEmpty()) {
 				pass(Topic.FURNISHING, "Ticket window, fare gates, departure boards, clock and benches fitted");
 			} else {
-				fail(Topic.FURNISHING, "The station building is missing " + String.join(", ", missing));
+				fail(Topic.FURNISHING, "The station building is missing " + String.join(", ", missing), "Choose a bigger building (city or grand) so the ticket office, gates, boards and benches have room.");
 			}
 		}
 

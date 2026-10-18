@@ -1,7 +1,9 @@
 package com.aureliatransit.architecture.station.studio;
 
 import com.aureliatransit.architecture.station.Heading;
+import com.aureliatransit.architecture.station.PlanFingerprint;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationScale;
 import com.aureliatransit.architecture.station.StationPresets;
@@ -20,10 +22,14 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StudioTest {
+
+	/** Tests start their servers from here up, never on the studio's own 25680 range, where a running studio may be open. */
+	private static final int TEST_PORT = 25800;
 
 	/** The mod's own assets as the studio reads them outside the game. */
 	private static final BlockModels.AssetSource OWN_ASSETS = (namespace, path) -> {
@@ -254,7 +260,7 @@ class StudioTest {
 
 	@Test
 	void serverAnswersOnlyThisComputerAndGuardsTheGame() throws IOException, InterruptedException {
-		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok " + action);
+		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok " + action, null, TEST_PORT);
 		try {
 			final HttpClient http = HttpClient.newHttpClient();
 			final String base = server.url();
@@ -280,7 +286,7 @@ class StudioTest {
 	@Test
 	void pagesReloadWhenTheirFilesChangeOrTheServerRestarts() throws Exception {
 		final HttpClient http = HttpClient.newHttpClient();
-		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, TEST_PORT);
 		String oldToken;
 		String oldVersion;
 		try {
@@ -307,7 +313,7 @@ class StudioTest {
 			first.stop();
 		}
 		// a restarted server answers differently and has a new token: the reloaded page picks it up, the old one is refused
-		final StudioServer second = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		final StudioServer second = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, TEST_PORT);
 		try {
 			final String version = http.send(HttpRequest.newBuilder(URI.create(second.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString()).body();
 			assertTrue(!version.equals(oldVersion));
@@ -320,6 +326,152 @@ class StudioTest {
 			assertTrue(page.contains("studio.js"));
 		} finally {
 			second.stop();
+		}
+	}
+
+	@Test
+	void planCarriesTheSeedAndThePlanFingerprint() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, String> q = new java.util.HashMap<>(Map.of("look", "UTRECHT", "tracks", "2", "length", "64", "seed", "K7F2RA"));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+		assertEquals("k7f2ra", plan.get("seed"));
+		final StationPlan planned = StationPlanner.plan(StationDescriptionParser.parse((String) plan.get("text")).spec());
+		assertEquals(PlanFingerprint.of(planned), plan.get("fingerprint"));
+		assertTrue(Json.list(plan.get("warnings")).isEmpty(), plan.get("warnings").toString());
+		// the same request again, and without the seed
+		assertEquals(plan.get("fingerprint"), Json.object(Json.parse(api.plan(q))).get("fingerprint"));
+		q.remove("seed");
+		final Map<String, Object> plain = Json.object(Json.parse(api.plan(q)));
+		assertEquals("", plain.get("seed"));
+		assertNotEquals(plan.get("fingerprint"), plain.get("fingerprint"));
+	}
+
+	@Test
+	void aBadSeedFieldIsLeftOutWithANoteNotAnError() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, String> plain = Map.of("look", "UTRECHT", "tracks", "2", "length", "64");
+		final Map<String, Object> want = Json.object(Json.parse(api.plan(plain)));
+		for (final String bad : new String[]{"toolongtoolongtoolong", "k7 f2", "k7-f2", "\u00fcber", "!!", "seed k7f2ra", "a,b"}) {
+			final Map<String, String> q = new java.util.HashMap<>(plain);
+			q.put("seed", bad);
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			assertEquals("", plan.get("seed"), bad);
+			assertEquals(want.get("fingerprint"), plan.get("fingerprint"), bad);
+			assertEquals(Boolean.TRUE, plan.get("buildable"), bad);
+			assertTrue(Json.list(plan.get("warnings")).stream().anyMatch(w -> w.toString().startsWith("seed")), bad + " " + plan.get("warnings"));
+			assertEquals(StudioApi.description(plain), StudioApi.description(q), bad + ": the bad seed never reaches the words");
+		}
+	}
+
+	@Test
+	void checksCarryATitleAFixAndASummary() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final Map<String, String> q : List.of(Map.of("look", "UTRECHT", "tracks", "2", "length", "64"),
+				Map.of("look", "HAMBURG", "tracks", "4", "length", "96", "layout", "ISLAND", "text", "named Test, footbridge"),
+				Map.of("look", "ST_PANCRAS", "mode", "terminus", "tracks", "6", "building", "1"))) {
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			final List<Object> checks = Json.list(plan.get("checks"));
+			assertFalse(checks.isEmpty());
+			final double[] counts = new double[3];
+			for (final Object o : checks) {
+				final Map<String, Object> check = Json.object(o);
+				assertTrue(check.containsKey("topic") && check.containsKey("status") && check.containsKey("message"), "the existing keys stay: " + check);
+				assertFalse(((String) check.get("title")).isBlank(), check.toString());
+				final String status = (String) check.get("status");
+				assertEquals("PASS".equals(status), ((String) check.get("fix")).isEmpty(), "a fix exactly when it is not a pass: " + check);
+				counts["PASS".equals(status) ? 0 : "WARN".equals(status) ? 1 : 2]++;
+			}
+			final Map<String, Object> summary = Json.object(plan.get("summary"));
+			assertEquals(counts[0], summary.get("pass"), q.toString());
+			assertEquals(counts[1], summary.get("warn"), q.toString());
+			assertEquals(counts[2], summary.get("fail"), q.toString());
+		}
+		// an island platform reached across a track warns, with a way out
+		final Map<String, Object> warned = Json.object(Json.parse(api.plan(Map.of("text", "4 tracks island, 64 long, no footbridge", "pinned", ""))));
+		final List<Object> problems = Json.list(warned.get("checks")).stream().filter(c -> !"PASS".equals(Json.object(c).get("status"))).toList();
+		assertFalse(problems.isEmpty(), "this station should warn about crossing a track");
+		for (final Object c : problems) {
+			assertFalse(((String) Json.object(c).get("fix")).isBlank());
+		}
+		assertEquals("Step-free access", problems.stream().map(c -> Json.object(c).get("title")).findFirst().orElse(""));
+	}
+
+	@Test
+	void classEraAndFacingArePlannedAndReportedWithoutEverFailing() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> halt = Json.object(Json.parse(api.plan(Map.of("class", "halt", "era", "postwar", "facing", "east", "look", "UTRECHT",
+				"tracks", "4", "length", "200", "pinned", ""))));
+		final Map<String, Object> resolved = Json.object(halt.get("resolved"));
+		assertEquals("halt", resolved.get("class"));
+		assertEquals("postwar", resolved.get("era"));
+		assertEquals("east", halt.get("facing"));
+		final Map<String, Object> built = Json.object(halt.get("built"));
+		assertEquals(1.0, built.get("tracks"), "the class decides what is not pinned, whatever the controls say");
+		assertEquals(75.0, built.get("length"));
+		assertEquals(Boolean.TRUE, halt.get("buildable"));
+		assertTrue(((String) halt.get("text")).contains("halt class") && ((String) halt.get("text")).contains("postwar era")
+				&& ((String) halt.get("text")).contains("facing east"), (String) halt.get("text"));
+		// a pinned control wins
+		final Map<String, Object> pinned = Json.object(Json.parse(api.plan(Map.of("class", "halt", "tracks", "3", "length", "200", "pinned", "tracks,length"))));
+		assertEquals(3.0, Json.object(pinned.get("built")).get("tracks"));
+		assertEquals(200.0, Json.object(pinned.get("built")).get("length"));
+		assertEquals("halt", Json.object(pinned.get("resolved")).get("class"), "asked for is reported, whatever the numbers became");
+		// unknown values are auto, never an error
+		final Map<String, Object> junk = Json.object(Json.parse(api.plan(Map.of("class", "banana", "era", "1", "facing", "up", "tracks", "2", "length", "48", "building", "0"))));
+		assertEquals("auto", junk.get("facing"));
+		assertEquals("halt", Json.object(junk.get("resolved")).get("class"), "auto resolves to what the numbers amount to");
+		assertEquals("modern", Json.object(junk.get("resolved")).get("era"));
+		assertEquals(Boolean.TRUE, junk.get("buildable"));
+		// the picture turns with the facing; the blocks and the fingerprint do not
+		final Map<String, String> base = Map.of("look", "UTRECHT", "tracks", "2", "length", "64", "building", "1");
+		final Map<String, Object> north = Json.object(Json.parse(api.plan(base)));
+		final java.util.HashMap<String, String> east = new java.util.HashMap<>(base);
+		east.put("facing", "east");
+		final Map<String, Object> turned = Json.object(Json.parse(api.plan(east)));
+		assertEquals(north.get("fingerprint"), turned.get("fingerprint"));
+		assertEquals(Json.list(north.get("cells")).size(), Json.list(turned.get("cells")).size());
+		assertNotEquals(Json.list(north.get("cells")), Json.list(turned.get("cells")));
+		assertNotNull(Json.object(turned.get("street")).get("x"), "the street view follows the turned station");
+		// options list them
+		final Map<String, Object> options = Json.object(Json.parse(api.options()));
+		assertEquals(6, Json.list(options.get("classes")).size());
+		assertEquals(5, Json.list(options.get("eras")).size());
+		assertEquals(5, Json.list(options.get("facings")).size());
+		assertEquals(List.of("halt", "Halt"), Json.list(Json.list(options.get("classes")).get(1)));
+	}
+
+	/** Turning a station turns its panes, rails, girders and screens with it: the same joins whichever way it faces. */
+	@Test
+	void joinsDoNotDependOnWhichWayTheStationFaces() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final String words : new String[]{"3 tracks island, 96 long, station building, utrecht, footbridge, escalators",
+				"4 tracks island, 96 long, terminus, hamburg"}) {
+			final java.util.Map<String, Integer> joins = new java.util.TreeMap<>();
+			for (final String facing : new String[]{"auto", "north", "east", "south", "west"}) {
+				final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("text", words, "facing", facing, "pinned", ""))));
+				int count = 0;
+				final java.util.Map<String, Integer> perCell = new java.util.HashMap<>();
+				final List<Object> models = Json.list(plan.get("models"));
+				final List<Object> cells = Json.list(plan.get("cells"));
+				final int[] uses = new int[models.size()];
+				for (int i = 3; i < cells.size(); i += 5) {
+					uses[((Double) cells.get(i)).intValue()]++;
+				}
+				for (int m = 0; m < models.size(); m++) {
+					final String state = (String) Json.object(models.get(m)).get("state");
+					int here = 0;
+					for (int at = state.indexOf("=true"); at >= 0; at = state.indexOf("=true", at + 1)) {
+						here++;
+					}
+					count += here * uses[m];
+				}
+				joins.put(facing, count);
+			}
+			assertTrue(joins.get("auto") > 100, words + ": found only " + joins.get("auto") + " joins to compare");
+			assertEquals(joins.get("auto"), joins.get("north"), words);
+			for (final String facing : new String[]{"east", "south", "west"}) {
+				assertEquals(joins.get("auto"), joins.get(facing), words + " facing " + facing + ": " + joins);
+			}
 		}
 	}
 }

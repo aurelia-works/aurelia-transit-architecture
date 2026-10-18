@@ -14,6 +14,8 @@ Operators only (permission level 2), like `/ata_message`.
 | `/ata_station confirm replace_terrain` | Builds and approves the terrain changes the summary listed. This literal token is the **only** way to approve them. The description never can. |
 | `/ata_station cancel` | Stops a running build (what is built stays) or discards the pending plan. |
 | `/ata_station undo` | Reverts your last build, batched. Cells changed since the build are left alone. |
+| `/ata_station verify` | Reads the world back against the pending plan, or the last build, where it was planned, and lists the blocks that differ. Read only, never loads a chunk. |
+| `/ata_station verify paste` | The same with the plan's schematic paste origin on your feet: stand where you pasted an exported `.schem` and run it. |
 | `/ata_station status` | Pending plan, job progress, undo. |
 
 ## Station Wrench
@@ -77,6 +79,10 @@ Examples:
 | Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning). Without a number a terminus is a main station: 8 tracks, 160 long; `large`/`big` 10 tracks, 200 long; `city` 4 tracks, 96 long; `small`, `compact`, `halt`, `village` or `rural` the ordinary 2 tracks. Any track count or length you give wins. | through station |
 | Platform list | `platform 1: island 12 wide 120 long open; platform 2: side canopy;` (up to 10, left to right; each clause ends with `;`). Each platform brings its tracks (a side platform one, an island two), so the list sets the tracks, up to 20. Per platform: `side`/`island`, `bay` (a through station's dead-end platform: its tracks come in from the station's start and end at buffer stops just past its far end; in a terminus every track already does), `N wide` (3-20), `N long` (16-300), `canopy`/`open` (under a train shed every platform is covered). A shorter terminus platform ends at the head building; a shorter through-station platform is centred on the footbridge line and always reaches 12 blocks past it, so its stairs and lift fit. The station is as long as its longest platform. Two side platforms next to each other go back to back; a side platform with an island after it gets a one-block gap behind it. A hub needs islands only. | not listed: every platform alike |
 | Hub | `hub`, `interchange`: a terminus whose outer tracks run on past the head building (SCR-style): one a side up to 6 tracks, two a side from 8. Island platforms only, an even number of tracks, at least 4; an odd count is rounded up and side platforms become islands, both with a warning. | no |
+| Seed | `seed k7f2ra`: 1 to 12 letters or digits (any case, read in base 36). Varies only what the words left open; see **Seeds and fingerprints**. Anything else after `seed` is ignored with a warning | none (same as `seed 0`) |
+| Class | `halt class`, `regional class`, `town class`, `city class`, `grand class`: fills in everything the words left open; see **Station class and era** | none (the plan reports the class its numbers amount to) |
+| Era | `historic era`, `interwar era`, `postwar era`, `modern era`: chooses the look when none was named | none (the plan reports the era of its building look) |
+| Facing | `facing north` (east, south, west): the way the entrance, the street side, looks. Places the station; no block changes | the way the player looks in the game; north in the studio |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 
@@ -183,6 +189,76 @@ The generator never creates rail connections itself, because those live in MTR's
 - The preview is server-side particles sent only to the planning player (at most about 600 per refresh, every 10 ticks, for 30 s), and it changes nothing.
 - Pending plans, jobs and undo logs live in memory: a server restart forgets them, and a player who leaves loses their pending plan (a running build continues).
 
+## Station class and era
+
+A **class** says how big a place the station serves; an **era** says when it was built. Both only fill in what the words and the
+Studio's touched controls left open, so anything said wins: `halt class, 3 tracks, 100 long, station building` is a halt with three
+tracks, 100 long and a building. They are written as phrases ("halt class", "postwar era") because the bare words keep their older
+meaning: `halt`, `regional`, `town`, `city` and `grand` on their own still pick a station building's size (compact, city, city, city,
+grand) and `modern` still picks the modern platform style, so every saved description plans as it did.
+
+| Class | Tracks | Platforms | Length | Width | Building | Roof |
+|---|---|---|---|---|---|---|
+| halt | 1 | side | 75 | 5 | none | open (no roof) |
+| regional | 2 | historic, interwar, postwar: side platforms and a footbridge; modern: one island | 180 | 10 (island 11) | compact | gable canopies when historic; glass canopies when modern; never a train shed |
+| town | 3 | island | 180 | 11 | city size | canopies (gable when historic) |
+| city | 4 | island | 200 | 11 | city size | canopies |
+| grand | 6 (terminus 8) | island | 210 (terminus 160) | 11 | grand | train shed: several arches when historic, one arch otherwise; escalators when modern |
+
+(Lengths and widths are in blocks, 1.5 to the metre: a halt's 75 is 50 m, a regional platform's 180 is 120 m. They follow the
+Deutsche Bahn archetypes of docs/STUDIO_API.md's research notes; the platform widths DB publishes are only a 2.75 m minimum, so these
+are estimates.) A terminus keeps its own defaults and takes the class's building size and look; a halt class with a terminus keeps
+the head building a terminus needs, with the usual warning.
+
+| Era | Look when none was named (building, platforms) |
+|---|---|
+| historic | sandstone, Frankfurt's look (German S-Bahn platforms) |
+| interwar | Hamburg's clinker brick (German S-Bahn platforms); a grand station Milan's monumental stone |
+| postwar | Munich's concrete (German S-Bahn platforms) |
+| modern | Utrecht's glass (Dutch platforms); a grand station Berlin's glass and steel (German S-Bahn platforms); a halt the modern platforms |
+
+There is no look drawn from the 1920s and 30s yet, so **interwar uses the nearest existing ones** (clinker brick, Milan). The class
+with no era asked uses its own: halt postwar, regional, town and grand historic, city modern. Without either, the plan reports the
+class and era it amounts to (`resolved.class`, `resolved.era` in Studio's answer): no building and up to two tracks is a halt, a compact
+building regional, a city-sized one on up to three tracks town (more tracks, or a terminus: city), a grand one grand; the era is the one
+of the building's look (platform style when there is none).
+
+Station Studio sends `class`, `era` and `facing` as request fields; with a class or an era chosen only the controls the player has
+touched (the `pinned` list) go in, even when no words are typed, so the class decides everything else.
+
+## Facing
+
+`facing north` (also east, south, west) says which way the entrance looks. A through station's building is on the left of its tracks'
+direction and a terminus's head building across them, so the station is placed with its street side that way. It changes no block (the
+plan's fingerprint is the same). In the game it is built that way round instead of the way the player looks; Station Studio draws
+and exports it that way, and `/ata_station verify paste` expects it. Without the words the game builds the way the player looks, and the
+studio and the export use their own north-up view: a terminus's front to the north, a through station's street to the west.
+
+## Seeds and fingerprints
+
+`seed k7f2ra` (Station Studio's dice writes it for you) varies the choices the words left open, and nothing the words decided.
+A seed is 1 to 12 characters of `a-z`/`0-9`, any case, read in base 36 (`StationSeed`); the biggest, `zzzzzzzzzzzz`, is 36^12 - 1 and fits
+a long. Anything else after the word (13 or more characters, a space or symbol inside, other scripts) is **ignored with a warning**
+and the station is planned as if there were no seed; the Studio's seed field does the same (the warning is in the plan's
+`warnings`). A seed given twice uses the first. `seed 0` (or `000`) is the plain plan, exactly as planned without a seed, and the
+report says so.
+
+A seed changes these, each only when the words did not say it: the platform floor (3 in 5), the roof material (1 in 2), the canopy
+profile (2 in 5), one arch or several in a barrel-vaulted shed (2 in 5), which of the four colours platform 1 starts on at a
+terminus gate line, and where the first bench stands (4 to 12 in). That is the whole list.
+
+**Theoretical limit.** Seeds are many, but the stations they can reach from one description are few: the product of the choices
+above that this station shows (at most 3,000 or so: 4 colours x 9 bench positions x about 6 floors x 4 roofs x 3 canopies), however
+long the seed is. A roll of random seeds therefore repeats a station after a few dozen (`3 tracks, 80 long, hamburg, station building`
+has 77 distinct stations among 200 random seeds, a utrecht island canopy station 130). Two seeds with the same effective choices
+(`StationSeed.effective`) plan the same blocks; two with different ones never do. A test holds both directions over 200 seeds and
+four descriptions.
+
+**Fingerprint.** `PlanFingerprint.of(plan)` is a 16-hex-digit SHA-256 prefix over the blocks sorted by (u, y, v), one line each:
+`u,y,v,blockId,facing,state,text`. The same words and seed give the same fingerprint on any machine, in any order of planning,
+on any thread; any change to a block's position, id, facing, state or sign text changes it. Roles, and where or which way the
+station is built, are not part of it. Station Studio sends it as `fingerprint`.
+
 ## Known limitations
 
 - Ground-level stations only: no underground or elevated. Straight stations along one axis. No curves, no catenary, no platform screen doors.
@@ -222,6 +298,15 @@ client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) a
 - **In the game:** *Plan in front of me* plans the design in front of you facing the way you look (with the usual particle
   outline and chat summary), then *Build it*, *Cancel plan* and *Undo last build*. The design is also saved on a Station Wrench
   you hold, so right-clicking the ground with it places the same station.
+
+- **Export a schematic:** `GET /api/export` (or a POST) with the plan parameters gives the planned station as a gzipped Sponge
+  Schematic version 2 file that WorldEdit, FastAsyncWorldEdit and Litematica read, written by the studio itself with no Minecraft
+  classes, so it works outside the game too. The paste origin is the ground just outside the street entrance: stand there and
+  `//paste`. Block states include the joins (panes, rails, girders) and MTR's escalator shapes. No block entities, so sign text,
+  screens, lifts' MTR data and the MTR station zone come from building with the generator. Details: `docs/STUDIO_API.md`.
+- **Check a paste:** `/ata_station verify` reads the world back against the pending plan (or the last build) and says
+  `Exact: all N blocks ... are as planned` or lists the first differing blocks; `/ata_station verify paste` puts the plan's paste
+  origin on your feet first, to check a schematic you pasted standing there. Operators only, read only.
 
 - **Reloads by itself:** the page asks the studio every 1.5 s (5 s in a hidden tab) for `/api/version`: a start id and the
   modification times of the page files. When either changes (the page files on disk, or the studio restarted, e.g. a new game

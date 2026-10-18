@@ -46,6 +46,50 @@ public final class BlockModels {
 	}
 
 	/**
+	 * Blocks whose {@code facing} has six values (a barrel, a rod): the game's own placing does not turn them to the plan's front
+	 * ({@code BlockStateResolver} sets {@code HORIZONTAL_FACING} only), so they keep their default unless the plan says otherwise.
+	 */
+	private static final Set<String> SIX_WAY_FACING = Set.of("minecraft:barrel", "minecraft:lightning_rod", "minecraft:end_rod");
+	/** MTR blocks that face the way the plan's front says, for when their blockstate files are not at hand (a studio without MTR's jar). */
+	private static final Set<String> MTR_FACING = Set.of("mtr:ticket_machine", "mtr:tactile_map", "mtr:station_name_entrance", "mtr:lift_buttons_1",
+			"mtr:lift_door_1", "mtr:lift_track_1", "mtr:lift_track_floor_1", "mtr:escalator_step", "mtr:escalator_side");
+
+	/**
+	 * The block state properties the game gives a planned block before its neighbours join it, sorted by name: FACING or the axis
+	 * from the front (the ticket machine and tactile map face away; MTR's rail node takes its boolean flags), then the plan's own
+	 * extras. This is what {@code BlockStateResolver.state} and {@code withState} do, worked out from the blockstate file (which
+	 * properties the block has) or, without the file, from what is known about the few blocks the planner uses. A property the block
+	 * does not have is not listed, so the answer is safe to write into a schematic. Joins (panes, fences, girders) come in with
+	 * {@code state}, as {@link Connections#state} gives them.
+	 */
+	public synchronized Map<String, String> gameProperties(String blockId, Heading facing, String state) {
+		final int colon = blockId.indexOf(':');
+		final String namespace = colon < 0 ? "minecraft" : blockId.substring(0, colon);
+		final String name = blockId.substring(colon + 1);
+		final Map<String, Object> blockstate = file(namespace, "blockstates/" + name + ".json");
+		final Set<String> names = blockstate == null ? Set.of() : propertyNames(blockstate);
+		final Heading heading = facing == null ? Heading.NORTH : facing;
+		final Map<String, String> props = new java.util.TreeMap<>();
+		if (blockId.equals(StylePalette.MTR_RAIL_NODE)) {
+			props.put("facing", Boolean.toString(heading.alongX()));
+			props.put("is_45", "false");
+			props.put("is_22_5", "false");
+			props.put("is_connected", "false");
+		} else if (!SIX_WAY_FACING.contains(blockId) && (names.contains("facing") || blockstate == null && (MTR_FACING.contains(blockId) || blockId.endsWith("_stairs")))) {
+			props.put("facing", (FACING_AWAY.contains(blockId) ? heading.opposite() : heading).name().toLowerCase(java.util.Locale.ROOT));
+		} else if (names.contains("axis")) {
+			props.put("axis", heading.alongX() ? "x" : "z");
+		}
+		for (final String pair : state.split(",")) {
+			final int eq = pair.indexOf('=');
+			if (eq > 0) {
+				props.put(pair.substring(0, eq).trim(), pair.substring(eq + 1).trim());
+			}
+		}
+		return props;
+	}
+
+	/**
 	 * Whether the model shows a solid full square on its {@code side} face, as {@code isSideSolidFullSquare} would see it:
 	 * one element, after the variant's turn, flush with that side and covering it edge to edge. Cached per key and side.
 	 */
