@@ -1027,6 +1027,9 @@ public class StationGameTests implements FabricGameTest {
 		}
 	};
 
+	private static final List<String> EXTRA_DESCRIPTIONS = List.of("3 tracks island, 96 long, station building, city, hamburg, parking",
+			"city class, parking, named Lot", "halt class", "regional class, modern era", "grand class, modern era");
+
 	private static BlockState parseState(String state) {
 		try {
 			return BlockArgumentParser.block(Registries.BLOCK.getReadOnlyWrapper(), state, false).blockState();
@@ -1049,7 +1052,12 @@ public class StationGameTests implements FabricGameTest {
 		final List<String> problems = new ArrayList<>();
 		final java.util.Set<String> blocks = new java.util.TreeSet<>();
 		int cells = 0;
-		for (final StationPresets.Preset preset : StationPresets.ALL) {
+		final List<StationPresets.Preset> presets = new ArrayList<>(StationPresets.ALL);
+		// what the presets do not show: the forecourt (trees, cycle stands, drop-off), a class, a shelter and the hub's bus interchange
+		for (final String extra : EXTRA_DESCRIPTIONS) {
+			presets.add(new StationPresets.Preset("extra " + extra, com.aureliatransit.architecture.station.BuildingStyle.NONE, extra));
+		}
+		for (final StationPresets.Preset preset : presets) {
 			final StationSpec spec = StationDescriptionParser.parse(preset.description()).spec();
 			final StationPlan plan = StationPlanner.plan(spec);
 			final int[] origin = StationPlacement.pasteOrigin(spec, plan);

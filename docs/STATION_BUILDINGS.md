@@ -81,12 +81,15 @@ All of the terminus, plus whichever apply:
 
 ## Phases
 
-1. **Terminus concourse** — sizing (scale + platforms), ticket hall, gateline across the hall, paid double-height
-   concourse with a mezzanine.
-2. **Through-station building** — proper ticket hall, paid concourse, vertical circulation with two access points per
-   platform at bigger stations.
-3. **Hub** — bus interchange, taxi/drop-off, tram, retail, multi-level concourse.
-4. **Forecourt / site** — drop-off, cycle parking, landscaping (extends the car park work).
-5. **Platform realism** — width rules by station type, waiting/shelter, multiple accesses, signage.
+Status as of this branch (`agent/c-planner`). A phase is **complete** only when everything it lists is built, tested, documented and the
+audit is clean; the table says what is, with the test that shows it. Nothing below is marked complete unless every listed item is.
+
+| Phase | Status | What exists (evidence) | What is not done |
+|---|---|---|---|
+| 1. Terminus concourse | complete | ticket hall, one gate line across the hall, paid double-height concourse with a mezzanine (3f271f3; `ConcourseGeometryTest`, `StationPlannerTest`) | |
+| 2. Through-station building | **partial** | ticket hall, gate line, ticket office (before); **two ways down to each wide platform** at city and grand through stations: the stairs-both-ways geometry is now the default there, `single stairs` keeps one (ca848a1; `TwoWaysDownTest`, `StairOptionsTest`, the existing escalator game test builds the geometry) | both flights leave the same footbridge: a second footbridge or an underpass at the far platform end is not built; no escalators by default |
+| 3. Hub | **partial** | (493e58a) a hub has a forecourt past its head building (18 rows, inside the footprint): a **taxi rank** (three marked bays, a bollard at the head of each) and a **bus interchange** (kerbed island, a walk-in waiting shelter of the bus kit, two stop signs, a timetable case, a marked carriageway) (`HubForecourtTest`; every state parses in Minecraft in the game test `schematicStatesAreMinecraftsAndFollowTheBuild`) | tram stop (the mod has no tram blocks); a retail row beyond the terminus's shop; the multi-level concourse; no taxi sign block exists, so the rank is marked by bays and bollards only |
+| 4. Forecourt / site | **partial**: complete for the through-station car park (the `parking` word) | drop-off forecourt by the door closed by bollards, ten cells of cycle stands (a post and a rail each; there is no bike-stand block), trees in the planter, and leaves planned persistent so they cannot decay (84c4da0; `ParkingTest.theForecourtHasADropOffCycleStandsAndTrees`, the schematic game test) | a terminus's forecourt is only the hub's (phase 3); a car park is opt-in by word |
+| 5. Platform realism | **partial** | width rules by class (halt 5, regional 10/11, bigger classes 11 wide platforms; `StationClassTest`), a walk-in **shelter** on every open platform of 24 or more blocks (side: wall, seat, roof; island: wall with a seat each side) (d31b716, rebuilt from the bus kit in 493e58a; `ShelterTest`), the two ways down of phase 2, the existing platform numbers | width rules are not applied to descriptions that name no class (the 10/11 defaults stay so saved descriptions plan as before); wayfinding signs at stair heads and exits; a second access along long platforms |
 
 Each phase: implemented with tests, docs and the changelog updated, and the audit clean.

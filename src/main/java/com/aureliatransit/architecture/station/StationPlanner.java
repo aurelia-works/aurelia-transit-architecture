@@ -25,6 +25,19 @@ public final class StationPlanner {
 	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	private static final String CEILING_SPEAKER = "aurelia_transit_architecture:ceiling_speaker";
 	private static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
+	/**
+	 * A walk-in waiting shelter, from the bus kit: a back wall of glass two high, a seat in front of it and a roof over both at
+	 * two blocks above its seat. All three face the way the wall is from the seat (the kit is placed "away from the player").
+	 */
+	private static final String SHELTER_GLASS = "aurelia_transit_architecture:bus_shelter_glass";
+	private static final String SHELTER_ROOF = "aurelia_transit_architecture:bus_shelter_roof";
+	private static final String SHELTER_SEAT = "aurelia_transit_architecture:bus_shelter_seat";
+	/** Cells in a row of shelter blocks. */
+	private static final int SHELTER_LENGTH = 3;
+	/** The narrowest island that takes a shelter wall with a seat on each side and a walkway beside each. */
+	private static final int SHELTER_ISLAND = 7;
+	/** The shortest open platform that gets a shelter. */
+	private static final int SHELTER_MIN_PLATFORM = 24;
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
 	/** The canopy's sloping blocks (the low end points the way the block faces): the two halves of a half-block slope. */
@@ -66,12 +79,14 @@ public final class StationPlanner {
 		planning.building();
 		planning.wings();
 		planning.head();
+		planning.forecourt();
 		planning.footbridge();
 		planning.columns();
 		planning.canopyRoofs();
 		planning.hallRoof();
 		planning.numberSigns();
 		planning.lamps();
+		planning.shelters();
 		planning.benchesAndBins();
 		planning.interior();
 		planning.headInterior();
@@ -3786,6 +3801,109 @@ public final class StationPlanner {
 			}
 		}
 
+		/**
+		 * A waiting shelter on an open platform (no roof over it): {@link #SHELTER_LENGTH} cells long, a glass wall two high in the back
+		 * column of a side platform with a seat in front of it facing the track and a roof over both, or on an island at least
+		 * {@link #SHELTER_ISLAND} wide a glass wall down the middle with a seat on each side, at the free spot nearest the middle of the
+		 * platform, clear of the edge, the stairs and any travelator. Platforms under a roof have cover already.
+		 */
+		void shelters() {
+			if (!spec.furniture()) {
+				return;
+			}
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (roof(band) != RoofType.NONE || band.length() < SHELTER_MIN_PLATFORM) {
+					continue;
+				}
+				final int middle = (band.vFrom() + band.vTo()) / 2;
+				for (int d = 0; d <= band.length() / 2 - SHELTER_LENGTH; d++) {
+					boolean placed = false;
+					for (final int v : d == 0 ? new int[]{middle} : new int[]{middle + d, middle - d}) {
+						placed = shelterAt(band, v);
+						if (placed) {
+							break;
+						}
+					}
+					if (placed) {
+						break;
+					}
+				}
+			}
+		}
+
+		/** A shelter whose first cell is at {@code v}; true if all of its cells were free and it was placed. */
+		private boolean shelterAt(TrackLayout.PlatformBand band, int v) {
+			if (v < band.vFrom() + 2 || v + SHELTER_LENGTH - 1 > band.vTo() - 2) {
+				return false;
+			}
+			for (int i = 0; i < SHELTER_LENGTH; i++) {
+				if (nearStairs(band, v + i)) {
+					return false;
+				}
+			}
+			if (!band.island()) {
+				final LocalDir toTrack = towardTrack(band);
+				final int wall = backColumn(band);
+				final int seat = wall + (toTrack == LocalDir.PLUS_U ? 1 : -1);
+				if (isEdge(band, wall) || isEdge(band, seat) || nearTravelatorRow(band, v, wall, seat)) {
+					return false;
+				}
+				return shelter(StationGeometry.WALK_Y, wall, seat, toTrack.opposite(), v, null, 0);
+			}
+			if (band.width() < SHELTER_ISLAND) {
+				return false;
+			}
+			final int middle = (band.uMin() + band.uMax()) / 2;
+			if (nearTravelatorRow(band, v, middle - 1, middle + 1)) {
+				return false;
+			}
+			// one glass wall down the middle with a seat each side, each facing its own track
+			return shelter(StationGeometry.WALK_Y, middle, middle - 1, LocalDir.PLUS_U, v, LocalDir.MINUS_U, middle + 1);
+		}
+
+		private boolean nearTravelatorRow(TrackLayout.PlatformBand band, int v, int u1, int u2) {
+			for (int i = 0; i < SHELTER_LENGTH; i++) {
+				if (nearTravelator(band, u1, v + i) || nearTravelator(band, u2, v + i)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		/**
+		 * A waiting shelter {@link #SHELTER_LENGTH} long from {@code v0}: a glass wall in column {@code wallU} two high, a seat in column
+		 * {@code seatU} beside it, a roof over both columns; {@code back} is the way the wall is from that seat. With {@code seat2U} (not
+		 * null) a second seat on the wall's other side, whose back is {@code back2}. True if every cell was free and it was placed.
+		 */
+		private boolean shelter(int baseY, int wallU, int seatU, LocalDir back, int v0, LocalDir back2, int seat2U) {
+			final List<Integer> columns = new ArrayList<>(List.of(wallU, seatU));
+			if (back2 != null) {
+				columns.add(seat2U);
+			}
+			final int roofY = baseY + 2;
+			for (int i = 0; i < SHELTER_LENGTH; i++) {
+				for (final int u : columns) {
+					for (int y = baseY; y <= roofY; y++) {
+						if (taken(u, y, v0 + i)) {
+							return false;
+						}
+					}
+				}
+			}
+			for (int i = 0; i < SHELTER_LENGTH; i++) {
+				put(Role.FIXTURE, wallU, baseY, v0 + i, back, SHELTER_GLASS);
+				put(Role.FIXTURE, wallU, baseY + 1, v0 + i, back, SHELTER_GLASS);
+				put(Role.FIXTURE, seatU, baseY, v0 + i, back, SHELTER_SEAT);
+				if (back2 != null) {
+					put(Role.FIXTURE, seat2U, baseY, v0 + i, back2, SHELTER_SEAT);
+				}
+				for (final int u : columns) {
+					put(Role.FIXTURE, u, roofY, v0 + i, u == wallU || u == seatU ? back : back2, SHELTER_ROOF);
+				}
+			}
+			return true;
+		}
+
 		void benchesAndBins() {
 			if (!spec.furniture()) {
 				return;
@@ -4561,6 +4679,27 @@ public final class StationPlanner {
 		private static final String LOT_MARK = "aurelia_transit_architecture:platform_paving_dark";
 		private static final String LOT_KERB = "aurelia_transit_architecture:bus_curb";
 		private static final String LOT_HEDGE = "minecraft:oak_leaves";
+		/** The way from a hub's door across its forecourt is this far either side of the door, in cells. */
+		private static final int FORECOURT_WAY = 2;
+		/** The width of a hub's bus island. */
+		private static final int FORECOURT_ISLAND = 3;
+		/** Taxi bays: how many, how wide and how long. */
+		private static final int FORECOURT_BAYS = 3;
+		private static final int FORECOURT_BAY = 3;
+		private static final int FORECOURT_BAY_LENGTH = 5;
+		private static final String FORECOURT_STOP_SIGN = "aurelia_transit_architecture:bus_stop_sign";
+		private static final String FORECOURT_TIMETABLE = "aurelia_transit_architecture:bus_timetable_case";
+		private static final String LOT_TRUNK = "minecraft:oak_log";
+		private static final String LOT_BOLLARD = "aurelia_transit_architecture:bollard";
+		/** A cycle stand: a post and a rail beside it, from the station fence and bollard blocks. */
+		private static final String LOT_STAND_POST = "aurelia_transit_architecture:bollard";
+		private static final String LOT_STAND_RAIL = "aurelia_transit_architecture:station_fence";
+		/** The drop-off reaches this far either side of the door, in cells. */
+		private static final int LOT_DROP_OFF = 4;
+		/** Pairs of cycle stands in the row by the kerb. */
+		private static final int LOT_CYCLE_ROWS = 5;
+		/** A tree every this many cells along the planter. */
+		private static final int LOT_TREE_PITCH = 8;
 
 		/** u of the building's entrance apron (its two ramp cells on the street side): past a car park band when there is one. */
 		private int apronU() {
@@ -4579,6 +4718,66 @@ public final class StationPlanner {
 		 * the planter). It fills the band the layout leaves in front of the building ({@link StationGeometry#PARKING_DEPTH}
 		 * cells, u = 0..depth-1), so nothing stands outside the footprint.
 		 */
+		/**
+		 * A hub's forecourt, past the head building's entrance ramps: paving to the street kerb, a pedestrian way from the door, a taxi
+		 * rank on one side (three marked bays with a bollard at the head of each) and a bus interchange on the other (a kerbed island
+		 * with a walk-in waiting shelter, stop signs and a timetable case, and a marked carriageway beside it). Built from the paving,
+		 * bus kerb, bus kit and bollard blocks already in the mod; there is no tram stop (no tram blocks) and no taxi sign block.
+		 */
+		void forecourt() {
+			if (!layout.terminus() || layout.forecourtDepth() <= 0) {
+				return;
+			}
+			final int u0 = layout.headFrom();
+			final int u1 = layout.headTo();
+			final int door = headDoor();
+			final int f0 = layout.forecourtFrom();
+			final int f1 = layout.vMax();
+			final int busKerb = door + FORECOURT_WAY + FORECOURT_ISLAND + 1;
+			final int taxiTo = door - FORECOURT_WAY - 1;
+			for (int u = u0; u <= u1; u++) {
+				for (int v = f0; v <= f1; v++) {
+					final int c = u - door;
+					final int d = v - f0;
+					final boolean way = Math.abs(c) <= FORECOURT_WAY || d < 3;
+					final boolean street = v == f1;
+					String block = LOT_PAVING;
+					LocalDir front = LocalDir.PLUS_V;
+					if (street && !way) {
+						// the kerb along the street, open where the pedestrian way meets it
+						block = LOT_KERB;
+					} else if (!way && c > 0 && u == busKerb && d >= 3 && d < f1 - f0) {
+						block = LOT_KERB;
+						front = LocalDir.PLUS_U;
+					} else if (!way && c > 0 && u > busKerb) {
+						// the bus carriageway
+						block = LOT_MARK;
+					} else if (!way && c < 0 && u <= taxiTo) {
+						// the taxi rank: bays of paving three wide, five long, between dark lines
+						final int bay = (taxiTo - u) / (FORECOURT_BAY + 1);
+						final boolean line = (taxiTo - u) % (FORECOURT_BAY + 1) == FORECOURT_BAY || d < 3 || d >= 3 + FORECOURT_BAY_LENGTH;
+						block = bay < FORECOURT_BAYS && !line ? LOT_PAVING : LOT_MARK;
+					}
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y - 1, v, front, block);
+				}
+			}
+			// taxi rank: a bollard at the head of each bay
+			for (int bay = 0; bay < FORECOURT_BAYS; bay++) {
+				final int u = taxiTo - bay * (FORECOURT_BAY + 1) - FORECOURT_BAY / 2;
+				if (u > u0) {
+					put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, f0 + 2, LocalDir.PLUS_V, LOT_BOLLARD);
+				}
+			}
+			// bus interchange: the island between the way and the kerb, a shelter on its way side facing the buses, signs at both ends
+			if (busKerb < u1) {
+				final int wall = door + FORECOURT_WAY + 1;
+				shelter(StationGeometry.PLATFORM_Y, wall, wall + 1, LocalDir.MINUS_U, f0 + 5, null, 0);
+				put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f0 + 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
+				put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f1 - 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
+				put(Role.FIXTURE, wall, StationGeometry.PLATFORM_Y, f0 + 9, LocalDir.PLUS_U, FORECOURT_TIMETABLE);
+			}
+		}
+
 		void parking() {
 			if (!spec.parking() || !spec.sideBuilding()) {
 				return;
@@ -4586,6 +4785,7 @@ public final class StationPlanner {
 			final int front = site.entranceV();
 			final int vFrom = Math.max(layout.vMin(), front - LOT_HALF);
 			final int vTo = Math.min(layout.vMax(), front + LOT_HALF);
+			final int first = vFrom + 2;
 			for (int a = 0; a < StationGeometry.PARKING_DEPTH; a++) {
 				final boolean kerb = a == 0;
 				final boolean bays = a >= 1 && a <= LOT_BAY || a >= LOT_BAY + 6;
@@ -4595,18 +4795,62 @@ public final class StationPlanner {
 				for (int v = vFrom; v <= vTo; v++) {
 					final boolean entrance = Math.abs(v - front) <= 1;
 					final boolean end = v == vFrom || v == vTo;
-					final boolean separator = bays && Math.floorMod(v - vFrom, LOT_PITCH) == 0;
+					// the drop-off: the bays by the building's door are one plain forecourt, with no bay markings to park in
+					final boolean dropOff = a >= LOT_BAY + 6 && Math.abs(v - front) <= LOT_DROP_OFF;
+					// cycle parking: the bays at the street end of the lot, by the kerb
+					final boolean cycles = a >= 1 && a <= 3 && v >= first && v < first + LOT_CYCLE_ROWS * 2;
+					final boolean separator = bays && !dropOff && !cycles && Math.floorMod(v - vFrom, LOT_PITCH) == 0;
 					final String block;
+					String state = "";
+					boolean tree = false;
 					if (kerb && !entrance) {
 						block = LOT_KERB;
 					} else if (planter && !end && !entrance) {
-						block = LOT_HEDGE;
+						tree = Math.abs(v - front) > LOT_DROP_OFF && Math.floorMod(v - vFrom, LOT_TREE_PITCH) == LOT_TREE_PITCH / 2 && v > vFrom + 1 && v < vTo - 1;
+						// a tree stands in its own cell of the planter; the hedge round it is leaves that stay (persistent, so they never decay)
+						block = tree ? LOT_TRUNK : LOT_HEDGE;
+						state = tree ? "axis=y" : "persistent=true";
+					} else if (dropOff && !lane && !head) {
+						block = LOT_PAVING;
+					} else if (cycles) {
+						block = LOT_PAVING;
 					} else if (lane || head || end || separator) {
 						block = LOT_MARK;
 					} else {
 						block = LOT_PAVING;
 					}
-					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block);
+					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block, state);
+					if (tree) {
+						tree(a, v);
+					}
+					if (cycles && (a == 2 || a == 3) && Math.floorMod(v - first, 2) == 0) {
+						// a stand: a post and a rail beside it, two cells long
+						put(Role.FIXTURE, a, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, LOT_STAND_POST);
+						put(Role.RAILING, a, StationGeometry.PLATFORM_Y, v + 1, LocalDir.PLUS_V, LOT_STAND_RAIL);
+					}
+				}
+			}
+			// bollards close the ends of the drop-off so nothing parks across the way to the door
+			for (final int v : new int[]{front - LOT_DROP_OFF - 1, front + LOT_DROP_OFF + 1}) {
+				if (v > vFrom && v < vTo) {
+					put(Role.FIXTURE, StationGeometry.PARKING_DEPTH - 1, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U, LOT_BOLLARD);
+					put(Role.FIXTURE, LOT_BAY + 6, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U, LOT_BOLLARD);
+				}
+			}
+		}
+
+		/** A tree in the planter: a trunk four high (the first block is the planter cell itself) and a crown of leaves round its top. */
+		private void tree(int a, int v) {
+			for (int y = StationGeometry.PLATFORM_Y; y <= StationGeometry.PLATFORM_Y + 3; y++) {
+				put(Role.FIXTURE, a, y, v, LocalDir.PLUS_V, LOT_TRUNK, "axis=y");
+			}
+			final int top = StationGeometry.PLATFORM_Y + 3;
+			for (int da = -1; da <= 1; da++) {
+				for (int dv = -1; dv <= 1; dv++) {
+					if (da != 0 || dv != 0) {
+						put(Role.FIXTURE, a + da, top, v + dv, LocalDir.PLUS_V, LOT_HEDGE, "persistent=true");
+					}
+					put(Role.FIXTURE, a + da, top + 1, v + dv, LocalDir.PLUS_V, LOT_HEDGE, "persistent=true");
 				}
 			}
 		}
@@ -4676,6 +4920,9 @@ public final class StationPlanner {
 			if (layout.terminus()) {
 				supports.add(new Box(layout.headFrom(), -1, length, layout.headTo(), -1, layout.headEnd()));
 				supports.add(new Box(headDoor() - 1, -1, layout.headEnd() + 1, headDoor() + 1, -1, layout.vMax()));
+				if (layout.forecourtDepth() > 0) {
+					supports.add(new Box(layout.headFrom(), -1, layout.forecourtFrom(), layout.headTo(), -1, layout.vMax()));
+				}
 			}
 			if (site.building()) {
 				supports.add(new Box(0, -1, buildingFrom(), layout.buildingWidth() - 1, -1, buildingTo()));
