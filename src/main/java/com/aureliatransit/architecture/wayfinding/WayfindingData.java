@@ -123,6 +123,12 @@ public record WayfindingData(
 				streetLabel, transfers, languageLayout, pictogram, accent, association, view, List.of());
 	}
 
+	/** A copy pointing elsewhere: the arrow and the destination text ("Platform 2", "Way out"). */
+	public WayfindingData withDirection(SignArrow newArrow, String newDestination) {
+		return new WayfindingData(autoStation, stationName, secondaryName, stationCode, lines, autoLines, newArrow, newDestination, serviceType, serviceLabel,
+				platform, exitLabel, streetLabel, transfers, languageLayout, pictogram, accent, association, view, exitSettings);
+	}
+
 	/**
 	 * A copy with a different pictogram; convenience for blocks whose default content is a fixed pictogram.
 	 */

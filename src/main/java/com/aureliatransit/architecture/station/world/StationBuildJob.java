@@ -87,6 +87,8 @@ public final class StationBuildJob {
 	private final List<BlockPos> screenCells = new ArrayList<>();
 	private final List<String> screenStyles = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
+	/** Wayfinding signs placed with "ARROW:destination", written into each sign when the build is done. */
+	private final Map<BlockPos, String> wayfindingTexts = new HashMap<>();
 	/**
 	 * Rebuild only: the cells the last build wrote that still hold its block, with the state each had before that build. They
 	 * may be written over without approval, and the undo log keeps their first state, so undo still gives the original site back.
@@ -419,6 +421,9 @@ public final class StationBuildJob {
 			signCells.add(pos);
 			signTexts.add(op.text());
 		}
+		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock) {
+			wayfindingTexts.put(pos, op.text());
+		}
 		return Step.DONE;
 	}
 
@@ -469,6 +474,7 @@ public final class StationBuildJob {
 			escalators();
 			screens();
 			nameSigns();
+			wayfindingSigns();
 			lifts();
 			MtrStationContract.register(world, zone, log, out);
 			out.accept(Text.literal((mode == Mode.REBUILD ? "Station rebuilt: " + kept + " cells kept as they stood, " + restored + " taken back, " : "Station built: ")
@@ -517,6 +523,25 @@ public final class StationBuildJob {
 					&& screen.config().style() != style) {
 				screen.setConfig(screen.config().withStyle(style));
 			}
+		}
+	}
+
+	/** Each planned wayfinding sign takes its arrow and destination ("DOWN:Platform 2"). */
+	private void wayfindingSigns() {
+		for (final Map.Entry<BlockPos, String> sign : wayfindingTexts.entrySet()) {
+			final BlockPos pos = sign.getKey();
+			final int colon = sign.getValue().indexOf(':');
+			if (colon < 0 || !probe.loaded(pos.getX(), pos.getZ())
+					|| !(world.getBlockEntity(pos) instanceof com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity entity)) {
+				continue;
+			}
+			SignArrow arrow = SignArrow.NONE;
+			try {
+				arrow = SignArrow.valueOf(sign.getValue().substring(0, colon));
+			} catch (IllegalArgumentException ignored) {
+				// an unknown arrow name: no arrow
+			}
+			entity.setWayfinding(entity.getWayfinding().withDirection(arrow, sign.getValue().substring(colon + 1)));
 		}
 	}
 

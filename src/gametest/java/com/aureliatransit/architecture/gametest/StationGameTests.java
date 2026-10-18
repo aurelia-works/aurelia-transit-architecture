@@ -206,6 +206,26 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/** The footbridge's wayfinding signs are built with their arrow and destination written in. */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
+	public void footbridgeWayfindingSignsSayWhereTheyLead(TestContext context) {
+		buildsEveryPlannedBlock(context, LIFTS, new UUID(0, 60), (pending, job) -> {
+			final ServerWorld world = context.getWorld();
+			int signs = 0;
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (!block.blockId().endsWith(":hanging_wayfinding_sign")) {
+					continue;
+				}
+				signs++;
+				final BlockPos pos = cellPos(pending, block);
+				check(world.getBlockEntity(pos) instanceof com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity entity
+						&& entity.getWayfinding().arrow() == com.aureliatransit.architecture.text.SignArrow.DOWN
+						&& ("DOWN:" + entity.getWayfinding().destination()).equals(block.text()), "sign at " + block + " does not say " + block.text());
+			}
+			check(signs == 2, "two platforms, two stair-head signs: " + signs);
+		});
+	}
+
 	/** A terminus (head building, buffer stops, gate line, train shed) built in the world. */
 	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
 	public void terminusBuildsThroughTheCommandPath(TestContext context) {

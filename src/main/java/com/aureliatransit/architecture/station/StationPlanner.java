@@ -93,6 +93,7 @@ public final class StationPlanner {
 		planning.headInterior();
 		planning.platformEquipment();
 		planning.nameSigns();
+		planning.wayfinding();
 		planning.speakers();
 		planning.liftButtons();
 		planning.endFences();
@@ -302,6 +303,16 @@ public final class StationPlanner {
 			// a screen carries the display style it is set to when built
 			final String text = role == Role.NAME_SIGN ? spec.name() : screen(blockId) ? palette.screenStyle().id() : "";
 			cells.put(cell, new PlannedBlock(u, y, v, role, blockId, front, text, state));
+			return true;
+		}
+
+		/** A block carrying its own text (a wayfinding sign's "ARROW:destination", see {@link #wayfinding}). */
+		private boolean putText(Role role, int u, int y, int v, LocalDir front, String blockId, String text) {
+			final Cell cell = new Cell(u, y, v);
+			if (cells.containsKey(cell) || air.contains(cell)) {
+				return false;
+			}
+			cells.put(cell, new PlannedBlock(u, y, v, role, blockId, front, text, ""));
 			return true;
 		}
 
@@ -4616,6 +4627,36 @@ public final class StationPlanner {
 			return false;
 		}
 
+		/**
+		 * Wayfinding in the footbridge corridor: a direction sign hung from the roof over the head of each platform's stair
+		 * ("Platform 2" with a down arrow, both faces readable along the corridor), and where the corridor meets the station
+		 * building an exit sign facing the platforms. Hung at the top of the corridor, so the walkway keeps three blocks of
+		 * headroom. A sign's text is "ARROW:destination"; the build writes it into the sign.
+		 */
+		void wayfinding() {
+			if (!site.bridge()) {
+				return;
+			}
+			final int vB = site.bridgeV();
+			final int y = StationGeometry.BUILDING_ROOF_Y - 1;
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				if (band.number() <= 0) {
+					continue;
+				}
+				final List<StationLayout.Flight> flights = site.flights(band);
+				if (flights.isEmpty()) {
+					continue;
+				}
+				final List<Integer> columns = flights.get(0).columns();
+				final int u = columns.get(columns.size() / 2);
+				putText(Role.FIXTURE, u, y, vB, LocalDir.MINUS_U, WAYFINDING_SIGN, "DOWN:Platform " + band.number());
+			}
+			if (site.building()) {
+				final int from = site.platformWall(layout);
+				putText(Role.FIXTURE, from + 1, y, vB, LocalDir.PLUS_U, EXIT_SIGN, "NONE:Way out");
+			}
+		}
+
 		void nameSigns() {
 			if (spec.name().isEmpty()) {
 				return;
@@ -4711,6 +4752,8 @@ public final class StationPlanner {
 		private static final int FORECOURT_ISLAND = 3;
 		/** Taxi bays: how many, how wide and how long. */
 		private static final int FORECOURT_BAYS = 3;
+		private static final String WAYFINDING_SIGN = "aurelia_transit_architecture:hanging_wayfinding_sign";
+		private static final String EXIT_SIGN = "aurelia_transit_architecture:exit_sign";
 		/** Rows of a terminus forecourt's drop-off lay-by, between its kerb and the street. */
 		private static final int TERMINUS_LAY_BY = 4;
 		private static final int FORECOURT_BAY = 3;
