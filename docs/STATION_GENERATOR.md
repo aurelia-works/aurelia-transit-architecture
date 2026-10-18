@@ -234,6 +234,22 @@ plan's fingerprint is the same). In the game it is built that way round instead 
 and exports it that way, and `/ata_station verify paste` expects it. Without the words the game builds the way the player looks, and the
 studio and the export use their own north-up view: a terminus's front to the north, a through station's street to the west.
 
+## Bigger stations: two ways down, shelters, forecourts
+
+- **Two ways down.** A through station with a city or grand building gives every footbridge platform wide enough for it (islands 11,
+  side platforms 9) a second stair from the other side of the corridor, so a train's passengers spread over two stairs. Both flights
+  leave the one footbridge. `single stairs` keeps one; a compact building, a terminus and a station with no building are unchanged.
+- **Shelters.** An open platform (no roof over it) 24 or more blocks long gets a walk-in waiting shelter near its middle, from the bus kit:
+  a glass wall two high and three long, a seat in front of it facing the track, a roof over both. An island at least 7 wide gets the wall
+  down its middle with a seat on each side. Platforms under a canopy or train shed, stations with `no benches` and short platforms get none.
+- **Car park forecourt.** The `parking` word's lot has a plain drop-off forecourt by the door (closed by bollards), ten cells of cycle stands by
+  the kerb (a bollard and a station-fence rail each: there is no bike block), and trees in the planter (oak trunks, leaf crowns). All its
+  leaves are planned persistent, so they never decay.
+- **Hub forecourt.** A hub (`hub`, `interchange`) has 18 rows past its head building's entrance ramps: a way across from the door, a taxi
+  rank of three marked bays with a bollard at the head of each on one side, and a bus interchange on the other (a kerbed island with a
+  waiting shelter, two stop signs, a timetable case, and a marked carriageway beside it). There is no tram stop (the mod has no tram
+  blocks) and no taxi sign block. The footprint grows by the forecourt, so a hub is 18 blocks longer than before.
+
 ## Seeds and fingerprints
 
 `seed k7f2ra` (Station Studio's dice writes it for you) varies the choices the words left open, and nothing the words decided.
