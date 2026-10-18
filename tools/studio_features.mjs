@@ -14,7 +14,9 @@ const p = await ctx.newPage();
 const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => m.type() === 'error' && errors.push(m.text()));
 let fail = 0; const check = (ok, what) => { console.log((ok ? 'PASS ' : 'FAIL ') + what); if (!ok) fail++; };
 const t0 = Date.now();
-await p.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+await p.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+// the first visit rolls a random station, and the biggest take seconds to plan: wait for the plan, not a fixed time
+await p.waitForFunction(() => /Planned in/.test(document.getElementById('status').textContent), null, { timeout: 30000 }).catch(() => {});
 check(await p.title() !== '' && (await p.$$('.look')).length > 10, `studio opens (${Date.now() - t0} ms, ${(await p.$$('.look')).length} looks)`);
 check(!(await p.$eval('#stage', s => s.classList.contains('no-gl'))), 'WebGL preview is live');
 const status = await p.textContent('#status'); check(/Planned in \d+ ms/.test(status), 'status: ' + status);

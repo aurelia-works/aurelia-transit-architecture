@@ -3,13 +3,16 @@ package com.aureliatransit.architecture.client;
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LayoutValidator;
+import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationPlacement;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.Violation;
+import com.aureliatransit.architecture.station.studio.Connections;
 import com.aureliatransit.architecture.station.studio.StudioApi;
 import com.aureliatransit.architecture.station.world.BlockStateResolver;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -123,11 +126,14 @@ public final class StationPreview {
 			return;
 		}
 		final StationPlan plan;
+		final LocalFrame frame;
 		final String summary;
 		final boolean buildable;
 		try {
 			final ParseResult parse = StationDescriptionParser.parse(description);
 			plan = StationPlanner.plan(parse.spec());
+			// drawn the way the Studio draws and exports it, so "facing east" turns the preview too
+			frame = StationPlacement.frame(parse.spec());
 			final List<Violation> violations = LayoutValidator.validate(plan);
 			final StationAudit.Result audit = StationAudit.audit(plan);
 			buildable = violations.isEmpty() && audit.buildable();
@@ -162,7 +168,7 @@ public final class StationPreview {
 		final BufferBuilder.BuiltBuffer[] built;
 		final int[] bounds = new int[6];
 		try {
-			built = mesh(plan, bounds);
+			built = mesh(plan, frame, bounds);
 		} catch (RuntimeException e) {
 			BUILDERS.release();
 			AureliaTransitArchitecture.LOGGER.warn("Station preview could not draw {}", description, e);
@@ -200,7 +206,7 @@ public final class StationPreview {
 	 * Both meshes, the station moved so its footprint starts at the origin ({@code bounds} gets min and max x, y, z before the
 	 * move). Faces whose neighbour in the plan is a full opaque cube are skipped.
 	 */
-	private static BufferBuilder.BuiltBuffer[] mesh(StationPlan plan, int[] bounds) {
+	private static BufferBuilder.BuiltBuffer[] mesh(StationPlan plan, LocalFrame frame, int[] bounds) {
 		final MinecraftClient client = MinecraftClient.getInstance();
 		final Map<Long, PlannedBlock> at = new HashMap<>();
 		int minX = Integer.MAX_VALUE;
@@ -210,8 +216,8 @@ public final class StationPreview {
 		int maxY = Integer.MIN_VALUE;
 		int maxZ = Integer.MIN_VALUE;
 		for (final PlannedBlock block : plan.blocks()) {
-			final int x = StudioApi.FRAME.x(block.u(), block.v());
-			final int z = StudioApi.FRAME.z(block.u(), block.v());
+			final int x = frame.x(block.u(), block.v());
+			final int z = frame.z(block.u(), block.v());
 			at.put(StudioApi.cell(x, block.y(), z), block);
 			minX = Math.min(minX, x);
 			minY = Math.min(minY, block.y());
@@ -228,7 +234,7 @@ public final class StationPreview {
 		bounds[5] = maxZ;
 		final Map<String, Optional<Block>> blocks = new HashMap<>();
 		// a neighbour's solid full side, from its own block state as the game resolves it
-		final com.aureliatransit.architecture.station.studio.Connections.FullFace full = (other, heading, side) ->
+		final Connections.FullFace full = (other, heading, side) ->
 				blocks.computeIfAbsent(other.blockId(), BlockStateResolver::block)
 						.map(b -> BlockStateResolver.withState(BlockStateResolver.state(b, heading), other.state())
 								.isSideSolidFullSquare(EmptyBlockView.INSTANCE, BlockPos.ORIGIN, direction(side)))
@@ -240,10 +246,10 @@ public final class StationPreview {
 			if (found.isEmpty()) {
 				continue;
 			}
-			final int x = StudioApi.FRAME.x(block.u(), block.v());
-			final int z = StudioApi.FRAME.z(block.u(), block.v());
-			final Heading heading = StudioApi.FRAME.heading(block.front());
-			final BlockState state = BlockStateResolver.withState(BlockStateResolver.state(found.get(), heading), StudioApi.withConnections(block, at, full));
+			final int x = frame.x(block.u(), block.v());
+			final int z = frame.z(block.u(), block.v());
+			final Heading heading = frame.heading(block.front());
+			final BlockState state = BlockStateResolver.withState(BlockStateResolver.state(found.get(), heading), Connections.state(block, at, full, frame));
 			final long key = StudioApi.cell(x, block.y(), z);
 			states.put(key, state);
 			order.add(new long[]{key, x - minX, block.y() - minY, z - minZ});
