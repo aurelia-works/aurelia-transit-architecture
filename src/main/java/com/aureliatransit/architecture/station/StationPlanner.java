@@ -2812,10 +2812,22 @@ public final class StationPlanner {
 		}
 
 		/** A short pier on the footbridge roof at u, up to the hall frame. */
-		private void bridgePier(int u, int bridgeRoof, int beamY) {
+		private void bridgePier(int u, int bridgeRoof, int beamY, int vB) {
 			for (int y = bridgeRoof + 1; y < beamY; y++) {
-				put(Role.BRIDGE_PIER, u, y, site.bridgeV(), LocalDir.PLUS_V, palette.building().pier());
+				put(Role.BRIDGE_PIER, u, y, vB, LocalDir.PLUS_V, palette.building().pier());
 			}
+		}
+
+		/** The centre lines of the footbridges: the main one's and the far one's (empty without a footbridge). */
+		private List<Integer> bridgeLines() {
+			final List<Integer> lines = new ArrayList<>();
+			if (site.bridge()) {
+				lines.add(site.bridgeV());
+			}
+			if (far != null) {
+				lines.add(far.bridgeV());
+			}
+			return lines;
 		}
 
 		/**
@@ -3022,9 +3034,14 @@ public final class StationPlanner {
 			}
 			// over a footbridge the frame also rests on the bridge roof (see hallRoof): that row carries the girders too, so the
 			// gaps either side of it are measured from it and no extra row of columns is squeezed in beside the stairs
-			final boolean bridgeRow = site.bridge() && top >= StationGeometry.BUILDING_ROOF_Y + 2 && !rows.contains(site.bridgeV());
-			if (bridgeRow) {
-				rows.add(site.bridgeV());
+			final List<Integer> bridgeRows = new ArrayList<>();
+			if (top >= StationGeometry.BUILDING_ROOF_Y + 2) {
+				for (final int vB : bridgeLines()) {
+					if (!rows.contains(vB)) {
+						bridgeRows.add(vB);
+						rows.add(vB);
+					}
+				}
 			}
 			rows.sort(Comparator.naturalOrder());
 			// a row kept off a doorway or a stair can leave two rows further apart than a girder spans: add one between them,
@@ -3053,9 +3070,7 @@ public final class StationPlanner {
 			if (!rows.isEmpty() && rows.get(0) > reach) {
 				endRow(rows, 0, reach, top);
 			}
-			if (bridgeRow) {
-				rows.remove(Integer.valueOf(site.bridgeV()));
-			}
+			rows.removeAll(bridgeRows);
 			rows.sort(Comparator.naturalOrder());
 			hallRows = rows;
 			return rows;
@@ -3511,9 +3526,11 @@ public final class StationPlanner {
 			final List<Integer> rows = new ArrayList<>(hallRows());
 			// over a footbridge the frame also rests on the bridge roof: short piers under every girder line, a cross girder on them
 			final int bridgeRoof = StationGeometry.BUILDING_ROOF_Y;
-			final boolean onBridge = site.bridge() && beamY >= bridgeRoof + 2;
-			if (onBridge && !rows.contains(site.bridgeV())) {
-				rows.add(site.bridgeV());
+			final List<Integer> onBridges = beamY >= bridgeRoof + 2 ? bridgeLines() : List.of();
+			for (final int vB : onBridges) {
+				if (!rows.contains(vB)) {
+					rows.add(vB);
+				}
 			}
 			rows.sort(Comparator.naturalOrder());
 			// a single vault is its own arch: no tie girders across the tracks, only brackets over the platforms and eaves (the
@@ -3522,7 +3539,7 @@ public final class StationPlanner {
 			final boolean[] untied = freeArch ? betweenPlatforms() : new boolean[layout.width()];
 			for (final int v : rows) {
 				for (int u = u0; u <= u1; u++) {
-					if (untied[u] && !(onBridge && v == site.bridgeV())) {
+					if (untied[u] && !onBridges.contains(v)) {
 						continue;
 					}
 					put(Role.BEAM, u, beamY, v, LocalDir.PLUS_U, girder, kind);
@@ -3561,18 +3578,18 @@ public final class StationPlanner {
 					}
 				}
 			}
-			if (onBridge) {
+			for (final int vB : onBridges) {
 				for (int u = u0; u <= u1; u++) {
-					final PlannedBlock below = cells.get(new Cell(u, bridgeRoof, site.bridgeV()));
+					final PlannedBlock below = cells.get(new Cell(u, bridgeRoof, vB));
 					if (below != null && below.role() == Role.BUILDING_ROOF && (along.contains(u - u0) || lit[u])) {
-						bridgePier(u, bridgeRoof, beamY);
+						bridgePier(u, bridgeRoof, beamY, vB);
 					}
 				}
 				// where the cross girder would still span more than a girder may (a vault's tie over several tracks), more piers
 				// on the bridge roof, each as far along as the span allows
 				final java.util.TreeSet<Integer> carried = new java.util.TreeSet<>();
 				for (int u = u0; u <= u1; u++) {
-					final PlannedBlock under = cells.get(new Cell(u, beamY - 1, site.bridgeV()));
+					final PlannedBlock under = cells.get(new Cell(u, beamY - 1, vB));
 					if (under != null && (under.role() == Role.BRIDGE_PIER || under.role() == Role.COLUMN_CAP)) {
 						carried.add(u);
 					}
@@ -3583,15 +3600,15 @@ public final class StationPlanner {
 					while (previous != null && u - from > StationGeometry.MAX_BEAM_SPAN) {
 						int pick = -1;
 						for (int c = from + StationGeometry.MAX_BEAM_SPAN; c > from && pick < 0; c--) {
-							final PlannedBlock roofBelow = cells.get(new Cell(c, bridgeRoof, site.bridgeV()));
-							if (roofBelow != null && roofBelow.role() == Role.BUILDING_ROOF && !taken(c, bridgeRoof + 1, site.bridgeV())) {
+							final PlannedBlock roofBelow = cells.get(new Cell(c, bridgeRoof, vB));
+							if (roofBelow != null && roofBelow.role() == Role.BUILDING_ROOF && !taken(c, bridgeRoof + 1, vB)) {
 								pick = c;
 							}
 						}
 						if (pick < 0) {
 							break;
 						}
-						bridgePier(pick, bridgeRoof, beamY);
+						bridgePier(pick, bridgeRoof, beamY, vB);
 						from = pick;
 					}
 					previous = u;

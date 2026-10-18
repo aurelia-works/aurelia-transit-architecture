@@ -134,11 +134,11 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	 * Phase 2: at a big through station (a building and two ways down), a second footbridge across the platforms' far end, so
 	 * passengers at that end of a long train need not walk back to the building to change platforms. It is a plain footbridge,
 	 * glazed at both ends, from the first platform to the last, with stairs only (the step-free route stays the main bridge's
-	 * lifts); its stairs run in towards the middle. Null where there is none: no building, one way down, a street entrance,
-	 * a hall roof, or platforms too short to keep both bridges' stairs apart.
+	 * lifts); its stairs run in towards the middle. Under a hall roof the shed's frame rests on both bridges. Null where there is
+	 * none: no building, one way down, a street entrance, or platforms too short to keep both bridges' stairs apart.
 	 */
 	public StationLayout farBridge(StationSpec spec, TrackLayout layout) {
-		if (!bridge || !building || !bothWays || street != null || layout.terminus() || spec.roof() == RoofType.HALL) {
+		if (!bridge || !building || !bothWays || street != null || layout.terminus()) {
 			return null;
 		}
 		final int length = layout.platformLength();

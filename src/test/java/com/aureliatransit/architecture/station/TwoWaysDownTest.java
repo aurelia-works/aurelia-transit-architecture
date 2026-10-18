@@ -81,10 +81,19 @@ class TwoWaysDownTest {
 				}
 			}
 		}
-		// a hall's girder frame rests on the main bridge only, so a hall-roofed station keeps one bridge
-		final StationSpec hall = spec("3 tracks island, 96 long, station building, city, hall roof");
-		assertEquals(RoofType.HALL, hall.roof());
-		assertEquals(null, StationLayout.of(hall, StationGeometry.layout(hall)).farBridge(hall, StationGeometry.layout(hall)));
+		// under a hall roof the shed's frame rests on both bridges: piers on the far bridge's roof carry its cross girder
+		for (final String words : new String[]{"3 tracks island, 96 long, station building, city, hall roof", "grand class, 120 long",
+				"4 tracks island, 120 long, station building, city, arched train shed"}) {
+			final StationSpec hall = spec(words);
+			assertEquals(RoofType.HALL, hall.roof(), words);
+			final StationPlan plan = StationPlanner.plan(hall);
+			assertEquals(java.util.List.of(), LayoutValidator.validate(plan), words);
+			assertTrue(StationAudit.audit(plan).buildable(), words + " " + StationAudit.audit(plan).problems());
+			final StationLayout far = StationLayout.of(hall, plan.layout()).farBridge(hall, plan.layout());
+			assertTrue(far != null, words + ": a far bridge under the hall");
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.v() == far.bridgeV() && b.role() == Role.BRIDGE_PIER && b.y() > StationGeometry.BUILDING_ROOF_Y),
+					words + ": the hall frame rests on the far bridge");
+		}
 		final StationSpec shortCity = spec("3 tracks island, 48 long, station building, city");
 		final TrackLayout layout = StationGeometry.layout(shortCity);
 		assertEquals(null, StationLayout.of(shortCity, layout).farBridge(shortCity, layout), "too short for two bridges");
