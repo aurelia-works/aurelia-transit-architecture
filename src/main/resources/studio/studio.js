@@ -236,6 +236,11 @@
 				// is pinned: the words stay authoritative and nothing is said twice
 				touched.clear();
 				touched.add("name");
+				// the preset replaced the rolled settings: the seed alone no longer makes this station
+				if (!seeds.edited) {
+					seeds.edited = true;
+					showSeed();
+				}
 				changed();
 			});
 			presets.append(b);
@@ -539,7 +544,9 @@
 		if (seeds.locks.building) {
 			holdBuilding();
 		}
-		// what the dice set is pinned like a hand-set control, so a typed description never overrides the rolled station
+		// What the dice set is pinned like a hand-set control: the server drops every unpinned control as soon as there are any
+		// typed words (the stairs, track bed and travelator choices count as words), so unpinned rolled settings would be lost.
+		// "Let my words decide" (below) un-pins them when the player wants the words to win.
 		for (const [group, ids] of Object.entries(GROUPS)) {
 			if (!seeds.locks[group]) {
 				ids.forEach((id) => touched.add(id));
@@ -788,7 +795,64 @@
 		}
 	}
 
+	// With typed words, the controls the player has not changed give way to the words: show what the plan came to in them
+	// (type, tracks, length, platforms, building), without a new plan and without pinning them.
+	function followWords(plan) {
+		if (!$("text").value.trim() || $("listOn").checked) {
+			return;
+		}
+		const b = plan.built;
+		const want = {
+			mode: /^terminus/i.test(b.mode) ? "terminus" : /^hub/i.test(b.mode) ? "hub" : "through",
+			tracks: String(b.tracks),
+			length: String(b.length),
+			building: /^no building/i.test(b.building) ? "0" : "1"
+		};
+		if ($("layout").value !== "AUTO") {
+			want.layout = /island/i.test(b.layout) ? "ISLAND" : "SIDE";
+		}
+		let moved = false;
+		for (const [f, v] of Object.entries(want)) {
+			const range = f === "tracks" ? options.tracks : f === "length" ? options.length : null;
+			const inRange = !range || (+v >= range[0] && +v <= range[1]);
+			if (!touched.has(f) && $(f).value !== v && inRange) {
+				$(f).value = v;
+				moved = true;
+			}
+		}
+		if (moved) {
+			updateOutputs();
+			remember();
+		}
+	}
+
+	// Typed words lose to the settings above where they clash (a roll sets them all, and the planner does not always flag it): say
+	// so while any setting is pinned, and offer the way out.
+	function showClash(plan) {
+		const pinned = [...touched].filter((f) => f !== "name").length;
+		const clash = !!$("text").value.trim() && pinned > 0;
+		$("clash").hidden = !clash;
+		$("clashText").textContent = clash ? "Where your words clash with the settings above, the settings win." : "";
+	}
+	$("clashBtn").addEventListener("click", () => {
+		// only the name stays pinned (the words leave it out): everything else follows the words, and the controls then follow the plan
+		const name = touched.has("name");
+		touched.clear();
+		if (name) {
+			touched.add("name");
+		}
+		changed();
+	});
+
 	let request = 0;
+	// set while the last plan request failed, so the page can ask again when the studio answers
+	let planFailed = false;
+	function setSendable(on) {
+		$("report").classList.toggle("stale", !on);
+		for (const b of document.querySelectorAll("#copyCmd, [data-send=plan], [data-send=build]")) {
+			b.disabled = !on;
+		}
+	}
 	async function generate() {
 		const mine = ++request;
 		$("busy").hidden = false;
@@ -801,11 +865,22 @@
 			if (mine !== request) {
 				return;
 			}
+			planFailed = false;
+			setSendable(true);
 			current = plan;
 			showPlan(plan);
 			report(plan);
+			followWords(plan);
+			showClash(plan);
 		} catch (e) {
-			$("banner").textContent = String(e.message || e);
+			// an older request failing says nothing about the newest one
+			if (mine === request) {
+				planFailed = true;
+				// the station on show is the last one that planned, not what the controls say: say so and keep it from being built
+				setSendable(false);
+				const why = e instanceof TypeError ? "The studio is not answering." : String(e.message || e).replace(/<[^>]*>/g, "").trim().slice(0, 160);
+				$("status").textContent = "Could not plan this: " + why + (e instanceof TypeError ? " It will try again when it is back." : " Change a setting to try again.");
+			}
 		} finally {
 			if (mine === request) {
 				$("busy").hidden = true;
@@ -827,9 +902,25 @@
 		} catch (e) {
 			$("no3d").hidden = false;
 			$("stage").classList.add("no-gl");
+			// nothing to point the camera at: the view buttons would do nothing, so they say why they are off
+			for (const b of document.querySelectorAll(".viewbar button, .viewbar input")) {
+				b.disabled = true;
+				b.title = "Needs the 3D preview";
+			}
 			return { render() {}, setSize() {}, getPixelRatio: () => 1, clippingPlanes: [] };
 		}
 	})();
+	// the GPU can take the drawing surface away (a driver reset, too many tabs): keep the page usable and draw again when it is back
+	canvas.addEventListener("webglcontextlost", (e) => {
+		e.preventDefault();
+		$("status").textContent = "The 3D view was reset by your graphics driver. It will come back by itself.";
+	});
+	canvas.addEventListener("webglcontextrestored", () => {
+		if (current) {
+			$("status").textContent = "Planned in " + current.ms + " ms · " + NUMBER.format(current.size.blocks) + " blocks · WebGL";
+		}
+		draw();
+	});
 	const scene = new THREE.Scene();
 	const NIGHT = new THREE.Color(0x101317);
 	const SKY = new THREE.Color(0xa9bfd3);
@@ -1197,7 +1288,8 @@
 			view.target.y = Math.min(size.y / 3, 8);
 			Object.assign(view, { yaw: -Math.PI / 2 - 0.25, pitch: 0.12, radius: Math.max(size.z, size.y * 3) * 0.75 });
 		} else if (name === "plan") {
-			Object.assign(view, { yaw: 0, pitch: Math.PI / 2 - 0.001, radius: reach * 1.25 });
+			// a floor plan reads with the street at the bottom, like an architect's entrance: turned so
+			Object.assign(view, { yaw: streetYaw(), pitch: Math.PI / 2 - 0.001, radius: reach * 1.25 });
 		} else if (name === "passenger" && current && current.passenger) {
 			lookFrom(current.passenger);
 		} else if (name === "head" && current && current.head) {
@@ -1211,7 +1303,87 @@
 			eye.y = Math.min(size.y * 0.55, 18);
 			Object.assign(view, viewFrom(eye, front));
 		}
+		if (/^(overview|reverse|street|plan)$/.test(name)) {
+			fitView();
+		}
 		draw();
+	}
+
+	// The plan's own frame has no compass north (the station is built to face the way its player looks), but it does say where
+	// the street is: the direction, on the ground, from the middle of the station to the street point.
+	function streetVector() {
+		if (!current || !current.street) {
+			return null;
+		}
+		const c = bounds.getCenter(new THREE.Vector3());
+		const x = current.street.x + 0.5 - c.x;
+		const z = current.street.z + 0.5 - c.z;
+		const len = Math.hypot(x, z);
+		return len < 0.5 ? null : { x: x / len, z: z / len };
+	}
+
+	// the camera yaw that puts the street at the bottom of the screen (the eye sits on the street side, looking away from it)
+	function streetYaw() {
+		const d = streetVector();
+		return d ? Math.atan2(d.x, d.z) : 0;
+	}
+
+	// The compass dial: its arrow points at the street as the camera sees the ground (up on the dial is where the camera looks).
+	function updateCompass() {
+		const d = streetVector();
+		const show = !!d && !walk && !$("stage").classList.contains("no-gl");
+		$("compass").hidden = !show;
+		if (!show) {
+			return;
+		}
+		// forward on the ground is (-sin yaw, -cos yaw), right of it (cos yaw, -sin yaw)
+		const sin = Math.sin(view.yaw);
+		const cos = Math.cos(view.yaw);
+		const ahead = -d.x * sin - d.z * cos;
+		const right = d.x * cos - d.z * sin;
+		const deg = (Math.atan2(right, ahead) * 180) / Math.PI;
+		$("compassArrow").setAttribute("transform", "rotate(" + deg.toFixed(1) + ")");
+	}
+
+	// Frame the whole station: from the angle already set, back the camera off (or in) and slide it sideways until the eight
+	// corners of the station's box fill the view with a margin, whatever the station's size or the view's shape.
+	function fitView() {
+		if (bounds.isEmpty()) {
+			return;
+		}
+		resize();
+		const corners = [];
+		for (const x of [bounds.min.x, bounds.max.x]) {
+			for (const y of [bounds.min.y, bounds.max.y]) {
+				for (const z of [bounds.min.z, bounds.max.z]) {
+					corners.push(new THREE.Vector3(x, y, z));
+				}
+			}
+		}
+		const tan = Math.tan((45 * Math.PI) / 360);
+		for (let i = 0; i < 40; i++) {
+			place();
+			camera.updateMatrixWorld();
+			let x0 = 9, x1 = -9, y0 = 9, y1 = -9, behind = false;
+			for (const c of corners) {
+				const v = c.clone().project(camera);
+				behind = behind || v.z > 1;
+				x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+			}
+			if (behind) {
+				view.radius *= 1.6;
+				continue;
+			}
+			const half = view.radius * tan;
+			const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+			const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+			view.target.addScaledVector(right, ((x0 + x1) / 2) * half * camera.aspect).addScaledVector(up, ((y0 + y1) / 2) * half);
+			const k = Math.max((x1 - x0) / 2, (y1 - y0) / 2) / 0.9;
+			view.radius = Math.max(4, Math.min(3000, view.radius * k));
+			if (Math.abs(k - 1) < 0.01 && Math.abs(x0 + x1) < 0.02 && Math.abs(y0 + y1) < 0.02) {
+				break;
+			}
+		}
 	}
 
 	// Stand at a passenger's eye height in cell {x, z}, looking towards cell {tx, tz}; the orbit turns about a point ahead.
@@ -1286,6 +1458,7 @@
 		place();
 		renderer.render(scene, camera);
 		labels();
+		updateCompass();
 	}
 
 	function resize() {
@@ -2198,7 +2371,51 @@
 	window.addEventListener("keyup", (e) => keys.delete(e.code));
 	window.addEventListener("blur", () => keys.clear());
 	$("walkBtn").addEventListener("click", () => (walk ? leaveWalk() : enterWalk()));
+	$("compass").addEventListener("click", () => setView("plan", true));
 	$("walkClick").addEventListener("click", lockMouse);
+	// read-only camera state, for automated framing checks: where the station's bounding box lands on screen (-1..1 both ways)
+	window.studioView = {
+		extent: () => {
+			place();
+			camera.updateMatrixWorld();
+			let x0 = 9, x1 = -9, y0 = 9, y1 = -9, behind = false;
+			for (const x of [bounds.min.x, bounds.max.x]) {
+				for (const y of [bounds.min.y, bounds.max.y]) {
+					for (const z of [bounds.min.z, bounds.max.z]) {
+						const v = new THREE.Vector3(x, y, z).project(camera);
+						behind = behind || v.z > 1;
+						x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x); y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+					}
+				}
+			}
+			return { x0, x1, y0, y1, behind, view: currentView, aspect: camera.aspect };
+		},
+		// what is on show: the plan the page is drawing, and what the renderer holds (for leak checks)
+		plan: () => current && { text: current.text, seed: current.seed, blocks: current.size.blocks },
+		stats: () => ({ meshes: meshes.length, textures: textures.size, geometries: renderer.info ? renderer.info.memory.geometries : 0, gpuTextures: renderer.info ? renderer.info.memory.textures : 0, programs: renderer.info && renderer.info.programs ? renderer.info.programs.length : 0 }),
+		// n renders in a row from a turning camera, each one finished on the GPU: the milliseconds each took
+		bench: (n) => {
+			const gl = renderer.getContext && renderer.getContext();
+			const px = new Uint8Array(4);
+			const ms = [];
+			for (let i = 0; i < n; i++) {
+				view.yaw += 0.05;
+				const t0 = performance.now();
+				place();
+				renderer.render(scene, camera);
+				if (gl) {
+					gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+				}
+				ms.push(performance.now() - t0);
+			}
+			draw();
+			return ms;
+		},
+		name: () => currentView,
+		yaw: () => view.yaw,
+		// the compass arrow's angle (degrees clockwise from up) and whether it shows
+		compass: () => ({ shown: !$("compass").hidden, deg: $("compassArrow").getAttribute("transform") })
+	};
 	// read-only state and a teleport, for automated walk checks
 	window.studioWalk = {
 		state: () => walk && { x: walk.pos.x, y: walk.pos.y, z: walk.pos.z, yaw: walk.yaw, onGround: walk.onGround, fly: walk.fly,
@@ -2313,6 +2530,9 @@
 			if (lost) {
 				lost = false;
 				showWhere();
+			}
+			if (planFailed) {
+				generate();
 			}
 		} catch (e) {
 			if (!lost) {

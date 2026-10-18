@@ -148,6 +148,7 @@
 						<p class="help">Type what you want, or start from a preset. Anything you set above wins; everything else comes from your words.</p>
 						<div class="chips presets" id="presets" role="group" aria-label="Presets"></div>
 						<textarea id="text" rows="5" aria-label="Station description" placeholder="e.g. sandstone terminus with an arched glass train shed and a clock tower"></textarea>
+						<div class="clash" id="clash" hidden><span id="clashText"></span> <button type="button" class="more" id="clashBtn">Let my words decide</button></div>
 						<div class="field-foot"><span id="count"></span></div>
 					</details>
 					<details class="adv" id="perPlatform">
@@ -174,6 +175,16 @@
 			<div class="stage" id="stage">
 				<canvas id="view" aria-label="3D view of the planned station"></canvas>
 				<div id="labels" class="labels"></div>
+				<button type="button" class="compass" id="compass" hidden title="Which way the street is. Click for the plan view" aria-label="Compass: the arrow points to the street side. Open the plan view">
+					<svg viewBox="-32 -32 64 64" aria-hidden="true">
+						<circle class="ring" r="29"/>
+						<g id="compassTicks"><path class="tick" d="M0 -29v5M29 0h-5M0 29v-5M-29 0h5"/></g>
+						<g id="compassArrow"><path class="street" d="M0 -23l7 14h-4.5v14h-5v-14H-7z"/></g>
+						<circle class="hub" r="2.4"/>
+					</svg>
+					<span id="compassFacing" class="facing"></span>
+					<span class="cap">Street</span>
+				</button>
 				<div id="no3d" class="no3d" hidden>
 					<h2>3D preview is off</h2>
 					<p>Your browser has graphics (WebGL) turned off, so the station can't be drawn. Everything else still works.</p>
@@ -197,7 +208,7 @@
 				<div class="seg views" role="group" aria-label="View">
 					<button type="button" data-view="overview" aria-pressed="true">Overview</button>
 					<button type="button" data-view="passenger">Passenger</button>
-					<button type="button" data-view="plan">From above</button>
+					<button type="button" data-view="plan" title="Floor plan from above, street at the bottom">Plan</button>
 					<button type="button" id="walkBtn" aria-pressed="false" title="Walk through the station yourself">Walk</button>
 				</div>
 				<div class="jumps" role="group" aria-label="Jump to">
@@ -218,7 +229,7 @@
 			</div>
 		</section>
 
-		<aside class="report" aria-label="Build and checks">
+		<aside class="report" id="report" aria-label="Build and checks">
 			<div class="report-scroll">
 				<section class="card" aria-labelledby="c-build">
 					<h2 class="label" id="c-build">Build</h2>
