@@ -67,6 +67,27 @@
 					</div>
 				</section>
 
+				<section class="group" aria-labelledby="g-class">
+					<h2 class="label" id="g-class">Class and era</h2>
+					<div class="field">
+						<span class="f-name" id="classLabel">Station class</span>
+						<div class="seg wrap" id="classSeg" role="group" aria-labelledby="classLabel"></div>
+						<select id="class" hidden></select>
+						<p class="help" id="classHelp">Auto lets the settings decide. A class fills in what you have not set yourself.</p>
+					</div>
+					<div class="field">
+						<span class="f-name" id="eraLabel">Era</span>
+						<div class="seg wrap" id="eraSeg" role="group" aria-labelledby="eraLabel"></div>
+						<select id="era" hidden></select>
+					</div>
+					<div class="field">
+						<span class="f-name" id="facingLabel">Entrance faces</span>
+						<div class="seg wrap" id="facingSeg" role="group" aria-labelledby="facingLabel"></div>
+						<select id="facing" hidden></select>
+						<p class="help">Auto is the way you look when you build it in game.</p>
+					</div>
+				</section>
+
 				<section class="group seed-group" aria-labelledby="g-seed">
 					<h2 class="label" id="g-seed">Seed</h2>
 					<div class="seed-row">
@@ -181,6 +202,7 @@
 						<g id="compassTicks"><path class="tick" d="M0 -29v5M29 0h-5M0 29v-5M-29 0h5"/></g>
 						<g id="compassArrow"><path class="street" d="M0 -23l7 14h-4.5v14h-5v-14H-7z"/></g>
 						<circle class="hub" r="2.4"/>
+						<text class="north" id="compassN" style="display:none">N</text>
 					</svg>
 					<span id="compassFacing" class="facing"></span>
 					<span class="cap">Street</span>
@@ -208,7 +230,7 @@
 				<div class="seg views" role="group" aria-label="View">
 					<button type="button" data-view="overview" aria-pressed="true">Overview</button>
 					<button type="button" data-view="passenger">Passenger</button>
-					<button type="button" data-view="plan" title="Floor plan from above, street at the bottom">Plan</button>
+					<button type="button" data-view="plan" title="Floor plan from above: street at the bottom, or north up once you choose a facing">Plan</button>
 					<button type="button" id="walkBtn" aria-pressed="false" title="Walk through the station yourself">Walk</button>
 				</div>
 				<div class="jumps" role="group" aria-label="Jump to">
@@ -248,6 +270,12 @@
 					</label>
 					<input type="range" id="cutAt" min="0" max="100" value="100" aria-label="Cut position" disabled>
 				</section>
+				<section class="card quiet" aria-label="Check a paste">
+					<details class="fold">
+						<summary>Check a paste</summary>
+						<p class="note">Plan the station here, download the .schem, stand where you will paste and run <code>//paste</code>. Then run <code>/ata_station verify paste</code> in game (operators). It says "Exact" when every block is as planned, or lists the first blocks that differ. The file holds the blocks only: name sign text, screens and the MTR connections come from building with the generator.</p>
+					</details>
+				</section>
 				<section class="card" aria-labelledby="c-mat">
 					<h2 class="label" id="c-mat">Materials</h2>
 					<details class="fold" id="matFold">
@@ -272,6 +300,10 @@
 			</div>
 
 			<div class="dock">
+				<div class="dock-row export">
+					<button type="button" id="exportBtn" title="Download the planned station as a .schem file for WorldEdit, FAWE or Litematica">Download .schem</button>
+				</div>
+				<p class="note" id="exportNote" role="status"></p>
 				<div id="game" class="game" hidden>
 					<div class="dock-row">
 						<button type="button" class="primary" data-send="plan" title="Plan this station in front of you, facing the way you look">Plan in front of me</button>

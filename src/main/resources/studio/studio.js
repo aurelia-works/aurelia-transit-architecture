@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav", "class", "era", "facing"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";
@@ -35,10 +35,16 @@
 			q[f] = $(f).value;
 		}
 		// the controls the player changed: the server only prepends these to a typed description, so the rest stays the words'
-		q.pinned = [...touched].join(",");
+		q.pinned = [...pinnedNow()].join(",");
 		// the generator seed: the dice's, or the one kept while Details is locked
 		q.seed = seeds.detail;
 		return q;
+	}
+
+	// The controls that hold their value against typed words, a class or an era (which fill only what is open). The dice pins what
+	// it rolls, but with a class or an era chosen those rolled settings are open again: the class decides them.
+	function pinnedNow() {
+		return $("class").value !== "auto" || $("era").value !== "auto" ? new Set([...touched].filter((f) => !rolled.has(f))) : touched;
 	}
 
 	function restore() {
@@ -60,6 +66,10 @@
 		for (const f of fields) {
 			if (saved[f] !== undefined && $(f)) {
 				$(f).value = saved[f];
+				// a saved value the page no longer offers (or an older page without this control) falls back to the first option
+				if ($(f).tagName === "SELECT" && $(f).selectedIndex < 0) {
+					$(f).selectedIndex = 0;
+				}
 			}
 		}
 		// only the controls the player had changed stay pinned: every select has a value, so having one says nothing
@@ -68,12 +78,17 @@
 				touched.add(f);
 			}
 		}
+		for (const f of saved.rolled || []) {
+			if (touched.has(f)) {
+				rolled.add(f);
+			}
+		}
 		return true;
 	}
 
 	function remember() {
 		try {
-			localStorage.setItem(STORE, JSON.stringify(Object.assign(values(), { seeds })));
+			localStorage.setItem(STORE, JSON.stringify(Object.assign(values(), { seeds, rolled: [...rolled] })));
 		} catch (e) {
 			// private window or storage blocked: the page still works, it just forgets
 		}
@@ -118,6 +133,8 @@
 	const synced = [];
 	// the controls the player changed: a typed description overrides everything else, but must agree with these
 	const touched = new Set();
+	// the touched controls that the dice set rather than the player
+	const rolled = new Set();
 
 	function set(id, value) {
 		$(id).value = value;
@@ -205,6 +222,9 @@
 			t.step = hub ? 2 : 1;
 			t.value = value;
 		});
+		segmented("class", "classSeg");
+		segmented("era", "eraSeg");
+		segmented("facing", "facingSeg");
 		segmented("walls", "wallsSeg");
 		segmented("bed", "bedSeg");
 		$("travSwitch").addEventListener("click", () => set("trav", $("trav").value ? "" : "1"));
@@ -235,6 +255,7 @@
 				// the preset's words already carry its look, type, tracks and length, so only its name (which they leave out)
 				// is pinned: the words stay authoritative and nothing is said twice
 				touched.clear();
+				rolled.clear();
 				touched.add("name");
 				// the preset replaced the rolled settings: the seed alone no longer makes this station
 				if (!seeds.edited) {
@@ -485,7 +506,7 @@
 	const choose = (rand, list) => list[Math.floor(rand() * list.length)];
 	const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
-	const GROUPS = { look: ["look", "mix"], shape: ["mode", "tracks", "length", "layout"], building: ["building", "size", "roof", "esc", "walls", "trav", "bed"] };
+	const GROUPS = { look: ["look", "mix", "era"], shape: ["mode", "tracks", "length", "layout"], building: ["building", "size", "roof", "esc", "walls", "trav", "bed", "class"] };
 
 	/**
 	 * A locked Building keeps what the station shows, not the word "Auto": an Auto roof or size follows the city, which an
@@ -513,6 +534,9 @@
 			const look = choose(r, cities);
 			$("look").value = look;
 			$("mix").value = r() < 0.3 ? choose(r, cities.filter((v) => v !== look)) : "";
+			// its own stream, so the rolls made before the era existed come out the same; most seeds leave the era open
+			const e = stream(seed, "era");
+			$("era").value = e() < 0.7 ? "auto" : choose(e, options.eras.map(([v]) => v).filter((v) => v !== "auto"));
 		}
 		if (!seeds.locks.shape) {
 			const r = stream(seed, "shape");
@@ -540,6 +564,17 @@
 			$("walls").value = r() < 0.25 ? "1" : "";
 			$("trav").value = r() < 0.25 ? "1" : "";
 			$("bed").value = choose(r, ["", "gravel", "andesite"]);
+			// the class, from its own stream: a terminus or hub is a city or grand station, and a Building locked to none can only
+			// be a halt, whose class the words would otherwise contradict
+			const c = stream(seed, "class");
+			const classes = options.classes.map(([v]) => v).filter((v) => v !== "auto");
+			const open = c() < 0.7;
+			const picked = choose(c, $("mode").value !== "through" ? ["city", "grand"] : classes);
+			$("class").value = open ? "auto" : picked;
+		}
+		if (seeds.locks.building && $("building").value === "0" && $("class").value !== "auto" && $("class").value !== "halt") {
+			// held: a locked "no building" cannot be a bigger class
+			$("class").value = "auto";
 		}
 		if (seeds.locks.building) {
 			holdBuilding();
@@ -549,7 +584,13 @@
 		// "Let my words decide" (below) un-pins them when the player wants the words to win.
 		for (const [group, ids] of Object.entries(GROUPS)) {
 			if (!seeds.locks[group]) {
-				ids.forEach((id) => touched.add(id));
+				ids.forEach((id) => {
+					touched.add(id);
+					rolled.add(id);
+				});
+			} else {
+				// a locked group is the player's choice
+				ids.forEach((id) => rolled.delete(id));
 			}
 		}
 		if ($("listOn").checked && !seeds.locks.shape) {
@@ -665,6 +706,12 @@
 					holdBuilding();
 					updateOutputs();
 				}
+				if (b.dataset.lock === "shape" && seeds.locks.shape && current && $("layout").value === "AUTO" && $("mode").value !== "hub") {
+					// an Auto platform layout follows the look, the class and the building, which a roll changes: keep the one on show
+					const shown = /island/i.test(current.built.layout) ? "ISLAND" : /side/i.test(current.built.layout) ? "SIDE" : "AUTO";
+					$("layout").value = shown;
+					updateOutputs();
+				}
 				if (!seeds.locks.look && seeds.detail !== seeds.value) {
 					// unlocking Look brings the planner back to the seed on show
 					seeds.detail = seeds.value;
@@ -715,6 +762,9 @@
 		fillSelect($("mix"), options.looks.filter(([v]) => v !== "AUTO"), ["", "Nothing"]);
 		fillSelect($("roof"), options.roofs);
 		fillSelect($("size"), options.sizes);
+		fillSelect($("class"), options.classes);
+		fillSelect($("era"), options.eras);
+		fillSelect($("facing"), options.facings);
 		$("tracks").min = options.tracks[0];
 		$("tracks").max = options.tracks[1];
 		$("tracks").value = 2;
@@ -757,6 +807,9 @@
 		for (const f of fields) {
 			$(f).addEventListener("input", () => {
 				touched.add(f);
+				if (!rolling) {
+					rolled.delete(f);
+				}
 				// a setting changed by hand after the roll: the seed alone no longer makes this station (the name is not rolled)
 				if (!rolling && f !== "name" && f !== "text" && !seeds.edited) {
 					seeds.edited = true;
@@ -798,9 +851,10 @@
 	// With typed words, the controls the player has not changed give way to the words: show what the plan came to in them
 	// (type, tracks, length, platforms, building), without a new plan and without pinning them.
 	function followWords(plan) {
-		if (!$("text").value.trim() || $("listOn").checked) {
+		if ((!$("text").value.trim() && $("class").value === "auto" && $("era").value === "auto") || $("listOn").checked) {
 			return;
 		}
+		const pins = pinnedNow();
 		const b = plan.built;
 		const want = {
 			mode: /^terminus/i.test(b.mode) ? "terminus" : /^hub/i.test(b.mode) ? "hub" : "through",
@@ -815,7 +869,7 @@
 		for (const [f, v] of Object.entries(want)) {
 			const range = f === "tracks" ? options.tracks : f === "length" ? options.length : null;
 			const inRange = !range || (+v >= range[0] && +v <= range[1]);
-			if (!touched.has(f) && $(f).value !== v && inRange) {
+			if (!pins.has(f) && $(f).value !== v && inRange) {
 				$(f).value = v;
 				moved = true;
 			}
@@ -838,6 +892,7 @@
 		// only the name stays pinned (the words leave it out): everything else follows the words, and the controls then follow the plan
 		const name = touched.has("name");
 		touched.clear();
+		rolled.clear();
 		if (name) {
 			touched.add("name");
 		}
@@ -849,7 +904,7 @@
 	let planFailed = false;
 	function setSendable(on) {
 		$("report").classList.toggle("stale", !on);
-		for (const b of document.querySelectorAll("#copyCmd, [data-send=plan], [data-send=build]")) {
+		for (const b of document.querySelectorAll("#copyCmd, #exportBtn, [data-send=plan], [data-send=build]")) {
 			b.disabled = !on;
 		}
 	}
@@ -887,6 +942,39 @@
 			}
 		}
 	}
+
+	// Download the station as a .schem: the same parameters as the plan, then the file saved under the name the server gave it.
+	$("exportBtn").addEventListener("click", async () => {
+		const note = $("exportNote");
+		note.textContent = "Writing the file…";
+		$("exportBtn").disabled = true;
+		try {
+			const r = await fetch("api/export", { method: "POST", body: new URLSearchParams(values()), headers: { "X-Studio-Token": TOKEN } });
+			if (!r.ok) {
+				let why = "";
+				try {
+					why = (await r.json()).error;
+				} catch (e) {
+					why = "";
+				}
+				throw new Error(why || "The studio could not write the file (" + r.status + ").");
+			}
+			const name = /filename="?([^";]+)"?/.exec(r.headers.get("Content-Disposition") || "");
+			const blob = await r.blob();
+			const a = document.createElement("a");
+			a.href = URL.createObjectURL(blob);
+			a.download = name ? name[1] : "station.schem";
+			document.body.append(a);
+			a.click();
+			a.remove();
+			setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+			note.textContent = "Saved " + a.download + " (" + NUMBER.format(+r.headers.get("X-ATA-Blocks") || 0) + " blocks, fingerprint " + (r.headers.get("X-ATA-Fingerprint") || "") + "). Paste with //paste, then /ata_station verify paste.";
+		} catch (e) {
+			note.textContent = e instanceof TypeError ? "The studio is not answering." : String(e.message || e);
+		} finally {
+			$("exportBtn").disabled = planFailed;
+		}
+	});
 
 	// ---- 3D view --------------------------------------------------------------------------------------------------------
 
@@ -1249,6 +1337,8 @@
 		}
 		updateCut();
 		showLayers();
+		// the compass reads the new plan's street and facing
+		draw();
 	}
 
 	let currentView = "overview";
@@ -1325,23 +1415,33 @@
 	// the camera yaw that puts the street at the bottom of the screen (the eye sits on the street side, looking away from it)
 	function streetYaw() {
 		const d = streetVector();
-		return d ? Math.atan2(d.x, d.z) : 0;
+		// with a chosen facing the station is drawn on the map's frame (north is -z, east +x): north up, as plans are read
+		return d && !(current && current.facing && current.facing !== "auto") ? Math.atan2(d.x, d.z) : 0;
 	}
 
 	// The compass dial: its arrow points at the street as the camera sees the ground (up on the dial is where the camera looks).
 	function updateCompass() {
 		const d = streetVector();
-		const show = !!d && !walk && !$("stage").classList.contains("no-gl");
+		const north = !!current && !!current.facing && current.facing !== "auto";
+		const show = (!!d || north) && !walk && !$("stage").classList.contains("no-gl");
 		$("compass").hidden = !show;
 		if (!show) {
 			return;
 		}
+		$("compassArrow").style.display = d ? "" : "none";
 		// forward on the ground is (-sin yaw, -cos yaw), right of it (cos yaw, -sin yaw)
 		const sin = Math.sin(view.yaw);
 		const cos = Math.cos(view.yaw);
-		const ahead = -d.x * sin - d.z * cos;
-		const right = d.x * cos - d.z * sin;
+		const ahead = d ? -d.x * sin - d.z * cos : 0;
+		const right = d ? d.x * cos - d.z * sin : 0;
 		const deg = (Math.atan2(right, ahead) * 180) / Math.PI;
+		// north is -z once a facing is chosen (the street really is on that side); the N rides the dial as the camera turns
+		$("compassN").style.display = north ? "" : "none";
+		if (north) {
+			$("compassN").setAttribute("x", (Math.sin(view.yaw) * 26.5).toFixed(1));
+			$("compassN").setAttribute("y", (-Math.cos(view.yaw) * 26.5).toFixed(1));
+		}
+		$("compassFacing").textContent = current.facing && current.facing !== "auto" ? "Faces " + current.facing : "";
 		$("compassArrow").setAttribute("transform", "rotate(" + deg.toFixed(1) + ")");
 	}
 
@@ -2391,7 +2491,7 @@
 			return { x0, x1, y0, y1, behind, view: currentView, aspect: camera.aspect };
 		},
 		// what is on show: the plan the page is drawing, and what the renderer holds (for leak checks)
-		plan: () => current && { text: current.text, seed: current.seed, blocks: current.size.blocks },
+		plan: () => current && { text: current.text, seed: current.seed, blocks: current.size.blocks, fingerprint: current.fingerprint },
 		stats: () => ({ meshes: meshes.length, textures: textures.size, geometries: renderer.info ? renderer.info.memory.geometries : 0, gpuTextures: renderer.info ? renderer.info.memory.textures : 0, programs: renderer.info && renderer.info.programs ? renderer.info.programs.length : 0 }),
 		// n renders in a row from a turning camera, each one finished on the GPU: the milliseconds each took
 		bench: (n) => {
@@ -2489,17 +2589,20 @@
 		const passed = plan.checks.filter((c) => c.status === "PASS");
 		const fails = problems.filter((c) => c.status === "FAIL").length;
 		const warns = problems.length - fails;
+		// the plan's own tally when it gives one (the same numbers, counted over the checks)
+		const tally = plan.summary ? plan.summary.pass + " passed, " + plan.summary.warn + " to look at, " + plan.summary.fail + " failed" : "";
 		const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
 		const verdict = !plan.buildable
 			? ["bad", "!", "Can't build this yet", plural(fails, "problem") + " to fix first"]
-			: warns ? ["warned", "!", "Ready to build", plural(warns, "thing") + " worth a look"]
+			: warns ? ["warned", "!", "Ready to build", plural(warns, "thing") + " worth a look" + (tally ? " · " + tally : "")]
 				: ["good", "✓", "Ready to build", "All " + plural(passed.length, "check") + " passed"];
 		const all = problems.concat(passed);
 		const shown = report.open ? all : all.slice(0, Math.max(problems.length, 8));
 		$("checks").innerHTML = "<div class='verdict " + verdict[0] + "'><span class='icon' aria-hidden='true'>" + verdict[1] + "</span><div><h3>"
 			+ verdict[2] + "</h3><p>" + verdict[3] + "</p></div></div>"
 			+ "<ul class='checks'>" + shown.map((c) => "<li class='" + c.status + "'><span class='sr'>" + (c.status === "PASS" ? "Passed: " : c.status === "FAIL" ? "Failed: " : "Warning: ")
-				+ "</span>" + esc(c.message) + "</li>").join("") + "</ul>"
+				+ "</span><div>" + (c.title ? "<b class='ttl'>" + esc(c.title) + "</b> " : "") + esc(c.message)
+				+ (c.fix ? "<span class='fix'>Next: " + esc(c.fix) + "</span>" : "") + "</div></li>").join("") + "</ul>"
 			+ (all.length > shown.length ? "<button type='button' class='more' id='moreChecks'>Show all " + all.length + " checks</button>"
 				: report.open && all.length > 8 ? "<button type='button' class='more' id='moreChecks'>Show fewer</button>" : "");
 		const more = $("moreChecks");

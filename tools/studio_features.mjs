@@ -79,6 +79,26 @@ check(await p.inputValue('#seed') !== seedBefore, 'R rolls outside walk');
 await p.click('#copyCmd'); await p.waitForTimeout(400);
 const clip = await p.evaluate(() => navigator.clipboard.readText().catch(e => 'ERR ' + e));
 check(/^\/ata_station /.test(clip) && /seed [a-z0-9]+/.test(clip), 'Copy command: ' + clip.slice(0, 160));
+// Export: the .schem download is a gzip, and its fingerprint header is the plan's
+await p.click('#roll'); await p.waitForTimeout(1500);
+const planFp = await p.evaluate(() => window.studioView.plan().fingerprint);
+const [dl] = await Promise.all([p.waitForEvent('download'), p.click('#exportBtn')]);
+const bytes = fs.readFileSync(await dl.path());
+check(bytes[0] === 0x1f && bytes[1] === 0x8b && /\.schem$/.test(dl.suggestedFilename()), `Export: ${dl.suggestedFilename()} is a gzip of ${bytes.length} bytes`);
+const note = await p.textContent('#exportNote');
+check(!!planFp && note.includes(planFp), `Export: the fingerprint header (${(note.match(/fingerprint (\w+)/) || [])[1]}) is the plan's (${planFp})`);
+// Checks show a title and the next step; the tally is the plan's summary
+await p.click('#roll'); await p.waitForTimeout(1500);
+const titles = await p.$$eval('#checks .ttl', n => n.length);
+check(titles > 0, `Checks: ${titles} items carry a title`);
+// Class: a halt plans a station with no building; Facing shows on the compass
+const planned = () => p.evaluate(() => window.studioView.plan());
+await p.click('#classSeg button:text-is("Halt")'); await p.waitForTimeout(1800);
+const halt = await p.evaluate(() => fetch('api/plan', { method: 'POST', body: new URLSearchParams({ class: 'halt', pinned: 'class', tracks: '2' }), headers: { 'X-Studio-Token': document.body.dataset.token } }).then(r => r.json()));
+check(halt.built.building === 'no building' && halt.resolved.class === 'halt', `Class halt: ${halt.built.building}, resolved ${halt.resolved.class}`);
+check((await p.textContent('#reqTable')).includes('no building'), 'Class halt on the page: the station has no building');
+await p.click('#facingSeg button:text-is("East")'); await p.waitForTimeout(1800);
+check((await p.textContent('#compassFacing')).toLowerCase().includes('east'), 'Facing east shows on the compass: ' + (await p.textContent('#compassFacing')));
 check(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join('; ') : ''));
 await b.close();
 console.log(fail ? fail + ' failed' : 'all passed'); process.exit(fail ? 1 : 0);

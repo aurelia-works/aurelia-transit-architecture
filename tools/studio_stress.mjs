@@ -153,9 +153,10 @@ for (let i = 0; i < REROLLS; i++) {
 const h1 = await heap(cdp);
 console.log(`after ${REROLLS} rerolls: JS heap ${h0} MB -> ${h1} MB (every 10: ${samples.join(', ')}); renderer geometries every 10: ${gpu.map(g => g.geometries).join(', ')}; GPU textures: ${gpu.map(g => g.gpuTextures).join(', ')}; programs: ${gpu.map(g => g.programs).join(', ')}`);
 check(h1 < h0 * 2 + 60, 'the JS heap does not grow without bound over the rerolls');
-const first = gpu[0];
-const lastG = gpu[gpu.length - 1];
-check(lastG.geometries <= first.geometries * 2 + 50 && lastG.gpuTextures <= first.gpuTextures * 2 + 50, 'renderer geometries and textures do not pile up over the rerolls');
+// the renderer holds the geometries of the station on show and no more (stations differ in size, so compare each sample with its own
+// mesh count); textures are a cache, bounded by how many different blocks have been drawn
+check(gpu.every(g => g.geometries <= g.meshes * 1.5 + 50), 'renderer geometries stay with the station on show, not piling up over the rerolls');
+check(gpu[gpu.length - 1].gpuTextures <= gpu[0].gpuTextures + 150, 'GPU textures stay a bounded cache over the rerolls');
 
 check(errors.length === 0, 'no console errors' + (errors.length ? ': ' + [...new Set(errors)].slice(0, 5).join(' | ') : ''));
 check(failed.length === 0, 'no failed requests' + (failed.length ? ': ' + [...new Set(failed)].slice(0, 5).join(' | ') : ''));
