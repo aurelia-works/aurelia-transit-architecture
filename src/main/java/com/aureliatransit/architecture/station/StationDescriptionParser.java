@@ -313,6 +313,16 @@ public final class StationDescriptionParser {
 		/** What the words themselves set, before a class, an era or the resolve step fills anything in. */
 		private Set<String> said = Set.of();
 
+		/**
+		 * A station with no class named that is what the halt class builds: open platforms ("no roof") with no building on one or
+		 * two tracks, no footbridge, escalators or platform list, and not a terminus. Its platforms get the halt class's width. A
+		 * roofed station keeps the default width, so an empty description plans as before.
+		 */
+		private boolean impliedHalt(boolean buildingComing, int trackCount, boolean stairGroup) {
+			return stationClass == StationClass.AUTO && roofNone && !buildingComing && !terminus && !hub && trackCount <= 2 && listed.isEmpty()
+					&& !Boolean.TRUE.equals(footbridge) && !stairGroup && !escalators && !travelators;
+		}
+
 		/** See {@link StationDescriptionParser#controlsSaid}; taken right after the scan. */
 		private Set<String> said() {
 			final Set<String> said = new LinkedHashSet<>();
@@ -1678,6 +1688,10 @@ public final class StationDescriptionParser {
 				builder.platformWidth(layout == PlatformLayout.ISLAND ? 14 : 12);
 			} else if (small) {
 				builder.platformWidth(StationSpec.MIN_WIDTH);
+			} else if (impliedHalt(buildingComing, builder.build().trackCount(), stairGroup)) {
+				// no class named, but the station amounts to a halt: it gets a halt's platforms, as "halt class" would give it
+				builder.platformWidth(HALT_WIDTH);
+				defaulted.add("width " + HALT_WIDTH + " (a halt's: no building, " + builder.build().trackCount() + (builder.build().trackCount() == 1 ? " track)" : " tracks)"));
 			} else {
 				builder.platformWidth(defaultWidth);
 				defaulted.add("width " + defaultWidth + (stairGroup ? " (so the " + (bothWays ? "second stair" : "escalator") + " fits beside the lift)"

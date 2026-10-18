@@ -261,4 +261,15 @@ class StationClassTest {
 		assertEquals(Facing.AUTO, spec("2 tracks, named \"Facing North\"").facing());
 		assertEquals("Facing North", spec("2 tracks, named \"Facing North\"").name());
 	}
+
+	/** A description with no class that amounts to an open halt gets a halt's platforms; anything roofed or bigger keeps its width. */
+	@Test
+	void anOpenHaltWithNoClassNamedGetsAHaltsWidth() {
+		assertEquals(StationDescriptionParser.HALT_WIDTH, StationDescriptionParser.parse("1 track, no roof").spec().platformWidth());
+		assertEquals(StationDescriptionParser.HALT_WIDTH, StationDescriptionParser.parse("two side platforms, no roof").spec().platformWidth());
+		assertEquals(StationSpec.DEFAULT_SIDE_WIDTH, StationDescriptionParser.parse("1 track").spec().platformWidth(), "a canopy keeps the width");
+		assertTrue(StationDescriptionParser.parse("3 tracks, no roof").spec().platformWidth() > StationDescriptionParser.HALT_WIDTH, "three tracks is no halt");
+		assertEquals(8, StationDescriptionParser.parse("1 track, no roof, 8 wide").spec().platformWidth(), "a said width wins");
+		assertEquals(StationSpec.DEFAULT_SIDE_WIDTH, StationDescriptionParser.parse("1 track, no roof, with station building").spec().platformWidth());
+	}
 }
