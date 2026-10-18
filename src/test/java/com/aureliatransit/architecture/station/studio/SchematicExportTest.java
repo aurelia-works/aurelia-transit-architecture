@@ -101,7 +101,9 @@ class SchematicExportTest {
 				"4 tracks island, 96 long, amsterdam, terminus, hall roof, named Centraal",
 				"2 tracks, 48 long, footbridge, escalators, travelators, stairs both ways, enclosed stairs, gravel track bed",
 				"platform 1: side 9 wide; platform 2: island 12 wide 60 long open; platform 3: side canopy; length 64, station building, tokyo",
-				"6 tracks island, 120 long, hub, berlin"));
+				"6 tracks island, 120 long, hub, berlin",
+				"3 tracks island, 96 long, station building, city, hamburg, parking",
+				"city class, parking, named Lot"));
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
 			words.add(preset.description());
 		}

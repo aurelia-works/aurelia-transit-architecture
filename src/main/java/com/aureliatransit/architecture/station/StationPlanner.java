@@ -4561,6 +4561,17 @@ public final class StationPlanner {
 		private static final String LOT_MARK = "aurelia_transit_architecture:platform_paving_dark";
 		private static final String LOT_KERB = "aurelia_transit_architecture:bus_curb";
 		private static final String LOT_HEDGE = "minecraft:oak_leaves";
+		private static final String LOT_TRUNK = "minecraft:oak_log";
+		private static final String LOT_BOLLARD = "aurelia_transit_architecture:bollard";
+		/** A cycle stand: a post and a rail beside it, from the station fence and bollard blocks. */
+		private static final String LOT_STAND_POST = "aurelia_transit_architecture:bollard";
+		private static final String LOT_STAND_RAIL = "aurelia_transit_architecture:station_fence";
+		/** The drop-off reaches this far either side of the door, in cells. */
+		private static final int LOT_DROP_OFF = 4;
+		/** Pairs of cycle stands in the row by the kerb. */
+		private static final int LOT_CYCLE_ROWS = 5;
+		/** A tree every this many cells along the planter. */
+		private static final int LOT_TREE_PITCH = 8;
 
 		/** u of the building's entrance apron (its two ramp cells on the street side): past a car park band when there is one. */
 		private int apronU() {
@@ -4586,6 +4597,7 @@ public final class StationPlanner {
 			final int front = site.entranceV();
 			final int vFrom = Math.max(layout.vMin(), front - LOT_HALF);
 			final int vTo = Math.min(layout.vMax(), front + LOT_HALF);
+			final int first = vFrom + 2;
 			for (int a = 0; a < StationGeometry.PARKING_DEPTH; a++) {
 				final boolean kerb = a == 0;
 				final boolean bays = a >= 1 && a <= LOT_BAY || a >= LOT_BAY + 6;
@@ -4595,18 +4607,62 @@ public final class StationPlanner {
 				for (int v = vFrom; v <= vTo; v++) {
 					final boolean entrance = Math.abs(v - front) <= 1;
 					final boolean end = v == vFrom || v == vTo;
-					final boolean separator = bays && Math.floorMod(v - vFrom, LOT_PITCH) == 0;
+					// the drop-off: the bays by the building's door are one plain forecourt, with no bay markings to park in
+					final boolean dropOff = a >= LOT_BAY + 6 && Math.abs(v - front) <= LOT_DROP_OFF;
+					// cycle parking: the bays at the street end of the lot, by the kerb
+					final boolean cycles = a >= 1 && a <= 3 && v >= first && v < first + LOT_CYCLE_ROWS * 2;
+					final boolean separator = bays && !dropOff && !cycles && Math.floorMod(v - vFrom, LOT_PITCH) == 0;
 					final String block;
+					String state = "";
+					boolean tree = false;
 					if (kerb && !entrance) {
 						block = LOT_KERB;
 					} else if (planter && !end && !entrance) {
-						block = LOT_HEDGE;
+						tree = Math.abs(v - front) > LOT_DROP_OFF && Math.floorMod(v - vFrom, LOT_TREE_PITCH) == LOT_TREE_PITCH / 2 && v > vFrom + 1 && v < vTo - 1;
+						// a tree stands in its own cell of the planter; the hedge round it is leaves that stay (persistent, so they never decay)
+						block = tree ? LOT_TRUNK : LOT_HEDGE;
+						state = tree ? "axis=y" : "persistent=true";
+					} else if (dropOff && !lane && !head) {
+						block = LOT_PAVING;
+					} else if (cycles) {
+						block = LOT_PAVING;
 					} else if (lane || head || end || separator) {
 						block = LOT_MARK;
 					} else {
 						block = LOT_PAVING;
 					}
-					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block);
+					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block, state);
+					if (tree) {
+						tree(a, v);
+					}
+					if (cycles && (a == 2 || a == 3) && Math.floorMod(v - first, 2) == 0) {
+						// a stand: a post and a rail beside it, two cells long
+						put(Role.FIXTURE, a, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, LOT_STAND_POST);
+						put(Role.RAILING, a, StationGeometry.PLATFORM_Y, v + 1, LocalDir.PLUS_V, LOT_STAND_RAIL);
+					}
+				}
+			}
+			// bollards close the ends of the drop-off so nothing parks across the way to the door
+			for (final int v : new int[]{front - LOT_DROP_OFF - 1, front + LOT_DROP_OFF + 1}) {
+				if (v > vFrom && v < vTo) {
+					put(Role.FIXTURE, StationGeometry.PARKING_DEPTH - 1, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U, LOT_BOLLARD);
+					put(Role.FIXTURE, LOT_BAY + 6, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U, LOT_BOLLARD);
+				}
+			}
+		}
+
+		/** A tree in the planter: a trunk four high (the first block is the planter cell itself) and a crown of leaves round its top. */
+		private void tree(int a, int v) {
+			for (int y = StationGeometry.PLATFORM_Y; y <= StationGeometry.PLATFORM_Y + 3; y++) {
+				put(Role.FIXTURE, a, y, v, LocalDir.PLUS_V, LOT_TRUNK, "axis=y");
+			}
+			final int top = StationGeometry.PLATFORM_Y + 3;
+			for (int da = -1; da <= 1; da++) {
+				for (int dv = -1; dv <= 1; dv++) {
+					if (da != 0 || dv != 0) {
+						put(Role.FIXTURE, a + da, top, v + dv, LocalDir.PLUS_V, LOT_HEDGE, "persistent=true");
+					}
+					put(Role.FIXTURE, a + da, top + 1, v + dv, LocalDir.PLUS_V, LOT_HEDGE, "persistent=true");
 				}
 			}
 		}

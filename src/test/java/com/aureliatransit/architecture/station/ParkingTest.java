@@ -54,4 +54,44 @@ class ParkingTest {
 	void aCarParkIsTheSameWord() {
 		assertTrue(StationDescriptionParser.parse("two track station with a station building and a car park").spec().parking());
 	}
+
+	/** Phase 4: the forecourt has a drop-off by the door, cycle stands by the kerb and trees in the planter, all inside the lot band. */
+	@Test
+	void theForecourtHasADropOffCycleStandsAndTrees() {
+		for (final String words : new String[]{SIDE, "three track island station 96 long with a station building, city, hamburg and parking",
+				"four track station, grand station building, utrecht, parking", "city class, parking", "grand class, modern era, parking"}) {
+			final StationSpec spec = StationDescriptionParser.parse(words).spec();
+			final StationPlan plan = StationPlanner.plan(spec);
+			assertEquals(java.util.List.of(), LayoutValidator.validate(plan), words);
+			assertTrue(StationAudit.audit(plan).buildable(), words + " " + StationAudit.audit(plan).problems());
+			final int front = StationLayout.of(spec, plan.layout()).entranceV();
+			final java.util.List<PlannedBlock> lot = plan.blocks().stream().filter(b -> b.u() < StationGeometry.PARKING_DEPTH).toList();
+			// cycle stands: posts and rails by the kerb, in pairs along the first rows
+			final long posts = lot.stream().filter(b -> b.blockId().endsWith(":bollard") && b.u() >= 1 && b.u() <= 3).count();
+			final long rails = lot.stream().filter(b -> b.blockId().endsWith(":station_fence") && b.u() >= 1 && b.u() <= 3).count();
+			assertTrue(posts >= 6 && rails >= 6, words + ": cycle stands " + posts + " posts " + rails + " rails");
+			// trees: a trunk standing in the planter, a crown on its top, and none of the leaves can decay
+			final long trunks = lot.stream().filter(b -> b.blockId().equals("minecraft:oak_log")).count();
+			assertTrue(trunks >= 8, words + ": trunks " + trunks);
+			assertTrue(lot.stream().filter(b -> b.blockId().equals("minecraft:oak_log")).allMatch(b -> b.state().equals("axis=y")), "trunks stand upright");
+			final java.util.List<PlannedBlock> leaves = lot.stream().filter(b -> b.blockId().equals("minecraft:oak_leaves")).toList();
+			assertTrue(leaves.size() > 20, words + ": leaves " + leaves.size());
+			assertTrue(leaves.stream().allMatch(b -> b.state().equals("persistent=true")), words + ": leaves that would decay");
+			assertTrue(lot.stream().noneMatch(b -> b.blockId().equals("minecraft:oak_log") && Math.abs(b.v() - front) <= 4), "no tree by the door");
+			// the drop-off: bollards close its ends and the way to the door is clear to head height
+			final java.util.List<PlannedBlock> bollards = lot.stream().filter(b -> b.blockId().endsWith(":bollard") && b.u() >= 10).toList();
+			assertEquals(4, bollards.size(), words + ": drop-off bollards");
+			for (int a = 0; a < StationGeometry.PARKING_DEPTH; a++) {
+				for (int v = front - 1; v <= front + 1; v++) {
+					for (int y = StationGeometry.WALK_Y - 1; y <= StationGeometry.WALK_Y + 1; y++) {
+						final int au = a;
+						final int av = v;
+						final int ay = y;
+						assertTrue(plan.blocks().stream().noneMatch(b -> b.u() == au && b.v() == av && b.y() == ay && b.y() >= 0),
+								words + ": the way to the door is blocked at u=" + a + " v=" + v + " y=" + y);
+					}
+				}
+			}
+		}
+	}
 }
