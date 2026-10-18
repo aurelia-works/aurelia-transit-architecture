@@ -322,9 +322,12 @@ public final class StudioApi {
 		for (int i = 0; i < audit.checks().size(); i++) {
 			final StationAudit.Check c = audit.checks().get(i);
 			out.append(i == 0 ? "" : ",").append("{\"topic\":").append(Json.quote(lower(c.topic().name()))).append(",\"status\":")
-					.append(Json.quote(c.status().name())).append(",\"message\":").append(Json.quote(c.message())).append('}');
+					.append(Json.quote(c.status().name())).append(",\"message\":").append(Json.quote(c.message())).append(",\"title\":")
+					.append(Json.quote(c.title())).append(",\"fix\":").append(Json.quote(c.fix())).append('}');
 		}
-		out.append("],\"violations\":[");
+		out.append("],\"summary\":{\"pass\":").append(audit.count(StationAudit.Status.PASS)).append(",\"warn\":").append(audit.count(StationAudit.Status.WARN))
+				.append(",\"fail\":").append(audit.count(StationAudit.Status.FAIL)).append('}');
+		out.append(",\"violations\":[");
 		for (int i = 0; i < violations.size(); i++) {
 			final Violation v = violations.get(i);
 			out.append(i == 0 ? "" : ",").append("{\"kind\":").append(Json.quote(v.kind().name())).append(",\"x\":").append(frame.x(v.u(), v.v()))

@@ -360,4 +360,37 @@ class StudioTest {
 		}
 	}
 
+	@Test
+	void checksCarryATitleAFixAndASummary() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final Map<String, String> q : List.of(Map.of("look", "UTRECHT", "tracks", "2", "length", "64"),
+				Map.of("look", "HAMBURG", "tracks", "4", "length", "96", "layout", "ISLAND", "text", "named Test, footbridge"),
+				Map.of("look", "ST_PANCRAS", "mode", "terminus", "tracks", "6", "building", "1"))) {
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			final List<Object> checks = Json.list(plan.get("checks"));
+			assertFalse(checks.isEmpty());
+			final double[] counts = new double[3];
+			for (final Object o : checks) {
+				final Map<String, Object> check = Json.object(o);
+				assertTrue(check.containsKey("topic") && check.containsKey("status") && check.containsKey("message"), "the existing keys stay: " + check);
+				assertFalse(((String) check.get("title")).isBlank(), check.toString());
+				final String status = (String) check.get("status");
+				assertEquals("PASS".equals(status), ((String) check.get("fix")).isEmpty(), "a fix exactly when it is not a pass: " + check);
+				counts["PASS".equals(status) ? 0 : "WARN".equals(status) ? 1 : 2]++;
+			}
+			final Map<String, Object> summary = Json.object(plan.get("summary"));
+			assertEquals(counts[0], summary.get("pass"), q.toString());
+			assertEquals(counts[1], summary.get("warn"), q.toString());
+			assertEquals(counts[2], summary.get("fail"), q.toString());
+		}
+		// an island platform reached across a track warns, with a way out
+		final Map<String, Object> warned = Json.object(Json.parse(api.plan(Map.of("text", "4 tracks island, 64 long, no footbridge", "pinned", ""))));
+		final List<Object> problems = Json.list(warned.get("checks")).stream().filter(c -> !"PASS".equals(Json.object(c).get("status"))).toList();
+		assertFalse(problems.isEmpty(), "this station should warn about crossing a track");
+		for (final Object c : problems) {
+			assertFalse(((String) Json.object(c).get("fix")).isBlank());
+		}
+		assertEquals("Step-free access", problems.stream().map(c -> Json.object(c).get("title")).findFirst().orElse(""));
+	}
+
 }
