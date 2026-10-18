@@ -226,6 +226,76 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * An underpass digs, so it needs terrain approval; built with it, every planned block stands, the tunnel and its wells are
+	 * clear to walk, and undo gives the ground back.
+	 */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 300)
+	public void underpassIsDugBuiltAndUndone(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final UUID owner = new UUID(0, 70);
+		// the test world's ground is a few blocks deep: raise the site on a block of stone deep enough for the tunnel
+		final String words = "2 tracks side platforms, length 24, width 9, underpass, named Test";
+		final BlockPos feet = context.getAbsolutePos(FEET_LARGE).up(9);
+		final StationSessions.Pending sizing = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		final TrackLayout site = sizing.plan().layout();
+		for (int u = -1; u <= site.width(); u++) {
+			for (int v = site.vMin() - 1; v <= site.vMax() + 1; v++) {
+				for (int y = -9; y <= -1; y++) {
+					world.setBlockState(pos(sizing.frame(), u, y, v), Blocks.STONE.getDefaultState());
+				}
+			}
+		}
+		final StationSessions.Pending pending = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		check(pending.plan().blocks().stream().anyMatch(b -> b.y() == StationGeometry.UNDERPASS_FLOOR_Y), "no underpass was planned");
+		check(pending.violations().isEmpty() && pending.audit().buildable(), "plan: " + pending.violations() + " " + pending.audit().problems());
+		final List<Text> said = new ArrayList<>();
+		check(StationCommand.startBuild(world, owner, pending, false, said::add) == null, "an underpass was built without terrain approval");
+		// the ground it will dig, to compare after undo
+		final Map<BlockPos, BlockState> ground = new HashMap<>();
+		for (final com.aureliatransit.architecture.station.Box box : pending.plan().headroom()) {
+			if (box.yMax() < 0) {
+				for (int u = box.uMin(); u <= box.uMax(); u++) {
+					for (int y = box.yMin(); y <= box.yMax(); y++) {
+						for (int v = box.vMin(); v <= box.vMax(); v++) {
+							final BlockPos pos = pos(pending.frame(), u, y, v);
+							ground.put(pos, world.getBlockState(pos));
+						}
+					}
+				}
+			}
+		}
+		said.clear();
+		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, true, said::add);
+		check(job != null, "build refused: " + said);
+		context.waitAndRun(100, () -> {
+			check(job.state() == StationBuildJob.State.DONE, "job " + job.state() + " " + said);
+			final List<String> problems = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				final String id = Registries.BLOCK.getId(world.getBlockState(cellPos(pending, block)).getBlock()).toString();
+				if (!id.equals(block.blockId())) {
+					problems.add(block + ": found " + id);
+				}
+			}
+			for (final BlockPos pos : ground.keySet()) {
+				if (!world.getBlockState(pos).isAir()) {
+					problems.add("not dug at " + pos + ": " + world.getBlockState(pos));
+				}
+			}
+			Fixtures.failIfAny(problems, "the underpass");
+			StationSessions.cancelJob(owner);
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			for (final Map.Entry<BlockPos, BlockState> cell : ground.entrySet()) {
+				check(world.getBlockState(cell.getKey()).getBlock() == cell.getValue().getBlock(), "undo did not give back the ground at " + cell.getKey());
+			}
+			context.complete();
+		});
+	}
+
 	/** A terminus (head building, buffer stops, gate line, train shed) built in the world. */
 	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
 	public void terminusBuildsThroughTheCommandPath(TestContext context) {

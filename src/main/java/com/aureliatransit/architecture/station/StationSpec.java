@@ -39,7 +39,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		RoofType roof, SurfaceMaterial surface, RoofMaterial roofMaterial, boolean stepFree, boolean tactile, boolean furniture,
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, CanopyShape canopy, StationScale scale, boolean hub,
 		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
-		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, long seed, StationClass stationClass, StationEra era,
+		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, boolean underpass, long seed, StationClass stationClass, StationEra era,
 		Facing facing) {
 
 	public static final int MIN_TRACKS = 1;
@@ -141,7 +141,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		return new Builder().trackCount(trackCount).platformLayout(platformLayout).platformLength(platformLength).platformWidth(platformWidth)
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).canopy(canopy).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
-				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).seed(seed)
+				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).seed(seed)
 				.stationClass(stationClass).era(era).facing(facing);
 	}
 
@@ -189,6 +189,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean enclosedStairs;
 		private boolean travelators;
 		private boolean parking;
+		private boolean underpass;
 		private long seed;
 		private StationClass stationClass = StationClass.AUTO;
 		private StationEra era = StationEra.AUTO;
@@ -317,6 +318,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder underpass(boolean value) {
+			underpass = value;
+			return this;
+		}
+
 		public Builder seed(long value) {
 			seed = value;
 			return this;
@@ -355,7 +361,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
 					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, canopy, scale, hub, platforms, trackBed, escalators,
-					stairsBothWays, enclosedStairs, travelators, parking, seed, stationClass, era, facing);
+					stairsBothWays, enclosedStairs, travelators, parking, underpass, seed, stationClass, era, facing);
 		}
 	}
 }

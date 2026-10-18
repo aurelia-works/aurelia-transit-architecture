@@ -68,6 +68,7 @@ public final class StationPlanner {
 
 	public static StationPlan plan(StationSpec spec) {
 		final Planning planning = new Planning(spec);
+		planning.underpass();
 		planning.escalators();
 		planning.travelators();
 		planning.floors();
@@ -243,6 +244,10 @@ public final class StationPlanner {
 		}
 		private final List<Integer> columnV;
 		private final List<Box> extraSupport = new ArrayList<>();
+		/** Terrain to clear besides the platforms' headroom: an underpass's corridor and stair wells. */
+		private final List<Box> extraHeadroom = new ArrayList<>();
+		/** Support-layer cells an underpass's stair wells pass through; the platform's support is not asked for there. */
+		private final Set<Cell> holes = new HashSet<>();
 		/** The station's layout; {@link #farFootbridge} points it at the far bridge while that bridge is planned. */
 		private StationLayout site;
 		/** The second footbridge at the platforms' far end (phase 2), or null. */
@@ -2666,6 +2671,116 @@ public final class StationPlanner {
 		 * to them. The slope runs level with the stair beside it; a flat landing step at each end lies in the platform floor
 		 * and in the corridor wall row. Each step has its handrail block above it, and a casing fills under the slope.
 		 */
+		/**
+		 * Phase 2: an underpass ("underpass"), a stairs-only pedestrian tunnel under every track near the platforms' far end from
+		 * the footbridges, a storey below the platforms. The corridor is three wide and three clear, walled, floored and roofed
+		 * with ceiling lights, closed at both ends; each platform wide enough has a stair down to it in a walled well on two
+		 * columns clear of the edges and the column lines, railed round its opening at platform level. The tunnel and its wells
+		 * are dug: the site survey asks for terrain approval. Planned first, so no later pass builds into the wells.
+		 */
+		void underpass() {
+			if (!spec.underpass() || layout.terminus() || layout.platforms().size() < 2) {
+				return;
+			}
+			final StylePalette.Building b = palette.building();
+			final int floorY = StationGeometry.UNDERPASS_FLOOR_Y;
+			final int ceilY = StationGeometry.UNDERPASS_CEILING_Y;
+			// at the end away from the footbridges (or from the entrance with none)
+			final int ref = far != null ? far.bridgeV() : site.bridge() ? site.bridgeV() : site.entranceV();
+			final boolean low = ref > length / 2;
+			final int vU = low ? UNDERPASS_END : length - 1 - UNDERPASS_END;
+			final int side = low ? 1 : -1;
+			final int reach = 2 + StationGeometry.STAIR_STEPS + 1;
+			// the stairs, chosen first: an underpass reaching fewer than two platforms is no way across
+			final java.util.Map<TrackLayout.PlatformBand, Integer> stairs = new java.util.LinkedHashMap<>();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (!band.runs(vU - 2) || !band.runs(vU + side * reach)) {
+					continue;
+				}
+				final List<Integer> lines = columnLines(band, roof(band));
+				int best = -1;
+				for (int c = band.uMin() + 1; c + 2 <= band.uMax(); c++) {
+					boolean ok = true;
+					for (int u = c - 1; u <= c + 2; u++) {
+						ok &= u >= band.uMin() && u <= band.uMax() && !isEdge(band, u) && !lines.contains(u);
+					}
+					final int centre = (band.uMin() + band.uMax()) / 2;
+					if (ok && (best < 0 || Math.abs(c - centre) < Math.abs(best - centre))) {
+						best = c;
+					}
+				}
+				if (best >= 0) {
+					stairs.put(band, best);
+				}
+			}
+			if (stairs.size() < 2) {
+				return;
+			}
+			final int uA = Math.max(1, layout.platforms().get(0).uMin());
+			final int uB = Math.min(layout.width() - 2, layout.platforms().get(layout.platforms().size() - 1).uMax());
+			// the wells: steps from the corridor's wall up to the platform, a stringer under each, walls either side, a rail round
+			// the opening; dug clear above every step
+			for (final java.util.Map.Entry<TrackLayout.PlatformBand, Integer> stair : stairs.entrySet()) {
+				final int c = stair.getValue();
+				final LocalDir up = side > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+				for (int u = c; u <= c + 1; u++) {
+					for (int y = floorY + 1; y <= floorY + 3; y++) {
+						keepClear(u, y, vU + side * 2);
+					}
+					for (int i = 1; i < StationGeometry.STAIR_STEPS; i++) {
+						final int v = vU + side * (2 + i);
+						final int stepY = floorY + i;
+						for (int y = stepY + 1; y <= stepY + 3; y++) {
+							keepClear(u, y, v);
+							if (y == -1) {
+								holes.add(new Cell(u, y, v));
+							}
+						}
+						// dug out up to the platform floor, which the well replaces from the fourth step on
+						extraHeadroom.add(new Box(u, stepY + 1, v, u, Math.min(stepY + 3, StationGeometry.PLATFORM_Y), v));
+						put(Role.STAIR, u, stepY, v, up, b.stair());
+						for (int y = floorY; y < stepY; y++) {
+							put(Role.WALL, u, y, v, up, b.trim());
+						}
+					}
+				}
+				for (int i = 0; i < StationGeometry.STAIR_STEPS; i++) {
+					final int v = vU + side * (2 + i);
+					for (final int u : new int[]{c - 1, c + 2}) {
+						for (int y = floorY; y < StationGeometry.PLATFORM_Y; y++) {
+							put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.interiorWall());
+						}
+						// the rail along the opening, where the platform floor is cut away beneath it
+						if (floorY + i + 3 >= StationGeometry.PLATFORM_Y) {
+							put(Role.RAILING, u, StationGeometry.WALK_Y, v, u < c ? LocalDir.MINUS_U : LocalDir.PLUS_U);
+						}
+					}
+					// across the opening's corridor end, where the floor still stands over the steps
+					if (floorY + i + 3 == StationGeometry.PLATFORM_Y - 1) {
+						for (int u = c; u <= c + 1; u++) {
+							put(Role.RAILING, u, StationGeometry.WALK_Y, v, side > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V);
+						}
+					}
+				}
+			}
+			// the corridor: floor, walls (open where a stair leaves), ceiling with lights, end walls; dug clear inside
+			extraHeadroom.add(new Box(uA, floorY + 1, vU - 1, uB, floorY + 3, vU + 1));
+			for (int u = uA - 1; u <= uB + 1; u++) {
+				final boolean end = u == uA - 1 || u == uB + 1;
+				for (int v = vU - 2; v <= vU + 2; v++) {
+					put(Role.FLOOR, u, floorY, v, LocalDir.PLUS_V, b.deck());
+					put((u + v) % 4 == 0 && !end && Math.abs(v - vU) <= 1 ? Role.LIGHT_PANEL : Role.BUILDING_ROOF, u, ceilY, v, LocalDir.PLUS_V,
+							(u + v) % 4 == 0 && !end && Math.abs(v - vU) <= 1 ? b.light() : b.deck());
+					final boolean wallRow = Math.abs(v - vU) == 2;
+					for (int y = floorY + 1; y < ceilY; y++) {
+						if (end || wallRow && !air.contains(new Cell(u, y, v))) {
+							put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.interiorWall());
+						}
+					}
+				}
+			}
+		}
+
 		void escalators() {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final List<Integer> columns = site.escalator(band);
@@ -4811,6 +4926,8 @@ public final class StationPlanner {
 		private static final int FORECOURT_ISLAND = 3;
 		/** Taxi bays: how many, how wide and how long. */
 		private static final int FORECOURT_BAYS = 3;
+		/** v of an underpass's centre line from the platforms' end: its walls at 1 and 5, inside the platforms. */
+		private static final int UNDERPASS_END = 3;
 		/** A hub's shop unit under the gallery: rows along the wall, and rows kept open past the lift's landing before the first. */
 		private static final int RETAIL_UNIT = 4;
 		private static final int RETAIL_CLEAR = 3;
@@ -5112,7 +5229,38 @@ public final class StationPlanner {
 				supports.add(new Box(0, -1, buildingFrom(), layout.buildingWidth() - 1, -1, buildingTo()));
 			}
 			supports.addAll(extraSupport);
-			return new StationPlan(spec, layout, blocks, envelopes, headroom, supports, palette.blockId(Role.FOUNDATION));
+			headroom.addAll(extraHeadroom);
+			return new StationPlan(spec, layout, blocks, envelopes, headroom, holes.isEmpty() ? supports : without(supports, holes),
+					palette.blockId(Role.FOUNDATION));
+		}
+
+		/** {@code boxes} with the {@code holes} taken out: a box holding a hole is cut into runs along u that miss it. */
+		static List<Box> without(List<Box> boxes, Set<Cell> holes) {
+			final List<Box> out = new ArrayList<>();
+			for (final Box box : boxes) {
+				boolean hit = false;
+				for (final Cell hole : holes) {
+					hit |= box.contains(hole.u(), hole.y(), hole.v());
+				}
+				if (!hit) {
+					out.add(box);
+					continue;
+				}
+				for (int y = box.yMin(); y <= box.yMax(); y++) {
+					for (int v = box.vMin(); v <= box.vMax(); v++) {
+						int start = box.uMin();
+						for (int u = box.uMin(); u <= box.uMax() + 1; u++) {
+							if (u > box.uMax() || holes.contains(new Cell(u, y, v))) {
+								if (u > start) {
+									out.add(new Box(start, y, v, u - 1, y, v));
+								}
+								start = u + 1;
+							}
+						}
+					}
+				}
+			}
+			return out;
 		}
 	}
 }

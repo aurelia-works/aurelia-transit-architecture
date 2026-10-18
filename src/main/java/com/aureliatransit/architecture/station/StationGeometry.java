@@ -123,6 +123,10 @@ public final class StationGeometry {
 	public static final int MIN_LIFT_ISLAND_WIDTH = 6;
 	/** Stairs from a walking level to the footbridge or upper floor: one step per block of rise. */
 	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
+	/** An underpass's floor: a storey (seven steps) below the platforms, under the track bed with a row of ground to spare. */
+	public static final int UNDERPASS_FLOOR_Y = PLATFORM_Y - STAIR_STEPS;
+	/** Its ceiling, three clear over the floor. */
+	public static final int UNDERPASS_CEILING_Y = UNDERPASS_FLOOR_Y + HEADROOM + 1;
 
 	private StationGeometry() {
 	}

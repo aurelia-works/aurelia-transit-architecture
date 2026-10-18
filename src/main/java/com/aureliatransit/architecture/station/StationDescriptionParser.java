@@ -237,6 +237,7 @@ public final class StationDescriptionParser {
 		private boolean enclosedStairs;
 		private boolean travelators;
 		private boolean parking;
+		private boolean underpass;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -902,6 +903,13 @@ public final class StationDescriptionParser {
 				case "carpark":
 				case "parkandride":
 					setParking(i);
+					use(i, i);
+					return true;
+				case "underpass":
+					if (!underpass) {
+						underpass = true;
+						note(i, "an underpass: a stairs-only pedestrian tunnel under the tracks to every platform (it digs: confirm with replace-terrain)");
+					}
 					use(i, i);
 					return true;
 				case "leidsche":
@@ -1804,7 +1812,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
-			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass);
 			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
 				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
 			}
@@ -1873,6 +1881,10 @@ public final class StationDescriptionParser {
 				// a buildingless station has no street wall to park in front of
 				warn("a car park is only built in front of a station building beside the platforms or past a terminus; it is left out here");
 				builder.parking(false);
+			}
+			if (underpass && terminus) {
+				warn("a terminus is reached from its concourse, so it gets no underpass");
+				builder.underpass(false);
 			}
 			final boolean bridge = Boolean.TRUE.equals(footbridge);
 			if (bridge && terminus) {

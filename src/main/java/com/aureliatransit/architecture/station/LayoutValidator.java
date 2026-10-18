@@ -15,6 +15,7 @@ public final class LayoutValidator {
 
 	/** Highest y a plan may use, room for a grand train shed at 1.5 blocks to the metre; the lowest is -1 (the support layer). */
 	private static final int MAX_Y = 96;
+	/** The lowest a block may go: the support layer, or with an underpass its floor. */
 	private static final int MIN_Y = -1;
 
 	private static final Comparator<Violation> CELL_ORDER = Comparator.comparingInt(Violation::y).thenComparingInt(Violation::v)
@@ -117,8 +118,9 @@ public final class LayoutValidator {
 
 		List<Violation> outOfBounds() {
 			final List<Violation> found = new ArrayList<>();
+			final int minY = plan.spec().underpass() ? StationGeometry.UNDERPASS_FLOOR_Y : MIN_Y;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.u() < 0 || block.u() >= layout.width() || block.v() < layout.vMin() || block.v() > layout.vMax() || block.y() < MIN_Y
+				if (block.u() < 0 || block.u() >= layout.width() || block.v() < layout.vMin() || block.v() > layout.vMax() || block.y() < minY
 						|| block.y() > MAX_Y) {
 					found.add(at(Violation.Kind.OUT_OF_BOUNDS, block, where(block) + " is outside the footprint"));
 				}
