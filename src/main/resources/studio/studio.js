@@ -44,7 +44,14 @@
 	// The controls that hold their value against typed words, a class or an era (which fill only what is open). The dice pins what
 	// it rolls, but with a class or an era chosen those rolled settings are open again: the class decides them.
 	function pinnedNow() {
-		return $("class").value !== "auto" || $("era").value !== "auto" ? new Set([...touched].filter((f) => !rolled.has(f))) : touched;
+		const pins = $("class").value !== "auto" || $("era").value !== "auto" ? new Set([...touched].filter((f) => !rolled.has(f))) : new Set(touched);
+		// a locked group is the player's choice, whoever set it: the class or the words must not move it
+		for (const [group, ids] of Object.entries(GROUPS)) {
+			if (seeds.locks[group]) {
+				ids.forEach((id) => pins.add(id));
+			}
+		}
+		return pins;
 	}
 
 	function restore() {
@@ -73,7 +80,8 @@
 			}
 		}
 		// only the controls the player had changed stay pinned: every select has a value, so having one says nothing
-		for (const f of (saved.pinned || "").split(",")) {
+		// what the player or the dice set (saved whole: "pinned" is filtered by the class and the locks)
+		for (const f of saved.touched || (saved.pinned || "").split(",")) {
 			if (fields.includes(f) && f !== "text") {
 				touched.add(f);
 			}
@@ -88,7 +96,7 @@
 
 	function remember() {
 		try {
-			localStorage.setItem(STORE, JSON.stringify(Object.assign(values(), { seeds, rolled: [...rolled] })));
+			localStorage.setItem(STORE, JSON.stringify(Object.assign(values(), { seeds, rolled: [...rolled], touched: [...touched] })));
 		} catch (e) {
 			// private window or storage blocked: the page still works, it just forgets
 		}

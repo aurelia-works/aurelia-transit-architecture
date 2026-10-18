@@ -127,6 +127,10 @@ for (let t = 0; t < 200 && plans.length === before; t++) {
 }
 await page.waitForTimeout(300);
 check(KEEPS.shape(plans[plans.length - 1]) === shape, 'a typed seed keeps the locked shape');
+// a locked group always goes to the server as pinned, even when a chosen class or era opens the dice's settings and after a
+// reload (it once came back empty, and the class then decided the shape)
+const pins = (plans[plans.length - 1].sent.pinned || '').split(',');
+check(['mode', 'tracks', 'length', 'layout'].every((f) => pins.includes(f)), 'the locked shape is sent as pinned: ' + pins.join(','));
 await setLocks([]);
 
 check(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.join('; ') : ''));
