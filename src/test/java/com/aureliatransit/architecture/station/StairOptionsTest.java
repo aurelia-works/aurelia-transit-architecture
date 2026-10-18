@@ -36,7 +36,7 @@ class StairOptionsTest {
 			assertEquals(List.of(), StationDescriptionParser.parse("4 tracks island footbridge " + text).ignored(), text);
 		}
 		// "both" on its own still mixes looks
-		assertFalse(spec("both utrecht and hamburg 4 tracks island footbridge").stairsBothWays());
+		assertFalse(spec("both utrecht and hamburg 4 tracks island footbridge compact").stairsBothWays());
 	}
 
 	@Test

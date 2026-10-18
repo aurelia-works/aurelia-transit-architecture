@@ -253,6 +253,8 @@ public final class StationDescriptionParser {
 		private int scaleAt = -1;
 		private long seed;
 		private String seedText = "";
+		/** "single stairs": one way down to each platform even at a station that would get two. */
+		private boolean singleStairs;
 		private StationClass stationClass = StationClass.AUTO;
 		private StationEra era = StationEra.AUTO;
 		private Facing facing = Facing.AUTO;
@@ -882,6 +884,12 @@ public final class StationDescriptionParser {
 				case "several":
 				case "triple":
 				case "twin":
+					if (token.equals("single") && (next.equals("stair") || next.equals("stairs") || next.equals("staircase") || next.equals("staircases"))) {
+						singleStairs = true;
+						note(i, "one stair down to each platform");
+						use(i, i + 1);
+						return true;
+					}
 					if (next.equals("span") || next.equals("arch") || next.equals("arches") || next.equals("vault") || next.equals("vaults")) {
 						if (shed == null) {
 							shed = token.equals("single") ? ShedShape.ARCH : ShedShape.MULTI_ARCH;
@@ -1774,6 +1782,15 @@ public final class StationDescriptionParser {
 					builder.scale(auto);
 					defaulted.add(auto.label() + " station building (default for " + sized.trackCount() + (sized.trackCount() == 1 ? " track, " : " tracks, ")
 							+ sized.platformLength() + " long)");
+				}
+			}
+			// a bigger through station (a city or grand building) gives every platform wide enough two ways down from its footbridge, so
+			// the people from one train spread over two stairs; "single stairs" keeps it to one
+			if (wantsBuilding && !terminus && !bothWays && !singleStairs) {
+				final StationScale built = builder.build().buildingScale();
+				if (built != StationScale.COMPACT) {
+					builder.stairsBothWays(true);
+					defaulted.add("a second footbridge stair to each wide platform (a " + built.label() + " station has two ways down; \"single stairs\" keeps one)");
 				}
 			}
 			if (terminus && hub) {
