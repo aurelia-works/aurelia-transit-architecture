@@ -428,3 +428,17 @@ table.mat th.num { text-align: right; padding: 0 0 6px 8px; }
 
 .clash { margin: 8px 0 0; font-size: 12.5px; color: var(--warn); }
 .clash[hidden] { display: none; }
+
+.seg.wrap { flex-wrap: wrap; }
+.seg.wrap button { flex: 1 1 auto; padding: 6px 9px; }
+.dock-row.export { display: grid; grid-template-columns: 1fr; margin-bottom: 6px; }
+.dock-row.export button { border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: var(--r); padding: 9px 12px; cursor: pointer; }
+.dock-row.export button:hover:not(:disabled) { border-color: var(--accent); }
+.dock .note:empty { display: none; }
+code { font: 12px var(--mono); color: var(--accent-text); }
+.checks li .fix { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.checks li .ttl { font-weight: 600; margin-right: 6px; }
+.compass .north { font: 600 9px var(--sans); fill: var(--fg); text-anchor: middle; dominant-baseline: central; }
+
+/* the view buttons size to their words (equal flex-basis 0 squeezed "Passenger" and "Overview" past their pills) */
+.viewbar .views button { flex: 1 1 auto; }

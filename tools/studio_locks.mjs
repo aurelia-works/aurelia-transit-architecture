@@ -29,10 +29,10 @@ page.on('pageerror', e => errors.push(e.message));
 /** What each lock keeps, read from one plan answer and the request that asked for it. */
 const KEEPS = {
 	// the city and the mix: the hall and platform style; and the planner seed's look choices (canopy, shed, floors, roof deck)
-	look: ({ plan, sent }) => [sent.look, sent.mix, plan.built.style, plan.seed].join(' | '),
+	look: ({ plan, sent }) => [sent.look, sent.mix, plan.built.style, plan.seed, sent.era].join(' | '),
 	shape: ({ plan }) => [plan.built.mode, plan.built.tracks, plan.built.length, plan.built.layout].join(' | '),
 	// a building or none, its size and roof form, the stairs, stairwells, travelators and track bed
-	building: ({ plan, sent }) => [plan.built.building === 'no building', plan.built.scale, plan.built.roof, sent.esc, sent.walls, sent.trav, sent.bed].join(' | ')
+	building: ({ plan, sent }) => [plan.built.building === 'no building', plan.built.scale, plan.built.roof, sent.esc, sent.walls, sent.trav, sent.bed, sent.class].join(' | ')
 };
 
 async function rollOnce() {

@@ -101,3 +101,16 @@ becomes a top bar.
 
 `tools/studio_features.mjs` (the features), `tools/studio_locks.mjs` (the seed locks) and `tools/studio_stress.mjs` (plan
 latency, frame time on the largest station, rapid input, memory over 50 rerolls, console errors, failed requests).
+
+## Class, era, facing, export
+
+- **Class and era** are segmented controls in their own group. The class belongs to the Building lock, the era to the Look lock; the
+  dice rolls each from its own stream of the seed (most seeds leave them Auto, a terminus or hub only rolls city or grand, a locked
+  "no building" only rolls halt or Auto), so older seeds still roll the same other settings. With a class or an era chosen the backend
+  fills only what is open, so the page sends as `pinned` just the settings the player set or locked: the dice's settings are open
+  again and the controls then follow what the plan came to (`followWords`).
+- **Entrance faces** is the facing (Auto, N, E, S, W). A chosen facing draws the station on the map's frame: the compass gets an N that
+  turns with the camera and a "Faces east" line, and the Plan view is north up (Auto keeps the street at the bottom).
+- **Download .schem** posts the plan parameters to `/api/export` and saves the file under the server's name; the note under it shows
+  the block count and fingerprint. **Check a paste** explains `//paste` then `/ata_station verify paste`.
+- Checks show their title, message and "Next:" fix; the verdict line carries the plan's pass/warn/fail tally.
