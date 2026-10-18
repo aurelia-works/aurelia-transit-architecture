@@ -390,7 +390,9 @@ class SchematicExportTest {
 		try {
 			final HttpClient http = HttpClient.newHttpClient();
 			final String base = server.url();
-			final HttpResponse<byte[]> get = http.send(HttpRequest.newBuilder(URI.create(base + "api/export?look=UTRECHT&tracks=2&length=40&name=Leiden&seed=k7f2ra&building=1"))
+			final String token = http.send(HttpRequest.newBuilder(URI.create(base)).build(), HttpResponse.BodyHandlers.ofString()).body()
+					.replaceAll("(?s).*data-token=\"([0-9a-f]+)\".*", "$1");
+			final HttpResponse<byte[]> get = http.send(HttpRequest.newBuilder(URI.create(base + "api/export?look=UTRECHT&tracks=2&length=40&name=Leiden&seed=k7f2ra&building=1&token=" + token))
 					.build(), HttpResponse.BodyHandlers.ofByteArray());
 			assertEquals(200, get.statusCode());
 			assertEquals("application/octet-stream", get.headers().firstValue("Content-Type").orElse(""));
@@ -404,18 +406,23 @@ class SchematicExportTest {
 			assertEquals(blocks, nonAir);
 			assertTrue(get.headers().firstValue("X-ATA-Fingerprint").orElse("").matches("[0-9a-f]{16}"));
 			assertEquals(get.headers().firstValue("X-ATA-Fingerprint").orElse(""), parsed.metadata().get("ATAFingerprint"));
-			// the same request, from a page on another site, is refused; typed in the address bar or clicked on the page it is fine
+			// no token and no word from the browser that the page asked: refused (a plain client, or an old browser)
+			assertEquals(403, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2")).build(), HttpResponse.BodyHandlers.ofString()).statusCode());
+			// from a page on another site: refused, unless it knows the token
 			assertEquals(403, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2")).header("Sec-Fetch-Site", "cross-site").build(),
 					HttpResponse.BodyHandlers.ofString()).statusCode());
 			assertEquals(403, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2")).header("Sec-Fetch-Site", "same-site").build(),
 					HttpResponse.BodyHandlers.ofString()).statusCode());
-			assertEquals(200, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2&length=24")).header("Sec-Fetch-Site", "same-origin").build(),
-					HttpResponse.BodyHandlers.ofByteArray()).statusCode());
+			assertEquals(403, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2&token=0123456789abcdef0123456789abcdef")).build(),
+					HttpResponse.BodyHandlers.ofString()).statusCode());
+			// typed in the address bar ("none") or followed on the page ("same-origin") is fine
+			for (final String site : new String[]{"same-origin", "none"}) {
+				assertEquals(200, http.send(HttpRequest.newBuilder(URI.create(base + "api/export?tracks=2&length=24")).header("Sec-Fetch-Site", site).build(),
+						HttpResponse.BodyHandlers.ofByteArray()).statusCode(), site);
+			}
 			// a POST needs the page's token
 			final HttpRequest.Builder post = HttpRequest.newBuilder(URI.create(base + "api/export")).POST(HttpRequest.BodyPublishers.ofString("tracks=1&length=24"));
 			assertEquals(403, http.send(post.build(), HttpResponse.BodyHandlers.ofString()).statusCode());
-			final String token = http.send(HttpRequest.newBuilder(URI.create(base)).build(), HttpResponse.BodyHandlers.ofString()).body()
-					.replaceAll("(?s).*data-token=\"([0-9a-f]+)\".*", "$1");
 			final HttpResponse<byte[]> posted = http.send(post.header("X-Studio-Token", token).build(), HttpResponse.BodyHandlers.ofByteArray());
 			assertEquals(200, posted.statusCode());
 			assertTrue(posted.headers().firstValue("Content-Disposition").orElse("").contains("station-noseed.schem"));

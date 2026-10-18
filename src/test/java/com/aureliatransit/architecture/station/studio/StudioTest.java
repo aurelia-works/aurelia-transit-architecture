@@ -28,6 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StudioTest {
 
+	/** Tests start their servers from here up, never on the studio's own 25680 range, where a running studio may be open. */
+	private static final int TEST_PORT = 25800;
+
 	/** The mod's own assets as the studio reads them outside the game. */
 	private static final BlockModels.AssetSource OWN_ASSETS = (namespace, path) -> {
 		final Path file = Path.of("src/main/resources/assets", namespace, path);
@@ -257,7 +260,7 @@ class StudioTest {
 
 	@Test
 	void serverAnswersOnlyThisComputerAndGuardsTheGame() throws IOException, InterruptedException {
-		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok " + action);
+		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok " + action, null, TEST_PORT);
 		try {
 			final HttpClient http = HttpClient.newHttpClient();
 			final String base = server.url();
@@ -283,7 +286,7 @@ class StudioTest {
 	@Test
 	void pagesReloadWhenTheirFilesChangeOrTheServerRestarts() throws Exception {
 		final HttpClient http = HttpClient.newHttpClient();
-		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, TEST_PORT);
 		String oldToken;
 		String oldVersion;
 		try {
@@ -310,7 +313,7 @@ class StudioTest {
 			first.stop();
 		}
 		// a restarted server answers differently and has a new token: the reloaded page picks it up, the old one is refused
-		final StudioServer second = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");
+		final StudioServer second = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, TEST_PORT);
 		try {
 			final String version = http.send(HttpRequest.newBuilder(URI.create(second.url() + "api/version")).build(), HttpResponse.BodyHandlers.ofString()).body();
 			assertTrue(!version.equals(oldVersion));
@@ -435,5 +438,40 @@ class StudioTest {
 		assertEquals(5, Json.list(options.get("eras")).size());
 		assertEquals(5, Json.list(options.get("facings")).size());
 		assertEquals(List.of("halt", "Halt"), Json.list(Json.list(options.get("classes")).get(1)));
+	}
+
+	/** Turning a station turns its panes, rails, girders and screens with it: the same joins whichever way it faces. */
+	@Test
+	void joinsDoNotDependOnWhichWayTheStationFaces() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		for (final String words : new String[]{"3 tracks island, 96 long, station building, utrecht, footbridge, escalators",
+				"4 tracks island, 96 long, terminus, hamburg"}) {
+			final java.util.Map<String, Integer> joins = new java.util.TreeMap<>();
+			for (final String facing : new String[]{"auto", "north", "east", "south", "west"}) {
+				final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("text", words, "facing", facing, "pinned", ""))));
+				int count = 0;
+				final java.util.Map<String, Integer> perCell = new java.util.HashMap<>();
+				final List<Object> models = Json.list(plan.get("models"));
+				final List<Object> cells = Json.list(plan.get("cells"));
+				final int[] uses = new int[models.size()];
+				for (int i = 3; i < cells.size(); i += 5) {
+					uses[((Double) cells.get(i)).intValue()]++;
+				}
+				for (int m = 0; m < models.size(); m++) {
+					final String state = (String) Json.object(models.get(m)).get("state");
+					int here = 0;
+					for (int at = state.indexOf("=true"); at >= 0; at = state.indexOf("=true", at + 1)) {
+						here++;
+					}
+					count += here * uses[m];
+				}
+				joins.put(facing, count);
+			}
+			assertTrue(joins.get("auto") > 100, words + ": found only " + joins.get("auto") + " joins to compare");
+			assertEquals(joins.get("auto"), joins.get("north"), words);
+			for (final String facing : new String[]{"east", "south", "west"}) {
+				assertEquals(joins.get("auto"), joins.get(facing), words + " facing " + facing + ": " + joins);
+			}
+		}
 	}
 }

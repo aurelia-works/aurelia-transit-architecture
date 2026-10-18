@@ -12,7 +12,7 @@ reads, so the preview, the export and the game all plan the same station.
 | Endpoint | Method | What |
 |---|---|---|
 | `/api/plan` | POST (token) | plans and describes a station: JSON, below |
-| `/api/export` | GET or POST | the same station as a Sponge schematic file |
+| `/api/export` | GET (`token=` or a typed address) or POST (token) | the same station as a Sponge schematic file |
 | `/api/send` | POST (token) | plan / build / undo / cancel in the game (only when opened from the game) |
 | `/api/options` | GET | the choices and limits |
 | `/api/version` | GET | page-file and start ids for the self-reload |
@@ -81,9 +81,11 @@ Request fields: `class` = `auto|halt|regional|town|city|grand`, `era` = `auto|hi
   `X-ATA-Blocks: <planned block count>`, `X-ATA-Fingerprint: <the plan's fingerprint>`.
 - **400** with `{"error": "..."}`: the station cannot be built (a design rule or station check fails: nothing is exported that the
   game would refuse to build), or the request is unreadable (too long).
-- **403**: a POST without the studio token, or a GET that a browser says came from another site (`Sec-Fetch-Site` other than
-  `same-origin`/`none`). A plain link on the page or an address typed in the bar is fine; a web page elsewhere cannot make the studio
-  plan in a loop. (A GET without `Sec-Fetch-Site`, such as `curl`, is answered.)
+- **403**: a POST without the studio token (header `X-Studio-Token`, or a `token` field), or a GET with neither `token=<the studio token>`
+  among its fields nor the browser's own word that it came from this page (`Sec-Fetch-Site: same-origin`) or from the address bar
+  (`none`). The page's download link should carry `token=`; an address typed in the bar works as it is; a page on another site, a
+  browser that sends no `Sec-Fetch-Site` and a plain `curl` without the token are refused, so a web page elsewhere cannot make
+  the studio plan in a loop.
 
 The file is written by `SchematicExport`/`Nbt` with no Minecraft classes, so it works in the standalone studio too, and it is
 deterministic: the same request gives the same bytes.

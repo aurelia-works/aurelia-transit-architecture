@@ -167,8 +167,9 @@ public final class StudioServer {
 
 	/**
 	 * The station of a plan request as a Sponge schematic file (see {@link SchematicExport}). A POST carries the studio token like
-	 * {@code /api/plan}. A GET is a link or a typed address, which cannot carry a header: it is answered unless the browser says
-	 * another site (or another page on this machine) asked for it, so a web page elsewhere cannot make the studio plan in a loop.
+	 * {@code /api/plan}. A GET is a link or a typed address, which cannot carry a header: it needs {@code token=} among its fields, or
+	 * the browser's own word that it came from this page ({@code Sec-Fetch-Site: same-origin}) or from nowhere ({@code none}, a typed
+	 * address), so a web page elsewhere cannot make the studio plan in a loop.
 	 * An unbuildable or invalid request is a 400 with {@code {"error": "..."}}.
 	 */
 	private void export(HttpExchange exchange, boolean get) throws IOException {
@@ -199,13 +200,17 @@ public final class StudioServer {
 	/** The export request's fields, or null after answering 403 for a request that is not the studio page's own. */
 	private Map<String, String> exportRequest(HttpExchange exchange, boolean get) throws IOException {
 		if (get) {
+			final String query = exchange.getRequestURI().getRawQuery();
+			final Map<String, String> q = form(query == null ? "" : query);
+			// a link on the page carries the token; an address typed in the bar has no token but the browser says it came from nowhere
+			// ("none"), and a link followed on this page says "same-origin". Anything else, or no word at all, needs the token.
 			final String site = exchange.getRequestHeaders().getFirst("Sec-Fetch-Site");
-			if (site != null && !site.equals("same-origin") && !site.equals("none")) {
-				reply(exchange, 403, "text/plain", "Open the export from the studio page.");
+			final boolean ownPage = "same-origin".equals(site) || "none".equals(site);
+			if (!token.equals(q.get("token")) && !ownPage) {
+				reply(exchange, 403, "text/plain", "Open the export from the studio page, or add its token.");
 				return null;
 			}
-			final String query = exchange.getRequestURI().getRawQuery();
-			return form(query == null ? "" : query);
+			return q;
 		}
 		final Map<String, String> q = form(body(exchange));
 		if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token")) && !token.equals(q.get("token"))) {
