@@ -4711,6 +4711,8 @@ public final class StationPlanner {
 		private static final int FORECOURT_ISLAND = 3;
 		/** Taxi bays: how many, how wide and how long. */
 		private static final int FORECOURT_BAYS = 3;
+		/** Rows of a terminus forecourt's drop-off lay-by, between its kerb and the street. */
+		private static final int TERMINUS_LAY_BY = 4;
 		private static final int FORECOURT_BAY = 3;
 		private static final int FORECOURT_BAY_LENGTH = 5;
 		private static final String FORECOURT_STOP_SIGN = "aurelia_transit_architecture:bus_stop_sign";
@@ -4752,6 +4754,10 @@ public final class StationPlanner {
 		 */
 		void forecourt() {
 			if (!layout.terminus() || layout.forecourtDepth() <= 0) {
+				return;
+			}
+			if (!spec.hub()) {
+				terminusForecourt();
 				return;
 			}
 			final int u0 = layout.headFrom();
@@ -4801,6 +4807,53 @@ public final class StationPlanner {
 				put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f0 + 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
 				put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f1 - 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
 				put(Role.FIXTURE, wall, StationGeometry.PLATFORM_Y, f0 + 9, LocalDir.PLUS_U, FORECOURT_TIMETABLE);
+			}
+		}
+
+		/**
+		 * A terminus's forecourt ("parking"), past its head building: a paved way from the door to the street, a drop-off lay-by
+		 * open to the street on one side behind a kerb with bollards, cycle stands on the other side, and a tree on each side.
+		 */
+		private void terminusForecourt() {
+			final int u0 = layout.headFrom();
+			final int u1 = layout.headTo();
+			final int door = headDoor();
+			final int f0 = layout.forecourtFrom();
+			final int f1 = layout.vMax();
+			final int layBy = f1 - TERMINUS_LAY_BY;
+			for (int u = u0; u <= u1; u++) {
+				for (int v = f0; v <= f1; v++) {
+					final int c = u - door;
+					final boolean way = Math.abs(c) <= FORECOURT_WAY || v - f0 < 2;
+					String block = LOT_PAVING;
+					LocalDir front = LocalDir.PLUS_V;
+					if (!way && c < 0 && v == layBy) {
+						// the kerb between the footway and the lay-by
+						block = LOT_KERB;
+					} else if (!way && c < 0 && v > layBy) {
+						// the lay-by itself, open to the street
+						block = LOT_MARK;
+					} else if (v == f1 && !way) {
+						block = LOT_KERB;
+					}
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y - 1, v, front, block);
+				}
+			}
+			// bollards along the lay-by kerb keep cars off the footway
+			for (int u = door - FORECOURT_WAY - 2; u > u0; u -= 3) {
+				put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, layBy - 1, LocalDir.PLUS_V, LOT_BOLLARD);
+			}
+			// cycle stands: a post and a rail each, in two rows beside the way
+			for (int u = door + FORECOURT_WAY + 2; u < u1 - 1; u += 2) {
+				put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, f0 + 3, LocalDir.PLUS_V, LOT_STAND_POST);
+				put(Role.RAILING, u, StationGeometry.PLATFORM_Y, f0 + 4, LocalDir.PLUS_V, LOT_STAND_RAIL);
+			}
+			// a tree each side, clear of the lay-by and the stands
+			for (final int[] at : new int[][]{{u0 + 2, f0 + 3}, {u1 - 2, f0 + 8}}) {
+				if (at[0] > u0 && at[0] < u1 && Math.abs(at[0] - door) > FORECOURT_WAY + 1 && at[1] < (at[0] < door ? layBy - 2 : f1 - 1)) {
+					put(Role.FLOOR, at[0], StationGeometry.PLATFORM_Y - 1, at[1], LocalDir.PLUS_V, LOT_TRUNK, "axis=y");
+					tree(at[0], at[1]);
+				}
 			}
 		}
 

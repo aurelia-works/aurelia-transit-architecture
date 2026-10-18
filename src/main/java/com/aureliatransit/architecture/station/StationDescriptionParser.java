@@ -1864,9 +1864,14 @@ public final class StationDescriptionParser {
 				builder.terminus(true);
 				note(terminusAt, "terminus: the tracks end at buffer stops in front of the head building");
 			}
-			if (parking && !builder.build().sideBuilding()) {
-				// a terminus's street is beyond its head building, and a buildingless station has no street wall to park in front of
-				warn("a car park is only built in front of a station building beside the platforms; it is left out here");
+			if (parking && hub) {
+				warn("a hub's forecourt already has its taxi rank and bus interchange; the car park is left out");
+				builder.parking(false);
+			} else if (parking && terminus) {
+				note(-1, "parking: a forecourt past the head building with a drop-off lay-by, cycle stands and trees");
+			} else if (parking && !builder.build().sideBuilding()) {
+				// a buildingless station has no street wall to park in front of
+				warn("a car park is only built in front of a station building beside the platforms or past a terminus; it is left out here");
 				builder.parking(false);
 			}
 			final boolean bridge = Boolean.TRUE.equals(footbridge);

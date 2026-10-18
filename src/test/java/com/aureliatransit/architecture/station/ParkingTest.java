@@ -44,10 +44,12 @@ class ParkingTest {
 	}
 
 	@Test
-	void aTerminusSaysTheLotWasLeftOut() {
+	void aTerminusGetsItsForecourtInstead() {
 		final ParseResult parse = StationDescriptionParser.parse("grand terminus 64 long with a station building and parking");
-		assertFalse(parse.spec().parking(), "a terminus has no street wall to park in front of");
-		assertTrue(parse.warnings().stream().anyMatch(w -> w.contains("car park")), parse.warnings().toString());
+		assertTrue(parse.spec().parking(), "a terminus's parking is the forecourt past its head building (TerminusForecourtTest)");
+		final ParseResult halt = StationDescriptionParser.parse("1 track, no station building, parking");
+		assertFalse(halt.spec().parking(), "no building, no street wall to park in front of");
+		assertTrue(halt.warnings().stream().anyMatch(w -> w.contains("car park")), halt.warnings().toString());
 	}
 
 	@Test

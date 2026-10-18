@@ -110,6 +110,13 @@ public final class StationGeometry {
 	public static final int GRAND_HEAD_DEPTH = 42;
 	/** A hub's forecourt past the head building's entrance ramps: a taxi rank on one side, a bus interchange on the other. */
 	public static final int FORECOURT_DEPTH = 18;
+	/** A terminus's forecourt asked for with "parking": a drop-off lay-by off the street, cycle stands and trees. */
+	public static final int TERMINUS_FORECOURT_DEPTH = 12;
+
+	/** Rows of forecourt past a terminus's head building: a hub's, a terminus's when it asked for parking, else none. */
+	public static int forecourtDepth(StationSpec spec) {
+		return !spec.terminus() ? 0 : spec.hub() ? FORECOURT_DEPTH : spec.parking() ? TERMINUS_FORECOURT_DEPTH : 0;
+	}
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
 	/** Narrowest island with a two-column stair and room for a lift beside the walkway. */
@@ -261,7 +268,7 @@ public final class StationGeometry {
 		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0);
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
-					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, spec.hub() ? FORECOURT_DEPTH : 0);
+					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, forecourtDepth(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {
