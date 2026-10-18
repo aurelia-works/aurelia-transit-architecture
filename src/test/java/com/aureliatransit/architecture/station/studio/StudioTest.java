@@ -393,4 +393,47 @@ class StudioTest {
 		assertEquals("Step-free access", problems.stream().map(c -> Json.object(c).get("title")).findFirst().orElse(""));
 	}
 
+	@Test
+	void classEraAndFacingArePlannedAndReportedWithoutEverFailing() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> halt = Json.object(Json.parse(api.plan(Map.of("class", "halt", "era", "postwar", "facing", "east", "look", "UTRECHT",
+				"tracks", "4", "length", "200", "pinned", ""))));
+		final Map<String, Object> resolved = Json.object(halt.get("resolved"));
+		assertEquals("halt", resolved.get("class"));
+		assertEquals("postwar", resolved.get("era"));
+		assertEquals("east", halt.get("facing"));
+		final Map<String, Object> built = Json.object(halt.get("built"));
+		assertEquals(1.0, built.get("tracks"), "the class decides what is not pinned, whatever the controls say");
+		assertEquals(75.0, built.get("length"));
+		assertEquals(Boolean.TRUE, halt.get("buildable"));
+		assertTrue(((String) halt.get("text")).contains("halt class") && ((String) halt.get("text")).contains("postwar era")
+				&& ((String) halt.get("text")).contains("facing east"), (String) halt.get("text"));
+		// a pinned control wins
+		final Map<String, Object> pinned = Json.object(Json.parse(api.plan(Map.of("class", "halt", "tracks", "3", "length", "200", "pinned", "tracks,length"))));
+		assertEquals(3.0, Json.object(pinned.get("built")).get("tracks"));
+		assertEquals(200.0, Json.object(pinned.get("built")).get("length"));
+		assertEquals("halt", Json.object(pinned.get("resolved")).get("class"), "asked for is reported, whatever the numbers became");
+		// unknown values are auto, never an error
+		final Map<String, Object> junk = Json.object(Json.parse(api.plan(Map.of("class", "banana", "era", "1", "facing", "up", "tracks", "2", "length", "48", "building", "0"))));
+		assertEquals("auto", junk.get("facing"));
+		assertEquals("halt", Json.object(junk.get("resolved")).get("class"), "auto resolves to what the numbers amount to");
+		assertEquals("modern", Json.object(junk.get("resolved")).get("era"));
+		assertEquals(Boolean.TRUE, junk.get("buildable"));
+		// the picture turns with the facing; the blocks and the fingerprint do not
+		final Map<String, String> base = Map.of("look", "UTRECHT", "tracks", "2", "length", "64", "building", "1");
+		final Map<String, Object> north = Json.object(Json.parse(api.plan(base)));
+		final java.util.HashMap<String, String> east = new java.util.HashMap<>(base);
+		east.put("facing", "east");
+		final Map<String, Object> turned = Json.object(Json.parse(api.plan(east)));
+		assertEquals(north.get("fingerprint"), turned.get("fingerprint"));
+		assertEquals(Json.list(north.get("cells")).size(), Json.list(turned.get("cells")).size());
+		assertNotEquals(Json.list(north.get("cells")), Json.list(turned.get("cells")));
+		assertNotNull(Json.object(turned.get("street")).get("x"), "the street view follows the turned station");
+		// options list them
+		final Map<String, Object> options = Json.object(Json.parse(api.options()));
+		assertEquals(6, Json.list(options.get("classes")).size());
+		assertEquals(5, Json.list(options.get("eras")).size());
+		assertEquals(5, Json.list(options.get("facings")).size());
+		assertEquals(List.of("halt", "Halt"), Json.list(Json.list(options.get("classes")).get(1)));
+	}
 }

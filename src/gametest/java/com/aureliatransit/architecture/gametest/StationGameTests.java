@@ -754,6 +754,33 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * "facing south" builds the station that way round whatever way the player looks: a through station's building is on the left of
+	 * its forward direction, a terminus's head building across it. Without the words the player's own heading is used.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 100)
+	public void facingWordsTurnTheStationNotThePlayer(TestContext context) {
+		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
+		final BlockPos feet = context.getAbsolutePos(FEET_Z);
+		player.refreshPositionAndAngles(feet.getX() + 0.5, feet.getY(), feet.getZ() + 0.5, Direction.SOUTH.asRotation(), 0.0F);
+		final UUID id = player.getUuid();
+		check(StationActions.plan(player, SMALL, null), "plan refused");
+		check(StationSessions.pending(id).frame().forward() == Heading.SOUTH, "no facing words: the player's heading, got " + StationSessions.pending(id).frame().forward());
+		for (final Heading facing : Heading.values()) {
+			final String words = SMALL + ", facing " + facing.name().toLowerCase();
+			check(StationActions.plan(player, words, null), "plan refused: " + words);
+			final StationSessions.Pending pending = StationSessions.pending(id);
+			check(pending.spec().facing().direction() == facing, "facing read as " + pending.spec().facing());
+			check(pending.frame().forward() == StationPlacement.heading(pending.spec()), "built facing " + pending.frame().forward());
+			check(pending.frame().forward() == facing.right(), "a through station faces " + facing + " with its building on the left of " + pending.frame().forward());
+		}
+		check(StationActions.plan(player, TERMINUS + ", facing west", null), "plan refused");
+		check(StationSessions.pending(id).frame().forward() == Heading.WEST, "a terminus faces the way its head building does");
+		StationSessions.forgetPlayer(id);
+		Fixtures.removePlayer(context, player);
+		context.complete();
+	}
+
 	// ---- station wrench --------------------------------------------------------------------------------------------
 
 	/**

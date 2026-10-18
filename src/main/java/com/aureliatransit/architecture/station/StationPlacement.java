@@ -28,11 +28,19 @@ public final class StationPlacement {
 	}
 
 	/**
-	 * The heading a station is built facing: the way the frame's {@code +v} runs. Station Studio draws and exports every station facing
-	 * north (a terminus's front to the north, a through station's street to the west).
+	 * The heading a station is built facing: the way the frame's {@code +v} runs. A station asked to face a compass direction ("facing
+	 * north", {@link StationSpec#facing()}) has its street side, the way its entrance looks, that way: a terminus's head building is across
+	 * the end of the tracks, so it faces the way {@code +v} runs; a through station's building is on the left of {@code +v}, so the
+	 * heading is a quarter turn clockwise from the facing. A station not asked is drawn and exported facing north, which is also Station
+	 * Studio's own view (a terminus's front to the north, a through station's street to the west); in the game it is built the way the
+	 * player looks.
 	 */
 	public static Heading heading(StationSpec spec) {
-		return Heading.NORTH;
+		final Heading facing = spec.facing().direction();
+		if (facing == null) {
+			return Heading.NORTH;
+		}
+		return spec.terminus() ? facing : facing.right();
 	}
 
 	/** The frame Station Studio draws and exports the station in: its origin at 0, 0, 0 and {@link #heading}. */

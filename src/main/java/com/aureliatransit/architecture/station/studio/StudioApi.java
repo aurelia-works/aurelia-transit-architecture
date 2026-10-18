@@ -10,7 +10,10 @@ import com.aureliatransit.architecture.station.ParseResult;
 import com.aureliatransit.architecture.station.PlanFingerprint;
 import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.Role;
+import com.aureliatransit.architecture.station.Facing;
 import com.aureliatransit.architecture.station.StationAudit;
+import com.aureliatransit.architecture.station.StationClass;
+import com.aureliatransit.architecture.station.StationEra;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationLayout;
 import com.aureliatransit.architecture.station.StationGeometry;
@@ -125,11 +128,35 @@ public final class StudioApi {
 
 	/**
 	 * The whole description a request plans and builds: the controls (only the pinned ones once there are typed words), the
-	 * typed words, then the dice's seed. The seed is not typed words: it must never make the controls give way to them.
-	 * The studio's preview and its Plan and Build buttons all use this, so the game builds the station the page showed.
+	 * typed words, the station class, era and facing, then the dice's seed. The seed is not typed words: it must never make the
+	 * controls give way to them. The studio's preview and its Plan and Build buttons all use this, so the game builds the station the
+	 * page showed.
+	 *
+	 * <p>With a class or an era chosen, the pinned controls alone go in (even when there are no typed words), so the class fills in
+	 * every control the player has not touched; a touched control and the typed words still win. The class and era are written as
+	 * "halt class" and "postwar era", which the parser reads without the older meaning of the bare words, and the facing as "facing north".
 	 */
 	public static String description(Map<String, String> q) {
-		final String text = recipe(q).text(typed(q), pinned(q));
+		final StationClass stationClass = StationClass.of(q.get("class"));
+		final StationEra era = StationEra.of(q.get("era"));
+		final Facing facing = Facing.of(q.get("facing"));
+		String text;
+		if (stationClass == StationClass.AUTO && era == StationEra.AUTO) {
+			text = recipe(q).text(typed(q), pinned(q));
+		} else {
+			final String head = recipe(q).description(pinned(q));
+			final String typed = typed(q);
+			text = typed.isEmpty() ? head : head.isEmpty() ? typed : head + ", " + typed;
+		}
+		if (stationClass != StationClass.AUTO) {
+			text = (text.isEmpty() ? "" : text + ", ") + stationClass.key() + " class";
+		}
+		if (era != StationEra.AUTO) {
+			text = (text.isEmpty() ? "" : text + ", ") + era.key() + " era";
+		}
+		if (facing != Facing.AUTO) {
+			text = (text.isEmpty() ? "" : text + ", ") + "facing " + facing.key();
+		}
 		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
 		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
 	}
@@ -158,6 +185,9 @@ public final class StudioApi {
 		out.append(",\"tracks\":[").append(StationRecipe.MIN_TRACKS).append(',').append(StationRecipe.MAX_TRACKS).append(']');
 		out.append(",\"length\":[").append(StationRecipe.MIN_LENGTH).append(',').append(StationRecipe.MAX_LENGTH).append(',')
 				.append(StationRecipe.DEFAULT_LENGTH).append(']');
+		out.append(",\"classes\":").append(keys(StationClass.values(), StationClass::key, StationClass::label));
+		out.append(",\"eras\":").append(keys(StationEra.values(), StationEra::key, StationEra::label));
+		out.append(",\"facings\":").append(keys(Facing.values(), Facing::key, f -> f == Facing.AUTO ? "Auto" : f.key().substring(0, 1).toUpperCase(Locale.ROOT) + f.key().substring(1)));
 		out.append(",\"maxTyped\":").append(MAX_TYPED).append(",\"maxName\":").append(StationSpec.MAX_NAME);
 		out.append(",\"presets\":[");
 		for (int i = 0; i < StationPresets.ALL.size(); i++) {
@@ -289,7 +319,9 @@ public final class StudioApi {
 		out.append(",\"fingerprint\":").append(Json.quote(PlanFingerprint.of(plan)));
 		// the roof and building size this station was planned with, as the page's options, so a locked "Auto" can keep them
 		out.append(",\"resolved\":{\"roof\":").append(Json.quote(resolvedRoof(spec).name())).append(",\"size\":")
-				.append(Json.quote(spec.hasBuilding() ? resolvedSize(spec).name() : "AUTO")).append('}');
+				.append(Json.quote(spec.hasBuilding() ? resolvedSize(spec).name() : "AUTO")).append(",\"class\":")
+				.append(Json.quote(StationClass.of(spec).key())).append(",\"era\":").append(Json.quote(StationEra.of(spec).key())).append('}');
+		out.append(",\"facing\":").append(Json.quote(spec.facing().key()));
 		out.append(",\"encoded\":").append(Json.quote(recipe.encode()));
 		out.append(",\"typed\":").append(Json.quote(typed));
 		out.append(",\"understood\":").append(Json.strings(parse.understood()));
@@ -385,9 +417,9 @@ public final class StudioApi {
 		info.put("Generator", "Station Studio");
 		info.put("Version", StudioServer.VERSION);
 		info.put("Seed", StationSeed.format(spec.seed()));
-		info.put("Facing", "auto");
-		info.put("Class", "auto");
-		info.put("Era", "auto");
+		info.put("Facing", spec.facing().key());
+		info.put("Class", StationClass.of(spec).key());
+		info.put("Era", StationEra.of(spec).key());
 		info.put("Blocks", Integer.toString(plan.blocks().size()));
 		info.put("Origin", "on the ground in front of the street entrance");
 		info.put("Description", done.text());
@@ -596,6 +628,15 @@ public final class StudioApi {
 			names.add(value.name());
 		}
 		return names;
+	}
+
+	/** [["key","Label"],...] in declaration order. */
+	private static <E> String keys(E[] values, java.util.function.Function<E, String> key, java.util.function.Function<E, String> label) {
+		final StringBuilder out = new StringBuilder("[");
+		for (final E value : values) {
+			out.append(out.length() > 1 ? "," : "").append('[').append(Json.quote(key.apply(value))).append(',').append(Json.quote(label.apply(value))).append(']');
+		}
+		return out.append(']').toString();
 	}
 
 	/** {"key":"Label",...} in declaration order. */
