@@ -25,6 +25,14 @@ public final class StationPlanner {
 	private static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	private static final String CEILING_SPEAKER = "aurelia_transit_architecture:ceiling_speaker";
 	private static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
+	/** A waiting shelter for an open platform: roof, back and posts in one block; its front is the open side. */
+	private static final String SHELTER = "aurelia_transit_architecture:sbahn_shelter";
+	/** Cells in a row of shelter blocks. */
+	private static final int SHELTER_LENGTH = 3;
+	/** The narrowest island that takes two rows of shelters back to back and a walkway either side. */
+	private static final int SHELTER_ISLAND = 7;
+	/** The shortest open platform that gets a shelter. */
+	private static final int SHELTER_MIN_PLATFORM = 24;
 	private static final String WAITING_ROOM_GLASS = "aurelia_transit_architecture:glass_wall";
 	private static final String NUMBER_SIGN = "aurelia_transit_architecture:platform_number_sign";
 	/** The canopy's sloping blocks (the low end points the way the block faces): the two halves of a half-block slope. */
@@ -72,6 +80,7 @@ public final class StationPlanner {
 		planning.hallRoof();
 		planning.numberSigns();
 		planning.lamps();
+		planning.shelters();
 		planning.benchesAndBins();
 		planning.interior();
 		planning.headInterior();
@@ -3784,6 +3793,66 @@ public final class StationPlanner {
 					put(Role.LAMP, u, room ? LAMP_HEAD_Y : StationGeometry.WALK_Y, v, front);
 				}
 			}
+		}
+
+		/**
+		 * Waiting shelters on an open platform (no roof over it): a row of {@link #SHELTER_LENGTH} S-Bahn shelter blocks facing the
+		 * track, in the back column of a side platform or, on an island at least {@link #SHELTER_ISLAND} wide, two rows back to back,
+		 * at the free spot nearest the middle of the platform, clear of the edge, the stairs and any travelator. Platforms under
+		 * a roof have cover already.
+		 */
+		void shelters() {
+			if (!spec.furniture()) {
+				return;
+			}
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (roof(band) != RoofType.NONE || band.length() < SHELTER_MIN_PLATFORM) {
+					continue;
+				}
+				final int middle = (band.vFrom() + band.vTo()) / 2;
+				for (int d = 0; d <= band.length() / 2 - SHELTER_LENGTH; d++) {
+					boolean placed = false;
+					for (final int v : d == 0 ? new int[]{middle} : new int[]{middle + d, middle - d}) {
+						placed = shelterAt(band, v);
+						if (placed) {
+							break;
+						}
+					}
+					if (placed) {
+						break;
+					}
+				}
+			}
+		}
+
+		/** A shelter whose first cell is at {@code v}; true if all of its cells were free and it was placed. */
+		private boolean shelterAt(TrackLayout.PlatformBand band, int v) {
+			final int[] columns;
+			final LocalDir[] fronts;
+			if (!band.island()) {
+				columns = new int[]{backColumn(band)};
+				fronts = new LocalDir[]{towardTrack(band)};
+			} else if (band.width() >= SHELTER_ISLAND) {
+				final int middle = (band.uMin() + band.uMax()) / 2;
+				columns = new int[]{middle, middle + 1};
+				fronts = new LocalDir[]{LocalDir.MINUS_U, LocalDir.PLUS_U};
+			} else {
+				return false;
+			}
+			for (final int u : columns) {
+				for (int i = 0; i < SHELTER_LENGTH; i++) {
+					if (v + i < band.vFrom() + 2 || v + i > band.vTo() - 2 || isEdge(band, u) || taken(u, StationGeometry.WALK_Y, v + i)
+							|| taken(u, StationGeometry.WALK_Y + 1, v + i) || nearStairs(band, v + i) || nearTravelator(band, u, v + i)) {
+						return false;
+					}
+				}
+			}
+			for (int c = 0; c < columns.length; c++) {
+				for (int i = 0; i < SHELTER_LENGTH; i++) {
+					put(Role.FIXTURE, columns[c], StationGeometry.WALK_Y, v + i, fronts[c], SHELTER);
+				}
+			}
+			return true;
 		}
 
 		void benchesAndBins() {
