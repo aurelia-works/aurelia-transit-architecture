@@ -20,9 +20,11 @@ import java.util.List;
  *                       the platforms beside a bay track (0 for any other station; see {@link StationGeometry#hubThrough})
  * @param parkingWidth   columns at the low-u edge taken by a car park in front of the building ({@link StationGeometry#PARKING_DEPTH},
  *                       0 without one); they are outside the building, so not indoor
+ * @param forecourtDepth rows v = headEnd + {@link StationGeometry#HEAD_APRON} + 1 .. past the head building's entrance ramps, taken by a
+ *                       hub's forecourt with its bus interchange and taxi rank ({@link StationGeometry#FORECOURT_DEPTH}, 0 without one)
  */
 public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
-		int headDepth, int hubThrough, int parkingWidth) {
+		int headDepth, int hubThrough, int parkingWidth, int forecourtDepth) {
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -33,6 +35,11 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 					platformLength - 1, band.deadEnd()) : band);
 		}
 		platforms = List.copyOf(bands);
+	}
+
+	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
+			int headDepth, int hubThrough, int parkingWidth) {
+		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, hubThrough, parkingWidth, 0);
 	}
 
 	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
@@ -184,9 +191,14 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return -rampLength;
 	}
 
-	/** Last v of the footprint (the end of the ramps, or of a terminus head building's apron). */
+	/** Last v of the footprint (the end of the ramps, or of a terminus head building's apron and the forecourt past it). */
 	public int vMax() {
-		return platformLength - 1 + (terminus() ? headDepth : rampLength);
+		return platformLength - 1 + (terminus() ? headDepth + forecourtDepth : rampLength);
+	}
+
+	/** First v of a hub's forecourt: the row past the head building's entrance ramps. Meaningful only with a forecourt. */
+	public int forecourtFrom() {
+		return headEnd() + StationGeometry.HEAD_APRON + 1;
 	}
 
 	/**
