@@ -45,6 +45,10 @@ public final class StudioServer {
 		String send(String action, String description, String encoded);
 	}
 
+	/** Who opened the studio, for the page's profile card: the Minecraft name and UUID (null outside the game). */
+	public record Player(String name, String uuid) {
+	}
+
 	public static final int FIRST_PORT = 25680;
 	private static final int PORTS = 10;
 	private static final int MAX_BODY = 16 * 1024;
@@ -56,12 +60,14 @@ public final class StudioServer {
 	private final StudioApi api;
 	private final BlockModels.AssetSource assets;
 	private final Sender sender;
+	private final Player player;
 	private final String token;
 	/** Changes on every start, so pages can tell a restarted server; not the token. */
 	private final String boot;
 
-	private StudioServer(HttpServer server, StudioApi api, BlockModels.AssetSource assets, Sender sender) {
+	private StudioServer(HttpServer server, StudioApi api, BlockModels.AssetSource assets, Sender sender, Player player) {
 		this.server = server;
+		this.player = player;
 		this.api = api;
 		this.assets = assets;
 		this.sender = sender;
@@ -81,11 +87,16 @@ public final class StudioServer {
 
 	/** Starts on the first free port from {@link #FIRST_PORT}; {@code sender} is null outside the game. */
 	public static StudioServer start(BlockModels.AssetSource assets, Sender sender) throws IOException {
+		return start(assets, sender, null);
+	}
+
+	/** As {@link #start(BlockModels.AssetSource, Sender)}, with the player shown on the page's profile card (null for none). */
+	public static StudioServer start(BlockModels.AssetSource assets, Sender sender, Player player) throws IOException {
 		IOException last = null;
 		for (int port = FIRST_PORT; port < FIRST_PORT + PORTS; port++) {
 			try {
 				final HttpServer http = HttpServer.create(new InetSocketAddress(InetAddress.getLoopbackAddress(), port), 16);
-				final StudioServer studio = new StudioServer(http, new StudioApi(new BlockModels(assets)), assets, sender);
+				final StudioServer studio = new StudioServer(http, new StudioApi(new BlockModels(assets)), assets, sender, player);
 				http.start();
 				return studio;
 			} catch (BindException e) {
@@ -114,7 +125,9 @@ public final class StudioServer {
 			final String path = exchange.getRequestURI().getPath();
 			final String method = exchange.getRequestMethod();
 			if (path.equals("/") || path.equals("/index.html")) {
-				final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null));
+				final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null))
+						.replace("{{VERSION}}", html(VERSION)).replace("{{PLAYER}}", player == null ? "" : html(player.name()))
+						.replace("{{UUID}}", player == null || player.uuid() == null ? "" : html(player.uuid().replace("-", "")));
 				reply(exchange, 200, "text/html; charset=utf-8", page);
 			} else if (path.equals("/studio.js") || path.equals("/silk.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
 				reply(exchange, 200, path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", resource(path.substring(1)));
@@ -208,6 +221,26 @@ public final class StudioServer {
 			exchange.getResponseHeaders().set("Cache-Control", "max-age=86400");
 			reply(exchange, 200, "image/jpeg", in.readAllBytes());
 		}
+	}
+
+	/** The mod's version, from fabric.mod.json on the classpath (expanded by processResources); "dev" when it is not there. */
+	static final String VERSION = version();
+
+	private static String version() {
+		try (InputStream in = StudioServer.class.getResourceAsStream("/fabric.mod.json")) {
+			if (in == null) {
+				return "dev";
+			}
+			final java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"version\"\\s*:\\s*\"([^\"$]+)\"")
+					.matcher(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+			return m.find() ? m.group(1) : "dev";
+		} catch (IOException e) {
+			return "dev";
+		}
+	}
+
+	private static String html(String text) {
+		return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
 	}
 
 	private static String resource(String name) throws IOException {

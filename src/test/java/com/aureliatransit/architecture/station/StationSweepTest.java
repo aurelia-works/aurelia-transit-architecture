@@ -59,6 +59,10 @@ class StationSweepTest {
 					d.append(o).append(", ");
 				}
 			}
+			// half the stations carry a generator seed, which varies canopies, sheds, floors, roofs and benches
+			if (r.nextBoolean()) {
+				d.append("seed ").append(Long.toString(r.nextLong() >>> 4, 36).substring(0, 6)).append(", ");
+			}
 			d.append("named Sweep ").append(i);
 			run(d.toString(), out);
 		});

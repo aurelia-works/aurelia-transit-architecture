@@ -342,8 +342,9 @@ public final class StationPlanner {
 		}
 
 		/** A platform's colour at the gate line. */
-		private static String platformColour(TrackLayout.PlatformBand band) {
-			return PLATFORM_COLOURS.get((band.number() - 1) % PLATFORM_COLOURS.size());
+		/** Each platform's colour, in turn from blue; a seed starts the turn at another colour. */
+		private String platformColour(TrackLayout.PlatformBand band) {
+			return PLATFORM_COLOURS.get((int) ((band.number() - 1 + Math.floorMod(spec.seed(), PLATFORM_COLOURS.size())) % PLATFORM_COLOURS.size()));
 		}
 
 		/**
@@ -3791,7 +3792,9 @@ public final class StationPlanner {
 			}
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				int index = 0;
-				for (int v = band.vFrom() + 8; v <= band.vTo() - 1; v += 16, index++) {
+				// the first bench 8 in from the platform's start, or with a seed anywhere from 4 to 12 in
+				final int first = spec.seed() == 0 ? 8 : 4 + (int) Math.floorMod(spec.seed() / PLATFORM_COLOURS.size(), 9L);
+				for (int v = band.vFrom() + first; v <= band.vTo() - 1; v += 16, index++) {
 					final int u;
 					final LocalDir front;
 					if (band.island()) {
