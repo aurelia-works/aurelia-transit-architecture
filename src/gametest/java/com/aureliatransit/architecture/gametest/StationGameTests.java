@@ -94,7 +94,7 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SITE_LARGE = "aurelia_transit_architecture_gametest:station_site_large";
 	private static final BlockPos FEET_LARGE = new BlockPos(12, 3, 1);
 	private static final String TERMINUS = "two track terminus, island platform, length 16, width 3, train shed, named Test";
-	private static final String SIDE_BUILDING = "single track station building, length 16, width 3, named Test";
+	private static final String SIDE_BUILDING = "single track station building, length 24, width 3, named Test";
 	/** The smallest footbridge station with lifts: platforms six wide take a two-column stair and a lift beside it. */
 	private static final String LIFTS = "two track station, side platforms, length 24, width 6, footbridge, named Test";
 	private static final String ESCALATORS = "platform 1: side 9 wide; platform 2: side 6 wide; length 24, footbridge, escalators, stairs both ways, enclosed, named Test";
@@ -262,12 +262,19 @@ public class StationGameTests implements FabricGameTest {
 			final ServerWorld world = context.getWorld();
 			final com.aureliatransit.architecture.station.StationLayout site = com.aureliatransit.architecture.station.StationLayout.of(pending.spec(),
 					StationGeometry.layout(pending.spec()));
-			final String[] shapes = {"landing_bottom", "transition_bottom", "slope", "slope", "slope", "slope", "transition_top", "landing_top"};
+			// two landings and a transition at each end, one slope step per block of rise between
+			final int top = com.aureliatransit.architecture.station.StationLayout.ESCALATOR_TOP;
+			final String[] shapes = new String[top + 1];
+			java.util.Arrays.fill(shapes, "slope");
+			shapes[0] = "landing_bottom";
+			shapes[1] = "transition_bottom";
+			shapes[top - 1] = "transition_top";
+			shapes[top] = "landing_top";
 			final Direction up = BlockStateResolver.direction(pending.frame().heading(site.stairFront()));
 			int steps = 0;
 			for (final TrackLayout.PlatformBand band : StationGeometry.layout(pending.spec()).platforms()) {
 				for (final int u : site.escalator(band)) {
-					for (int i = 0; i <= 7; i++) {
+					for (int i = 0; i <= top; i++) {
 						final BlockPos pos = pos(pending.frame(), u, com.aureliatransit.architecture.station.StationLayout.escalatorY(i), site.escalatorV(i));
 						final BlockState state = world.getBlockState(pos);
 						check(state.getProperties().stream().anyMatch(p -> p.getName().equals("orientation")), "no escalator step at " + pos + ": " + state);
@@ -279,7 +286,7 @@ public class StationGameTests implements FabricGameTest {
 					}
 				}
 			}
-			check(steps == 16, "expected one escalator of two columns of eight steps, found " + steps);
+			check(steps == 2 * (top + 1), "expected one escalator of two columns of " + (top + 1) + " steps, found " + steps);
 			// no travelator in the footbridge corridor (the platforms here are too short for their own)
 			final Map<Integer, List<BlockPos>> rows = new HashMap<>();
 			for (final PlannedBlock block : pending.plan().blocks()) {

@@ -113,7 +113,8 @@ public final class StudioApi {
 		for (final String part : list.split(",")) {
 			final String key = part.strip();
 			if (!key.isEmpty()) {
-				pinned.add(key);
+				// the second look is said together with the first ("hamburg and utrecht combined"), so it pins the look
+				pinned.add(key.equals("mix") ? "look" : key);
 			}
 		}
 		return pinned;

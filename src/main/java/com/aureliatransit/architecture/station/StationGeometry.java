@@ -10,6 +10,13 @@ import java.util.List;
 public final class StationGeometry {
 
 	/**
+	 * The scale everything people use is built at: 1.5 blocks to the real metre, so a station's halls, storeys, stairs and
+	 * buildings have their real proportions around a player (who stands 1.8 blocks, about 1.2 m at this scale). What MTR's
+	 * trains fix stays as MTR needs it: the platform edge, the track spacing and the train's clearance.
+	 */
+	public static final double BLOCKS_PER_METRE = 1.5;
+
+	/**
 	 * Columns from a track's rail node column to the nearest platform cell (the edge), at the same y as the rail node.
 	 * Live-checked in this repo's release-check world (tools/release_check/ata_test place.mcfunction: rail z=0, platform edge
 	 * z=2 facing the track, same Y), where MTR train doors were verified to open.
@@ -24,37 +31,37 @@ public final class StationGeometry {
 	public static final int ENVELOPE_HEIGHT = 5;
 	/** Smallest centre-to-centre distance of two neighbouring tracks with no platform between them. */
 	public static final int TRACK_SPACING = 4;
-	/** Clear cells above the walking surface under any roof (y = 1..3). */
+	/** Clear cells above the walking surface under any roof (y = 1..3): the least anything may leave, not what is built. */
 	public static final int HEADROOM = 3;
 	/** The lowest a roof part (girder, rib, roof) may hang over a platform: three clear cells above the walking surface. */
 	public static final int MIN_ROOF_Y = WALK_Y + HEADROOM;
 	/**
-	 * Clear cells under a platform canopy (y = 1..4): a block more than the minimum, as real canopies stand tall, and so the
-	 * roof clears the trains' envelope and can reach out over the boarding edge.
+	 * Clear cells under a platform canopy (y = 1..6): about 4 m, as real canopies stand, clear of the trains' envelope so the
+	 * roof can reach out over the boarding edge.
 	 */
-	public static final int CANOPY_HEADROOM = HEADROOM + 1;
+	public static final int CANOPY_HEADROOM = 6;
 	/** Platform canopies sit directly above their headroom, level with the footbridge deck. */
 	public static final int CANOPY_Y = WALK_Y + CANOPY_HEADROOM;
-	/** Hall beams sit directly above the track envelopes ... */
-	public static final int HALL_BEAM_Y = ENVELOPE_HEIGHT;
+	/** A compact flat hall's beams sit level with the canopies, a storey over the platforms ... */
+	public static final int HALL_BEAM_Y = CANOPY_Y;
 	/** ... and the hall roof on top of them. */
 	public static final int HALL_ROOF_Y = HALL_BEAM_Y + 1;
 	/** The frame of a wide vaulted shed, so the vault springs well above the trains. */
-	public static final int HIGH_HALL_BEAM_Y = 8;
+	public static final int HIGH_HALL_BEAM_Y = 10;
 	/** The frame of a shed over a footbridge or beside a station building: above the bridge roof and the building's cornice. */
-	public static final int TALL_HALL_BEAM_Y = 11;
+	public static final int TALL_HALL_BEAM_Y = 14;
 	/** A city flat hall's frame: higher than the compact one so the hall reads as a real volume, not a lid on the trains. */
-	public static final int CITY_HALL_BEAM_Y = 8;
+	public static final int CITY_HALL_BEAM_Y = 10;
 	/** A grand flat hall's frame: a real high hall. */
-	public static final int GRAND_HALL_BEAM_Y = 12;
+	public static final int GRAND_HALL_BEAM_Y = 15;
 	/** A city wide vault's springing. */
-	public static final int CITY_HIGH_HALL_BEAM_Y = 11;
+	public static final int CITY_HIGH_HALL_BEAM_Y = 14;
 	/** A grand wide vault's springing: a real train-shed springing height. */
-	public static final int GRAND_HIGH_HALL_BEAM_Y = 15;
+	public static final int GRAND_HIGH_HALL_BEAM_Y = 19;
 	/** A city shed over a footbridge or building: clears a taller building. */
-	public static final int CITY_TALL_HALL_BEAM_Y = 14;
-	/** A grand shed over a footbridge or building: about 20 m to the roof, the height of a real monumental train shed. */
-	public static final int GRAND_TALL_HALL_BEAM_Y = 18;
+	public static final int CITY_TALL_HALL_BEAM_Y = 18;
+	/** A grand shed over a footbridge or building: about 16 m to the springing, a real monumental train shed. */
+	public static final int GRAND_TALL_HALL_BEAM_Y = 24;
 	/** Columns stand every this many cells along a platform. */
 	public static final int COLUMN_SPACING = 8;
 	/** A roof cell must be within this many cells (along u and along v) of a column top or a beam carried by columns. */
@@ -75,12 +82,21 @@ public final class StationGeometry {
 	public static final int CITY_BUILDING_DEPTH = 15;
 	/** A grand building's depth: a real monumental hall, about 21 m, the depth a Beaux-Arts or Gothic front really has. */
 	public static final int GRAND_BUILDING_DEPTH = 21;
-	/** Ground storey: floor at y = 0, rooms y = 1..4, upper slab (and footbridge deck) at y = UPPER_FLOOR_Y ... */
-	public static final int UPPER_FLOOR_Y = ENVELOPE_HEIGHT;
+	/**
+	 * Ground storey: floor at y = 0, rooms y = 1..6 (4 m clear), upper slab (and footbridge deck) at y = UPPER_FLOOR_Y, which
+	 * leaves the trains about 4.7 m under the footbridge ...
+	 */
+	public static final int UPPER_FLOOR_Y = 7;
 	/** ... upper storey walking level ... */
 	public static final int UPPER_WALK_Y = UPPER_FLOOR_Y + 1;
-	/** ... and the flat roof (footbridge roof too) above three clear blocks. */
-	public static final int BUILDING_ROOF_Y = UPPER_WALK_Y + HEADROOM;
+	/** ... its clear height (y = 8..11, about 2.7 m: the footbridge corridor and the building's first floor) ... */
+	public static final int UPPER_HEADROOM = 4;
+	/** ... and the flat roof (footbridge roof too) above it. */
+	public static final int BUILDING_ROOF_Y = UPPER_WALK_Y + UPPER_HEADROOM;
+	/** Floor to floor of every storey a city or grand building adds over the first two: a slab and four clear, about 3.3 m. */
+	public static final int STOREY = UPPER_HEADROOM + 1;
+	/** Height of a doorway: y = 1..3, about 2.1 m. */
+	public static final int DOOR_HEIGHT = 3;
 	/** Facade bay width along the tracks, pilaster to pilaster. */
 	public static final int BAY = 6;
 	/** Footbridge corridor: clear width inside its walls ({@link #bridgeWidth}); the compact width. */
@@ -100,6 +116,11 @@ public final class StationGeometry {
 	public static final int STAIR_STEPS = UPPER_WALK_Y - WALK_Y;
 
 	private StationGeometry() {
+	}
+
+	/** Whole blocks for a real length in metres, at {@link #BLOCKS_PER_METRE}. */
+	public static int metres(double metres) {
+		return (int) Math.round(metres * BLOCKS_PER_METRE);
 	}
 
 	/**

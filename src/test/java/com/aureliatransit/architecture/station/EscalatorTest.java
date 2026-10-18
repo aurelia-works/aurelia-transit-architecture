@@ -61,6 +61,6 @@ class EscalatorTest {
 			}
 		}
 		assertTrue(escalators >= 2, "both islands are wide enough");
-		assertEquals(16L * escalators, steps(plan));
+		assertEquals(2L * (StationLayout.ESCALATOR_TOP + 1) * escalators, steps(plan));
 	}
 }

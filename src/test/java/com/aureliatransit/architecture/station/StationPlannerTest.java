@@ -483,7 +483,7 @@ class StationPlannerTest {
 		expected.put(Role.RAIL_NODE, 4);
 		// a canopy 5 wide (the platform and a cell out over its boarding edge) has one column line, so 5 columns (canopyPositions(48):
 		// 2, 12, 23, 34, 45) per platform, each a post and a cap
-		expected.put(Role.COLUMN, 20);
+		expected.put(Role.COLUMN, 40);
 		expected.put(Role.COLUMN_CAP, 10);
 		// per platform: an arm of 3 across each column row (5 * 3), and between them a girder along the line plus an edge girder
 		// at each arm's end (43 rows * 3)
@@ -498,7 +498,7 @@ class StationPlannerTest {
 		// point and two speakers (one every 32 blocks)
 		expected.put(Role.FIXTURE, 18);
 		assertEquals(expected, counts);
-		assertEquals(1254, plan(spec).blocks().size());
+		assertEquals(1274, plan(spec).blocks().size());
 	}
 
 	@Test
@@ -901,7 +901,8 @@ class StationPlannerTest {
 				if (layout == PlatformLayout.ISLAND && tracks < 2) {
 					continue;
 				}
-				for (final int length : new int[]{StationSpec.MIN_LENGTH, 48, StationSpec.MAX_LENGTH}) {
+				// the parser lengthens a building's platforms to the shortest its stairs and lift fit beside
+				for (final int length : new int[]{StationDescriptionParser.BUILDING_LIFT_LENGTH, 48, StationSpec.MAX_LENGTH}) {
 					for (final int width : new int[]{StationSpec.MIN_WIDTH, StationSpec.MAX_WIDTH}) {
 						for (final RoofType roof : new RoofType[]{RoofType.CANOPY, RoofType.NONE}) {
 							final StationSpec spec = StationSpec.builder().trackCount(tracks).platformLayout(layout).platformLength(length)
@@ -941,7 +942,7 @@ class StationPlannerTest {
 		assertTrue(site.innerStairSide() > 0);
 		final List<PlannedBlock> glass = plan.blocks().stream().filter(b -> b.blockId().endsWith(":glass_wall")).toList();
 		final int door = (uS + uP) / 2;
-		assertEquals((uP - uS - 1) * 3 - 2, glass.size(), "partition minus a two-high doorway");
+		assertEquals((uP - uS - 1) * StationGeometry.UPPER_HEADROOM - 2, glass.size(), "partition minus a two-high doorway");
 		assertTrue(glass.stream().allMatch(b -> b.v() == partition && b.y() >= StationGeometry.UPPER_WALK_Y));
 		assertTrue(glass.stream().noneMatch(b -> b.u() == door && b.y() < StationGeometry.UPPER_WALK_Y + 2), "the doorway is blocked");
 		final long seats = blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.UPPER_WALK_Y && b.v() > site.vStart() && b.v() < partition).count();

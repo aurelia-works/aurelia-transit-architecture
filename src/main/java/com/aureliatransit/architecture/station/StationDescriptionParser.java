@@ -32,8 +32,13 @@ public final class StationDescriptionParser {
 	static final int TERMINUS_LENGTH = 160;
 	/** A "large" or "big" terminus without a number. */
 	static final int LARGE_TERMINUS_TRACKS = 10;
-	/** Shortest platforms whose station building has room for a lift beside its stair. */
-	static final int BUILDING_LIFT_LENGTH = 18;
+	/**
+	 * Shortest platforms a station building stands beside: four bays, with room for its stair up a full storey on one side of
+	 * the entrance and its lift on the other.
+	 */
+	static final int BUILDING_LIFT_LENGTH = 24;
+	/** Shortest platforms of a hub: its footbridge's stairs and lifts down to the outer islands need this much room. */
+	static final int HUB_LENGTH = 20;
 	static final int LARGE_TERMINUS_LENGTH = 200;
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
@@ -1304,11 +1309,14 @@ public final class StationDescriptionParser {
 				}
 			}
 
-			// a two-bay building (under 18 long) has no room for its lift beside the stair up to the footbridge
-			if (buildingComing && !terminus && !Boolean.FALSE.equals(stepFree) && (islands || bands.platforms().size() >= 2)
-					&& builder.build().platformLength() < BUILDING_LIFT_LENGTH) {
-				warn("a station building needs platforms " + BUILDING_LIFT_LENGTH + " long for its lift up to the footbridge; using " + BUILDING_LIFT_LENGTH);
+			// a shorter building has no room for its stair up a storey on one side of the entrance and its lift on the other
+			if (buildingComing && !terminus && builder.build().platformLength() < BUILDING_LIFT_LENGTH) {
+				warn("a station building needs platforms " + BUILDING_LIFT_LENGTH + " long for its stairs and its lift; using " + BUILDING_LIFT_LENGTH);
 				builder.platformLength(BUILDING_LIFT_LENGTH);
+			}
+			if (hub && builder.build().platformLength() < HUB_LENGTH) {
+				warn("a hub needs platforms " + HUB_LENGTH + " long for its footbridge's stairs and lifts; using " + HUB_LENGTH);
+				builder.platformLength(HUB_LENGTH);
 			}
 
 			// width

@@ -10,6 +10,10 @@
 
 ### Station generator
 
+- **Built at 1.5 blocks to the metre:** storeys 4 m clear, the footbridge 4.7 m over the rails, canopies 4 m, taller sheds; stairs climb a whole storey. A station building needs platforms 24 long, a hub 20.
+- **A real terminus concourse:** ticket hall with a ticket office, machines, toilets and a shop; one gate line with glass barriers to the walls; the paid concourse with the main board, seating islands and, in a big hall, a gallery each side with a lift and a stair.
+- **Fixes:** Station Studio keeps typed words in charge after a reload, and the second look pins the look; canopy girders cut off by a stairwell are left out or shortened instead of hanging on nothing.
+
 - **Car park:** the words `parking`, `car park` or `park and ride` pave a surface car park in front of a station building — two rows of bays either side of a central aisle, a kerb round the outside and a driveway at the entrance, from the paving and bus kerb blocks already in the mod. The lot takes its own band in front of the street wall and moves the building back behind it, so it stands inside the station's footprint. It needs a station building beside the platforms (a terminus's street, past its head building, has no room yet), and it says so when it is left out.
 - **Real hall depths:** a city or grand station building is now as deep as a real one (15 and 21 blocks, about a block a metre) instead of keeping the compact 9-block footprint, and a city or grand terminus head building is 20 or 30 deep instead of 12. Compact stations are unchanged. So a bigger station gets a genuinely larger ticket hall and concourse, not just more storeys over a small floor.
 - **Train shed taller with the station:** the hall frame sits higher as a station grows (compact springs at y=8, a city shed at 11, a grand one at 15, its frame about 18 and roof about 20 — a real monumental train-shed height), so a city or grand hall is a genuine volume instead of a lid over the trains. Column bays (8) and roof spans (12) are unchanged: they were already at real-shed spacing.

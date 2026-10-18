@@ -13,8 +13,8 @@ import java.util.TreeMap;
  */
 public final class LayoutValidator {
 
-	/** Highest y a plan may use; the lowest is -1 (the support layer). */
-	private static final int MAX_Y = 64;
+	/** Highest y a plan may use, room for a grand train shed at 1.5 blocks to the metre; the lowest is -1 (the support layer). */
+	private static final int MAX_Y = 96;
 	private static final int MIN_Y = -1;
 
 	private static final Comparator<Violation> CELL_ORDER = Comparator.comparingInt(Violation::y).thenComparingInt(Violation::v)

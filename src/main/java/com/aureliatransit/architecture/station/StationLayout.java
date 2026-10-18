@@ -90,7 +90,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			bays = bays(length);
 			vStart = (length - (bays * StationGeometry.BAY + 1)) / 2;
 			vEnd = vStart + bays * StationGeometry.BAY;
-			innerSide = entranceV + 8 <= vEnd - 1 ? 1 : -1;
+			innerSide = entranceV + INNER_STAIR_END <= vEnd - 1 ? 1 : -1;
 		}
 		final List<Integer> served = new ArrayList<>();
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
@@ -130,9 +130,12 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays(), streetBand);
 	}
 
-	/** Facade bays of a station building beside platforms this long. */
+	/**
+	 * Facade bays of a station building beside platforms this long: five, or four on shorter platforms, the fewest that keep
+	 * the stair up a storey on one side of the entrance and the lift on the other.
+	 */
 	private static int bays(int length) {
-		return length >= 64 ? 5 : length >= 19 ? 3 : 2;
+		return length >= 64 ? 5 : 4;
 	}
 
 	/** v of the street entrance and the footbridge line: the middle bay of a side building, else the middle of the platforms. */
@@ -264,20 +267,23 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	/**
 	 * v of the escalator's step at height y (0..{@link StationGeometry#STAIR_STEPS}), counting from the top: the top landing
 	 * is in the corridor wall row at deck level, the bottom landing two rows past the stair's foot, at platform floor level.
-	 * Index 0 is the bottom landing, 7 the top landing.
+	 * Index 0 is the bottom landing, {@link #ESCALATOR_TOP} the top landing.
 	 */
 	public int escalatorV(int index) {
-		return stairWallV() + stairSide * (7 - index);
+		return stairWallV() + stairSide * (ESCALATOR_TOP - index);
 	}
 
-	/** Height of the escalator step at index 0..7: two at the floor, the slope, two at the deck. */
+	/** Index of an escalator's top landing: two steps at the floor, one per block of rise, two at the deck. */
+	public static final int ESCALATOR_TOP = StationGeometry.UPPER_FLOOR_Y + 2;
+
+	/** Height of the escalator step at index 0..{@link #ESCALATOR_TOP}: two at the floor, the slope, two at the deck. */
 	public static int escalatorY(int index) {
 		return Math.max(0, Math.min(StationGeometry.UPPER_FLOOR_Y, index - 1));
 	}
 
 	/** v of the clear landing at the escalator's foot. */
 	public int escalatorFootV() {
-		return stairWallV() + stairSide * 8;
+		return stairWallV() + stairSide * (ESCALATOR_TOP + 1);
 	}
 
 	/** Columns of a platform's stair without an escalator; empty if the platform is too narrow to keep a walkway beside it. */
@@ -309,8 +315,11 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	/** v of the building stair step at height y; the top step is nearest the entrance. */
 	public int innerStairV(int y) {
-		return entranceV + innerStairSide * (8 - y);
+		return entranceV + innerStairSide * (INNER_STAIR_END - y);
 	}
+
+	/** Rows from the entrance to the building stair's far landing: a clear row, the steps, and the landing at the foot. */
+	public static final int INNER_STAIR_END = StationGeometry.STAIR_STEPS + 3;
 
 	public LocalDir innerStairFront() {
 		return innerStairSide > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
@@ -318,11 +327,11 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	/** Lowest and highest v of the building stair with both landings. */
 	public int innerStairMin() {
-		return Math.min(entranceV + 2 * innerStairSide, entranceV + 8 * innerStairSide);
+		return Math.min(entranceV + 2 * innerStairSide, entranceV + INNER_STAIR_END * innerStairSide);
 	}
 
 	public int innerStairMax() {
-		return Math.max(entranceV + 2 * innerStairSide, entranceV + 8 * innerStairSide);
+		return Math.max(entranceV + 2 * innerStairSide, entranceV + INNER_STAIR_END * innerStairSide);
 	}
 
 	/**

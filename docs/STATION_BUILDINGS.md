@@ -1,6 +1,6 @@
 # Station buildings: the redesign spec
 
-Target: **1 block = 1 metre.** Each building is a real station building first and a generator output second, so the
+Target: **1.5 blocks = 1 metre** (`StationGeometry.BLOCKS_PER_METRE`). The metres below are real ones; the code builds them at 1.5x. What MTR's trains fix (platform edge, track spacing, train clearance) stays as MTR needs it. Each building is a real station building first and a generator output second, so the
 room list, the order of spaces and the dimensions come from how stations actually work, and only then from what is easy
 to place.
 
@@ -68,6 +68,16 @@ All of the terminus, plus whichever apply:
 - **Retail and amenities**: shops, toilets, waiting rooms, left luggage, a customer-service point on the gateline.
 - **Multi-level concourse**: an upper/lower concourse over or under the platforms (metro-style), with lifts/escalators
   and **multiple access points per platform**.
+
+## Built so far (scale and Phase 1)
+
+- Ground storey 6 clear (4 m), first floor / footbridge deck at y = 7 (about 4.7 m over the rails), upper storey 4 clear,
+  extra storeys 5 floor to floor, canopies 6 clear, sheds raised to match, the height limit 96.
+- Stairs climb a whole storey (7 steps), escalators 10 steps; a station building needs platforms 24 long (four bays), a hub 20.
+- Terminus head: unpaid ticket hall (ticket office, machines, information pillar, toilets, a shop), one gate line with a gate
+  bank centred on the entrance and glass barriers to the walls, paid concourse with the main board and clock over the
+  platform ends, seating islands, a kiosk and a help point, and in a big hall a gallery down each side with a glass lift at
+  its platform end and a stair at its street end.
 
 ## Phases
 

@@ -184,6 +184,12 @@ class StudioTest {
 		assertEquals("Terminus", built.get("mode"), "the words set the type");
 	}
 
+	/** Changing only the second look pins the look, since the two are said together. */
+	@Test
+	void theMixPinsTheLook() {
+		assertEquals(java.util.Set.of("look", "tracks"), StudioApi.pinned(Map.of("pinned", "mix,tracks")));
+	}
+
 	@Test
 	void thePlatformListComesFirstAndSetsTheTracks() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));

@@ -534,6 +534,21 @@ public final class StationPlanner {
 			}
 		}
 
+		/**
+		 * True for a row of a building's walls that carries windows: tall windows through the ground storey (y = 2..5), and two
+		 * rows in the middle of the first floor and of every storey above it, with a solid band at each floor and under the roof.
+		 */
+		private static boolean windowRow(int y) {
+			if (y < StationGeometry.UPPER_FLOOR_Y) {
+				return y >= 2 && y <= StationGeometry.UPPER_FLOOR_Y - 2;
+			}
+			if (y < StationGeometry.BUILDING_ROOF_Y) {
+				return y >= StationGeometry.UPPER_WALK_Y + 1 && y <= StationGeometry.BUILDING_ROOF_Y - 2;
+			}
+			final int k = Math.floorMod(y - StationGeometry.BUILDING_ROOF_Y, StationGeometry.STOREY);
+			return k == 2 || k == 3;
+		}
+
 		/** True when v is the centre of a facade bay. */
 		private boolean isBayCentre(int v) {
 			if (!site.building()) {
@@ -622,11 +637,11 @@ public final class StationPlanner {
 			// perimeter walls, ground storey y=1..4
 			for (int v = vS; v <= vE; v++) {
 				final boolean pilaster = (v - vS) % StationGeometry.BAY == 0;
-				for (int y = 1; y <= 4; y++) {
+				for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 					if (y == 1) {
 						put(Role.WALL, uS, y, v, LocalDir.MINUS_U, pilaster ? b.trim() : b.plinth());
 						put(Role.WALL, uP, y, v, LocalDir.PLUS_U, pilaster ? b.trim() : b.plinth());
-					} else if (y == 4) {
+					} else if (!windowRow(y)) {
 						put(Role.WALL, uS, y, v, LocalDir.MINUS_U, pilaster ? b.trim() : b.wall());
 						put(Role.WALL, uP, y, v, LocalDir.PLUS_U, pilaster ? b.trim() : b.wall());
 					} else if (isBayCentre(v)) {
@@ -642,9 +657,9 @@ public final class StationPlanner {
 				if (!(site.bridge() && v >= site.bridgeV() - bridgeHalf() && v <= site.bridgeV() + bridgeHalf())) {
 					put(Role.WALL, uP, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_U, b.trim());
 				}
-				// upper storey y=6..8, windows in the middle row
+				// the upper storey, windows in its middle rows
 				for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
-					if (y == StationGeometry.UPPER_WALK_Y + 1 && isBayCentre(v)) {
+					if (windowRow(y) && isBayCentre(v)) {
 						put(Role.WINDOW, uS, y, v, LocalDir.MINUS_U, b.window());
 						put(Role.WINDOW, uP, y, v, LocalDir.PLUS_U, b.window());
 					} else {
@@ -655,11 +670,11 @@ public final class StationPlanner {
 			}
 			for (int u = uS; u <= uP; u++) {
 				final boolean pilaster = (u - uS) % 3 == 0;
-				for (int y = 1; y <= 4; y++) {
+				for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 					if (y == 1) {
 						put(Role.WALL, u, y, vS, LocalDir.MINUS_V, pilaster ? b.trim() : b.plinth());
 						put(Role.WALL, u, y, vE, LocalDir.PLUS_V, pilaster ? b.trim() : b.plinth());
-					} else if (y == 4) {
+					} else if (!windowRow(y)) {
 						put(Role.WALL, u, y, vS, LocalDir.MINUS_V, pilaster ? b.trim() : b.wall());
 						put(Role.WALL, u, y, vE, LocalDir.PLUS_V, pilaster ? b.trim() : b.wall());
 					} else if (u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0) {
@@ -673,7 +688,7 @@ public final class StationPlanner {
 				put(Role.WALL, u, StationGeometry.UPPER_FLOOR_Y, vS, LocalDir.MINUS_V, b.trim());
 				put(Role.WALL, u, StationGeometry.UPPER_FLOOR_Y, vE, LocalDir.PLUS_V, b.trim());
 				for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
-					if (y == StationGeometry.UPPER_WALK_Y + 1 && u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0) {
+					if (windowRow(y) && u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0) {
 						put(Role.WINDOW, u, y, vS, LocalDir.MINUS_V, b.window());
 						put(Role.WINDOW, u, y, vE, LocalDir.PLUS_V, b.window());
 					} else {
@@ -713,7 +728,7 @@ public final class StationPlanner {
 			}
 			// storeys above the second (a city or grand station), the clock tower, then the roof and cornice parapet
 			for (int storey = 0; storey < scale.extraStoreys(); storey++) {
-				storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, uS, uP, vS, vE, true);
+				storey(StationGeometry.BUILDING_ROOF_Y + StationGeometry.STOREY * storey, uS, uP, vS, vE, true);
 			}
 			final int top = roofY();
 			if (scale == StationScale.GRAND) {
@@ -731,7 +746,7 @@ public final class StationPlanner {
 
 		/** y of the building block's roof: above its two storeys and any storeys a city or grand station adds. */
 		private int roofY() {
-			return StationGeometry.BUILDING_ROOF_Y + 4 * scale.extraStoreys();
+			return StationGeometry.BUILDING_ROOF_Y + StationGeometry.STOREY * scale.extraStoreys();
 		}
 
 		/**
@@ -759,8 +774,8 @@ public final class StationPlanner {
 					}
 				}
 			}
-			for (int y = floorY + 1; y <= floorY + 3; y++) {
-				final boolean windowRow = y == floorY + 2;
+			for (int y = floorY + 1; y < floorY + StationGeometry.STOREY; y++) {
+				final boolean windowRow = windowRow(y);
 				for (int v = vS; v <= vE; v++) {
 					final boolean pilaster = allRound ? (v - vS) % 3 == 0 : Math.floorMod(v - vS, StationGeometry.BAY) == 0;
 					final boolean window = allRound ? windowRow && v >= vS + 2 && v <= vE - 2 && (v - vS) % 2 == 0
@@ -1054,11 +1069,11 @@ public final class StationPlanner {
 				final int lo = Math.min(inner + side, end);
 				final int hi = Math.max(inner + side, end);
 				// the wing's own end wall and, before a pavilion, the cross wall above the wing roof
-				final int pavilionRoof = StationGeometry.BUILDING_ROOF_Y + 4;
+				final int pavilionRoof = StationGeometry.BUILDING_ROOF_Y + StationGeometry.STOREY;
 				for (int u = uS + 1; u <= uP - 1; u++) {
 					for (int y = 1; y < (pavilions ? pavilionRoof : StationGeometry.BUILDING_ROOF_Y); y++) {
 						final boolean band = y == StationGeometry.UPPER_FLOOR_Y || y == StationGeometry.BUILDING_ROOF_Y;
-						final boolean window = !band && (y == 2 || y == 3 || y == StationGeometry.UPPER_WALK_Y + 1 || y == StationGeometry.BUILDING_ROOF_Y + 2)
+						final boolean window = !band && windowRow(y)
 								&& u >= uS + 2 && u <= uP - 2 && (u - uS) % 2 == 0;
 						final String id = y == 1 ? b.plinth() : band || (u - uS) % 3 == 0 ? b.trim() : b.wall();
 						put(window ? Role.WINDOW : Role.WALL, u, y, end, side < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V, window ? b.window() : id);
@@ -1083,8 +1098,7 @@ public final class StationPlanner {
 						final LocalDir front = u == uS ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 						for (int y = 1; y < roofAt; y++) {
 							final boolean band = y == StationGeometry.UPPER_FLOOR_Y || y == StationGeometry.BUILDING_ROOF_Y;
-							final boolean windowRow = y == 2 || y == 3 || y == StationGeometry.UPPER_WALK_Y + 1 || y == StationGeometry.BUILDING_ROOF_Y + 2;
-							if (windowBay && windowRow && !band) {
+							if (windowBay && windowRow(y) && !band) {
 								put(Role.WINDOW, u, y, v, front, b.window());
 							} else {
 								put(Role.WALL, u, y, v, front, band || pilaster ? b.trim() : y == 1 ? b.plinth() : b.wall());
@@ -1336,7 +1350,7 @@ public final class StationPlanner {
 				final boolean pilaster = (v - vL) % 3 == 0;
 				for (int y = 1; y <= top; y++) {
 					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
-					final boolean window = !pilaster && (y == 2 || y == 3 || y == 6 || y == 7);
+					final boolean window = !pilaster && windowRow(y);
 					put(window ? Role.WINDOW : Role.WALL, u0, y, v, LocalDir.MINUS_U, window ? b.window() : id);
 					put(window ? Role.WINDOW : Role.WALL, u1, y, v, LocalDir.PLUS_U, window ? b.window() : id);
 				}
@@ -1346,9 +1360,9 @@ public final class StationPlanner {
 				final boolean pilaster = (u - u0) % 3 == 0;
 				for (int y = 1; y <= top; y++) {
 					final String id = y == 1 ? (pilaster ? b.trim() : b.plinth()) : y == StationGeometry.UPPER_FLOOR_Y || pilaster ? b.trim() : b.wall();
-					final boolean window = !pilaster && (y == 6 || y == 7);
+					final boolean window = !pilaster && y > StationGeometry.UPPER_FLOOR_Y && windowRow(y);
 					// ground-floor windows either side of the entrance
-					final boolean street = window || !pilaster && (y == 2 || y == 3) && Math.abs(u - door) > 2;
+					final boolean street = window || !pilaster && windowRow(y) && Math.abs(u - door) > 2;
 					put(street ? Role.WINDOW : Role.WALL, u, y, vE, LocalDir.PLUS_V, street ? b.window() : id);
 					if (y >= StationGeometry.UPPER_FLOOR_Y) {
 						// the lintel over each platform carries its colour, with its number hung below
@@ -1367,7 +1381,7 @@ public final class StationPlanner {
 				// a city or grand head building: storeys over the whole concourse (its ceiling is their first floor), the roof,
 				// and a grand one's clock tower over the entrance
 				for (int storey = 0; storey < scale.extraStoreys(); storey++) {
-					storey(StationGeometry.BUILDING_ROOF_Y + 4 * storey, u0, u1, vL, vE, true, true);
+					storey(StationGeometry.BUILDING_ROOF_Y + StationGeometry.STOREY * storey, u0, u1, vL, vE, true, true);
 				}
 				headCrown(u0, u1, vL, vE, door);
 				return;
@@ -2064,10 +2078,18 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * The terminus concourse: a gate line two rows in from the buffers (fare gates across each platform with a wide gate in
-		 * the middle, glass barriers behind the tracks), departure boards and a clock over the gate line facing the concourse,
-		 * the ticket office with its window on one side, MTR ticket machines and the kiosk on the other, and benches facing the
-		 * boards.
+		 * Inside a terminus head building, street to trains, as a real terminus works (its passengers wait in the concourse, not
+		 * on the platforms; docs/STATION_BUILDINGS.md):
+		 * <ol>
+		 * <li>the unpaid ticket hall against the street: a ticket office, ticket machines and an information point on one side,
+		 * toilets and a shop on the other;</li>
+		 * <li>one gate line across the hall: a bank of gates centred on the entrance with a wide gate in the middle, glass
+		 * barriers out to the side walls;</li>
+		 * <li>the paid concourse, where people wait: the main departure board and clock over the platform ends, benches facing
+		 * them, a kiosk, and in a hall big enough a gallery down each side, reached by a lift at its platform end and a stair at
+		 * its street end.</li>
+		 * </ol>
+		 * Narrow or shallow halls keep what fits: the gate line always, a ticket window in the corner, the board and the clock.
 		 */
 		void headInterior() {
 			if (!layout.terminus()) {
@@ -2079,93 +2101,237 @@ public final class StationPlanner {
 			final int vL = length;
 			final int vE = layout.headEnd();
 			final int door = headDoor();
-			// street to trains: the unpaid ticket hall against the street, a gate line across the hall, then the paid concourse
-			final int gateV = vE - Math.max(4, (vE - vL) / 3);
-			// one gate line across the whole hall (a real terminus checks tickets in the concourse, not on the platforms): end
-			// cabinets at the walls and a wide gate on the walk from the entrance
+			final int depth = vE - vL;
+			final int gateV = headGateV();
+			final int inner = u1 - u0 - 1;
+			// the gate line: a bank centred on the walk from the entrance, glass barriers out to the side walls (run-off for the
+			// staff and the crowd), a wide gate in the middle
+			final int half = Math.max(2, Math.min((inner - 4) / 2, layout.tracks().size() + 1));
 			for (int u = u0 + 1; u < u1; u++) {
-				final String kind = u == u0 + 1 || u == u1 - 1 ? "kind=end" : u == door ? "kind=wide" : "kind=gate";
-				// the green "go" side faces the concourse, where people come in; the red X faces the platforms
-				put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
-			}
-			// a big number under the lintel over each platform, in the middle of its gates
-			for (final TrackLayout.PlatformBand band : layout.platforms()) {
-				if (gateNumbered(band)) {
-					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.MIN_ROOF_Y, vL, LocalDir.PLUS_V);
+				final int d = u - door;
+				if (Math.abs(d) <= half) {
+					final String kind = Math.abs(d) == half ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
+					// the green "go" side faces the ticket hall, where people come in; the red X faces the concourse
+					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
+				} else {
+					put(Role.BARRIER, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V);
 				}
 			}
-			// boards over the gate line, hung from the lintel, and the clock above them
-			for (int u = door - 1; u <= door + 1; u++) {
+			// a big number under the lintel over each platform end
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				if (gateNumbered(band)) {
+					numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.UPPER_FLOOR_Y - 1, vL, LocalDir.PLUS_V);
+				}
+			}
+			// the main departure board hung from the lintel over the platform ends, facing the concourse, and the clock over it
+			final int boardHalf = Math.min((inner - 1) / 2, scale == StationScale.GRAND ? 4 : scale == StationScale.CITY ? 3 : 1);
+			for (int u = door - boardHalf; u <= door + boardHalf; u++) {
 				put(Role.FIXTURE, u, StationGeometry.UPPER_FLOOR_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
 			}
 			put(Role.FIXTURE, door, StationGeometry.UPPER_WALK_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:wall_digital_clock");
-			// ticket office against the first side wall: interior u0+1..u0+2, v=vE-5..vE-4, window facing the concourse
-			final int o0 = vE - 5;
-			final int o1 = vE - 4;
-			if (door - 1 - u0 > 4) {
-				for (int u = u0 + 1; u <= u0 + 3; u++) {
-					for (int y = 1; y <= 2; y++) {
-						put(Role.WALL, u, y, o0 - 1, LocalDir.MINUS_V, b.interiorWall());
-						put(Role.WALL, u, y, o1 + 1, LocalDir.PLUS_V, b.interiorWall());
-					}
+			final int gallery = galleryWidth(inner, gateV - vL);
+			if (gallery > 0) {
+				for (final int side : new int[]{-1, 1}) {
+					gallery(side, gallery, u0, u1, vL, gateV, b);
 				}
-				// the counter at chest height, wall below it
-				put(Role.WALL, u0 + 3, 1, o0, LocalDir.PLUS_U, b.interiorWall());
-				put(Role.FIXTURE, u0 + 3, 2, o0, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
-				put(Role.WALL, u0 + 3, 1, o1, LocalDir.PLUS_U, b.interiorWall());
-				put(Role.WALL, u0 + 3, 2, o1, LocalDir.PLUS_U, b.interiorWall());
-			} else { // too narrow for an office: a ticket window in the side wall's corner by the entrance
+			}
+			// the ticket hall's rooms stand against the side walls, leaving the walk from the entrance to the gates clear
+			final boolean rooms = inner >= 16 && vE - 1 - gateV >= 7;
+			if (rooms) {
+				ticketOffice(u0 + 1, gateV + 2, b);
+				toilets(u1 - 5, gateV + 2, b);
+				if (vE - 2 - (gateV + 8) >= 4) {
+					shop(u1 - 5, gateV + 8, vE - 2, b);
+				}
+				for (int i = 0; i < 3 && gateV + 7 + i < vE - 1; i++) {
+					tallFixture(u0 + 1, 1, gateV + 7 + i, LocalDir.PLUS_U, "mtr:ticket_machine");
+				}
+				put(Role.FIXTURE, door - 3, StationGeometry.WALK_Y, vE - 2, LocalDir.PLUS_V, "aurelia_transit_architecture:information_pillar");
+			} else {
+				// too small for rooms: a ticket window in the side wall's corner by the entrance, the machines opposite
 				put(Role.WALL, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, b.interiorWall());
 				put(Role.FIXTURE, u0 + 1, 2, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+				for (int i = 0; i < 2 && vE - 1 - i > gateV + 1; i++) {
+					tallFixture(u1 - 1, 1, vE - 1 - i, LocalDir.MINUS_U, "mtr:ticket_machine");
+				}
 			}
-			// ticket machines by the entrance (unpaid), and the kiosk out on the paid side where passengers wait
-			for (int i = 0; i < 2; i++) {
-				tallFixture(u1 - 1, 1, o0 + i, LocalDir.MINUS_U, "mtr:ticket_machine");
+			// on the paid side: the kiosk against a side wall where passengers wait, a help point by the gates
+			final int clearOfGallery = gallery > 0 ? gallery + 1 : 1;
+			tallFixture(u1 - clearOfGallery, 1, gateV - 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
+			if (door + half + 2 < u1) {
+				put(Role.WALL, door + half + 2, StationGeometry.WALK_Y, gateV - 1, LocalDir.MINUS_V, b.trim());
+				put(Role.FIXTURE, door + half + 2, StationGeometry.WALK_Y + 1, gateV - 1, LocalDir.MINUS_V, HELP_POINT);
 			}
-			tallFixture(u1 - 1, 1, vL + 4, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
-			// benches facing the boards, either side of the walk from the entrance
+			// seating islands facing the board, either side of the walk from the gates to the platforms
 			if (spec.furniture()) {
-				int seats = 0;
-				for (final int u : new int[]{door - 3, door - 2, door + 2, door + 3}) {
-					if (u > u0 && u < u1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
-						seats++;
-					}
-				}
-				// a narrow concourse: any free cell in the row that keeps the walk from the entrance clear
-				for (int u = u0 + 1; u < u1 && seats == 0; u++) {
-					if (Math.abs(u - door) > 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, vL + 6, LocalDir.MINUS_V, b.bench())) {
-						seats++;
-					}
-				}
-			}
-			// the mezzanine gallery: a floor down each side of the paid concourse looking over it, a rail on its edge, and a
-			// stair from the concourse floor climbing against the side wall up to it
-			final int galleryFrom = vL + 2 + StationGeometry.STAIR_STEPS;
-			final int galleryTo = gateV - 1;
-			// only a hall wide enough keeps a clear walk between the two colonnades, so a narrow one gets no gallery
-			if (u1 - u0 >= 12 && galleryTo >= galleryFrom) {
-			for (int v = galleryFrom; v <= galleryTo; v++) {
-				for (final int u : new int[]{u0 + 1, u0 + 2, u1 - 2, u1 - 1}) {
-					put(Role.LIGHT_PANEL, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
-					// a pier carries the gallery, so nothing floats (a wall pier: this is inside the head building, not a platform column)
-					for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
-						put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.trim());
-					}
-				}
-				put(Role.RAILING, u0 + 2, StationGeometry.UPPER_FLOOR_Y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.RAILING));
-				put(Role.RAILING, u1 - 2, StationGeometry.UPPER_FLOOR_Y + 1, v, LocalDir.MINUS_U, palette.blockId(Role.RAILING));
-			}
-			for (int step = 1; step <= StationGeometry.STAIR_STEPS; step++) {
-				for (final int u : new int[]{u0 + 1, u0 + 2}) {
-					put(Role.STAIR, u, step, vL + 1 + step, LocalDir.MINUS_V, b.stair());
-				}
-			}
+				concourseSeats(u0 + clearOfGallery + 1, u1 - clearOfGallery - 1, door, vL, gateV, b);
 			}
 			// MTR's station name over the street door and its tactile map inside beside it
 			for (int u = door - 1; u <= door + 1; u++) {
 				put(Role.FIXTURE, u, MTR_NAME_Y, vE + 1, LocalDir.PLUS_V, StylePalette.MTR_STATION_NAME);
 			}
 			tallFixture(door + 2, 1, vE - 1, LocalDir.MINUS_V, StylePalette.MTR_TACTILE_MAP);
+		}
+
+		/** v of a terminus head's gate line: about two fifths of the hall from the street wall, the ticket hall at least 7 deep. */
+		private int headGateV() {
+			final int vE = layout.headEnd();
+			return vE - Math.max(8, (vE - length) * 2 / 5);
+		}
+
+		/**
+		 * Width of each side gallery of a terminus concourse (its floor, the railing on its inner edge included), or 0 where the
+		 * hall is too narrow or the paid concourse too shallow for a lift, a gallery and a stair one after another.
+		 */
+		static int galleryWidth(int inner, int paidRows) {
+			if (inner < 24 || paidRows < 4 + 3 + StationGeometry.STAIR_STEPS + 2) {
+				return 0;
+			}
+			return inner >= 40 ? 4 : 3;
+		}
+
+		/**
+		 * A gallery down one side of the paid concourse ({@code side} -1 along the u0 wall, +1 along u1), {@code width} cells
+		 * wide, a storey up (floor at {@link StationGeometry#UPPER_FLOOR_Y}): a glass lift at its platform end, a stair down
+		 * along the wall at its street end landing short of the gates, a rail on its open edge and on the stair, piers every bay
+		 * under the edge, and benches looking over the concourse.
+		 */
+		private void gallery(int side, int width, int u0, int u1, int vL, int gateV, StylePalette.Building b) {
+			final int wall = side < 0 ? u0 : u1;
+			final int edge = wall - side * width;
+			// the lift: car two rows deep against the platform end, doors facing the street at both levels
+			final int c0 = side < 0 ? u0 + 1 : u1 - 2;
+			final StationLayout.Lift lift = new StationLayout.Lift(c0, vL + 4, -1);
+			shaft(lift, b.bridgeWall(), true, null, false);
+			// the stair: its top step level with the gallery, its foot two rows short of the gate line
+			final int top = gateV - 2 - StationGeometry.STAIR_STEPS;
+			final int s0 = wall - side;
+			final int s1 = wall - 2 * side;
+			for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+				final int v = top + StationGeometry.STAIR_STEPS - y;
+				for (final int u : new int[]{s0, s1}) {
+					put(Role.STAIR, u, y, v, LocalDir.MINUS_V, b.stair());
+					// a stringer under each step, so nobody walks in under the stair
+					for (int below = 1; below < y; below++) {
+						put(Role.WALL, u, below, v, LocalDir.MINUS_V, b.trim());
+					}
+					for (int clear = y + 1; clear <= y + 3; clear++) {
+						keepClear(u, clear, v);
+					}
+				}
+				// the stair's open side: a solid balustrade up to the step, the rail on it
+				for (int below = 1; below <= y; below++) {
+					put(Role.WALL, wall - 3 * side, below, v, LocalDir.MINUS_V, b.trim());
+				}
+				put(Role.RAILING, wall - 3 * side, y + 1, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U);
+			}
+			// the floor, from the lift's door row to the stair's top
+			for (int v = lift.doorV(); v < top; v++) {
+				for (int u = Math.min(wall - side, edge); u <= Math.max(wall - side, edge); u++) {
+					final boolean lit = Math.floorMod(u + v, 3) == 0;
+					put(lit ? Role.LIGHT_PANEL : Role.FLOOR, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, lit ? b.light() : b.upperFloor());
+				}
+				if (v > lift.doorV()) {
+					put(Role.RAILING, edge, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U);
+				}
+				// a pier under the open edge every bay, clear of the lift's landing
+				if (v > lift.doorV() + 1 && Math.floorMod(v - vL, StationGeometry.BAY) == 0) {
+					for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+						put(Role.WALL, edge, y, v, LocalDir.PLUS_V, b.pier());
+					}
+				}
+			}
+			// benches against the wall, looking out over the concourse
+			if (spec.furniture()) {
+				for (int v = lift.doorV() + 3; v < top - 1; v += 3) {
+					put(Role.BENCH, wall - side, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bench());
+				}
+			}
+		}
+
+		/**
+		 * A closed room of the ticket hall: walls four high (2.7 m) and a ceiling over them, with a doorway {@code doorWidth}
+		 * wide from {@code (doorU, doorV)} along v in its {@code doorU} wall.
+		 */
+		private void room(int ua, int ub, int va, int vb, String wallId, int doorU, int doorV, int doorWidth) {
+			final int height = StationGeometry.DOOR_HEIGHT + 1;
+			for (int dw = 0; dw < doorWidth; dw++) {
+				for (int y = 1; y <= StationGeometry.DOOR_HEIGHT; y++) {
+					keepClear(doorU, y, doorV + dw);
+				}
+			}
+			for (int u = ua; u <= ub; u++) {
+				for (int v = va; v <= vb; v++) {
+					final boolean rim = u == ua || u == ub || v == va || v == vb;
+					if (rim) {
+						for (int y = 1; y <= height; y++) {
+							put(Role.WALL, u, y, v, LocalDir.PLUS_V, wallId);
+						}
+					}
+					put(Role.WALL, u, height + 1, v, LocalDir.PLUS_V, wallId);
+				}
+			}
+		}
+
+		/** The ticket office against the u0 wall: a 4 x 4 room from {@code (u, v)} with two counter windows facing the hall. */
+		private void ticketOffice(int u, int v, StylePalette.Building b) {
+			for (final int w : new int[]{v + 1, v + 2}) {
+				put(Role.WALL, u + 3, 1, w, LocalDir.PLUS_U, b.interiorWall());
+				put(Role.FIXTURE, u + 3, 2, w, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
+			}
+			room(u, u + 3, v, v + 3, b.interiorWall(), u, v + 1, 0);
+		}
+
+		/** Toilets against the u1 wall: a tiled 5 x 5 room ending at {@code u + 4}, its doorway facing the hall, basins inside. */
+		private void toilets(int u, int v, StylePalette.Building b) {
+			room(u, u + 4, v, v + 4, ata("metro_pale_concrete"), u, v + 2, 1);
+			for (final int w : new int[]{v + 1, v + 3}) {
+				put(Role.FIXTURE, u + 3, 1, w, LocalDir.MINUS_U, "minecraft:cauldron");
+			}
+		}
+
+		/** A shop unit against the u1 wall from {@code v} to {@code vb}: a glazed front with a two-wide door, shelves and a counter. */
+		private void shop(int u, int v, int vb, StylePalette.Building b) {
+			final int doorV = (v + vb) / 2;
+			for (int w = v + 1; w < vb; w++) {
+				if (w != doorV && w != doorV + 1) {
+					for (int y = 1; y <= StationGeometry.DOOR_HEIGHT; y++) {
+						put(Role.WINDOW, u, y, w, LocalDir.MINUS_U, b.window());
+					}
+				}
+			}
+			room(u, u + 4, v, vb, b.interiorWall(), u, doorV, 2);
+			for (int w = v + 1; w < vb; w++) {
+				put(Role.FIXTURE, u + 3, 1, w, LocalDir.MINUS_U, "minecraft:barrel");
+			}
+			put(Role.WALL, u + 1, 1, v + 1, LocalDir.MINUS_U, b.trim());
+		}
+
+		/**
+		 * Benches in islands of four, back to back in two rows across the middle of the paid concourse, facing the board and
+		 * the gates, with the walks from the gates to every platform end kept clear.
+		 */
+		private void concourseSeats(int uFrom, int uTo, int door, int vL, int gateV, StylePalette.Building b) {
+			final int row = (vL + gateV) / 2;
+			int placed = 0;
+			for (int u = uFrom; u <= uTo; u++) {
+				final int k = Math.floorMod(u - door, 7);
+				if (Math.abs(u - door) <= 2 || k == 0 || k == 1 || k == 6) {
+					continue;
+				}
+				if (put(Role.BENCH, u, StationGeometry.WALK_Y, row, LocalDir.MINUS_V, b.bench())) {
+					placed++;
+				}
+				put(Role.BENCH, u, StationGeometry.WALK_Y, row + 1, LocalDir.PLUS_V, b.bench());
+			}
+			// a narrow concourse: one bench beside the walk, in the first row with room
+			for (int v = row; v < gateV - 1 && placed == 0; v++) {
+				for (int u = uFrom - 1; u <= uTo + 1 && placed == 0; u++) {
+					if (Math.abs(u - door) > 1 && put(Role.BENCH, u, StationGeometry.WALK_Y, v, LocalDir.MINUS_V, b.bench())) {
+						placed++;
+					}
+				}
+			}
 		}
 
 		/**
@@ -2414,7 +2580,7 @@ public final class StationPlanner {
 				final LocalDir up = site.stairFront();
 				// MTR's left half is on the left looking up the escalator; +U is to the right of +V
 				final int left = up == LocalDir.PLUS_V ? columns.get(0) : columns.get(1);
-				for (int i = 0; i <= 7; i++) {
+				for (int i = 0; i <= StationLayout.ESCALATOR_TOP; i++) {
 					final int v = site.escalatorV(i);
 					final int y = StationLayout.escalatorY(i);
 					for (final int u : columns) {
@@ -2424,7 +2590,7 @@ public final class StationPlanner {
 						for (int below = StationGeometry.WALK_Y; below < y; below++) {
 							put(Role.BRIDGE_PIER, u, below, v, up, palette.building().pier());
 						}
-						if (i < 7) {
+						if (i < StationLayout.ESCALATOR_TOP) {
 							keepClear(u, y + 2, v);
 							keepClear(u, y + 3, v);
 						}
@@ -3007,7 +3173,9 @@ public final class StationPlanner {
 									for (final int f : framed) {
 										put(Role.BEAM, f, y - 1, v, LocalDir.PLUS_U, girder, kind);
 									}
-									if (reach > 0 && !framed.contains(u + step * reach)) {
+									// the edge girder rests on the arm's end: past an arm cut short it would hang over the stairwell on
+									// nothing, unless it is framed into the far wall
+									if (reach > 0 && framed.contains(u + step * (reach - 1))) {
 										put(Role.BEAM, u + step * reach, y - 1, v, LocalDir.PLUS_V, girder, kind);
 									}
 								}
@@ -3069,6 +3237,7 @@ public final class StationPlanner {
 					}
 				}
 			}
+			pruneLooseGirders(y - 1);
 		}
 
 		/** The lamp offset of a row with no lamp. */
@@ -3082,6 +3251,69 @@ public final class StationPlanner {
 		 * whether a girder block is set under it. A raised roof touches the sloping block beside it only at an edge, so the
 		 * girder under a ridge, a fold or a crest is what joins it to the rest (and carries it, as a post).
 		 */
+		/**
+		 * Girders along a canopy's lines and edges that a stairwell, lift or escalator cut off from their columns: a piece resting
+		 * on nothing is left out, one carried at a single end is cut back to what a cantilever reaches, and one longer than a
+		 * girder spans between two supports becomes a cantilever off each. The rules match
+		 * {@link LayoutValidator}'s, so what stands is what the checks accept.
+		 */
+		private void pruneLooseGirders(int y) {
+			final Map<Integer, java.util.TreeSet<Integer>> lines = new TreeMap<>();
+			for (final PlannedBlock block : cells.values()) {
+				if (block.role() == Role.BEAM && block.y() == y && (block.front() == LocalDir.PLUS_V || block.front() == LocalDir.MINUS_V)) {
+					lines.computeIfAbsent(block.u(), k -> new java.util.TreeSet<>()).add(block.v());
+				}
+			}
+			for (final Map.Entry<Integer, java.util.TreeSet<Integer>> line : lines.entrySet()) {
+				final int u = line.getKey();
+				final List<int[]> runs = new ArrayList<>();
+				for (final int v : line.getValue()) {
+					if (!runs.isEmpty() && runs.get(runs.size() - 1)[1] == v - 1) {
+						runs.get(runs.size() - 1)[1] = v;
+					} else {
+						runs.add(new int[]{v, v});
+					}
+				}
+				for (final int[] run : runs) {
+					final boolean before = carriesGirder(u, y, run[0] - 1);
+					final boolean after = carriesGirder(u, y, run[1] + 1);
+					boolean capped = false;
+					for (int v = run[0]; v <= run[1] && !capped; v++) {
+						final PlannedBlock cap = cells.get(new Cell(u, y - 1, v));
+						capped = cap != null && cap.role() == Role.COLUMN_CAP;
+					}
+					if (capped || before && after && run[1] - run[0] + 1 <= StationGeometry.MAX_BEAM_SPAN) {
+						continue;
+					}
+					if (before && after) {
+						// longer than a girder spans between its two supports: two cantilevers, one off each
+						for (int v = run[0] + StationGeometry.MAX_CANTILEVER; v <= run[1] - StationGeometry.MAX_CANTILEVER; v++) {
+							cells.remove(new Cell(u, y, v));
+						}
+						continue;
+					}
+					final int keepFrom = before ? run[0] : after ? run[1] - StationGeometry.MAX_CANTILEVER + 1 : Integer.MAX_VALUE;
+					final int keepTo = before ? run[0] + StationGeometry.MAX_CANTILEVER - 1 : after ? run[1] : Integer.MIN_VALUE;
+					for (int v = run[0]; v <= run[1]; v++) {
+						if (v < keepFrom || v > keepTo) {
+							cells.remove(new Cell(u, y, v));
+						}
+					}
+				}
+			}
+		}
+
+		/** A cross beam, a column cap, a wall or a pier at (u, y, v) that a girder along v can end on. */
+		private boolean carriesGirder(int u, int y, int v) {
+			final PlannedBlock block = cells.get(new Cell(u, y, v));
+			if (block == null) {
+				return false;
+			}
+			final Role role = block.role();
+			return role == Role.BEAM && block.front() != LocalDir.PLUS_V && block.front() != LocalDir.MINUS_V || role == Role.COLUMN_CAP
+					|| role == Role.WALL || role == Role.BRIDGE_PIER;
+		}
+
 		private record RoofPiece(int rise, String block, LocalDir low, int edgeRise, boolean braced) {
 
 			static RoofPiece level(int rise) {

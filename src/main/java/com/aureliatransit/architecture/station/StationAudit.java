@@ -366,9 +366,6 @@ public final class StationAudit {
 				final Role role = block.role();
 				if (block.y() != StationGeometry.PLATFORM_Y && block.y() != StationGeometry.UPPER_FLOOR_Y
 						|| !(role.flatFloor() || role == Role.RAMP_LOWER || role == Role.RAMP_UPPER)
-						// built over: a floor cell with anything at all at walk level is not somewhere to stand, so its headroom
-						// is not checked (an ironwork or glass pier is passable but you still cannot stand in it)
-						|| at(block.u(), block.y() + 1, block.v()) != null
 						|| !standableAt(block.u(), block.y() + 1, block.v())) {
 					continue;
 				}

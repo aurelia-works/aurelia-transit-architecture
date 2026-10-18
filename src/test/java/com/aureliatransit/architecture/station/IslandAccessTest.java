@@ -137,14 +137,15 @@ class IslandAccessTest {
 				"2 tracks island, 16 long, station building, named Halt"}) {
 			final ParseResult parsed = StationDescriptionParser.parse(text);
 			assertEquals(StationDescriptionParser.BUILDING_LIFT_LENGTH, parsed.spec().platformLength(), text);
-			assertTrue(parsed.warnings().stream().anyMatch(w -> w.contains("for its lift")), text);
+			assertTrue(parsed.warnings().stream().anyMatch(w -> w.contains("for its stairs and its lift")), text);
 			final StationPlan plan = StationPlanner.plan(parsed.spec());
 			assertNotNull(StationLayout.of(parsed.spec(), plan.layout()).buildingLift(plan.layout()), text);
 			for (final StationAudit.Access access : StationAudit.audit(plan).access()) {
 				assertEquals(StationAudit.Access.STEP_FREE, access, text);
 			}
 		}
-		// without step-free there is no lift to make room for
-		assertEquals(16, StationDescriptionParser.parse("2 tracks island, 16 long, station building, stairs only, named Halt").spec().platformLength());
+		// without step-free the building still has its stair up a whole storey to fit
+		assertEquals(StationDescriptionParser.BUILDING_LIFT_LENGTH,
+				StationDescriptionParser.parse("2 tracks island, 16 long, station building, stairs only, named Halt").spec().platformLength());
 	}
 }

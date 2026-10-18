@@ -52,10 +52,12 @@
 		for (const f of fields) {
 			if (saved[f] !== undefined && $(f)) {
 				$(f).value = saved[f];
-				// what was remembered was a choice the player made, so it still wins over typed words
-				if (saved[f] !== "" && f !== "text") {
-					touched.add(f);
-				}
+			}
+		}
+		// only the controls the player had changed stay pinned: every select has a value, so having one says nothing
+		for (const f of (saved.pinned || "").split(",")) {
+			if (fields.includes(f) && f !== "text") {
+				touched.add(f);
 			}
 		}
 	}

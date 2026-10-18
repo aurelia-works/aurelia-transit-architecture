@@ -130,7 +130,7 @@ class LayoutValidatorTest {
 		final List<PlannedBlock> blocks = new ArrayList<>();
 		for (final PlannedBlock block : plan.blocks()) {
 			// the screens and speakers hanging from the girders come down with them; here they would only overlap
-			if (block.role() == Role.COLUMN && block.y() == 2 || block.blockId().endsWith(":hanging_platform_pids") || block.blockId().endsWith(":ceiling_speaker")) {
+			if (block.role() == Role.COLUMN && block.y() >= 2 || block.blockId().endsWith(":hanging_platform_pids") || block.blockId().endsWith(":ceiling_speaker")) {
 				continue;
 			}
 			if (block.role() == Role.COLUMN_CAP) {
@@ -239,12 +239,12 @@ class LayoutValidatorTest {
 	void columnWithoutACapOrRoofOrFloorIsUnsupported() {
 		final StationPlan plan = canopy();
 		// no girder above the cap
-		final PlannedBlock roof = find(plan, 2, 4, 23);
+		final PlannedBlock roof = find(plan, 2, StationGeometry.CANOPY_Y - 1, 23);
 		assertTrue(kinds(with(plan, without(plan, roof))).contains(Violation.Kind.UNSUPPORTED_COLUMN));
 		// a plain column where the cap should be
-		final PlannedBlock cap = find(plan, 2, 3, 23);
+		final PlannedBlock cap = find(plan, 2, StationGeometry.CANOPY_Y - 2, 23);
 		final List<PlannedBlock> blocks = new ArrayList<>(plan.blocks());
-		blocks.set(blocks.indexOf(cap), new PlannedBlock(2, 3, 23, Role.COLUMN, cap.blockId(), cap.front(), ""));
+		blocks.set(blocks.indexOf(cap), new PlannedBlock(2, StationGeometry.CANOPY_Y - 2, 23, Role.COLUMN, cap.blockId(), cap.front(), ""));
 		assertTrue(kinds(with(plan, blocks)).contains(Violation.Kind.UNSUPPORTED_COLUMN));
 		// standing on nothing
 		final List<PlannedBlock> floating = new ArrayList<>(plan.blocks());
@@ -344,7 +344,7 @@ class LayoutValidatorTest {
 		blocks.add(block(15, 0, 5, Role.PLATFORM_SURFACE, LocalDir.PLUS_V));
 		blocks.add(block(0, 0, 50, Role.PLATFORM_SURFACE, LocalDir.PLUS_V));
 		blocks.add(block(0, 0, -3, Role.PLATFORM_SURFACE, LocalDir.PLUS_V));
-		blocks.add(block(2, 65, 5, Role.ROOF, LocalDir.PLUS_V));
+		blocks.add(block(2, 97, 5, Role.ROOF, LocalDir.PLUS_V));
 		blocks.add(block(2, -2, 5, Role.FOUNDATION, LocalDir.PLUS_V));
 		final StationPlan broken = with(plan, blocks);
 		assertTrue(kinds(broken).contains(Violation.Kind.OUT_OF_BOUNDS));
