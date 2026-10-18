@@ -25,7 +25,24 @@ One seed, two jobs:
 - **Generator seed** (the planner). Sent as the words `seed k7f2ra`, so the wrench, `/ata_station plan` and the studio all
   read it. It varies only what the words left open: the canopy profile (two in five), one arch or several (barrel-vaulted
   sheds only), the platform floor (three in five), the roof material (one in two), which colour platform 1 starts on and where
-  the first bench stands. No seed, or seed 0, plans exactly as before. Lock **Details** to keep these while re-rolling the rest.
+  the first bench stands. No seed, or seed 0, plans exactly as before.
+
+Press **R** (or the dice) to roll. R does nothing while you type or walk.
+
+### Locks
+
+Three locks, and every part of the station you can see belongs to exactly one of them. A lock keeps the *planned* station,
+not just its controls: the check is on the `/api/plan` answers (`tools/studio_locks.mjs`).
+
+| Lock | Keeps |
+|---|---|
+| Look | city, mix, hall and platform style, and the generator seed (canopy profile, shed, floors, roof deck, colours) |
+| Shape | station type, tracks, platform length, platform layout |
+| Building | a building or none, its size and roof form, stairs, stairwells, travelators, track bed |
+
+Locking Building turns an **Auto** roof or size into the roof and size the plan actually resolved to (the plan reports them
+as `resolved`), because Auto follows the city and would change when Look re-rolls. Locking Building on a station without one
+keeps it without one: a roll then never brings a terminus or hub, which always have a building. Locks survive a reload.
 
 ## System
 
@@ -44,7 +61,9 @@ One seed, two jobs:
 - Radius: 10 px controls, 14 px panels. Hairline borders, no shadows except the main button.
 - Motion: one treatment per role. Segments and chips fill on press. Primary buttons lift 1 px and brighten. The seed flips.
   Reduced motion: no flips, no glide; the Silk shader stops.
-- Idle: the Silk background drifts at rest; nothing else moves on its own.
+- Idle: a still page, on purpose. This is a tool: the only thing that moves on its own is what you asked for (the flaps, the
+  new station settling in). The Silk shader drifts behind the chrome but the panels are opaque, so at rest the page reads as
+  still. Hovers and the seed flip carry the life.
 
 ## Layout
 

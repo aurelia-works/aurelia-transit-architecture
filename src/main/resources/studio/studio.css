@@ -103,6 +103,7 @@ textarea { width: 100%; resize: vertical; min-height: 96px; }
 .seg button:hover { color: var(--fg); background: var(--panel-3); }
 .seg button:active { scale: .96; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 500; }
+.seg button[aria-pressed="true"]:hover { background: var(--accent-hi); color: var(--accent-ink); }
 
 .range-head { display: flex; justify-content: space-between; align-items: baseline; }
 .range-head output { font: 500 12.5px var(--mono); color: var(--accent-text); font-variant-numeric: tabular-nums; }
@@ -118,6 +119,9 @@ input[type="range"]:disabled { opacity: .35; cursor: default; }
 
 .switch { flex: none; width: 44px; height: 26px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--panel-3); padding: 2px; cursor: pointer; transition: background-color .18s var(--ease), border-color .18s var(--ease); }
 .switch span { display: block; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: translate .18s var(--ease); }
+.switch:hover { border-color: var(--fg); }
+.switch:hover span { scale: 1.08; }
+.switch span { transition: translate .18s var(--ease), scale .15s var(--ease); }
 .switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
 .switch[aria-checked="true"] span { translate: 18px 0; }
 .switch-row { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
@@ -141,6 +145,10 @@ input[type="range"]:disabled { opacity: .35; cursor: default; }
 .group:last-child { border-bottom: 0; }
 
 .looks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; }
+/* room for the city grid, the Build facts and the checks before the server answers, so nothing below them jumps (19 looks: 5 rows) */
+.looks:empty { min-height: 340px; }
+#facts:empty { min-height: 79px; }
+#checks:empty { min-height: 300px; }
 .look { display: flex; flex-direction: column; align-items: stretch; gap: 4px; padding: 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); cursor: pointer; text-align: left; transition: border-color .15s var(--ease), translate .15s var(--ease); }
 .look:hover { border-color: var(--line-strong); translate: 0 -1px; }
 .look .sw { height: 34px; border-radius: 5px; background-color: var(--panel-3); background-size: cover, 32px 32px; background-position: center 30%, 0 0; }
@@ -276,7 +284,7 @@ ul.checks li.WARN::before { content: "!"; color: var(--warn); text-align: center
 ul.checks li.FAIL::before { content: "✕"; color: var(--fail); }
 ul.checks li.WARN, ul.checks li.FAIL { color: var(--fg); }
 ul.checks li.PASS { color: #d4d4d8; }
-.more { align-self: flex-start; border: 0; background: none; padding: 0; font-size: 12.5px; color: var(--accent-text); cursor: pointer; }
+.more { align-self: flex-start; border: 0; background: none; padding: 5px 0; min-height: 28px; font-size: 12.5px; color: var(--accent-text); cursor: pointer; }
 .more:hover { text-decoration: underline; }
 
 .layers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
