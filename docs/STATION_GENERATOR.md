@@ -197,8 +197,9 @@ A browser page for designing stations, opened from the Station Wrench screen (*S
 client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) and opens your browser.
 
 - **Settings:** a description of up to 1000 characters, station mode, platform layout, tracks and platform length sliders, look,
-  mix, roof, station building and name. The settings are written first in what the planner reads, so they win over the same
-  setting in your words; a clash shows under *Conflicts and limits*.
+  mix, roof, station building and name. Only a setting you actually change is written in front of what the planner reads; every
+  setting you leave alone is taken from your words, so a typed description describes the whole station unless you overrule a part
+  of it with a button.
 - **Platforms one by one (Advanced, off by default):** tick *Set each platform myself*, choose 1 to 10 platforms and give
   each its own type (side, island, side bay or island bay), width, length and roof (*Station roof*, *Canopy* or *Open*); *Auto* uses the station's.
   The rows are written as a platform list (see the table above) ahead of your words, so they are never cut off, and the

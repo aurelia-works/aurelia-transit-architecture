@@ -47,6 +47,7 @@
 
 ### Fixes
 
+- **Station Studio: a typed description now describes the station.** Before, every control was written in front of your words, so the defaults silently won and typing "8 tracks 200 long" still built a 2-track 64-long station. Now only a control you actually change is sent in front of your words; everything you leave alone comes from the description. Picking a preset still fills in the whole station.
 - Fare gates work like MTR's ticket barriers: no card needed, the fare comes from your MTR balance and MTR says why when the gate stays shut. The transit card still shows and tops up the balance. Before, a player without a card got the "carry a card" message and an inventory search on every tick in front of the gate.
 - Fare gates open from either side, so passengers can pay their way out too, and stay shut to anyone who has not paid: in Station Studio's walk mode you can no longer walk through a closed gate.
 - The MTR tactile map by the street doors faces the passenger instead of the wall.

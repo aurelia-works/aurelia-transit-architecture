@@ -1,5 +1,8 @@
 package com.aureliatransit.architecture.station;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 /**
  * The station wrench's choices (a look, an optional second look to mix in, through station, terminus or hub, tracks, platforms,
@@ -175,45 +178,72 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 
 	/** The description the parser reads, e.g. "two track hamburg and utrecht combined station, island platforms, 64 long". */
 	public String description() {
-		final StringBuilder text = new StringBuilder().append(tracks).append(" track");
-		if (look != Look.AUTO) {
-			text.append(' ').append(look.words);
-			if (mix != null) {
-				text.append(" and ").append(mix.words).append(" combined");
-			}
-		}
-		text.append(hub ? " hub" : terminus ? " terminus" : " station");
-		if (look == Look.AUTO && building && !terminus) {
-			text.append(" with station building");
-		}
-		if (platforms != Platforms.AUTO) {
-			text.append(", ").append(platforms == Platforms.ISLAND ? (tracks >= 4 ? "two island platforms" : "island platform") : "side platforms");
-		}
-		text.append(", ").append(length).append(" long");
-		if (width > 0) {
-			text.append(", ").append(width).append(" wide platforms");
-		}
-		if (!roof.words.isEmpty()) {
-			text.append(", ").append(roof.words);
-		}
-		if (!building) {
-			text.append(", no station building");
-		} else if (size != Size.AUTO) {
-			text.append(", ").append(size.words).append(" building");
-		}
-		if (!name.isEmpty()) {
-			text.append(", named ").append(name);
-		}
-		return text.toString();
+		return description(null);
 	}
 
 	/**
-	 * What the parser reads for these choices plus the player's own words: the choices come first, and the parser keeps the first
-	 * value it reads for each setting, so the choices win and a clash shows up as a "given twice" warning.
+	 * The description the parser reads from the given controls only: a part is left out when {@code pinned} does not contain it,
+	 * so a control the player never touched does not override their typed words. {@code null} pins every control (the buttons'
+	 * own description, as before).
+	 */
+	public String description(Set<String> pinned) {
+		final boolean all = pinned == null;
+		final List<String> head = new ArrayList<>();
+		if (all || pinned.contains("tracks")) {
+			head.add(tracks + " track");
+		}
+		if ((all || pinned.contains("look")) && look != Look.AUTO) {
+			head.add(mix != null ? look.words + " and " + mix.words + " combined" : look.words);
+		}
+		if (all || pinned.contains("mode")) {
+			head.add(hub ? "hub" : terminus ? "terminus" : "station");
+		}
+		if ((all || pinned.contains("building")) && look == Look.AUTO && building && !terminus) {
+			head.add("with station building");
+		}
+		final List<String> text = new ArrayList<>();
+		if (!head.isEmpty()) {
+			text.add(String.join(" ", head));
+		}
+		if ((all || pinned.contains("layout")) && platforms != Platforms.AUTO) {
+			text.add(platforms == Platforms.ISLAND ? (tracks >= 4 ? "two island platforms" : "island platform") : "side platforms");
+		}
+		if (all || pinned.contains("length")) {
+			text.add(length + " long");
+		}
+		if ((all || pinned.contains("width")) && width > 0) {
+			text.add(width + " wide platforms");
+		}
+		if ((all || pinned.contains("roof")) && !roof.words.isEmpty()) {
+			text.add(roof.words);
+		}
+		if (!building && (all || pinned.contains("building"))) {
+			text.add("no station building");
+		} else if (building && size != Size.AUTO && (all || pinned.contains("size"))) {
+			text.add(size.words + " building");
+		}
+		if ((all || pinned.contains("name")) && !name.isEmpty()) {
+			text.add("named " + name);
+		}
+		return String.join(", ", text);
+	}
+
+	/**
+	 * What the parser reads for these choices plus the player's own words. With a typed description, only the pinned controls go
+	 * in front of it, so the words decide everything else; with no words the whole description is sent as before.
 	 */
 	public String text(String typed) {
+		return text(typed, null);
+	}
+
+	/** {@link #text(String)} where a typed description overrides every control that is not in {@code pinned}. */
+	public String text(String typed, Set<String> pinned) {
 		final String words = typed == null ? "" : typed.strip();
-		return words.isEmpty() ? description() : description() + ", " + words;
+		if (words.isEmpty()) {
+			return description();
+		}
+		final String head = description(pinned);
+		return head.isEmpty() ? words : head + ", " + words;
 	}
 
 	/** One short line for buttons and chat: "Hamburg + Utrecht terminus, 4 tracks, long". */

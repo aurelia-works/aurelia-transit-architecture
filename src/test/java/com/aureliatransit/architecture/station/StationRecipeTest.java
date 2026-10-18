@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -130,6 +132,27 @@ class StationRecipeTest {
 		assertEquals(120, result.spec().platformLength());
 		assertTrue(result.warnings().stream().anyMatch(w -> w.contains("given twice")), result.warnings().toString());
 		assertEquals(recipe.description(), recipe.text("  "));
+	}
+
+	@Test
+	void typedWordsOverrideEveryControlLeftUntouched() {
+		// the studio's starting state: a typed description with nothing pinned decides everything itself
+		final StationRecipe recipe = StationRecipe.defaults().withLook(StationRecipe.Look.AUTO);
+		final ParseResult result = StationDescriptionParser.parse(recipe.text("8 tracks 200 long terminus", Set.of()));
+		assertEquals(8, result.spec().trackCount(), "the words set the track count");
+		assertEquals(200, result.spec().platformLength(), "the words set the length");
+		assertTrue(result.spec().terminus(), "the words set the type");
+		// a terminus always keeps its head building, so the building switch is checked on a through station
+		final ParseResult off = StationDescriptionParser.parse(recipe.text("3 tracks side platforms 80 long station, no station building", Set.of()));
+		assertFalse(off.spec().hasBuilding(), "the words turn the building off");
+	}
+
+	@Test
+	void onlyThePinnedControlsGoInFrontOfTheWords() {
+		final StationRecipe recipe = StationRecipe.defaults().withLook(StationRecipe.Look.AUTO).withTracks(2).withLength(64);
+		final String text = recipe.text("8 tracks 200 long terminus", Set.of("mode"));
+		assertEquals("station, 8 tracks 200 long terminus", text);
+		assertEquals(8, StationDescriptionParser.parse(text).spec().trackCount(), "untouched controls leave the words alone");
 	}
 
 	@Test

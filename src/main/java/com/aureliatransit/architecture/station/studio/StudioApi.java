@@ -22,10 +22,12 @@ import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.Violation;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Station Studio's answers, as JSON text. {@link #plan} runs the same parser, planner, design rules and station checks as
@@ -98,6 +100,25 @@ public final class StudioApi {
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}
 
+	/**
+	 * The controls the page says the player changed ("tracks,length", the field names the studio tracks as touched). A typed
+	 * description then only has to agree with those: every control left at its default is taken from the words instead.
+	 */
+	public static Set<String> pinned(Map<String, String> q) {
+		final String list = q.getOrDefault("pinned", "").strip();
+		if (list.isEmpty()) {
+			return Set.of();
+		}
+		final Set<String> pinned = new HashSet<>();
+		for (final String part : list.split(",")) {
+			final String key = part.strip();
+			if (!key.isEmpty()) {
+				pinned.add(key);
+			}
+		}
+		return pinned;
+	}
+
 	/** The choices the page offers and their limits. */
 	public String options() {
 		final StringBuilder out = new StringBuilder("{");
@@ -160,7 +181,7 @@ public final class StudioApi {
 	public String plan(Map<String, String> q) {
 		final StationRecipe recipe = recipe(q);
 		final String typed = typed(q);
-		final String text = recipe.text(typed);
+		final String text = recipe.text(typed, pinned(q));
 		final long started = System.nanoTime();
 		final ParseResult parse = StationDescriptionParser.parse(text);
 		final StationPlan plan = StationPlanner.plan(parse.spec());

@@ -34,6 +34,8 @@
 		for (const f of fields) {
 			q[f] = $(f).value;
 		}
+		// the controls the player changed: the server only prepends these to a typed description, so the rest stays the words'
+		q.pinned = [...touched].join(",");
 		return q;
 	}
 
@@ -50,6 +52,10 @@
 		for (const f of fields) {
 			if (saved[f] !== undefined && $(f)) {
 				$(f).value = saved[f];
+				// what was remembered was a choice the player made, so it still wins over typed words
+				if (saved[f] !== "" && f !== "text") {
+					touched.add(f);
+				}
 			}
 		}
 	}
@@ -93,6 +99,8 @@
 		hub: "A bit of both: the middle tracks end at the station hall, the outer ones carry on through."
 	};
 	const synced = [];
+	// the controls the player changed: a typed description overrides everything else, but must agree with these
+	const touched = new Set();
 
 	function set(id, value) {
 		$(id).value = value;
@@ -208,6 +216,10 @@
 				$("building").value = "1";
 				$("size").value = "AUTO";
 				$("name").value = p.name;
+				// the preset's words already carry its look, type, tracks and length, so only its name (which they leave out)
+				// is pinned: the words stay authoritative and nothing is said twice
+				touched.clear();
+				touched.add("name");
 				changed();
 			});
 			presets.append(b);
@@ -419,7 +431,10 @@
 			}
 		});
 		for (const f of fields) {
-			$(f).addEventListener("input", changed);
+			$(f).addEventListener("input", () => {
+				touched.add(f);
+				changed();
+			});
 		}
 		if ($("text").value) {
 			$("words").open = true;

@@ -57,6 +57,8 @@ class StudioTest {
 				q.put(field, value instanceof Double d ? Integer.toString(d.intValue()) : (String) value);
 			}
 			q.put("building", "1");
+			// the page pins only the preset's name: its words already carry the rest, so nothing is said twice
+			q.put("pinned", "name");
 			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
 			final StationSpec want = StationDescriptionParser.parse(preset.description()).spec();
 			final Map<String, Object> built = Json.object(plan.get("built"));
@@ -73,7 +75,8 @@ class StudioTest {
 	@Test
 	void planListsEveryBlockWithItsModel() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
-		final Map<String, String> q = Map.of("look", "HAMBURG", "tracks", "3", "length", "96", "text", "named Altona", "building", "1");
+		final Map<String, String> q = Map.of("look", "HAMBURG", "tracks", "3", "length", "96", "text", "named Altona", "building", "1",
+				"pinned", "look,tracks,length");
 		final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
 		final String text = (String) plan.get("text");
 		final int expected = StationPlanner.plan(StationDescriptionParser.parse(text).spec()).blocks().size();
@@ -142,7 +145,7 @@ class StudioTest {
 	void aGrandTerminusReportsItsBuildingSize() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
 		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("look", "TOKYO", "tracks", "10", "length", "200", "mode", "terminus",
-				"size", "GRAND", "text", "named Ueno"))));
+				"size", "GRAND", "text", "named Ueno", "pinned", "look,tracks,length,mode,size"))));
 		final Map<String, Object> built = Json.object(plan.get("built"));
 		assertEquals("Terminus", built.get("mode"));
 		assertEquals(StationScale.GRAND.label(), built.get("scale"), "the head building's size, not \"-\"");
@@ -157,13 +160,28 @@ class StudioTest {
 	}
 
 	@Test
-	void controlsWinAndTypedWordsAreKept() {
+	void pinnedControlsWinAndTypedWordsAreKept() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
-		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "text", "4 tracks, 100 long, brick"))));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "pinned", "tracks,length",
+				"text", "4 tracks, 100 long, named Riverside"))));
 		assertEquals(2.0, Json.object(plan.get("built")).get("tracks"));
 		assertEquals(40.0, Json.object(plan.get("built")).get("length"));
-		assertTrue(Json.list(plan.get("warnings")).stream().anyMatch(w -> w.toString().contains("given twice")));
+		assertEquals("Riverside", Json.object(plan.get("built")).get("name"), "the words still describe the rest");
 		assertEquals(StudioApi.MAX_TYPED, StudioApi.typed(Map.of("text", "x".repeat(5000))).length());
+	}
+
+	/**
+	 * With nothing pinned, a typed description decides everything itself — the bug the studio had, where every control's
+	 * default overrode the words. The buttons the player touched still win (see {@link #pinnedControlsWinAndTypedWordsAreKept}).
+	 */
+	@Test
+	void typedWordsWinWhenNothingIsPinned() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "text", "8 tracks 200 long terminus"))));
+		final Map<String, Object> built = Json.object(plan.get("built"));
+		assertEquals(8.0, built.get("tracks"), "the words set the track count");
+		assertEquals(200.0, built.get("length"), "the words set the length");
+		assertEquals("Terminus", built.get("mode"), "the words set the type");
 	}
 
 	@Test
@@ -171,7 +189,7 @@ class StudioTest {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
 		final String list = "platform 1: side 12 wide 30 long canopy; platform 2: island 10 wide; platform 3: side open;";
 		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "64", "platforms", list,
-				"text", "x".repeat(5000)))));
+				"pinned", "tracks,length", "text", "x".repeat(5000)))));
 		final StationSpec spec = StationDescriptionParser.parse(StudioApi.recipe(Map.of("tracks", "2", "length", "64"))
 				.text(StudioApi.typed(Map.of("platforms", list)))).spec();
 		assertEquals(3, spec.platforms().size());
