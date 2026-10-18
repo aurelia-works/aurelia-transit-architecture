@@ -93,9 +93,9 @@ becomes a top bar.
   the way its player looks); when the backend reports `facing`, its letter goes in `#compassFacing`.
 - A failed plan request keeps the last station on show, dims the Build column, disables the copy and send buttons and says so
   in the status line; the page asks again when the studio answers.
-- Typed words lose to the settings above where they clash, because a roll pins every setting (the server drops unpinned
-  settings once there are typed words). The page says so and offers "Let my words decide", which un-pins them; the controls
-  then follow what the plan came to.
+- Typed words win over the settings above where they clash (Jah, 2026-10-18). A roll pins every setting, but the server
+  leaves out each pinned setting the words set themselves (`StationDescriptionParser.controlsSaid`) and returns them as
+  `wordsWon`; the page names them under the text box.
 
 ## Checking it
 

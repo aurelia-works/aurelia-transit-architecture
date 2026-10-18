@@ -123,7 +123,30 @@ public final class StudioApi {
 				pinned.add(key.equals("mix") ? "look" : key);
 			}
 		}
+		// typed words win: a pinned control the words set themselves is left out, so it cannot contradict them
+		pinned.removeAll(wordsWon(q));
 		return pinned;
+	}
+
+	/** The pinned controls the typed words set themselves, and so overrule (sorted, for the page's note). */
+	public static List<String> wordsWon(Map<String, String> q) {
+		final String words = q.getOrDefault("text", "").strip();
+		final String list = q.getOrDefault("pinned", "").strip();
+		if (words.isEmpty() || list.isEmpty()) {
+			return List.of();
+		}
+		final Set<String> asked = new HashSet<>();
+		for (final String part : list.split(",")) {
+			asked.add(part.strip().equals("mix") ? "look" : part.strip());
+		}
+		final List<String> won = new ArrayList<>();
+		for (final String key : StationDescriptionParser.controlsSaid(words)) {
+			if (asked.contains(key)) {
+				won.add(key);
+			}
+		}
+		won.sort(null);
+		return won;
 	}
 
 	/**
@@ -333,6 +356,7 @@ public final class StudioApi {
 		}
 		out.append(",\"warnings\":").append(Json.strings(warnings));
 		out.append(",\"ignored\":").append(Json.strings(parse.ignored()));
+		out.append(",\"wordsWon\":").append(Json.strings(wordsWon(q)));
 		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.hub() ? "Hub" : recipe.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(recipe.platforms().label())).append(",\"tracks\":").append(recipe.tracks())
 				.append(",\"length\":").append(recipe.length()).append(",\"look\":").append(Json.quote(recipe.look().label()))

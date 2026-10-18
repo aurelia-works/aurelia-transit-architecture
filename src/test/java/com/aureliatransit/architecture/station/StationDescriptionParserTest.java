@@ -554,4 +554,14 @@ class StationDescriptionParserTest {
 		// "track" without "bed" after it is still the track count's noun
 		assertEquals(4, StationDescriptionParser.parse("gravel 4 track station").spec().trackCount());
 	}
+
+	@Test
+	void controlsSaidNamesWhatTheWordsSet() {
+		assertEquals(java.util.Set.of("tracks", "length", "name"), StationDescriptionParser.controlsSaid("4 tracks, 100 long, named Riverside"));
+		// a terminus always has its head building, so the word sets the building too
+		assertEquals(java.util.Set.of("mode", "building", "layout"), StationDescriptionParser.controlsSaid("terminus with island platforms"));
+		assertEquals(java.util.Set.of("roof"), StationDescriptionParser.controlsSaid("no roof"));
+		assertEquals(java.util.Set.of(), StationDescriptionParser.controlsSaid("gravel track bed"));
+		assertEquals(java.util.Set.of(), StationDescriptionParser.controlsSaid(""));
+	}
 }

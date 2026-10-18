@@ -182,6 +182,16 @@ public final class StationDescriptionParser {
 		return new Parse().run(description == null ? "" : description);
 	}
 
+	/**
+	 * The Studio controls a description sets itself, by the Studio's control keys (tracks, look, mode, building, layout, length,
+	 * width, roof, size, name). Typed words beat a pinned control, so the Studio leaves out each pin the words already set.
+	 */
+	public static Set<String> controlsSaid(String description) {
+		final Parse parse = new Parse();
+		parse.run(description == null ? "" : description);
+		return parse.said;
+	}
+
 	/** A recognised phrase and the token where it started, so feedback comes out in text order. */
 	private record Note(int at, String text) {
 	}
@@ -288,6 +298,7 @@ public final class StationDescriptionParser {
 					scan(i);
 				}
 			}
+			said = said();
 			applyClassAndEra();
 			final StationSpec spec = resolve(description.isBlank());
 			final List<String> ignored = new ArrayList<>(new LinkedHashSet<>(ignoredWords()));
@@ -297,6 +308,45 @@ public final class StationDescriptionParser {
 				understoodLines.add(note.text());
 			}
 			return new ParseResult(spec, understoodLines, defaulted, warnings, ignored);
+		}
+
+		/** What the words themselves set, before a class, an era or the resolve step fills anything in. */
+		private Set<String> said = Set.of();
+
+		/** See {@link StationDescriptionParser#controlsSaid}; taken right after the scan. */
+		private Set<String> said() {
+			final Set<String> said = new LinkedHashSet<>();
+			if (tracks != null || !listed.isEmpty()) {
+				said.add("tracks");
+			}
+			if (!looks.isEmpty() || buildingStyle != null || style != null) {
+				said.add("look");
+			}
+			if (terminus || hub) {
+				said.add("mode");
+			}
+			if (building != null) {
+				said.add("building");
+			}
+			if (islandAt >= 0 || islandPlatforms != null || sidePlatforms || !listed.isEmpty()) {
+				said.add("layout");
+			}
+			if (length != null || lengthAdjective != null) {
+				said.add("length");
+			}
+			if (width != null || wide || narrow) {
+				said.add("width");
+			}
+			if (roofNone || roof != null || shed != null || canopy != null) {
+				said.add("roof");
+			}
+			if (small || large || scale != null) {
+				said.add("size");
+			}
+			if (!name.isEmpty()) {
+				said.add("name");
+			}
+			return said;
 		}
 
 		// ---- platform list ----------------------------------------------------------------------------------------------

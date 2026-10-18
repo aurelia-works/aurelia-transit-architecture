@@ -589,7 +589,7 @@
 		}
 		// What the dice set is pinned like a hand-set control: the server drops every unpinned control as soon as there are any
 		// typed words (the stairs, track bed and travelator choices count as words), so unpinned rolled settings would be lost.
-		// "Let my words decide" (below) un-pins them when the player wants the words to win.
+		// Where typed words set the same thing, the words win (the server drops those pins).
 		for (const [group, ids] of Object.entries(GROUPS)) {
 			if (!seeds.locks[group]) {
 				ids.forEach((id) => {
@@ -888,24 +888,12 @@
 		}
 	}
 
-	// Typed words lose to the settings above where they clash (a roll sets them all, and the planner does not always flag it): say
-	// so while any setting is pinned, and offer the way out.
+	// Typed words beat the settings above: the server leaves out each pinned setting the words set themselves and says which.
 	function showClash(plan) {
-		const pinned = [...touched].filter((f) => f !== "name").length;
-		const clash = !!$("text").value.trim() && pinned > 0;
-		$("clash").hidden = !clash;
-		$("clashText").textContent = clash ? "Where your words clash with the settings above, the settings win." : "";
+		const won = (plan && plan.wordsWon) || [];
+		$("clash").hidden = won.length === 0;
+		$("clashText").textContent = won.length ? "Your words set " + won.join(", ") + ", so they win over those settings above." : "";
 	}
-	$("clashBtn").addEventListener("click", () => {
-		// only the name stays pinned (the words leave it out): everything else follows the words, and the controls then follow the plan
-		const name = touched.has("name");
-		touched.clear();
-		rolled.clear();
-		if (name) {
-			touched.add("name");
-		}
-		changed();
-	});
 
 	let request = 0;
 	// set while the last plan request failed, so the page can ask again when the studio answers

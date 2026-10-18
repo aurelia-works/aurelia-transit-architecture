@@ -166,19 +166,30 @@ class StudioTest {
 	}
 
 	@Test
-	void pinnedControlsWinAndTypedWordsAreKept() {
+	void typedWordsWinOverPinnedControls() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "roof", "NONE",
+				"pinned", "tracks,length,roof", "text", "4 tracks, 100 long, named Riverside"))));
+		assertEquals(4.0, Json.object(plan.get("built")).get("tracks"), "the words set the tracks, so the pin gives way");
+		assertEquals(100.0, Json.object(plan.get("built")).get("length"));
+		assertEquals("Riverside", Json.object(plan.get("built")).get("name"), "the words still describe the rest");
+		assertEquals(List.of("length", "tracks"), plan.get("wordsWon"), "the page is told which pins the words overruled");
+		assertEquals(StudioApi.MAX_TYPED, StudioApi.typed(Map.of("text", "x".repeat(5000))).length());
+	}
+
+	@Test
+	void aPinTheWordsDoNotMentionStillHolds() {
 		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
 		final Map<String, Object> plan = Json.object(Json.parse(api.plan(Map.of("tracks", "2", "length", "40", "pinned", "tracks,length",
-				"text", "4 tracks, 100 long, named Riverside"))));
+				"text", "named Riverside"))));
 		assertEquals(2.0, Json.object(plan.get("built")).get("tracks"));
 		assertEquals(40.0, Json.object(plan.get("built")).get("length"));
-		assertEquals("Riverside", Json.object(plan.get("built")).get("name"), "the words still describe the rest");
-		assertEquals(StudioApi.MAX_TYPED, StudioApi.typed(Map.of("text", "x".repeat(5000))).length());
+		assertEquals(List.of(), plan.get("wordsWon"));
 	}
 
 	/**
 	 * With nothing pinned, a typed description decides everything itself — the bug the studio had, where every control's
-	 * default overrode the words. The buttons the player touched still win (see {@link #pinnedControlsWinAndTypedWordsAreKept}).
+	 * default overrode the words. The buttons the player touched still win (see {@link #aPinTheWordsDoNotMentionStillHolds}).
 	 */
 	@Test
 	void typedWordsWinWhenNothingIsPinned() {
