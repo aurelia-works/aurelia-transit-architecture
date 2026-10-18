@@ -2165,6 +2165,9 @@ public final class StationPlanner {
 			if (gallery > 0) {
 				for (final int side : new int[]{-1, 1}) {
 					gallery(side, gallery, u0, u1, vL, gateV, b);
+					if (spec.hub()) {
+						retailRow(side, gallery, u0, u1, vL, gateV, b);
+					}
 				}
 			}
 			// the ticket hall's rooms stand against the side walls, leaving the walk from the entrance to the gates clear
@@ -2278,6 +2281,47 @@ public final class StationPlanner {
 				for (int v = lift.doorV() + 3; v < top - 1; v += 3) {
 					put(Role.BENCH, wall - side, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bench());
 				}
+			}
+		}
+
+		/**
+		 * A hub's retail row under one side gallery (Phase 3): shop units between the lift's landing and the gallery stair, each
+		 * a glazed shopfront with a doorway on the gallery's open edge, a fascia up to the gallery floor, partitions between units
+		 * and a counter against the back wall. The gallery's piers stand in the shopfront line.
+		 */
+		private void retailRow(int side, int width, int u0, int u1, int vL, int gateV, StylePalette.Building b) {
+			final int wall = side < 0 ? u0 : u1;
+			final int edge = wall - side * width;
+			final int from = vL + 4 + RETAIL_CLEAR;
+			final int to = gateV - 2 - StationGeometry.STAIR_STEPS - 1;
+			int a = from;
+			while (a + RETAIL_UNIT - 1 <= to) {
+				final int bEnd = a + RETAIL_UNIT - 1;
+				final int doorV = a + RETAIL_UNIT / 2 - 1;
+				// partitions at both ends of the unit, from the back wall to the shopfront
+				for (final int v : new int[]{a - 1, bEnd + 1}) {
+					for (int u = Math.min(wall - side, edge); u <= Math.max(wall - side, edge); u++) {
+						for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+							put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.interiorWall());
+						}
+					}
+				}
+				for (int v = a; v <= bEnd; v++) {
+					final boolean door = v == doorV || v == doorV + 1;
+					for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+						if (y <= StationGeometry.DOOR_HEIGHT && door) {
+							keepClear(edge, y, v);
+						} else if (y <= StationGeometry.DOOR_HEIGHT) {
+							put(Role.WINDOW, edge, y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.window());
+						} else {
+							put(Role.WALL, edge, y, v, LocalDir.PLUS_V, b.trim());
+						}
+					}
+					if (!door) {
+						put(Role.FIXTURE, wall - side, 1, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U, "minecraft:barrel");
+					}
+				}
+				a = bEnd + 2;
 			}
 		}
 
@@ -4767,6 +4811,9 @@ public final class StationPlanner {
 		private static final int FORECOURT_ISLAND = 3;
 		/** Taxi bays: how many, how wide and how long. */
 		private static final int FORECOURT_BAYS = 3;
+		/** A hub's shop unit under the gallery: rows along the wall, and rows kept open past the lift's landing before the first. */
+		private static final int RETAIL_UNIT = 4;
+		private static final int RETAIL_CLEAR = 3;
 		private static final String WAYFINDING_SIGN = "aurelia_transit_architecture:hanging_wayfinding_sign";
 		private static final String EXIT_SIGN = "aurelia_transit_architecture:exit_sign";
 		/** Rows of a terminus forecourt's drop-off lay-by, between its kerb and the street. */
