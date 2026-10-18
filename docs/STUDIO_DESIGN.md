@@ -81,3 +81,23 @@ keeps it without one: a roll then never brings a terminus or hub, which always h
 
 Under 1180 px the build column moves under the view; under 860 px everything stacks with the view first, and the sidebar
 becomes a top bar.
+
+## Views, compass and framing
+
+- **Fit** frames the whole station, not a guess: `fitView` projects the eight corners of the station's box and backs the camera
+  off (and slides it sideways) until they fill 90 % of the view, for any station size or window shape. Overview, Back, Street
+  and Plan all use it.
+- **Plan** is the floor plan from above, turned so the street is at the bottom (like the entrance of an architect's plan).
+- **Compass** (top left of the view): the arrow points to the street as the camera sees the ground, so it turns as you orbit;
+  a click opens the Plan view. It is drawn from `plan.street` only. The plan has no world north (the station is built to face
+  the way its player looks); when the backend reports `facing`, its letter goes in `#compassFacing`.
+- A failed plan request keeps the last station on show, dims the Build column, disables the copy and send buttons and says so
+  in the status line; the page asks again when the studio answers.
+- Typed words lose to the settings above where they clash, because a roll pins every setting (the server drops unpinned
+  settings once there are typed words). The page says so and offers "Let my words decide", which un-pins them; the controls
+  then follow what the plan came to.
+
+## Checking it
+
+`tools/studio_features.mjs` (the features), `tools/studio_locks.mjs` (the seed locks) and `tools/studio_stress.mjs` (plan
+latency, frame time on the largest station, rapid input, memory over 50 rerolls, console errors, failed requests).

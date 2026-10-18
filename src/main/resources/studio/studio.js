@@ -544,7 +544,9 @@
 		if (seeds.locks.building) {
 			holdBuilding();
 		}
-		// what the dice set is pinned like a hand-set control, so a typed description never overrides the rolled station
+		// What the dice set is pinned like a hand-set control: the server drops every unpinned control as soon as there are any
+		// typed words (the stairs, track bed and travelator choices count as words), so unpinned rolled settings would be lost.
+		// "Let my words decide" (below) un-pins them when the player wants the words to win.
 		for (const [group, ids] of Object.entries(GROUPS)) {
 			if (!seeds.locks[group]) {
 				ids.forEach((id) => touched.add(id));
@@ -793,6 +795,55 @@
 		}
 	}
 
+	// With typed words, the controls the player has not changed give way to the words: show what the plan came to in them
+	// (type, tracks, length, platforms, building), without a new plan and without pinning them.
+	function followWords(plan) {
+		if (!$("text").value.trim() || $("listOn").checked) {
+			return;
+		}
+		const b = plan.built;
+		const want = {
+			mode: /^terminus/i.test(b.mode) ? "terminus" : /^hub/i.test(b.mode) ? "hub" : "through",
+			tracks: String(b.tracks),
+			length: String(b.length),
+			building: /^no building/i.test(b.building) ? "0" : "1"
+		};
+		if ($("layout").value !== "AUTO") {
+			want.layout = /island/i.test(b.layout) ? "ISLAND" : "SIDE";
+		}
+		let moved = false;
+		for (const [f, v] of Object.entries(want)) {
+			const range = f === "tracks" ? options.tracks : f === "length" ? options.length : null;
+			const inRange = !range || (+v >= range[0] && +v <= range[1]);
+			if (!touched.has(f) && $(f).value !== v && inRange) {
+				$(f).value = v;
+				moved = true;
+			}
+		}
+		if (moved) {
+			updateOutputs();
+			remember();
+		}
+	}
+
+	// Typed words lose to the settings above where they clash (a roll sets them all, and the planner does not always flag it): say
+	// so while any setting is pinned, and offer the way out.
+	function showClash(plan) {
+		const pinned = [...touched].filter((f) => f !== "name").length;
+		const clash = !!$("text").value.trim() && pinned > 0;
+		$("clash").hidden = !clash;
+		$("clashText").textContent = clash ? "Where your words clash with the settings above, the settings win." : "";
+	}
+	$("clashBtn").addEventListener("click", () => {
+		// only the name stays pinned (the words leave it out): everything else follows the words, and the controls then follow the plan
+		const name = touched.has("name");
+		touched.clear();
+		if (name) {
+			touched.add("name");
+		}
+		changed();
+	});
+
 	let request = 0;
 	// set while the last plan request failed, so the page can ask again when the studio answers
 	let planFailed = false;
@@ -819,6 +870,8 @@
 			current = plan;
 			showPlan(plan);
 			report(plan);
+			followWords(plan);
+			showClash(plan);
 		} catch (e) {
 			// an older request failing says nothing about the newest one
 			if (mine === request) {
@@ -857,6 +910,17 @@
 			return { render() {}, setSize() {}, getPixelRatio: () => 1, clippingPlanes: [] };
 		}
 	})();
+	// the GPU can take the drawing surface away (a driver reset, too many tabs): keep the page usable and draw again when it is back
+	canvas.addEventListener("webglcontextlost", (e) => {
+		e.preventDefault();
+		$("status").textContent = "The 3D view was reset by your graphics driver. It will come back by itself.";
+	});
+	canvas.addEventListener("webglcontextrestored", () => {
+		if (current) {
+			$("status").textContent = "Planned in " + current.ms + " ms · " + NUMBER.format(current.size.blocks) + " blocks · WebGL";
+		}
+		draw();
+	});
 	const scene = new THREE.Scene();
 	const NIGHT = new THREE.Color(0x101317);
 	const SKY = new THREE.Color(0xa9bfd3);
