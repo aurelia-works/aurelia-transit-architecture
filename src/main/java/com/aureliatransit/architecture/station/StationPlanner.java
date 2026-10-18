@@ -81,6 +81,7 @@ public final class StationPlanner {
 		planning.head();
 		planning.forecourt();
 		planning.footbridge();
+		planning.farFootbridge();
 		planning.columns();
 		planning.canopyRoofs();
 		planning.hallRoof();
@@ -241,7 +242,10 @@ public final class StationPlanner {
 		}
 		private final List<Integer> columnV;
 		private final List<Box> extraSupport = new ArrayList<>();
-		private final StationLayout site;
+		/** The station's layout; {@link #farFootbridge} points it at the far bridge while that bridge is planned. */
+		private StationLayout site;
+		/** The second footbridge at the platforms' far end (phase 2), or null. */
+		private final StationLayout far;
 		private List<Integer> hallRows;
 		/** v of the building's platform-side doorways: no shed column stands in front of them. */
 		private final java.util.Set<Integer> doorV = new java.util.HashSet<>();
@@ -256,6 +260,7 @@ public final class StationPlanner {
 			this.length = layout.platformLength();
 			this.columnV = columnPositions(length);
 			this.site = StationLayout.of(spec, layout);
+			this.far = site.farBridge(spec, layout);
 			this.scale = spec.buildingScale();
 			this.wingBays = site.building() ? wingBays(scale, length, site.vStart(), site.vEnd()) : 0;
 		}
@@ -2354,6 +2359,25 @@ public final class StationPlanner {
 		 * The footbridge over the tracks: deck, glazed corridor walls, roof with lights, support piers on every platform
 		 * and six-foot piers where the span exceeds 12, and a stair with a landing down to every served platform.
 		 */
+		/** The far-end footbridge, planned by {@link #footbridge} itself with the far bridge as the layout. */
+		void farFootbridge() {
+			if (far == null) {
+				return;
+			}
+			final StationLayout main = site;
+			site = far;
+			try {
+				footbridge();
+			} finally {
+				site = main;
+			}
+		}
+
+		/** True on the centre line of either footbridge. */
+		private boolean bridgeRow(int v) {
+			return site.bridge() && v == site.bridgeV() || far != null && v == far.bridgeV();
+		}
+
 		void footbridge() {
 			if (!site.bridge()) {
 				return;
@@ -2667,9 +2691,11 @@ public final class StationPlanner {
 					blocked.add(v);
 				}
 			}
-			if (site.bridge()) {
-				for (int v = site.bridgeV() - 3; v <= site.bridgeV() + 3; v++) {
-					blocked.add(v);
+			for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
+				if (bridge.bridge()) {
+					for (int v = bridge.bridgeV() - 3; v <= bridge.bridgeV() + 3; v++) {
+						blocked.add(v);
+					}
 				}
 			}
 			final int target = site.bridge() ? site.bridgeV() : layout.terminus() ? layout.platformLength() : -1;
@@ -3200,7 +3226,7 @@ public final class StationPlanner {
 							// a footbridge or stair pier rising through the girders carries a cross beam framed into its sides,
 							// as far as a cantilever reaches (on the footbridge line, right across the canopy); the girders run on
 							// past the rest of the row
-							final boolean bridgeRow = site.bridge() && v == site.bridgeV();
+							final boolean bridgeRow = bridgeRow(v);
 							final int start = bridgeRow && i > 0 ? lines.get(i - 1) + armRight[i - 1] + 1 : u - armLeft[i];
 							final int end = u + armRight[i];
 							// where a stairwell or lift shaft wall stops the girder along the line, the cross beam frames into it

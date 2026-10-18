@@ -50,4 +50,43 @@ class TwoWaysDownTest {
 			assertTrue(two > 0, words + ": no platform has two ways down");
 		}
 	}
+
+	@Test
+	void longBigThroughStationsGetASecondFootbridgeAtTheFarEnd() {
+		for (final String words : new String[]{"3 tracks island, 96 long, station building, city", "4 tracks island, 120 long, station building, grand",
+				"2 tracks, 96 long, station building, city", "city class", "town class"}) {
+			final StationSpec spec = spec(words);
+			final StationPlan plan = StationPlanner.plan(spec);
+			assertEquals(java.util.List.of(), LayoutValidator.validate(plan), words);
+			assertTrue(StationAudit.audit(plan).buildable(), words + " " + StationAudit.audit(plan).problems());
+			final StationLayout site = StationLayout.of(spec, plan.layout());
+			final StationLayout far = site.farBridge(spec, plan.layout());
+			assertTrue(far != null, words);
+			assertTrue(Math.abs(far.bridgeV() - site.bridgeV()) > plan.layout().platformLength() / 3, words + ": the far bridge is at the far end");
+			// a deck across every track, and a stair down to every platform wide enough for one
+			final java.util.Set<Integer> deckU = new java.util.HashSet<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.v() == far.bridgeV() && block.role() == Role.BRIDGE_DECK) {
+					deckU.add(block.u());
+				}
+			}
+			for (int u = far.deckFrom(); u <= far.deckTo(); u++) {
+				assertTrue(deckU.contains(u), words + ": far deck missing at u " + u);
+			}
+			for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+				for (final StationLayout.Flight flight : far.flights(band)) {
+					final int top = flight.stepV(StationGeometry.STAIR_STEPS);
+					assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.STAIR && b.v() == top && flight.columns().contains(b.u())),
+							words + ": no stair at the far bridge for platform " + band.number());
+				}
+			}
+		}
+		// a hall's girder frame rests on the main bridge only, so a hall-roofed station keeps one bridge
+		final StationSpec hall = spec("3 tracks island, 96 long, station building, city, hall roof");
+		assertEquals(RoofType.HALL, hall.roof());
+		assertEquals(null, StationLayout.of(hall, StationGeometry.layout(hall)).farBridge(hall, StationGeometry.layout(hall)));
+		final StationSpec shortCity = spec("3 tracks island, 48 long, station building, city");
+		final TrackLayout layout = StationGeometry.layout(shortCity);
+		assertEquals(null, StationLayout.of(shortCity, layout).farBridge(shortCity, layout), "too short for two bridges");
+	}
 }

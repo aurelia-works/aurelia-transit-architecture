@@ -131,6 +131,41 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	}
 
 	/**
+	 * Phase 2: at a big through station (a building and two ways down), a second footbridge across the platforms' far end, so
+	 * passengers at that end of a long train need not walk back to the building to change platforms. It is a plain footbridge,
+	 * glazed at both ends, from the first platform to the last, with stairs only (the step-free route stays the main bridge's
+	 * lifts); its stairs run in towards the middle. Null where there is none: no building, one way down, a street entrance,
+	 * a hall roof, or platforms too short to keep both bridges' stairs apart.
+	 */
+	public StationLayout farBridge(StationSpec spec, TrackLayout layout) {
+		if (!bridge || !building || !bothWays || street != null || layout.terminus() || spec.roof() == RoofType.HALL) {
+			return null;
+		}
+		final int length = layout.platformLength();
+		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);
+		final int reach = offset + StationGeometry.STAIR_STEPS + 1;
+		// two rows of platform beyond the corridor's end wall, at the end further from the main bridge
+		final boolean high = bridgeV <= length / 2;
+		final int v = high ? length - 1 - offset - 2 : offset + 2;
+		if (Math.abs(v - bridgeV) < 2 * reach + FAR_BRIDGE_GAP) {
+			return null;
+		}
+		final List<Integer> all = new ArrayList<>();
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			// its piers stand on the platforms: every platform runs under the corridor and to its stairs' landings
+			if (!band.runs(v - offset - 1) || !band.runs(v + offset + 1) || !band.runs(high ? v - reach : v + reach)) {
+				return null;
+			}
+			all.add(band.number());
+		}
+		return new StationLayout(false, 0, 0, 0, v, 1, true, v, bridgeWidth, layout.platforms().get(0).uMin(), deckTo, high ? -1 : 1, all,
+				false, false, null);
+	}
+
+	/** Open platform between the two footbridges' stair landings, at least. */
+	static final int FAR_BRIDGE_GAP = 8;
+
+	/**
 	 * Facade bays of a station building beside platforms this long: five, or four on shorter platforms, the fewest that keep
 	 * the stair up a storey on one side of the entrance and the lift on the other.
 	 */

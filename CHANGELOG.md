@@ -10,6 +10,8 @@
 
 ### Station generator
 
+- **A second footbridge at the far end:** long city and town through stations with a canopy (or no roof) get a stairs-only footbridge across the far end of the platforms, so passengers at that end can change platforms without walking back to the building.
+- **The wrench preview turns with "facing":** it now draws the station the way the Studio and the build do.
 - **Built at 1.5 blocks to the metre:** storeys 4 m clear, the footbridge 4.7 m over the rails, canopies 4 m, taller sheds; stairs climb a whole storey. A station building needs platforms 24 long, a hub 20.
 - **A real terminus concourse:** ticket hall with a ticket office, machines, toilets and a shop; one gate line with glass barriers to the walls; the paid concourse with the main board, seating islands and, in a big hall, a gallery each side with a lift and a stair.
 - **Seeds hardened:** a seed is 1 to 12 letters or digits; anything else after `seed` is ignored with a warning (never an error), a seed given twice uses the first, and every plan has a **fingerprint** (a stable hash of its blocks) that Station Studio shows, so two people can tell whether they planned the same station. Tests hold reproducibility across fresh planners and threads, and that seeds that plan the same station always share their effective choices.
