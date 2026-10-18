@@ -7,6 +7,7 @@ import com.aureliatransit.architecture.station.LayoutValidator;
 import com.aureliatransit.architecture.station.LocalDir;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
+import com.aureliatransit.architecture.station.PlanFingerprint;
 import com.aureliatransit.architecture.station.PlannedBlock;
 import com.aureliatransit.architecture.station.Role;
 import com.aureliatransit.architecture.station.StationAudit;
@@ -17,6 +18,7 @@ import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.StationRecipe;
+import com.aureliatransit.architecture.station.StationSeed;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.Violation;
@@ -128,7 +130,21 @@ public final class StudioApi {
 	public static String description(Map<String, String> q) {
 		final String text = recipe(q).text(typed(q), pinned(q));
 		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
-		return seed.matches("[a-z0-9]{1,12}") ? text + ", seed " + seed : text;
+		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
+	}
+
+	/**
+	 * What to tell the player about a seed field that is not a seed: it is left out of the description, so the parser never sees
+	 * it. Null for no seed or a good one.
+	 */
+	static String seedNote(Map<String, String> q) {
+		final String seed = q.getOrDefault("seed", "").strip();
+		if (seed.isEmpty() || StationSeed.valid(seed)) {
+			return null;
+		}
+		final String shown = seed.length() > 20 ? seed.substring(0, 20) + "..." : seed;
+		return "seed \"" + shown.replaceAll("\\p{Cntrl}", " ") + "\" ignored: a seed is 1 to " + StationSeed.MAX_CHARS
+				+ " letters or digits (a-z, 0-9)";
 	}
 
 	/** The choices the page offers and their limits. */
@@ -245,7 +261,8 @@ public final class StudioApi {
 				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
-		out.append(",\"seed\":").append(Json.quote(spec.seed() == 0 ? "" : Long.toString(spec.seed(), 36)));
+		out.append(",\"seed\":").append(Json.quote(StationSeed.format(spec.seed())));
+		out.append(",\"fingerprint\":").append(Json.quote(PlanFingerprint.of(plan)));
 		// the roof and building size this station was planned with, as the page's options, so a locked "Auto" can keep them
 		out.append(",\"resolved\":{\"roof\":").append(Json.quote(resolvedRoof(spec).name())).append(",\"size\":")
 				.append(Json.quote(spec.hasBuilding() ? resolvedSize(spec).name() : "AUTO")).append('}');
@@ -253,7 +270,12 @@ public final class StudioApi {
 		out.append(",\"typed\":").append(Json.quote(typed));
 		out.append(",\"understood\":").append(Json.strings(parse.understood()));
 		out.append(",\"defaulted\":").append(Json.strings(parse.defaulted()));
-		out.append(",\"warnings\":").append(Json.strings(parse.warnings()));
+		final List<String> warnings = new ArrayList<>(parse.warnings());
+		final String seedNote = seedNote(q);
+		if (seedNote != null) {
+			warnings.add(seedNote);
+		}
+		out.append(",\"warnings\":").append(Json.strings(warnings));
 		out.append(",\"ignored\":").append(Json.strings(parse.ignored()));
 		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.hub() ? "Hub" : recipe.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(recipe.platforms().label())).append(",\"tracks\":").append(recipe.tracks())

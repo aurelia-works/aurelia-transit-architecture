@@ -77,6 +77,7 @@ Examples:
 | Terminus | `terminus`, `terminal`, `kopfbahnhof` (asks for a head building; a footbridge is dropped with a warning). Without a number a terminus is a main station: 8 tracks, 160 long; `large`/`big` 10 tracks, 200 long; `city` 4 tracks, 96 long; `small`, `compact`, `halt`, `village` or `rural` the ordinary 2 tracks. Any track count or length you give wins. | through station |
 | Platform list | `platform 1: island 12 wide 120 long open; platform 2: side canopy;` (up to 10, left to right; each clause ends with `;`). Each platform brings its tracks (a side platform one, an island two), so the list sets the tracks, up to 20. Per platform: `side`/`island`, `bay` (a through station's dead-end platform: its tracks come in from the station's start and end at buffer stops just past its far end; in a terminus every track already does), `N wide` (3-20), `N long` (16-300), `canopy`/`open` (under a train shed every platform is covered). A shorter terminus platform ends at the head building; a shorter through-station platform is centred on the footbridge line and always reaches 12 blocks past it, so its stairs and lift fit. The station is as long as its longest platform. Two side platforms next to each other go back to back; a side platform with an island after it gets a one-block gap behind it. A hub needs islands only. | not listed: every platform alike |
 | Hub | `hub`, `interchange`: a terminus whose outer tracks run on past the head building (SCR-style): one a side up to 6 tracks, two a side from 8. Island platforms only, an even number of tracks, at least 4; an odd count is rounded up and side platforms become islands, both with a warning. | no |
+| Seed | `seed k7f2ra`: 1 to 12 letters or digits (any case, read in base 36). Varies only what the words left open; see **Seeds and fingerprints**. Anything else after `seed` is ignored with a warning | none (same as `seed 0`) |
 
 Out-of-range values are clamped with a warning. A contradiction gives a warning and keeps the first value (an explicit "no roof" always wins). Words it did not understand are listed as "Ignored". `underground` and `elevated` are not built yet: the station is built at ground level and a warning says so.
 
@@ -182,6 +183,31 @@ The generator never creates rail connections itself, because those live in MTR's
 - One new block (the station girder, no block entity), no mixins. The wrench adds one item, one client-to-server packet (hand, action, a description of at most 256 characters and the screen's choices of at most 160, all bounded on read and handled on the server thread) and one client screen.
 - The preview is server-side particles sent only to the planning player (at most about 600 per refresh, every 10 ticks, for 30 s), and it changes nothing.
 - Pending plans, jobs and undo logs live in memory: a server restart forgets them, and a player who leaves loses their pending plan (a running build continues).
+
+## Seeds and fingerprints
+
+`seed k7f2ra` (Station Studio's dice writes it for you) varies the choices the words left open, and nothing the words decided.
+A seed is 1 to 12 characters of `a-z`/`0-9`, any case, read in base 36 (`StationSeed`); the biggest, `zzzzzzzzzzzz`, is 36^12 - 1 and fits
+a long. Anything else after the word (13 or more characters, a space or symbol inside, other scripts) is **ignored with a warning**
+and the station is planned as if there were no seed; the Studio's seed field does the same (the warning is in the plan's
+`warnings`). A seed given twice uses the first. `seed 0` (or `000`) is the plain plan, exactly as planned without a seed, and the
+report says so.
+
+A seed changes these, each only when the words did not say it: the platform floor (3 in 5), the roof material (1 in 2), the canopy
+profile (2 in 5), one arch or several in a barrel-vaulted shed (2 in 5), which of the four colours platform 1 starts on at a
+terminus gate line, and where the first bench stands (4 to 12 in). That is the whole list.
+
+**Theoretical limit.** Seeds are many, but the stations they can reach from one description are few: the product of the choices
+above that this station shows (at most 3,000 or so: 4 colours x 9 bench positions x about 6 floors x 4 roofs x 3 canopies), however
+long the seed is. A roll of random seeds therefore repeats a station after a few dozen (`3 tracks, 80 long, hamburg, station building`
+has 77 distinct stations among 200 random seeds, a utrecht island canopy station 130). Two seeds with the same effective choices
+(`StationSeed.effective`) plan the same blocks; two with different ones never do. A test holds both directions over 200 seeds and
+four descriptions.
+
+**Fingerprint.** `PlanFingerprint.of(plan)` is a 16-hex-digit SHA-256 prefix over the blocks sorted by (u, y, v), one line each:
+`u,y,v,blockId,facing,state,text`. The same words and seed give the same fingerprint on any machine, in any order of planning,
+on any thread; any change to a block's position, id, facing, state or sign text changes it. Roles, and where or which way the
+station is built, are not part of it. Station Studio sends it as `fingerprint`.
 
 ## Known limitations
 

@@ -1,7 +1,9 @@
 package com.aureliatransit.architecture.station.studio;
 
 import com.aureliatransit.architecture.station.Heading;
+import com.aureliatransit.architecture.station.PlanFingerprint;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationScale;
 import com.aureliatransit.architecture.station.StationPresets;
@@ -20,6 +22,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -320,6 +323,40 @@ class StudioTest {
 			assertTrue(page.contains("studio.js"));
 		} finally {
 			second.stop();
+		}
+	}
+
+	@Test
+	void planCarriesTheSeedAndThePlanFingerprint() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, String> q = new java.util.HashMap<>(Map.of("look", "UTRECHT", "tracks", "2", "length", "64", "seed", "K7F2RA"));
+		final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+		assertEquals("k7f2ra", plan.get("seed"));
+		final StationPlan planned = StationPlanner.plan(StationDescriptionParser.parse((String) plan.get("text")).spec());
+		assertEquals(PlanFingerprint.of(planned), plan.get("fingerprint"));
+		assertTrue(Json.list(plan.get("warnings")).isEmpty(), plan.get("warnings").toString());
+		// the same request again, and without the seed
+		assertEquals(plan.get("fingerprint"), Json.object(Json.parse(api.plan(q))).get("fingerprint"));
+		q.remove("seed");
+		final Map<String, Object> plain = Json.object(Json.parse(api.plan(q)));
+		assertEquals("", plain.get("seed"));
+		assertNotEquals(plan.get("fingerprint"), plain.get("fingerprint"));
+	}
+
+	@Test
+	void aBadSeedFieldIsLeftOutWithANoteNotAnError() {
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final Map<String, String> plain = Map.of("look", "UTRECHT", "tracks", "2", "length", "64");
+		final Map<String, Object> want = Json.object(Json.parse(api.plan(plain)));
+		for (final String bad : new String[]{"toolongtoolongtoolong", "k7 f2", "k7-f2", "\u00fcber", "!!", "seed k7f2ra", "a,b"}) {
+			final Map<String, String> q = new java.util.HashMap<>(plain);
+			q.put("seed", bad);
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			assertEquals("", plan.get("seed"), bad);
+			assertEquals(want.get("fingerprint"), plan.get("fingerprint"), bad);
+			assertEquals(Boolean.TRUE, plan.get("buildable"), bad);
+			assertTrue(Json.list(plan.get("warnings")).stream().anyMatch(w -> w.toString().startsWith("seed")), bad + " " + plan.get("warnings"));
+			assertEquals(StudioApi.description(plain), StudioApi.description(q), bad + ": the bad seed never reaches the words");
 		}
 	}
 }

@@ -31,7 +31,7 @@ public final class StationPlanner {
 	private static final String CANOPY_SLOPE_LOWER = "aurelia_transit_architecture:canopy_slope_lower";
 	private static final String CANOPY_SLOPE_UPPER = "aurelia_transit_architecture:canopy_slope_upper";
 	/** One colour per platform at a terminus gate line, in turn: a stripe on the floor and over the arcade, to follow to the gates. */
-	private static final List<String> PLATFORM_COLOURS = List.of("aurelia_transit_architecture:metro_tile_blue",
+	static final List<String> PLATFORM_COLOURS = List.of("aurelia_transit_architecture:metro_tile_blue",
 			"aurelia_transit_architecture:metro_tile_green", "aurelia_transit_architecture:metro_tile_orange",
 			"aurelia_transit_architecture:metro_tile_yellow");
 
@@ -344,7 +344,7 @@ public final class StationPlanner {
 		/** A platform's colour at the gate line. */
 		/** Each platform's colour, in turn from blue; a seed starts the turn at another colour. */
 		private String platformColour(TrackLayout.PlatformBand band) {
-			return PLATFORM_COLOURS.get((int) ((band.number() - 1 + Math.floorMod(spec.seed(), PLATFORM_COLOURS.size())) % PLATFORM_COLOURS.size()));
+			return PLATFORM_COLOURS.get((band.number() - 1 + StationSeed.colourOffset(spec.seed(), PLATFORM_COLOURS.size())) % PLATFORM_COLOURS.size());
 		}
 
 		/**
@@ -3793,7 +3793,7 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				int index = 0;
 				// the first bench 8 in from the platform's start, or with a seed anywhere from 4 to 12 in
-				final int first = spec.seed() == 0 ? 8 : 4 + (int) Math.floorMod(spec.seed() / PLATFORM_COLOURS.size(), 9L);
+				final int first = StationSeed.benchStart(spec.seed(), PLATFORM_COLOURS.size());
 				for (int v = band.vFrom() + first; v <= band.vTo() - 1; v += 16, index++) {
 					final int u;
 					final LocalDir front;

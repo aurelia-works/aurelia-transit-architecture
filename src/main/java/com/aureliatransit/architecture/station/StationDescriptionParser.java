@@ -47,8 +47,12 @@ public final class StationDescriptionParser {
 	private static final Pattern NAME_STOP = Pattern.compile("(?i)\\s+\\b(?:with|and|having|style|styled|in|using)\\b.*$");
 	/** One platform of a platform list: "platform 2: island 12 wide 120 long open;" (Station Studio writes these). */
 	private static final Pattern PLATFORM_CLAUSE = Pattern.compile("(?i)\\bplatform\\s+(\\d{1,2})\\s*:\\s*([^;]*);?");
-	/** "seed k7f2ra": the generator seed, base 36 (Station Studio's dice), up to twelve letters and digits. */
-	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\s+([a-z0-9]{1,12})\\b");
+	/**
+	 * "seed k7f2ra": the generator seed ({@link StationSeed}: base 36, Station Studio's dice, one to twelve letters and digits).
+	 * Whatever stands after the word is taken and checked, so a seed that is too long or has other characters in it is reported
+	 * and left out instead of being half read.
+	 */
+	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\b(?:\\s*[:=]?\\s*([^\\s,;!?:()\"]+))?");
 	private static final Pattern SEPARATORS = Pattern.compile("[-_/,.;:!?()\"]+");
 	private static final Pattern DIGITS_THEN_LETTERS = Pattern.compile("(\\d+)([a-z]+)");
 
@@ -341,15 +345,35 @@ public final class StationDescriptionParser {
 		// ---- name -------------------------------------------------------------------------------------------------------
 
 		/** Takes the station name out of the text so words inside it are never read as keywords. */
-		/** Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). */
+		/**
+		 * Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). A seed that is not one
+		 * to twelve letters or digits is ignored with a warning, never an error; the first valid one wins.
+		 */
 		private String extractSeed(String text) {
 			final Matcher matcher = SEED.matcher(text);
-			if (!matcher.find()) {
-				return text;
+			final StringBuilder rest = new StringBuilder();
+			int last = 0;
+			boolean taken = false;
+			while (matcher.find()) {
+				rest.append(text, last, matcher.start()).append(' ');
+				last = matcher.end();
+				// a full stop ends the sentence, not the seed; one inside ("3.5") makes it invalid
+				final String given = matcher.group(1) == null ? null : matcher.group(1).replaceAll("\\.+$", "");
+				if (given == null || given.isEmpty()) {
+					warn("\"seed\" needs 1 to " + StationSeed.MAX_CHARS + " letters or digits after it, like \"seed k7f2ra\"; no seed was used");
+				} else if (!StationSeed.valid(given)) {
+					final String shown = given.length() > 20 ? given.substring(0, 20) + "..." : given;
+					warn("seed \"" + shown + "\" ignored: a seed is 1 to " + StationSeed.MAX_CHARS + " letters or digits (a-z, 0-9)");
+				} else if (taken) {
+					warn("seed given twice; using the first (" + seedText + ")");
+				} else {
+					seedText = given.toLowerCase(Locale.ROOT);
+					seed = StationSeed.parse(seedText);
+					taken = true;
+				}
 			}
-			seed = Long.parseLong(matcher.group(1).toLowerCase(Locale.ROOT), 36);
-			seedText = matcher.group(1).toLowerCase(Locale.ROOT);
-			return text.substring(0, matcher.start()) + " " + text.substring(matcher.end());
+			rest.append(text.substring(last));
+			return rest.toString();
 		}
 
 		private String extractName(String text) {
@@ -1574,6 +1598,9 @@ public final class StationDescriptionParser {
 				}
 			}
 			builder.name(name);
+			if (seed == 0 && !seedText.isEmpty()) {
+				note(Integer.MAX_VALUE, "seed " + seedText + ": no variation, the plain plan");
+			}
 			if (seed != 0) {
 				builder.seed(seed);
 				understood.add(new Note(Integer.MAX_VALUE, "seed " + seedText + (seeded.isEmpty() ? ": benches and platform colours"
