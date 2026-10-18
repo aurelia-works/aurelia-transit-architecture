@@ -66,8 +66,8 @@ public final class StationGeometry {
 
 	/** Station building: entrance apron (the entrance ramp's two cells) on the street side ... */
 	public static final int APRON = 2;
-	/** A car park in front of a station building's street wall: its depth across u (two bay rows either side of an aisle). */
-	public static final int PARKING_DEPTH = 13;
+	/** A car park in front of a station building's street wall: its depth across u (a kerb, two runs of bays and a central aisle). */
+	public static final int PARKING_DEPTH = 14;
 	/** ... then the building across u, walls included (street wall, 7 interior columns, platform wall); the compact depth
 	 * ({@link #buildingDepth}). */
 	public static final int BUILDING_DEPTH = 9;

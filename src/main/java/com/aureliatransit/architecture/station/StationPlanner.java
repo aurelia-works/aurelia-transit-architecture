@@ -4303,14 +4303,14 @@ public final class StationPlanner {
 			return true;
 		}
 
-		/** A car park: two rows of five-deep bays either side of a three-wide aisle, half its length along the front. */
+		/** A car park: a kerb, a run of bays, a lane, a central planter, a lane and a second run of bays, across PARKING_DEPTH cells. */
 		private static final int LOT_HALF = 14;
-		private static final int LOT_BAY = 5;
-		private static final int LOT_AISLE = 3;
-		private static final int LOT_BAY_PITCH = 3;
+		private static final int LOT_BAY = 4;
+		private static final int LOT_PITCH = 3;
 		private static final String LOT_PAVING = "aurelia_transit_architecture:platform_paving_light";
 		private static final String LOT_MARK = "aurelia_transit_architecture:platform_paving_dark";
 		private static final String LOT_KERB = "aurelia_transit_architecture:bus_curb";
+		private static final String LOT_HEDGE = "minecraft:oak_leaves";
 
 		/** u of the building's entrance apron (its two ramp cells on the street side): past a car park band when there is one. */
 		private int apronU() {
@@ -4323,10 +4323,11 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * A surface car park in front of the street wall (the "parking" / "car park" word): a paved lot with a bay marked every
-		 * few cells either side of a central aisle, a kerb round the outside and a driveway onto the street at the entrance,
-		 * built from the platform paving and bus kerb blocks already in the mod. It fills the band the layout leaves in front of
-		 * the building ({@link StationGeometry#PARKING_DEPTH} cells, u = 0..depth-1), so nothing stands outside the footprint.
+		 * A surface car park in front of the street wall (the "parking" / "car park" word): a kerb along the street edge, two runs
+		 * of bays with their heads and separators marked out, a lane either side of a central planter, and a driveway onto the
+		 * street at the entrance. Built from the platform paving and bus kerb blocks already in the mod (and vanilla leaves for
+		 * the planter). It fills the band the layout leaves in front of the building ({@link StationGeometry#PARKING_DEPTH}
+		 * cells, u = 0..depth-1), so nothing stands outside the footprint.
 		 */
 		void parking() {
 			if (!spec.parking() || !spec.sideBuilding()) {
@@ -4336,14 +4337,25 @@ public final class StationPlanner {
 			final int vFrom = Math.max(layout.vMin(), front - LOT_HALF);
 			final int vTo = Math.min(layout.vMax(), front + LOT_HALF);
 			for (int a = 0; a < StationGeometry.PARKING_DEPTH; a++) {
-				final boolean street = a == 0;
-				final boolean aisle = a >= LOT_BAY && a < LOT_BAY + LOT_AISLE;
+				final boolean kerb = a == 0;
+				final boolean bays = a >= 1 && a <= LOT_BAY || a >= LOT_BAY + 6;
+				final boolean head = a == LOT_BAY + 1 || a == LOT_BAY + 5;
+				final boolean lane = a == LOT_BAY + 2 || a == LOT_BAY + 4;
+				final boolean planter = a == LOT_BAY + 3;
 				for (int v = vFrom; v <= vTo; v++) {
-					final boolean edge = v == vFrom || v == vTo;
-					final boolean driveway = street && Math.abs(v - front) <= 1;
-					final String block = (street || edge) && !driveway ? LOT_KERB
-							: aisle || (!street && !edge && Math.floorMod(v - vFrom, LOT_BAY_PITCH) == 0) ? LOT_MARK : LOT_PAVING;
-					// the lot is at street level, the ground the approach comes in on, so it is the flat ground the apron ramps rise from
+					final boolean entrance = Math.abs(v - front) <= 1;
+					final boolean end = v == vFrom || v == vTo;
+					final boolean separator = bays && Math.floorMod(v - vFrom, LOT_PITCH) == 0;
+					final String block;
+					if (kerb && !entrance) {
+						block = LOT_KERB;
+					} else if (planter && !end && !entrance) {
+						block = LOT_HEDGE;
+					} else if (lane || head || end || separator) {
+						block = LOT_MARK;
+					} else {
+						block = LOT_PAVING;
+					}
 					put(Role.FLOOR, a, StationGeometry.PLATFORM_Y - 1, v, LocalDir.MINUS_U, block);
 				}
 			}

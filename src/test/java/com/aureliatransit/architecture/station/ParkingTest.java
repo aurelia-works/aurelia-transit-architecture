@@ -35,6 +35,8 @@ class ParkingTest {
 		final TrackLayout layout = plan.layout();
 		final long kerb = plan.blocks().stream().filter(b -> b.blockId().endsWith("bus_curb")).count();
 		assertTrue(kerb > 0, "the lot has a kerb");
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith("oak_leaves")), "the central planter");
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith("platform_paving_dark")), "the bay markings");
 		assertTrue(plan.blocks().stream().filter(b -> b.blockId().endsWith("bus_curb"))
 				.allMatch(b -> b.u() >= 0 && b.u() < layout.width() && b.u() < StationGeometry.PARKING_DEPTH
 						&& b.y() == StationGeometry.PLATFORM_Y - 1),
