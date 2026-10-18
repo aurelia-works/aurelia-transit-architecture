@@ -89,7 +89,7 @@ public class AureliaGameTests implements FabricGameTest {
 			// TextSignBlock: editable sign text
 			Map.entry("station_name_sign", "TextSignBlock"), Map.entry("hanging_station_sign", "TextSignBlock"),
 			Map.entry("platform_number_sign", "TextSignBlock"), Map.entry("direction_sign", "TextSignBlock"),
-			Map.entry("composition_board", "TextSignBlock"), Map.entry("bus_stop_sign", "TextSignBlock"),
+			Map.entry("composition_board", "TextSignBlock"), Map.entry("bus_stop_sign", "TextSignBlock"), Map.entry("tram_stop_sign", "TextSignBlock"),
 			Map.entry("psd_text_panel", "TextSignBlock"), Map.entry("stand_back_sign", "TextSignBlock"),
 			Map.entry("dutch_station_sign", "TextSignBlock"), Map.entry("dutch_platform_sign", "TextSignBlock"),
 			Map.entry("german_station_sign", "TextSignBlock"),
