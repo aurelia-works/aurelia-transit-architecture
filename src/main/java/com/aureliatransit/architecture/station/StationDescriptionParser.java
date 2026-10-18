@@ -238,6 +238,7 @@ public final class StationDescriptionParser {
 		private boolean travelators;
 		private boolean parking;
 		private boolean underpass;
+		private boolean tram;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -696,7 +697,7 @@ public final class StationDescriptionParser {
 			String normal = SEPARATORS.matcher(text.toLowerCase(Locale.ROOT)).replaceAll(" ");
 			normal = DIGITS_THEN_LETTERS.matcher(normal).replaceAll("$1 $2");
 			// two-word names of one thing, so a single token carries them
-			normal = normal.replace("car park", "carpark").replace("park and ride", "parkandride");
+			normal = normal.replace("tram stop", "tramstop").replace("car park", "carpark").replace("park and ride", "parkandride");
 			normal = normal.trim();
 			return normal.isEmpty() ? new String[0] : normal.split("\\s+");
 		}
@@ -903,6 +904,15 @@ public final class StationDescriptionParser {
 				case "carpark":
 				case "parkandride":
 					setParking(i);
+					use(i, i);
+					return true;
+				case "tram":
+				case "trams":
+				case "tramstop":
+					if (!tram) {
+						tram = true;
+						note(i, "a tram stop on the hub's forecourt in place of the taxi rank: street track blocks to lay the MTR rail on, a platform, shelter seats and stop signs");
+					}
 					use(i, i);
 					return true;
 				case "underpass":
@@ -1812,7 +1822,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
-			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram);
 			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
 				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
 			}
@@ -1881,6 +1891,10 @@ public final class StationDescriptionParser {
 				// a buildingless station has no street wall to park in front of
 				warn("a car park is only built in front of a station building beside the platforms or past a terminus; it is left out here");
 				builder.parking(false);
+			}
+			if (tram && !hub) {
+				warn("a tram stop is built on a hub's forecourt; it is left out here");
+				builder.tram(false);
 			}
 			if (underpass && terminus) {
 				warn("a terminus is reached from its concourse, so it gets no underpass");

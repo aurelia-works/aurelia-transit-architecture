@@ -240,6 +240,16 @@ public final class ModBlocks {
 			new FacingShapedBlock(paving(MapColor.STONE_GRAY).nonOpaque(), Placement.AWAY_FROM_PLAYER,
 					union(box(0, 0, 0, 16, 2, 16), box(0, 2, 0.75, 16, 4, 16), box(0, 4, 1.5, 16, 8, 16))), TIP_POINTS_AWAY);
 
+	// ---- Tram (street running; the MTR rail is laid on top by the player) -------------------------------------------
+
+	public static final Block TRAM_STOP_SIGN = register("tram_stop_sign", BlockFamily.BUS, RenderKind.CUTOUT,
+			new TextSignBlock(metal(),
+					new TextLayout(7.5F, 9, 13, 6.75F, 9.25F, false, SignStyle.BUS_STOP),
+					union(POLE, box(1, 3, 6.75, 15, 12, 9.25), box(3, 12, 7, 13, 16, 9))),
+			TIP_EDITABLE);
+	public static final Block TRAM_TRACK = register("tram_track", BlockFamily.BUS, RenderKind.SOLID,
+			new AxisShapedBlock(paving(MapColor.DEEPSLATE_GRAY), box(0, 0, 0, 16, 16, 16)));
+
 	private ModBlocks() {
 	}
 

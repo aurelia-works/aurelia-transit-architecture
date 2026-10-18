@@ -214,6 +214,8 @@
     "aurelia_transit_architecture:sbahn_platform_half_slab",
     "aurelia_transit_architecture:metro_granite_floor_slab",
     "aurelia_transit_architecture:metro_terrazzo_floor_slab",
-    "aurelia_transit_architecture:metro_quarry_floor_slab"
+    "aurelia_transit_architecture:metro_quarry_floor_slab",
+    "aurelia_transit_architecture:tram_stop_sign",
+    "aurelia_transit_architecture:tram_track"
   ]
 }

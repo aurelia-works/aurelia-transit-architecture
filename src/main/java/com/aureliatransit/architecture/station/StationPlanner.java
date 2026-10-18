@@ -4938,6 +4938,11 @@ public final class StationPlanner {
 		private static final int FORECOURT_BAY = 3;
 		private static final int FORECOURT_BAY_LENGTH = 5;
 		private static final String FORECOURT_STOP_SIGN = "aurelia_transit_architecture:bus_stop_sign";
+		private static final String TRAM_TRACK = "aurelia_transit_architecture:tram_track";
+		private static final String TRAM_STOP_SIGN = "aurelia_transit_architecture:tram_stop_sign";
+		/** A hub's tram stop: rows from the forecourt's start of the track's centre line and of the platform's kerb. */
+		private static final int TRAM_CENTRE = 8;
+		private static final int TRAM_EDGE = TRAM_CENTRE - StationGeometry.EDGE_OFFSET;
 		private static final String FORECOURT_TIMETABLE = "aurelia_transit_architecture:bus_timetable_case";
 		private static final String LOT_TRUNK = "minecraft:oak_log";
 		private static final String LOT_BOLLARD = "aurelia_transit_architecture:bollard";
@@ -4972,7 +4977,8 @@ public final class StationPlanner {
 		 * A hub's forecourt, past the head building's entrance ramps: paving to the street kerb, a pedestrian way from the door, a taxi
 		 * rank on one side (three marked bays with a bollard at the head of each) and a bus interchange on the other (a kerbed island
 		 * with a walk-in waiting shelter, stop signs and a timetable case, and a marked carriageway beside it). Built from the paving,
-		 * bus kerb, bus kit and bollard blocks already in the mod; there is no tram stop (no tram blocks) and no taxi sign block.
+		 * bus kerb, bus kit and bollard blocks already in the mod; there is no taxi sign block. With the "tram" word a tram stop takes
+		 * the taxi rank's side (see {@link #tramStop}).
 		 */
 		void forecourt() {
 			if (!layout.terminus() || layout.forecourtDepth() <= 0) {
@@ -5006,6 +5012,16 @@ public final class StationPlanner {
 					} else if (!way && c > 0 && u > busKerb) {
 						// the bus carriageway
 						block = LOT_MARK;
+					} else if (!way && c < 0 && u <= taxiTo && spec.tram()) {
+						// the tram stop: a platform to a kerb, the track's envelope in dark paving with the street track at its centre
+						if (d == TRAM_EDGE) {
+							block = LOT_KERB;
+						} else if (d == TRAM_CENTRE && u < taxiTo) {
+							block = TRAM_TRACK;
+							front = LocalDir.PLUS_U;
+						} else if (Math.abs(d - TRAM_CENTRE) <= StationGeometry.ENVELOPE_HALF_WIDTH) {
+							block = LOT_MARK;
+						}
 					} else if (!way && c < 0 && u <= taxiTo) {
 						// the taxi rank: bays of paving three wide, five long, between dark lines
 						final int bay = (taxiTo - u) / (FORECOURT_BAY + 1);
@@ -5015,8 +5031,11 @@ public final class StationPlanner {
 					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y - 1, v, front, block);
 				}
 			}
+			if (spec.tram()) {
+				tramStop(u0, taxiTo, f0);
+			}
 			// taxi rank: a bollard at the head of each bay
-			for (int bay = 0; bay < FORECOURT_BAYS; bay++) {
+			for (int bay = 0; bay < FORECOURT_BAYS && !spec.tram(); bay++) {
 				final int u = taxiTo - bay * (FORECOURT_BAY + 1) - FORECOURT_BAY / 2;
 				if (u > u0) {
 					put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, f0 + 2, LocalDir.PLUS_V, LOT_BOLLARD);
@@ -5030,6 +5049,29 @@ public final class StationPlanner {
 				put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f1 - 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
 				put(Role.FIXTURE, wall, StationGeometry.PLATFORM_Y, f0 + 9, LocalDir.PLUS_U, FORECOURT_TIMETABLE);
 			}
+		}
+
+		/**
+		 * The tram stop on a hub's forecourt (the "tram" word), on the taxi rank's side: the track runs along the forecourt from its
+		 * side edge, where the player carries the MTR rail on to the street, to a bollard by the pedestrian way. The floor pass lays
+		 * the street track blocks and the kerb; this adds the shelter against the way's rows (glass, seats facing the track, roof),
+		 * a stop sign at each end of the platform and a bollard at the track's end. The rail, its nodes and the stop's MTR platform
+		 * are the player's to lay, as on the main tracks.
+		 */
+		private void tramStop(int u0, int taxiTo, int f0) {
+			final int y = StationGeometry.PLATFORM_Y;
+			final int mid = (u0 + taxiTo) / 2 - SHELTER_LENGTH / 2;
+			for (int i = 0; i < SHELTER_LENGTH; i++) {
+				final int u = mid + i;
+				put(Role.FIXTURE, u, y, f0 + 3, LocalDir.MINUS_V, SHELTER_GLASS);
+				put(Role.FIXTURE, u, y + 1, f0 + 3, LocalDir.MINUS_V, SHELTER_GLASS);
+				put(Role.FIXTURE, u, y, f0 + 4, LocalDir.MINUS_V, SHELTER_SEAT);
+				put(Role.FIXTURE, u, y + 2, f0 + 3, LocalDir.MINUS_V, SHELTER_ROOF);
+				put(Role.FIXTURE, u, y + 2, f0 + 4, LocalDir.MINUS_V, SHELTER_ROOF);
+			}
+			put(Role.FIXTURE, u0 + 1, y, f0 + TRAM_EDGE - 1, LocalDir.PLUS_U, TRAM_STOP_SIGN);
+			put(Role.FIXTURE, taxiTo - 1, y, f0 + TRAM_EDGE - 1, LocalDir.MINUS_U, TRAM_STOP_SIGN);
+			put(Role.FIXTURE, taxiTo, y, f0 + TRAM_CENTRE, LocalDir.MINUS_U, LOT_BOLLARD);
 		}
 
 		/**

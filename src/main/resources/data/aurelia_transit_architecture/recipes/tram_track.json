@@ -1,0 +1,20 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "I I",
+    "SSS"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "S": {
+      "item": "aurelia_transit_architecture:platform_paving_dark"
+    }
+  },
+  "result": {
+    "item": "aurelia_transit_architecture:tram_track",
+    "count": 3
+  }
+}

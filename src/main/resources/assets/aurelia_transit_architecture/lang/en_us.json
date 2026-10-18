@@ -264,11 +264,11 @@
   "message.aurelia_transit_architecture.style.platform_fascia.ribbed": "Ribbed",
   "message.aurelia_transit_architecture.style.platform_windscreen.lower": "Lower",
   "message.aurelia_transit_architecture.style.platform_windscreen.upper": "Upper",
-  "message.aurelia_transit_architecture.style.screen_door_doorway.diagonal": "45\u00b0 Diagonal",
+  "message.aurelia_transit_architecture.style.screen_door_doorway.diagonal": "45° Diagonal",
   "message.aurelia_transit_architecture.style.screen_door_doorway.inner": "Concave Curve",
   "message.aurelia_transit_architecture.style.screen_door_doorway.outer": "Convex Curve",
   "message.aurelia_transit_architecture.style.screen_door_doorway.straight": "Straight",
-  "message.aurelia_transit_architecture.style.screen_door_panel.diagonal": "45\u00b0 Diagonal",
+  "message.aurelia_transit_architecture.style.screen_door_panel.diagonal": "45° Diagonal",
   "message.aurelia_transit_architecture.style.screen_door_panel.inner": "Concave Curve",
   "message.aurelia_transit_architecture.style.screen_door_panel.outer": "Convex Curve",
   "message.aurelia_transit_architecture.style.screen_door_panel.straight": "Straight",
@@ -625,5 +625,7 @@
   "tooltip.aurelia_transit_architecture.wf_marker": "Right-click to change the marker",
   "tooltip.aurelia_transit_architecture.wf_tall": "Two blocks tall",
   "tooltip.aurelia_transit_architecture.wf_terminal": "Right-click for trains, maps and station info",
-  "tooltip.aurelia_transit_architecture.wf_terminal_edit": "Sneak + right-click to edit"
+  "tooltip.aurelia_transit_architecture.wf_terminal_edit": "Sneak + right-click to edit",
+  "block.aurelia_transit_architecture.tram_stop_sign": "Tram Stop Sign",
+  "block.aurelia_transit_architecture.tram_track": "Street Tram Track"
 }

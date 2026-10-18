@@ -1,0 +1,11 @@
+{
+  "variants": {
+    "axis=z": {
+      "model": "aurelia_transit_architecture:block/tram_track"
+    },
+    "axis=x": {
+      "model": "aurelia_transit_architecture:block/tram_track",
+      "y": 90
+    }
+  }
+}
