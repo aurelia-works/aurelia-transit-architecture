@@ -131,17 +131,21 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	}
 
 	/**
-	 * Phase 2: at a big through station (a building and two ways down), a second footbridge across the platforms' far end, so
+	 * Phase 2 and 5: at a big through station (a building and two ways down), or at any footbridge station with platforms
+	 * {@link #LONG_PLATFORMS} long, a second footbridge across the platforms' far end, so
 	 * passengers at that end of a long train need not walk back to the building to change platforms. It is a plain footbridge,
 	 * glazed at both ends, from the first platform to the last, with stairs only (the step-free route stays the main bridge's
 	 * lifts); its stairs run in towards the middle. Under a hall roof the shed's frame rests on both bridges. Null where there is
 	 * none: no building, one way down, a street entrance, or platforms too short to keep both bridges' stairs apart.
 	 */
 	public StationLayout farBridge(StationSpec spec, TrackLayout layout) {
-		if (!bridge || !building || !bothWays || street != null || layout.terminus()) {
+		final int length = layout.platformLength();
+		// a big station with two ways down gets one; so does any footbridge station with platforms long enough that the far
+		// end is a long walk from the only way off
+		// (a street entrance stays the main bridge's: the far one spans the platforms only)
+		if (!bridge || layout.terminus() || !(building && bothWays && street == null || length >= LONG_PLATFORMS)) {
 			return null;
 		}
-		final int length = layout.platformLength();
 		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);
 		final int reach = offset + StationGeometry.STAIR_STEPS + 1;
 		// two rows of platform beyond the corridor's end wall, at the end further from the main bridge
@@ -161,6 +165,9 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return new StationLayout(false, 0, 0, 0, v, 1, true, v, bridgeWidth, layout.platforms().get(0).uMin(), deckTo, high ? -1 : 1, all,
 				false, false, null);
 	}
+
+	/** Platforms at least this long get a second footbridge at the far end at any footbridge station (Phase 5: a second access). */
+	public static final int LONG_PLATFORMS = 96;
 
 	/** Open platform between the two footbridges' stair landings, at least. */
 	static final int FAR_BRIDGE_GAP = 8;

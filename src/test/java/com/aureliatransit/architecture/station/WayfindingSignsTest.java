@@ -29,8 +29,9 @@ class WayfindingSignsTest {
 			final StationPlan plan = plan(words);
 			final List<PlannedBlock> signs = plan.blocks().stream().filter(b -> b.blockId().equals(SIGN)).toList();
 			assertTrue(!signs.isEmpty(), words);
-			final Set<String> texts = signs.stream().map(PlannedBlock::text).collect(Collectors.toSet());
-			assertEquals(signs.size(), texts.size(), words + ": one sign per platform");
+			// one sign per platform on each bridge (a long station has a second one at the far end)
+			final Set<String> texts = signs.stream().map(b -> b.v() + " " + b.text()).collect(Collectors.toSet());
+			assertEquals(signs.size(), texts.size(), words + ": one sign per platform and bridge");
 			for (final PlannedBlock sign : signs) {
 				assertTrue(sign.text().matches("DOWN:Platform \\d+"), words + ": " + sign.text());
 				assertEquals(StationGeometry.BUILDING_ROOF_Y - 1, sign.y(), words + ": hung at the top of the corridor");

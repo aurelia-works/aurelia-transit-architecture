@@ -98,4 +98,24 @@ class TwoWaysDownTest {
 		final TrackLayout layout = StationGeometry.layout(shortCity);
 		assertEquals(null, StationLayout.of(shortCity, layout).farBridge(shortCity, layout), "too short for two bridges");
 	}
+
+	/** Phase 5: any footbridge station with long platforms gets the far bridge, building or not; short ones keep one. */
+	@Test
+	void longPlatformsGetASecondAccessAtTheFarEnd() {
+		for (final String words : new String[]{"4 tracks island, 120 long, footbridge", "2 tracks side platforms, 96 long, footbridge",
+				"3 tracks, 160 long, footbridge, hall roof"}) {
+			final StationSpec spec = spec(words);
+			final StationPlan plan = StationPlanner.plan(spec);
+			assertEquals(java.util.List.of(), LayoutValidator.validate(plan), words);
+			assertTrue(StationAudit.audit(plan).buildable(), words + " " + StationAudit.audit(plan).problems());
+			final StationLayout far = StationLayout.of(spec, plan.layout()).farBridge(spec, plan.layout());
+			assertTrue(far != null, words);
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.v() == far.bridgeV() && b.role() == Role.BRIDGE_DECK), words + ": far deck");
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.v() == far.bridgeV() && b.blockId().endsWith(":hanging_wayfinding_sign")),
+					words + ": the far bridge's stair heads are signed");
+		}
+		final StationSpec shorter = spec("4 tracks island, 80 long, footbridge");
+		final TrackLayout layout = StationGeometry.layout(shorter);
+		assertEquals(null, StationLayout.of(shorter, layout).farBridge(shorter, layout));
+	}
 }

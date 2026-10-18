@@ -4645,7 +4645,7 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Wayfinding in the footbridge corridor: a direction sign hung from the roof over the head of each platform's stair
+		 * Wayfinding in the footbridge corridors (both, with a far bridge): a direction sign hung from the roof over the head of each platform's stair
 		 * ("Platform 2" with a down arrow, both faces readable along the corridor), and where the corridor meets the station
 		 * building an exit sign facing the platforms. Hung at the top of the corridor, so the walkway keeps three blocks of
 		 * headroom. A sign's text is "ARROW:destination"; the build writes it into the sign.
@@ -4654,23 +4654,21 @@ public final class StationPlanner {
 			if (!site.bridge()) {
 				return;
 			}
-			final int vB = site.bridgeV();
 			final int y = StationGeometry.BUILDING_ROOF_Y - 1;
-			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-				if (band.number() <= 0) {
-					continue;
+			for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
+				for (final TrackLayout.PlatformBand band : bridge.bridgeBands(layout)) {
+					final List<StationLayout.Flight> flights = bridge.flights(band);
+					if (band.number() <= 0 || flights.isEmpty()) {
+						continue;
+					}
+					final List<Integer> columns = flights.get(0).columns();
+					putText(Role.FIXTURE, columns.get(columns.size() / 2), y, bridge.bridgeV(), LocalDir.MINUS_U, WAYFINDING_SIGN,
+							"DOWN:Platform " + band.number());
 				}
-				final List<StationLayout.Flight> flights = site.flights(band);
-				if (flights.isEmpty()) {
-					continue;
-				}
-				final List<Integer> columns = flights.get(0).columns();
-				final int u = columns.get(columns.size() / 2);
-				putText(Role.FIXTURE, u, y, vB, LocalDir.MINUS_U, WAYFINDING_SIGN, "DOWN:Platform " + band.number());
 			}
 			if (site.building()) {
 				final int from = site.platformWall(layout);
-				putText(Role.FIXTURE, from + 1, y, vB, LocalDir.PLUS_U, EXIT_SIGN, "NONE:Way out");
+				putText(Role.FIXTURE, from + 1, y, site.bridgeV(), LocalDir.PLUS_U, EXIT_SIGN, "NONE:Way out");
 			}
 		}
 
