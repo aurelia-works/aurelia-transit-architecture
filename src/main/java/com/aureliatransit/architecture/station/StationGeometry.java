@@ -85,12 +85,13 @@ public final class StationGeometry {
 	public static final int BAY = 6;
 	/** Footbridge corridor: clear width inside its walls ({@link #bridgeWidth}); the compact width. */
 	public static final int BRIDGE_WIDTH = 3;
-	/** Terminus head building along v past the platform ends: buffer row, paid row, gate line, concourse, street wall; the
-	 * compact depth ({@link #headDepth}). */
-	public static final int HEAD_DEPTH = 12;
-	/** A city terminus head building's depth: a real concourse behind the gate line, about 20 m. */
-	public static final int CITY_HEAD_DEPTH = 20;	/** A grand terminus head building's depth: a monumental concourse, about 30 m, with room for a real hall. */
-	public static final int GRAND_HEAD_DEPTH = 30;
+	/** Terminus head building along v past the platform ends: the arcade, paid concourse, gate line, ticket hall and street
+	 * wall. {@link #HEAD_DEPTH} is the compact depth ({@link #headDepth}); a real terminus hall, not a strip behind the gates. */
+	public static final int HEAD_DEPTH = 18;
+	/** A city terminus head building's depth: about 30 m of hall, a real concourse behind the gate line. */
+	public static final int CITY_HEAD_DEPTH = 30;
+	/** A grand terminus head building's depth: about 42 m, room for a monumental hall with a gallery. */
+	public static final int GRAND_HEAD_DEPTH = 42;
 	/** Entrance ramps outside a terminus head building's street wall. */
 	public static final int HEAD_APRON = RAMP_LENGTH;
 	/** Narrowest island with a two-column stair and room for a lift beside the walkway. */
@@ -124,6 +125,15 @@ public final class StationGeometry {
 			case CITY -> CITY_HEAD_DEPTH;
 			case GRAND -> GRAND_HEAD_DEPTH;
 		};
+	}
+
+	/**
+	 * Depth of a terminus head building for a station of {@code tracks} platforms: the scale's base plus a term per platform,
+	 * because the concourse holds the waiting crowd and must grow with the station (a terminus's passengers wait in the
+	 * concourse, not on the platforms).
+	 */
+	public static int headDepth(StationScale scale, int tracks) {
+		return headDepth(scale) + Math.max(0, tracks - 2);
 	}
 
 	/**
@@ -228,7 +238,7 @@ public final class StationGeometry {
 		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0);
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
-					spec.terminus() ? headDepth(scale) + HEAD_APRON : 0, hubThrough(spec));
+					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {

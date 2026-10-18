@@ -1116,7 +1116,8 @@ class StationPlannerTest {
 		// ramps only at the open end; the platforms run level into the concourse
 		assertTrue(plan.blocks().stream().filter(b -> b.role() == Role.RAMP_LOWER || b.role() == Role.RAMP_UPPER)
 				.allMatch(b -> b.v() < 0 || b.v() > layout.headEnd()));
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.GATE && b.v() == length + 2));
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.GATE && b.v() > length && b.v() <= layout.headEnd()),
+				"the gate line is across the hall, not on the platforms");
 		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":booth_window")));
 		assertFalse(blocks(plan, Role.BEAM).isEmpty(), "the train shed (hall roof) is kept at a terminus");
 		assertEquals(List.of(), LayoutValidator.validate(plan));

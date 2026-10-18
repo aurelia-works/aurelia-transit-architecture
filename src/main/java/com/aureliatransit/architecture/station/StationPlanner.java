@@ -2078,23 +2078,15 @@ public final class StationPlanner {
 			final int u1 = layout.headTo();
 			final int vL = length;
 			final int vE = layout.headEnd();
-			final int gateV = vL + 2;
 			final int door = headDoor();
+			// street to trains: the unpaid ticket hall against the street, a gate line across the hall, then the paid concourse
+			final int gateV = vE - Math.max(4, (vE - vL) / 3);
+			// one gate line across the whole hall (a real terminus checks tickets in the concourse, not on the platforms): end
+			// cabinets at the walls and a wide gate on the walk from the entrance
 			for (int u = u0 + 1; u < u1; u++) {
-				TrackLayout.PlatformBand band = null;
-				for (final TrackLayout.PlatformBand candidate : layout.platforms()) {
-					if (u >= candidate.uMin() && u <= candidate.uMax()) {
-						band = candidate;
-					}
-				}
-				if (band == null) {
-					put(Role.BARRIER, u, StationGeometry.WALK_Y, gateV, LocalDir.MINUS_V);
-				} else {
-					final int i = u - band.uMin();
-					final String kind = i == 0 || i == band.width() - 1 ? "kind=end" : i == band.width() / 2 ? "kind=wide" : "kind=gate";
-					// the green "go" side faces the concourse, where people come in; the red X faces the platforms
-					put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
-				}
+				final String kind = u == u0 + 1 || u == u1 - 1 ? "kind=end" : u == door ? "kind=wide" : "kind=gate";
+				// the green "go" side faces the concourse, where people come in; the red X faces the platforms
+				put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
 			}
 			// a big number under the lintel over each platform, in the middle of its gates
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
@@ -2126,11 +2118,11 @@ public final class StationPlanner {
 				put(Role.WALL, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, b.interiorWall());
 				put(Role.FIXTURE, u0 + 1, 2, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
 			}
-			// ticket machines and the kiosk against the far wall
+			// ticket machines by the entrance (unpaid), and the kiosk out on the paid side where passengers wait
 			for (int i = 0; i < 2; i++) {
 				tallFixture(u1 - 1, 1, o0 + i, LocalDir.MINUS_U, "mtr:ticket_machine");
 			}
-			tallFixture(u1 - 1, 1, o1 + 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
+			tallFixture(u1 - 1, 1, vL + 4, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
 			// benches facing the boards, either side of the walk from the entrance
 			if (spec.furniture()) {
 				int seats = 0;
@@ -2145,6 +2137,29 @@ public final class StationPlanner {
 						seats++;
 					}
 				}
+			}
+			// the mezzanine gallery: a floor down each side of the paid concourse looking over it, a rail on its edge, and a
+			// stair from the concourse floor climbing against the side wall up to it
+			final int galleryFrom = vL + 2 + StationGeometry.STAIR_STEPS;
+			final int galleryTo = gateV - 1;
+			// only a hall wide enough keeps a clear walk between the two colonnades, so a narrow one gets no gallery
+			if (u1 - u0 >= 12 && galleryTo >= galleryFrom) {
+			for (int v = galleryFrom; v <= galleryTo; v++) {
+				for (final int u : new int[]{u0 + 1, u0 + 2, u1 - 2, u1 - 1}) {
+					put(Role.LIGHT_PANEL, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, b.light());
+					// a pier carries the gallery, so nothing floats (a wall pier: this is inside the head building, not a platform column)
+					for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+						put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.trim());
+					}
+				}
+				put(Role.RAILING, u0 + 2, StationGeometry.UPPER_FLOOR_Y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.RAILING));
+				put(Role.RAILING, u1 - 2, StationGeometry.UPPER_FLOOR_Y + 1, v, LocalDir.MINUS_U, palette.blockId(Role.RAILING));
+			}
+			for (int step = 1; step <= StationGeometry.STAIR_STEPS; step++) {
+				for (final int u : new int[]{u0 + 1, u0 + 2}) {
+					put(Role.STAIR, u, step, vL + 1 + step, LocalDir.MINUS_V, b.stair());
+				}
+			}
 			}
 			// MTR's station name over the street door and its tactile map inside beside it
 			for (int u = door - 1; u <= door + 1; u++) {
