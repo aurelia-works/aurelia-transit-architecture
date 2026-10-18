@@ -359,4 +359,5 @@ class StudioTest {
 			assertEquals(StudioApi.description(plain), StudioApi.description(q), bad + ": the bad seed never reaches the words");
 		}
 	}
+
 }

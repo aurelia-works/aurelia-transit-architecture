@@ -14,6 +14,7 @@ import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationLayout;
 import com.aureliatransit.architecture.station.StationGeometry;
+import com.aureliatransit.architecture.station.StationPlacement;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationPresets;
@@ -205,8 +206,16 @@ public final class StudioApi {
 		};
 	}
 
-	/** Plans the request's station and describes it for the page. */
-	public String plan(Map<String, String> q) {
+	/** One request planned, validated and audited: what {@link #plan} describes and {@link #export} writes. */
+	private record Planned(StationRecipe recipe, String typed, String text, ParseResult parse, StationPlan plan, List<Violation> violations,
+			StationAudit.Result audit, long started, long planned) {
+
+		boolean buildable() {
+			return violations.isEmpty() && audit.buildable();
+		}
+	}
+
+	private static Planned planned(Map<String, String> q) {
 		final StationRecipe recipe = recipe(q);
 		final String typed = typed(q);
 		final String text = description(q);
@@ -215,17 +224,32 @@ public final class StudioApi {
 		final StationPlan plan = StationPlanner.plan(parse.spec());
 		final List<Violation> violations = LayoutValidator.validate(plan);
 		final StationAudit.Result audit = StationAudit.audit(plan);
-		final long planned = System.nanoTime();
+		return new Planned(recipe, typed, text, parse, plan, violations, audit, started, System.nanoTime());
+	}
+
+	/** Plans the request's station and describes it for the page. */
+	public String plan(Map<String, String> q) {
+		final Planned done = planned(q);
+		final StationRecipe recipe = done.recipe();
+		final String typed = done.typed();
+		final String text = done.text();
+		final long started = done.started();
+		final ParseResult parse = done.parse();
+		final StationPlan plan = done.plan();
+		final List<Violation> violations = done.violations();
+		final StationAudit.Result audit = done.audit();
+		final long planned = done.planned();
 		final StationSpec spec = parse.spec();
 		final TrackLayout layout = plan.layout();
+		final LocalFrame frame = StationPlacement.frame(spec);
 
 		final Map<Long, String> idAt = new java.util.HashMap<>();
 		final Map<Long, PlannedBlock> at = new java.util.HashMap<>();
 		for (final PlannedBlock block : plan.blocks()) {
-			idAt.put(cell(FRAME.x(block.u(), block.v()), block.y(), FRAME.z(block.u(), block.v())), block.blockId());
-			at.put(cell(FRAME.x(block.u(), block.v()), block.y(), FRAME.z(block.u(), block.v())), block);
+			idAt.put(cell(frame.x(block.u(), block.v()), block.y(), frame.z(block.u(), block.v())), block.blockId());
+			at.put(cell(frame.x(block.u(), block.v()), block.y(), frame.z(block.u(), block.v())), block);
 		}
-		final Connections.FullFace full = (other, heading, side) -> models.fullFace(other.blockId(), heading, other.state(), side);
+		final Connections.FullFace full = Connections.withMtrShapes((other, heading, side) -> models.fullFace(other.blockId(), heading, other.state(), side), at, frame);
 		final Map<String, Integer> modelIndex = new LinkedHashMap<>();
 		final List<String> modelJson = new ArrayList<>();
 		final StringBuilder cells = new StringBuilder();
@@ -235,12 +259,12 @@ public final class StudioApi {
 				// MTR's step model is the same both ways along its axis, so the page is told which way each step moves
 				final int du = block.front() == LocalDir.PLUS_U ? 1 : block.front() == LocalDir.MINUS_U ? -1 : 0;
 				final int dv = block.front() == LocalDir.PLUS_V ? 1 : block.front() == LocalDir.MINUS_V ? -1 : 0;
-				final int x = FRAME.x(block.u(), block.v());
-				final int z = FRAME.z(block.u(), block.v());
+				final int x = frame.x(block.u(), block.v());
+				final int z = frame.z(block.u(), block.v());
 				moving.append(moving.length() == 0 ? "" : ",").append(x).append(',').append(block.y()).append(',').append(z).append(',')
-						.append(FRAME.x(block.u() + du, block.v() + dv) - x).append(',').append(FRAME.z(block.u() + du, block.v() + dv) - z);
+						.append(frame.x(block.u() + du, block.v() + dv) - x).append(',').append(frame.z(block.u() + du, block.v() + dv) - z);
 			}
-			final Heading heading = FRAME.heading(block.front());
+			final Heading heading = frame.heading(block.front());
 			final String state = withConnections(block, at, full);
 			final String key = BlockModels.key(block.blockId(), heading, state);
 			final int model = modelIndex.computeIfAbsent(key, k -> {
@@ -250,7 +274,7 @@ public final class StudioApi {
 			if (cells.length() > 0) {
 				cells.append(',');
 			}
-			cells.append(FRAME.x(block.u(), block.v())).append(',').append(block.y()).append(',').append(FRAME.z(block.u(), block.v())).append(',')
+			cells.append(frame.x(block.u(), block.v())).append(',').append(block.y()).append(',').append(frame.z(block.u(), block.v())).append(',')
 					.append(model).append(',').append(block.role().ordinal());
 		}
 
@@ -303,8 +327,8 @@ public final class StudioApi {
 		out.append("],\"violations\":[");
 		for (int i = 0; i < violations.size(); i++) {
 			final Violation v = violations.get(i);
-			out.append(i == 0 ? "" : ",").append("{\"kind\":").append(Json.quote(v.kind().name())).append(",\"x\":").append(FRAME.x(v.u(), v.v()))
-					.append(",\"y\":").append(v.y()).append(",\"z\":").append(FRAME.z(v.u(), v.v())).append(",\"message\":")
+			out.append(i == 0 ? "" : ",").append("{\"kind\":").append(Json.quote(v.kind().name())).append(",\"x\":").append(frame.x(v.u(), v.v()))
+					.append(",\"y\":").append(v.y()).append(",\"z\":").append(frame.z(v.u(), v.v())).append(",\"message\":")
 					.append(Json.quote(v.message())).append('}');
 		}
 		out.append("],\"faceLabels\":[");
@@ -314,18 +338,69 @@ public final class StudioApi {
 			final int u = track.u() + (face.leftOfTrack() ? -2 : 2);
 			final int v = face.vStart() + face.length() / 2;
 			out.append(i == 0 ? "" : ",").append("{\"n\":").append(i + 1).append(",\"platform\":").append(face.platform()).append(",\"x\":")
-					.append(FRAME.x(u, v)).append(",\"z\":").append(FRAME.z(u, v)).append(",\"view\":").append(faceView(face, track, idAt))
+					.append(frame.x(u, v)).append(",\"z\":").append(frame.z(u, v)).append(",\"view\":").append(faceView(frame, face, track, idAt))
 					.append('}');
 		}
-		out.append("],\"passenger\":").append(passenger(layout, idAt));
-		out.append(",\"street\":").append(street(spec, layout, idAt));
-		out.append(",\"head\":").append(headView(layout));
+		out.append("],\"passenger\":").append(passenger(frame, layout, idAt));
+		out.append(",\"street\":").append(street(frame, spec, layout, idAt));
+		out.append(",\"head\":").append(headView(frame, layout));
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
 		out.append(",\"models\":[").append(String.join(",", modelJson)).append(']');
 		out.append(",\"cells\":[").append(cells).append(']');
 		out.append(",\"moving\":[").append(moving).append(']');
 		out.append(",\"ms\":").append((planned - started) / 1_000_000);
 		return out.append('}').toString();
+	}
+
+	/** A station as a schematic file: the bytes, the file name to offer and the numbers the headers carry. */
+	public record Export(byte[] bytes, String filename, int blocks, String fingerprint) {
+	}
+
+	/**
+	 * The request's station as a Sponge schematic ({@link SchematicExport}), planned exactly as {@link #plan} does. Throws
+	 * {@link IllegalArgumentException} (the reason is for the player) when the station cannot be built.
+	 */
+	public Export export(Map<String, String> q) {
+		final Planned done = planned(q);
+		if (!done.buildable()) {
+			final StringBuilder why = new StringBuilder("This station cannot be built, so there is nothing to export");
+			for (final Violation v : done.violations()) {
+				why.append("; ").append(v.message());
+				break;
+			}
+			for (final StationAudit.Check check : done.audit().checks()) {
+				if (check.status() == StationAudit.Status.FAIL) {
+					why.append("; ").append(check.message());
+					break;
+				}
+			}
+			throw new IllegalArgumentException(why.toString());
+		}
+		final StationSpec spec = done.parse().spec();
+		final StationPlan plan = done.plan();
+		final Map<String, String> info = new LinkedHashMap<>();
+		info.put("Generator", "Station Studio");
+		info.put("Version", StudioServer.VERSION);
+		info.put("Seed", StationSeed.format(spec.seed()));
+		info.put("Facing", "auto");
+		info.put("Class", "auto");
+		info.put("Era", "auto");
+		info.put("Blocks", Integer.toString(plan.blocks().size()));
+		info.put("Origin", "on the ground in front of the street entrance");
+		info.put("Description", done.text());
+		final SchematicExport.Result result = SchematicExport.export(plan, StationPlacement.frame(spec), models, StationPlacement.pasteOrigin(spec, plan), spec.name(), info);
+		final String seed = spec.seed() == 0 ? "noseed" : StationSeed.format(spec.seed());
+		return new Export(result.bytes(), slug(spec.name()) + "-" + seed + ".schem", result.blocks(), result.fingerprint());
+	}
+
+	/** A file-name-safe lower case slug of {@code name}: letters, digits and single hyphens, at most 40 characters; "station" when empty. */
+	static String slug(String name) {
+		String slug = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT)
+				.replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+		if (slug.length() > 40) {
+			slug = slug.substring(0, 40).replaceAll("-+$", "");
+		}
+		return slug.isEmpty() ? "station" : slug;
 	}
 
 	/** {@code block}'s state with the joins it gets in the game ({@link Connections}); {@code at} maps {@link #cell} keys to blocks. */
@@ -341,15 +416,15 @@ public final class StudioApi {
 	 * Where to look at a terminus's head building from the street: the middle of its front ({@code x}, {@code z}), the way
 	 * the front faces ({@code dx}, {@code dz}) and its width; null for a through station.
 	 */
-	private static String headView(TrackLayout layout) {
+	private static String headView(LocalFrame frame, TrackLayout layout) {
 		if (!layout.terminus()) {
 			return "null";
 		}
 		final int u = (layout.headFrom() + layout.headTo()) / 2;
 		final int v = layout.headEnd();
-		final int x = FRAME.x(u, v);
-		final int z = FRAME.z(u, v);
-		return "{\"x\":" + x + ",\"z\":" + z + ",\"dx\":" + (FRAME.x(u, v + 1) - x) + ",\"dz\":" + (FRAME.z(u, v + 1) - z)
+		final int x = frame.x(u, v);
+		final int z = frame.z(u, v);
+		return "{\"x\":" + x + ",\"z\":" + z + ",\"dx\":" + (frame.x(u, v + 1) - x) + ",\"dz\":" + (frame.z(u, v + 1) - z)
 				+ ",\"width\":" + (layout.headTo() - layout.headFrom() + 1) + "}";
 	}
 
@@ -357,7 +432,7 @@ public final class StudioApi {
 	 * Where a walk from the street starts: on the ground in front of the station's street entrance (a terminus's head front, or
 	 * the side building's entrance), on the first spot with three clear blocks, looking at the door; null without a building.
 	 */
-	private static String street(StationSpec spec, TrackLayout layout, Map<Long, String> idAt) {
+	private static String street(LocalFrame frame, StationSpec spec, TrackLayout layout, Map<Long, String> idAt) {
 		final int u;
 		final int du;
 		final int v;
@@ -376,13 +451,13 @@ public final class StudioApi {
 			return "null";
 		}
 		for (int step = 0; step < 24; step++) {
-			final int x = FRAME.x(u + du * step, v + dv * step);
-			final int z = FRAME.z(u + du * step, v + dv * step);
+			final int x = frame.x(u + du * step, v + dv * step);
+			final int z = frame.z(u + du * step, v + dv * step);
 			if (!idAt.containsKey(cell(x, 0, z)) && !idAt.containsKey(cell(x, 1, z)) && !idAt.containsKey(cell(x, 2, z))) {
 				// a few steps further out, so the whole entrance is in view
 				final int out = step + 4;
-				return "{\"x\":" + FRAME.x(u + du * out, v + dv * out) + ",\"z\":" + FRAME.z(u + du * out, v + dv * out) + ",\"tx\":"
-						+ FRAME.x(u, v) + ",\"tz\":" + FRAME.z(u, v) + "}";
+				return "{\"x\":" + frame.x(u + du * out, v + dv * out) + ",\"z\":" + frame.z(u + du * out, v + dv * out) + ",\"tx\":"
+						+ frame.x(u, v) + ",\"tz\":" + frame.z(u, v) + "}";
 			}
 		}
 		return "null";
@@ -392,7 +467,7 @@ public final class StudioApi {
 	 * Where a passenger stands for the Passenger view: on the first platform near its start, in a cell with three clear blocks
 	 * above the floor (not in a column or a stair), looking along the platform.
 	 */
-	private static String passenger(TrackLayout layout, Map<Long, String> idAt) {
+	private static String passenger(LocalFrame frame, TrackLayout layout, Map<Long, String> idAt) {
 		if (layout.platforms().isEmpty()) {
 			return "null";
 		}
@@ -404,11 +479,11 @@ public final class StudioApi {
 				if (u < band.uMin() || u > band.uMax()) {
 					continue;
 				}
-				final int x = FRAME.x(u, v);
-				final int z = FRAME.z(u, v);
+				final int x = frame.x(u, v);
+				final int z = frame.z(u, v);
 				if (!idAt.containsKey(cell(x, 1, z)) && !idAt.containsKey(cell(x, 2, z)) && !idAt.containsKey(cell(x, 3, z))) {
-					return "{\"x\":" + x + ",\"z\":" + z + ",\"tx\":" + FRAME.x(u, layout.platformLength()) + ",\"tz\":"
-							+ FRAME.z(u, layout.platformLength()) + "}";
+					return "{\"x\":" + x + ",\"z\":" + z + ",\"tx\":" + frame.x(u, layout.platformLength()) + ",\"tz\":"
+							+ frame.z(u, layout.platformLength()) + "}";
 				}
 			}
 		}
@@ -420,20 +495,20 @@ public final class StudioApi {
 	 * face's start, in a cell with three clear blocks above the floor and nothing at eye height just ahead (so not behind a
 	 * column), looking at the track some way ahead.
 	 */
-	private static String faceView(StationAudit.Face face, TrackLayout.Track track, Map<Long, String> idAt) {
+	private static String faceView(LocalFrame frame, StationAudit.Face face, TrackLayout.Track track, Map<Long, String> idAt) {
 		final int inward = face.leftOfTrack() ? -1 : 1;
 		final int edge = track.u() + inward * StationGeometry.EDGE_OFFSET;
 		final int last = Math.max(face.vStart(), face.vEnd() - 8);
 		for (int v = Math.min(face.vStart() + 3, last); v <= last; v++) {
 			for (final int back : new int[]{1, 2, 0, 3}) {
 				final int u = edge + inward * back;
-				final int x = FRAME.x(u, v);
-				final int z = FRAME.z(u, v);
+				final int x = frame.x(u, v);
+				final int z = frame.z(u, v);
 				final int y = StationGeometry.WALK_Y;
 				if (idAt.containsKey(cell(x, y - 1, z)) && !idAt.containsKey(cell(x, y, z)) && !idAt.containsKey(cell(x, y + 2, z))
-						&& clearAhead(u, v, y + 1, Math.min(v + 8, face.vEnd()), idAt)) {
+						&& clearAhead(frame, u, v, y + 1, Math.min(v + 8, face.vEnd()), idAt)) {
 					final int ahead = Math.min(v + 20, face.vEnd());
-					return "{\"x\":" + x + ",\"z\":" + z + ",\"tx\":" + FRAME.x(track.u(), ahead) + ",\"tz\":" + FRAME.z(track.u(), ahead) + "}";
+					return "{\"x\":" + x + ",\"z\":" + z + ",\"tx\":" + frame.x(track.u(), ahead) + ",\"tz\":" + frame.z(track.u(), ahead) + "}";
 				}
 			}
 		}
@@ -441,9 +516,9 @@ public final class StudioApi {
 	}
 
 	/** Nothing at eye height from row v to row to in column u, so no column stands right in front of the passenger. */
-	private static boolean clearAhead(int u, int v, int y, int to, Map<Long, String> idAt) {
+	private static boolean clearAhead(LocalFrame frame, int u, int v, int y, int to, Map<Long, String> idAt) {
 		for (int w = v; w <= to; w++) {
-			if (idAt.containsKey(cell(FRAME.x(u, w), y, FRAME.z(u, w)))) {
+			if (idAt.containsKey(cell(frame.x(u, w), y, frame.z(u, w)))) {
 				return false;
 			}
 		}

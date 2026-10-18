@@ -4,6 +4,9 @@ import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
+import com.aureliatransit.architecture.station.StationPlacement;
+import com.aureliatransit.architecture.station.StationPlan;
+import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.TrackLayout;
 import net.minecraft.server.MinecraftServer;
@@ -198,9 +201,39 @@ public final class StationActions {
 		if (job == null) {
 			return false;
 		}
+		StationSessions.setBuilt(id, pending);
 		StationSessions.discard(id);
 		player.sendMessage(Text.literal("Building " + job.total() + " changes, " + StationBuildJob.OPS_PER_TICK + " per tick. Cancel stops it.")
 				.formatted(Formatting.GREEN), false);
+		return true;
+	}
+
+	/**
+	 * Reads the world back against a plan (see {@link StationVerify}): the pending plan, else the last build's, where it was planned
+	 * (a station that was built or pasted there). With {@code paste} the plan is instead anchored with its schematic paste origin on the
+	 * player's feet, for a schematic pasted standing here with the origin it was exported with. Read only.
+	 */
+	public static boolean verify(ServerPlayerEntity player, boolean paste) {
+		final UUID id = player.getUuid();
+		final StationSessions.Pending pending = StationSessions.pending(id);
+		final StationSessions.Built built = pending != null ? null : StationSessions.built(id);
+		if (pending == null && built == null) {
+			error(player, "Nothing to check against: plan a station first (or build one).");
+			return false;
+		}
+		final StationPlan plan = pending != null ? pending.plan() : built.plan();
+		final StationSpec spec = pending != null ? pending.spec() : built.spec();
+		final var dimension = pending != null ? pending.dimension() : built.dimension();
+		final ServerWorld world = player.getServer().getWorld(dimension);
+		if (world == null || player.getServerWorld() != world) {
+			error(player, "The plan is in " + dimension.getValue() + "; go back there to check it.");
+			return false;
+		}
+		final LocalFrame frame = paste
+				? StationPlacement.frameAt(spec, plan, StationPlacement.heading(spec), player.getBlockX(), player.getBlockY(), player.getBlockZ())
+				: pending != null ? pending.frame() : built.frame();
+		final StationVerify.Report report = StationVerify.verify(world, plan, frame);
+		StationText.verify(report, paste, message(player));
 		return true;
 	}
 

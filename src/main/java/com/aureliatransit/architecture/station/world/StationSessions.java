@@ -46,8 +46,13 @@ public final class StationSessions {
 			List<Violation> violations, StationAudit.Result audit, SurveyReport report, boolean railSkipped) {
 	}
 
+	/** The station a player's last confirmed build was planned as, for {@code /ata_station verify}; kept after the pending plan goes. */
+	public record Built(StationPlan plan, StationSpec spec, LocalFrame frame, RegistryKey<World> dimension, boolean railSkipped) {
+	}
+
 	private static final Map<UUID, Pending> PENDING = new HashMap<>();
 	private static final Map<UUID, StationPreview> PREVIEWS = new HashMap<>();
+	private static final Map<UUID, Built> BUILT = new HashMap<>();
 	private static final Map<UUID, StationBuildJob> JOBS = new LinkedHashMap<>();
 	private static final Map<UUID, UndoLog> UNDO = new HashMap<>();
 	/** Server tick of each player's last wrench cancel, so a held left-click does not repeat it. */
@@ -64,6 +69,15 @@ public final class StationSessions {
 
 	public static Pending pending(UUID player) {
 		return PENDING.get(player);
+	}
+
+	public static void setBuilt(UUID player, Pending pending) {
+		BUILT.put(player, new Built(pending.plan(), pending.spec(), pending.frame(), pending.dimension(), pending.railSkipped()));
+	}
+
+	/** The plan of the player's last confirmed build; null when there is none. */
+	public static Built built(UUID player) {
+		return BUILT.get(player);
 	}
 
 	/** Drops the pending plan and its preview; true when there was a plan. */
@@ -83,6 +97,7 @@ public final class StationSessions {
 	/** A player left: their pending plan and preview go, a running job keeps going. */
 	public static void forgetPlayer(UUID player) {
 		discard(player);
+		BUILT.remove(player);
 		LAST_CANCEL.remove(player);
 	}
 
@@ -155,6 +170,7 @@ public final class StationSessions {
 	public static void clear() {
 		PENDING.clear();
 		PREVIEWS.clear();
+		BUILT.clear();
 		JOBS.clear();
 		UNDO.clear();
 		LAST_CANCEL.clear();
