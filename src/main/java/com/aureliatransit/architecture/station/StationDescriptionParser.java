@@ -239,6 +239,7 @@ public final class StationDescriptionParser {
 		private boolean parking;
 		private boolean underpass;
 		private boolean tram;
+		private boolean mezzanine;
 		private Boolean furniture;
 		private Boolean railNodes;
 		private String name = "";
@@ -697,7 +698,7 @@ public final class StationDescriptionParser {
 			String normal = SEPARATORS.matcher(text.toLowerCase(Locale.ROOT)).replaceAll(" ");
 			normal = DIGITS_THEN_LETTERS.matcher(normal).replaceAll("$1 $2");
 			// two-word names of one thing, so a single token carries them
-			normal = normal.replace("tram stop", "tramstop").replace("car park", "carpark").replace("park and ride", "parkandride");
+			normal = normal.replace("upper concourse", "mezzanine").replace("multi-level", "multilevel").replace("multi level", "multilevel").replace("tram stop", "tramstop").replace("car park", "carpark").replace("park and ride", "parkandride");
 			normal = normal.trim();
 			return normal.isEmpty() ? new String[0] : normal.split("\\s+");
 		}
@@ -904,6 +905,14 @@ public final class StationDescriptionParser {
 				case "carpark":
 				case "parkandride":
 					setParking(i);
+					use(i, i);
+					return true;
+				case "mezzanine":
+				case "multilevel":
+					if (!mezzanine) {
+						mezzanine = true;
+						note(i, "a mezzanine: the footbridge widened into an upper concourse over the tracks, with seats and departure screens");
+					}
 					use(i, i);
 					return true;
 				case "tram":
@@ -1822,7 +1831,7 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
-			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine);
 			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
 				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
 			}
@@ -1900,7 +1909,14 @@ public final class StationDescriptionParser {
 				warn("a terminus is reached from its concourse, so it gets no underpass");
 				builder.underpass(false);
 			}
-			final boolean bridge = Boolean.TRUE.equals(footbridge);
+			if (mezzanine && terminus) {
+				warn("a terminus is reached from its concourse, so it gets no mezzanine");
+				builder.mezzanine(false);
+			} else if (mezzanine && builder.build().trackCount() < 2) {
+				warn("a mezzanine spans tracks; one track has nothing to span, so it is left out");
+				builder.mezzanine(false);
+			}
+			final boolean bridge = Boolean.TRUE.equals(footbridge) || mezzanine && !terminus && builder.build().trackCount() >= 2;
 			if (bridge && terminus) {
 				warn("a terminus is reached from its concourse, so it gets no footbridge");
 			} else if (bridge) {

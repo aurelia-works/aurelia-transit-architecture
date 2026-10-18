@@ -101,6 +101,8 @@ public final class StationGeometry {
 	public static final int BAY = 6;
 	/** Footbridge corridor: clear width inside its walls ({@link #bridgeWidth}); the compact width. */
 	public static final int BRIDGE_WIDTH = 3;
+	/** A mezzanine ("upper concourse"): the footbridge corridor widened to a concourse over the tracks, this wide inside its walls. */
+	public static final int MEZZANINE_WIDTH = 9;
 	/** Terminus head building along v past the platform ends: the arcade, paid concourse, gate line, ticket hall and street
 	 * wall. {@link #HEAD_DEPTH} is the compact depth ({@link #headDepth}); a real terminus hall, not a strip behind the gates. */
 	public static final int HEAD_DEPTH = 18;
@@ -183,7 +185,7 @@ public final class StationGeometry {
 	 * accessor is kept so a wider corridor can be introduced in one place.
 	 */
 	public static int bridgeWidth(StationSpec spec, TrackLayout layout) {
-		return bridgeWidth(spec.buildingScale());
+		return spec.mezzanine() ? MEZZANINE_WIDTH : bridgeWidth(spec.buildingScale());
 	}
 
 	/** The corridor's long walls stand this many rows from its centre line: the clear half-width plus the wall itself. */

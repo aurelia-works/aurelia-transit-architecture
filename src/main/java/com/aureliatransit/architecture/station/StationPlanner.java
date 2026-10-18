@@ -95,6 +95,7 @@ public final class StationPlanner {
 		planning.platformEquipment();
 		planning.nameSigns();
 		planning.wayfinding();
+		planning.mezzanine();
 		planning.speakers();
 		planning.liftButtons();
 		planning.endFences();
@@ -338,6 +339,16 @@ public final class StationPlanner {
 		private boolean taken(int u, int y, int v) {
 			final Cell cell = new Cell(u, y, v);
 			return cells.containsKey(cell) || air.contains(cell);
+		}
+
+		/** True when no cell from y0 to y1 at (u, v) is taken or kept clear. */
+		private boolean freeColumn(int u, int y0, int y1, int v) {
+			for (int y = y0; y <= y1; y++) {
+				if (taken(u, y, v)) {
+					return false;
+				}
+			}
+			return true;
 		}
 
 		private void keepClear(int u, int y, int v) {
@@ -2536,6 +2547,14 @@ public final class StationPlanner {
 				for (final int uPier : bridgePierLines(band)) {
 					for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 						put(Role.BRIDGE_PIER, uPier, y, vB, LocalDir.PLUS_V, b.pier());
+					}
+					// a mezzanine's deck is too wide to overhang one pier line: a pier under each edge as well, where it is free
+					for (final int vEdge : spec.mezzanine() ? new int[]{vB - bridgeHalf(), vB + bridgeHalf()} : new int[0]) {
+						if (freeColumn(uPier, StationGeometry.WALK_Y, StationGeometry.UPPER_FLOOR_Y - 1, vEdge)) {
+							for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+								put(Role.BRIDGE_PIER, uPier, y, vEdge, LocalDir.PLUS_V, b.pier());
+							}
+						}
 					}
 				}
 			}
@@ -4980,6 +4999,67 @@ public final class StationPlanner {
 		 * bus kerb, bus kit and bollard blocks already in the mod; there is no taxi sign block. With the "tram" word a tram stop takes
 		 * the taxi rank's side (see {@link #tramStop}).
 		 */
+		/** Rows either side of a mezzanine's centre line where its benches stand, facing out over the tracks. */
+		private static final int MEZZANINE_BENCH_ROW = 2;
+		/** A pair of benches and a bin every this many cells along a mezzanine. */
+		private static final int MEZZANINE_BENCH_PITCH = 8;
+
+		/**
+		 * A mezzanine's furnishing (the "mezzanine" / "upper concourse" word; the footbridge pass builds its wide deck, walls, roof
+		 * and edge piers): benches with a bin in two rows either side of the centre line, facing out through the glass over the
+		 * tracks, kept clear of every stair and lift opening, and a hanging departure screen over the centre line at each end.
+		 * There is no lower concourse: the ticket hall stays in the building.
+		 */
+		void mezzanine() {
+			if (!spec.mezzanine() || !site.bridge()) {
+				return;
+			}
+			final int vB = site.bridgeV();
+			final int from = site.building() ? site.platformWall(layout) + 1 : site.deckFrom();
+			final int to = site.deckTo();
+			final Set<Integer> openings = new HashSet<>();
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					openings.addAll(opening(band, flight));
+				}
+			}
+			for (final PlannedBlock block : cells.values()) {
+				// lift doors on the deck
+				if (block.y() == StationGeometry.UPPER_WALK_Y && Math.abs(block.v() - vB) == bridgeWall() && block.role() != Role.WINDOW) {
+					openings.add(block.u());
+				}
+			}
+			final int y = StationGeometry.UPPER_WALK_Y;
+			// the first clear spot from each pitch mark on: a pair and its bin with a cell free of openings either side
+			for (int u = from + 2; u + 2 <= to - 2; u++) {
+				boolean clear = true;
+				for (int du = -1; du <= 3; du++) {
+					clear &= !openings.contains(u + du);
+				}
+				if (!clear) {
+					continue;
+				}
+				final int at = u;
+				u += MEZZANINE_BENCH_PITCH - 1;
+				for (final int side : new int[]{-1, 1}) {
+					final int v = vB + side * MEZZANINE_BENCH_ROW;
+					if (taken(at, y, v) || taken(at + 1, y, v) || taken(at + 2, y, v)) {
+						continue;
+					}
+					final LocalDir front = side < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
+					put(Role.BENCH, at, y, v, front);
+					put(Role.BENCH, at + 1, y, v, front);
+					put(Role.BIN, at + 2, y, v, front);
+				}
+			}
+			final int screenY = StationGeometry.BUILDING_ROOF_Y - 1;
+			for (final int u : new int[]{from + 1, to - 1}) {
+				if (!taken(u, screenY, vB)) {
+					put(Role.FIXTURE, u, screenY, vB, u == to - 1 ? LocalDir.MINUS_U : LocalDir.PLUS_U, HANGING_PIDS);
+				}
+			}
+		}
+
 		void forecourt() {
 			if (!layout.terminus() || layout.forecourtDepth() <= 0) {
 				return;
