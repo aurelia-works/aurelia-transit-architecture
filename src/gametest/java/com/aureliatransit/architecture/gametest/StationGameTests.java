@@ -478,6 +478,74 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * Rebuild at the same spot: a second plan over the first build writes only what differs (the renamed sign, the roof that
+	 * goes), keeps the rest as it stands, needs no terrain approval for its own cells, and one undo afterwards gives back the
+	 * site as it was before either build.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 100)
+	public void rebuildWritesOnlyWhatChangedAndUndoRestoresTheSite(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final Map<BlockPos, BlockState> site = snapshot(context);
+		final UUID owner = new UUID(0, 50);
+		final StationSessions.Pending first = StationCommand.prepare(world, SMALL, context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationBuildJob build = StationBuildJob.build(world, owner, first.report().ops(), false, text -> {
+		});
+		while (!build.finished()) {
+			build.step(StationBuildJob.OPS_PER_TICK);
+		}
+		check(build.state() == StationBuildJob.State.DONE, "first build " + build.state());
+		final List<Text> said = new ArrayList<>();
+		final StationSessions.Pending second = StationCommand.prepare(world, "1 track, length 16, width 3, no roof, named Test",
+				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationBuildJob rebuild = StationCommand.startRebuild(world, owner, second, first.frame(), build.undoLog(), false, said::add);
+		check(rebuild != null, "rebuild refused: " + said);
+		while (!rebuild.finished()) {
+			rebuild.step(StationBuildJob.OPS_PER_TICK);
+		}
+		StationSessions.cancelJob(owner); // forgets the finished job, as the server tick would
+		check(rebuild.state() == StationBuildJob.State.DONE, "rebuild " + rebuild.state() + " " + said);
+		check(rebuild.kept() > 0, "nothing was kept");
+		check(rebuild.restored() > 0, "the roof was not taken away");
+		check(rebuild.placed() < second.report().ops().size(), "the rebuild wrote every cell (" + rebuild.placed() + ")");
+		check(rebuild.terrainChanged() == 0, "terrain changed without approval");
+		checkBuilt(context, new StationSessions.Pending(second.parse(), second.spec(), second.plan(), first.frame(), second.dimension(),
+				second.violations(), second.audit(), second.report(), second.railSkipped()));
+		// a new name rewrites the name signs and nothing else
+		final StationSessions.Pending renamed = StationCommand.prepare(world, "1 track, length 16, width 3, no roof, named Other",
+				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationBuildJob rename = StationCommand.startRebuild(world, owner, renamed, first.frame(), rebuild.undoLog(), false, said::add);
+		check(rename != null, "rename refused: " + said);
+		while (!rename.finished()) {
+			rename.step(StationBuildJob.OPS_PER_TICK);
+		}
+		StationSessions.cancelJob(owner); // forgets the finished job, as the server tick would
+		check(rename.state() == StationBuildJob.State.DONE && rename.placed() == 3 && rename.restored() == 0,
+				"a rename wrote " + rename.placed() + " cells and took back " + rename.restored());
+		boolean named = false;
+		for (final PlannedBlock block : renamed.plan().blocks()) {
+			final BlockPos pos = pos(first.frame(), block.u(), block.y(), block.v());
+			if (world.getBlockState(pos).getBlock() instanceof TextSignBlock sign
+					&& world.getBlockEntity(sign.findRowOwner(world, pos, world.getBlockState(pos))) instanceof TextSignBlockEntity entity) {
+				named |= entity.getData().primary().equals("Other");
+			}
+		}
+		check(named, "the name signs do not say the new name");
+		final StationBuildJob undo = StationBuildJob.undo(world, owner, rename.undoLog(), text -> {
+		});
+		while (!undo.finished()) {
+			undo.step(StationBuildJob.OPS_PER_TICK);
+		}
+		final List<BlockPos> left = new ArrayList<>();
+		site.forEach((pos, state) -> {
+			if (world.getBlockState(pos).getBlock() != state.getBlock()) {
+				left.add(pos);
+			}
+		});
+		check(left.isEmpty(), "undo after the rebuild left " + left.size() + " cells changed, e.g. " + (left.isEmpty() ? "" : left.get(0)));
+		context.complete();
+	}
+
 	@GameTest(templateName = SITE_Z)
 	public void jobRunsInBatchesAndCancelThenUndoRestoresAir(TestContext context) {
 		final ServerWorld world = context.getWorld();

@@ -10,6 +10,8 @@
 
 ### Station generator
 
+- **Rebuild in place:** `/ata_station rebuild` builds a changed plan over your last station and writes only what differs (a rename touches only the name signs); cells the new plan drops go back to the original ground, and undo still restores the site from before the first build.
+- **Typed words win in Station Studio:** where the words and a pinned or rolled setting disagree, the words decide; the page names the settings they overruled.
 - **A second footbridge at the far end:** long city and town through stations with a canopy (or no roof) get a stairs-only footbridge across the far end of the platforms, so passengers at that end can change platforms without walking back to the building.
 - **The wrench preview turns with "facing":** it now draws the station the way the Studio and the build do.
 - **Built at 1.5 blocks to the metre:** storeys 4 m clear, the footbridge 4.7 m over the rails, canopies 4 m, taller sheds; stairs climb a whole storey. A station building needs platforms 24 long, a hub 20.

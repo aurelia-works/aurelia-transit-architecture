@@ -7,6 +7,7 @@ import net.minecraft.world.World;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,6 +27,8 @@ public final class UndoLog {
 
 	private final RegistryKey<World> dimension;
 	private final List<Entry> entries = new ArrayList<>();
+	/** Each written cell's rebuild key (block state and text, see {@link StationBuildJob#key}), last write wins, in write order. */
+	private final Map<BlockPos, String> keys = new LinkedHashMap<>();
 	private final Map<BlockPos, BlockState> coveredSoil = new HashMap<>();
 	/** One stop of each MTR lift the build formed; undo deletes those lifts before the blocks. */
 	private final List<BlockPos> lifts = new ArrayList<>();
@@ -52,6 +55,32 @@ public final class UndoLog {
 
 	void add(Entry entry) {
 		entries.add(entry);
+	}
+
+	void add(Entry entry, String key) {
+		entries.add(entry);
+		keys.remove(entry.pos());
+		keys.put(entry.pos(), key);
+	}
+
+	/** What each written cell was written as, in write order; a rebuild at the same spot compares its plan with this. */
+	Map<BlockPos, String> keys() {
+		return keys;
+	}
+
+	/** Each cell's state before the build first wrote it, and the state its last write left. */
+	Map<BlockPos, Entry> cells() {
+		final Map<BlockPos, Entry> cells = new LinkedHashMap<>();
+		for (final Entry entry : entries) {
+			final Entry first = cells.get(entry.pos());
+			cells.put(entry.pos(), new Entry(entry.pos(), first == null ? entry.previous() : first.previous(), entry.placed()));
+		}
+		return cells;
+	}
+
+	/** Covered soil carries over to the log of a rebuild at the same spot. */
+	void copySoil(UndoLog from) {
+		from.coveredSoil.forEach(coveredSoil::putIfAbsent);
 	}
 
 	/** Remembers soil that decays when covered, the first time the build writes above it. */

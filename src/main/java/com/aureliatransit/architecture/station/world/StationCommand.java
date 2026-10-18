@@ -54,6 +54,8 @@ public final class StationCommand {
 						.then(CommandManager.literal(REPLACE_TERRAIN).executes(context -> run(context, player -> StationActions.confirm(player, true)))))
 				.then(CommandManager.literal("cancel").executes(context -> run(context, StationActions::cancel)))
 				.then(CommandManager.literal("undo").executes(context -> run(context, StationActions::undo)))
+				.then(CommandManager.literal("rebuild").executes(context -> run(context, player -> StationActions.rebuild(player, false)))
+						.then(CommandManager.literal(REPLACE_TERRAIN).executes(context -> run(context, player -> StationActions.rebuild(player, true)))))
 				.then(CommandManager.literal("verify").executes(context -> run(context, player -> StationActions.verify(player, false)))
 						.then(CommandManager.literal("paste").executes(context -> run(context, player -> StationActions.verify(player, true)))))
 				.then(CommandManager.literal("status").executes(context -> run(context, StationActions::status))));
@@ -94,19 +96,7 @@ public final class StationCommand {
 	 * Re-surveys a pending plan where it was planned and starts its build; returns the job, or null after explaining why not.
 	 */
 	public static StationBuildJob startBuild(ServerWorld world, UUID owner, StationSessions.Pending pending, boolean replaceTerrain, Consumer<Text> out) {
-		if (!pending.violations().isEmpty()) {
-			out.accept(Text.literal("This plan breaks " + pending.violations().size() + " design rule(s) and cannot be built; plan again with "
-					+ "different options.").formatted(Formatting.RED));
-			return null;
-		}
-		if (!pending.audit().buildable()) {
-			out.accept(Text.literal("This plan fails " + pending.audit().count(StationAudit.Status.FAIL) + " station check(s) and cannot be built; "
-					+ "plan again with different options.").formatted(Formatting.RED));
-			return null;
-		}
-		final BlockStateResolver.Check check = BlockStateResolver.check(pending.plan());
-		if (!check.ok()) {
-			out.accept(Text.literal("Unknown blocks: " + String.join(", ", check.missing())).formatted(Formatting.RED));
+		if (!buildable(pending, out)) {
 			return null;
 		}
 		final SurveyReport report = SiteSurvey.survey(pending.plan(), pending.frame(), WorldSiteProbe.loading(world), replaceTerrain);
@@ -124,6 +114,54 @@ public final class StationCommand {
 		return job;
 	}
 
+	/**
+	 * Builds a pending plan where the last build stands, writing only what changed (see {@link StationBuildJob#rebuild}): the
+	 * plan is surveyed in {@code frame} with the last build's own cells read as the site they replaced. Returns the job, or null
+	 * after explaining why not.
+	 */
+	public static StationBuildJob startRebuild(ServerWorld world, UUID owner, StationSessions.Pending pending, LocalFrame frame, UndoLog last,
+			boolean replaceTerrain, Consumer<Text> out) {
+		if (!buildable(pending, out)) {
+			return null;
+		}
+		if (StationSessions.job(owner) != null) {
+			out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
+			return null;
+		}
+		final java.util.Map<BlockPos, net.minecraft.block.BlockState> site = new java.util.HashMap<>();
+		StationBuildJob.ours(world, last).forEach((pos, entry) -> site.put(pos, entry.previous()));
+		final SurveyReport report = SiteSurvey.survey(pending.plan(), frame, WorldSiteProbe.under(world, site), replaceTerrain);
+		if (!report.buildable()) {
+			out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
+			StationText.site(report, out);
+			return null;
+		}
+		final StationBuildJob job = StationBuildJob.rebuild(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
+				StationZone.of(pending.spec().name(), report.ops()), last);
+		StationSessions.start(job);
+		return job;
+	}
+
+	/** The checks before any build: no broken design rules, no failed station checks, every block known. */
+	private static boolean buildable(StationSessions.Pending pending, Consumer<Text> out) {
+		if (!pending.violations().isEmpty()) {
+			out.accept(Text.literal("This plan breaks " + pending.violations().size() + " design rule(s) and cannot be built; plan again with "
+					+ "different options.").formatted(Formatting.RED));
+			return false;
+		}
+		if (!pending.audit().buildable()) {
+			out.accept(Text.literal("This plan fails " + pending.audit().count(StationAudit.Status.FAIL) + " station check(s) and cannot be built; "
+					+ "plan again with different options.").formatted(Formatting.RED));
+			return false;
+		}
+		final BlockStateResolver.Check check = BlockStateResolver.check(pending.plan());
+		if (!check.ok()) {
+			out.accept(Text.literal("Unknown blocks: " + String.join(", ", check.missing())).formatted(Formatting.RED));
+			return false;
+		}
+		return true;
+	}
+
 	// ---- commands --------------------------------------------------------------------------------------------------
 
 	private static int help(CommandContext<ServerCommandSource> context) {
@@ -131,6 +169,7 @@ public final class StationCommand {
 		source.sendFeedback(() -> Text.literal("ATA station generator").formatted(Formatting.GOLD), false);
 		source.sendFeedback(() -> Text.literal("/ata_station plan <description>: plan a station in front of you and preview it"), false);
 		source.sendFeedback(() -> Text.literal("/ata_station confirm [" + REPLACE_TERRAIN + "]: build it (the token approves terrain changes)"), false);
+		source.sendFeedback(() -> Text.literal("/ata_station rebuild [" + REPLACE_TERRAIN + "]: build the pending plan where your last station stands, changing only what differs"), false);
 		source.sendFeedback(() -> Text.literal("/ata_station verify [paste]: read the world back against the plan (paste: a schematic pasted at your feet)"), false);
 		source.sendFeedback(() -> Text.literal("/ata_station preview | cancel | undo | status"), false);
 		source.sendFeedback(() -> Text.literal("Or use the Station Wrench: right-click a block to plan, sneak + right-click the air to edit").formatted(Formatting.GRAY), false);

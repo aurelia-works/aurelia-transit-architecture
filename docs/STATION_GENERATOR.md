@@ -14,6 +14,7 @@ Operators only (permission level 2), like `/ata_message`.
 | `/ata_station confirm replace_terrain` | Builds and approves the terrain changes the summary listed. This literal token is the **only** way to approve them. The description never can. |
 | `/ata_station cancel` | Stops a running build (what is built stays) or discards the pending plan. |
 | `/ata_station undo` | Reverts your last build, batched. Cells changed since the build are left alone. |
+| `/ata_station rebuild [replace-terrain]` | Builds the pending plan where your last station stands (same origin and facing, not the plan's own place) and writes only the cells that differ: a cell that would be written the same (block state, sign or screen text) is kept, a cell the new plan leaves out goes back to the ground it replaced, and the rest is written, batched like a build. The site is surveyed as it was before the first build, so your own blocks never need approval; anything else the new plan touches does, as for `confirm`. The old MTR lifts and station area are removed and formed again. One undo afterwards gives back the site from before either build. |
 | `/ata_station verify` | Reads the world back against the pending plan, or the last build, where it was planned, and lists the blocks that differ. Read only, never loads a chunk. |
 | `/ata_station verify paste` | The same with the plan's schematic paste origin on your feet: stand where you pasted an exported `.schem` and run it. |
 | `/ata_station status` | Pending plan, job progress, undo. |

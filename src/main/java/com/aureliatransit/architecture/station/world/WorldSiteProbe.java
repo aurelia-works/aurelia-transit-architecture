@@ -14,6 +14,7 @@ import net.minecraft.util.math.Direction;
 
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,19 +31,32 @@ public final class WorldSiteProbe implements SiteProbe {
 	private final ServerWorld world;
 	private final boolean load;
 	private final Set<Long> held = new HashSet<>();
+	/** Cells read as another state than the world's: a rebuild surveys the last build's cells as the site they replaced. */
+	private final Map<BlockPos, BlockState> under;
 
 	public WorldSiteProbe(ServerWorld world) {
-		this(world, false);
+		this(world, false, Map.of());
 	}
 
-	private WorldSiteProbe(ServerWorld world, boolean load) {
+	private WorldSiteProbe(ServerWorld world, boolean load, Map<BlockPos, BlockState> under) {
 		this.world = world;
 		this.load = load;
+		this.under = under;
+	}
+
+	/** A loading probe that reads each cell of {@code under} as the state given there instead of the world's. */
+	public static WorldSiteProbe under(ServerWorld world, Map<BlockPos, BlockState> under) {
+		return new WorldSiteProbe(world, true, Map.copyOf(under));
+	}
+
+	private BlockState state(BlockPos pos) {
+		final BlockState state = under.get(pos);
+		return state != null ? state : world.getBlockState(pos);
 	}
 
 	/** A probe that loads (and generates if needed) every chunk it reads. */
 	public static WorldSiteProbe loading(ServerWorld world) {
-		return new WorldSiteProbe(world, true);
+		return new WorldSiteProbe(world, true, Map.of());
 	}
 
 	/** True when the chunk holding the column is loaded; a loading probe loads it first. */
@@ -66,7 +80,7 @@ public final class WorldSiteProbe implements SiteProbe {
 			return CellKind.UNLOADED;
 		}
 		final BlockPos pos = new BlockPos(x, y, z);
-		final BlockState state = world.getBlockState(pos);
+		final BlockState state = state(pos);
 		if (state.isAir()) {
 			return CellKind.AIR;
 		}
@@ -88,7 +102,7 @@ public final class WorldSiteProbe implements SiteProbe {
 			return false;
 		}
 		final BlockPos pos = new BlockPos(x, y, z);
-		return world.getBlockState(pos).isSideSolidFullSquare(world, pos, Direction.UP);
+		return state(pos).isSideSolidFullSquare(world, pos, Direction.UP);
 	}
 
 	@Override
@@ -99,6 +113,6 @@ public final class WorldSiteProbe implements SiteProbe {
 		if (!loaded(x, z)) {
 			return "unloaded chunk";
 		}
-		return Registries.BLOCK.getId(world.getBlockState(new BlockPos(x, y, z)).getBlock()).toString();
+		return Registries.BLOCK.getId(state(new BlockPos(x, y, z)).getBlock()).toString();
 	}
 }

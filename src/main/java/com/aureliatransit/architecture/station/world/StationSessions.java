@@ -158,7 +158,10 @@ public final class StationSessions {
 			return;
 		}
 		JOBS.remove(job.owner());
-		if (job.mode() == StationBuildJob.Mode.BUILD) {
+		if (job.mode() == StationBuildJob.Mode.REBUILD) {
+			// the rebuild's log took over the last build's cells, kept or not, so it replaces that log even when empty
+			UNDO.put(job.owner(), job.undoLog());
+		} else if (job.mode() == StationBuildJob.Mode.BUILD) {
 			if (!job.undoLog().isEmpty()) {
 				UNDO.put(job.owner(), job.undoLog());
 			}

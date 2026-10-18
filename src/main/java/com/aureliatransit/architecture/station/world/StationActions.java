@@ -279,6 +279,43 @@ public final class StationActions {
 		return true;
 	}
 
+	/**
+	 * Builds the pending plan where the player's last station stands (same origin and facing), writing only what differs; the
+	 * pending plan's own place is not used. {@code replaceTerrain} is the explicit approval, as for {@link #confirm}.
+	 */
+	public static boolean rebuild(ServerPlayerEntity player, boolean replaceTerrain) {
+		if (stillPlanning(player)) {
+			return false;
+		}
+		final UUID id = player.getUuid();
+		final StationSessions.Pending pending = StationSessions.pending(id);
+		final StationSessions.Built built = StationSessions.built(id);
+		final UndoLog log = StationSessions.undoLog(id);
+		if (pending == null) {
+			error(player, "Plan the new version first (/ata_station plan or the wrench); rebuild then builds it where your last station stands.");
+			return false;
+		}
+		if (built == null || log == null || log.isEmpty()) {
+			error(player, "No station of yours to rebuild: build one first, or undo has taken it away.");
+			return false;
+		}
+		final ServerWorld world = player.getServer().getWorld(log.dimension());
+		if (world == null || player.getServerWorld() != world) {
+			error(player, "Your last station is in " + log.dimension().getValue() + "; go there to rebuild it.");
+			return false;
+		}
+		final StationSessions.Pending there = new StationSessions.Pending(pending.parse(), pending.spec(), pending.plan(), built.frame(),
+				pending.dimension(), pending.violations(), pending.audit(), pending.report(), pending.railSkipped());
+		final StationBuildJob job = StationCommand.startRebuild(world, id, there, built.frame(), log, replaceTerrain, message(player));
+		if (job == null) {
+			return false;
+		}
+		StationSessions.setBuilt(id, there);
+		StationSessions.discard(id);
+		player.sendMessage(Text.literal("Rebuilding: " + job.kept() + " cells stay as they are, " + job.total() + " changes.").formatted(Formatting.GREEN), false);
+		return true;
+	}
+
 	public static boolean status(ServerPlayerEntity player) {
 		final UUID id = player.getUuid();
 		final StationSessions.Pending pending = StationSessions.pending(id);

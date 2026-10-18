@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.world;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.station.CellKind;
+import com.aureliatransit.architecture.station.RebuildDiff;
 import com.aureliatransit.architecture.station.StylePalette;
 import com.aureliatransit.architecture.station.WorldOp;
 import com.aureliatransit.architecture.station.world.BlockStateResolver.Prepared;
@@ -49,7 +50,9 @@ public final class StationBuildJob {
 
 	public enum Mode {
 		BUILD,
-		UNDO
+		UNDO,
+		/** A build at the spot of the last one that writes only what changed: first the cells the new plan leaves out, then the rest. */
+		REBUILD
 	}
 
 	public enum State {
@@ -83,9 +86,15 @@ public final class StationBuildJob {
 	/** Departure screens placed with the display style they are set to, applied to each screen's owner when the build is done. */
 	private final List<BlockPos> screenCells = new ArrayList<>();
 	private final List<String> screenStyles = new ArrayList<>();
-	/** MTR escalator cells placed, shaped against the finished station when the build is done. */
-	private final List<BlockPos> escalatorCells = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
+	/**
+	 * Rebuild only: the cells the last build wrote that still hold its block, with the state each had before that build. They
+	 * may be written over without approval, and the undo log keeps their first state, so undo still gives the original site back.
+	 */
+	private final Map<BlockPos, UndoLog.Entry> ours;
+	/** Rebuild only: how many of the first ops are the left-out cells taken back, from the undo log, before any write. */
+	private final int removals;
+	private int kept;
 
 	private State state = State.RUNNING;
 	private int done;
@@ -99,6 +108,14 @@ public final class StationBuildJob {
 
 	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> ops, boolean approved, UndoLog log, int total, Consumer<Text> out,
 							StationZone zone) {
+		this(world, owner, mode, ops, ops, approved, log, total, out, zone, Map.of(), 0);
+	}
+
+	/** @param all every op of the plan (what each cell will hold); {@code ops} is the part this job writes */
+	private StationBuildJob(ServerWorld world, UUID owner, Mode mode, List<Prepared> all, List<Prepared> ops, boolean approved, UndoLog log, int total,
+							Consumer<Text> out, StationZone zone, Map<BlockPos, UndoLog.Entry> ours, int removals) {
+		this.ours = ours;
+		this.removals = removals;
 		this.world = world;
 		this.zone = zone;
 		this.probe = WorldSiteProbe.loading(world);
@@ -109,7 +126,7 @@ public final class StationBuildJob {
 		this.log = log;
 		this.total = total;
 		this.out = out;
-		for (final Prepared prepared : ops) {
+		for (final Prepared prepared : all) {
 			if (prepared.op().kind() != WorldOp.Kind.CLEAR) {
 				planned.put(new BlockPos(prepared.op().x(), prepared.op().y(), prepared.op().z()), prepared.state());
 			}
@@ -136,6 +153,85 @@ public final class StationBuildJob {
 			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
 		}
 		return new StationBuildJob(world, owner, Mode.BUILD, resolution.ops(), approved, new UndoLog(world.getRegistryKey()), resolution.ops().size(), out, zone);
+	}
+
+	/**
+	 * Builds {@code resolution} over the station {@code last} logged, at the same spot: a cell that would be written the same
+	 * stays as it stands, a cell the new plan leaves out goes back to its state before that build, and only the rest is written.
+	 * The old station's MTR lifts and station area go first and are formed again when the job finishes. The new job's log
+	 * takes over from {@code last}, so one undo still restores the site as it was before either build. The resolution must come
+	 * from a survey that read our own cells as their state before the build ({@link WorldSiteProbe#under}).
+	 */
+	public static StationBuildJob rebuild(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out,
+										  StationZone zone, UndoLog last) {
+		if (!resolution.ok()) {
+			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
+		}
+		final Map<BlockPos, UndoLog.Entry> cells = ours(world, last);
+		// a rebuild that cannot start must leave the last build's MTR lifts and station alone, so nothing above may fail after this
+		final Map<BlockPos, String> built = new java.util.LinkedHashMap<>();
+		for (final Map.Entry<BlockPos, String> key : last.keys().entrySet()) {
+			if (cells.containsKey(key.getKey())) {
+				built.put(key.getKey(), key.getValue());
+			}
+		}
+		final List<RebuildDiff.Want<BlockPos>> wanted = new ArrayList<>();
+		for (final Prepared prepared : resolution.ops()) {
+			wanted.add(new RebuildDiff.Want<>(pos(prepared.op()), key(prepared)));
+		}
+		final RebuildDiff<BlockPos> diff = RebuildDiff.of(built, wanted);
+		MtrLiftContract.remove(world, last.takeLifts());
+		MtrStationContract.remove(world, last.takeStations());
+		final UndoLog log = new UndoLog(world.getRegistryKey());
+		log.copySoil(last);
+		// kept cells carry over first; then the left-out ones, oldest first, so the undo phase takes them newest first
+		final Set<BlockPos> leaving = new HashSet<>(diff.remove());
+		final Set<BlockPos> rewritten = new HashSet<>();
+		for (final int i : diff.write()) {
+			rewritten.add(wanted.get(i).pos());
+		}
+		for (final Map.Entry<BlockPos, String> key : built.entrySet()) {
+			if (!leaving.contains(key.getKey()) && !rewritten.contains(key.getKey())) {
+				log.add(cells.get(key.getKey()), key.getValue());
+			}
+		}
+		for (int i = diff.remove().size() - 1; i >= 0; i--) {
+			final BlockPos pos = diff.remove().get(i);
+			log.add(cells.get(pos), built.get(pos));
+		}
+		final List<Prepared> writes = new ArrayList<>();
+		for (final int i : diff.write()) {
+			writes.add(resolution.ops().get(i));
+		}
+		final StationBuildJob job = new StationBuildJob(world, owner, Mode.REBUILD, resolution.ops(), writes, approved, log,
+				diff.remove().size() + writes.size(), out, zone, cells, diff.remove().size());
+		job.kept = diff.kept();
+		return job;
+	}
+
+	/**
+	 * The cells {@code log} wrote that still hold the block written there (a rail node connected in MTR since counts as changed),
+	 * each with its state before the build and after its last write.
+	 */
+	static Map<BlockPos, UndoLog.Entry> ours(ServerWorld world, UndoLog log) {
+		final WorldSiteProbe probe = WorldSiteProbe.loading(world);
+		final Map<BlockPos, UndoLog.Entry> ours = new java.util.LinkedHashMap<>();
+		for (final Map.Entry<BlockPos, UndoLog.Entry> cell : log.cells().entrySet()) {
+			final BlockPos pos = cell.getKey();
+			if (probe.loaded(pos.getX(), pos.getZ()) && stillPlaced(world.getBlockState(pos), cell.getValue().placed())) {
+				ours.put(pos, cell.getValue());
+			}
+		}
+		return ours;
+	}
+
+	/** What identifies a write completely, for {@link RebuildDiff}: the block state as resolved and any sign or screen text. */
+	static String key(Prepared prepared) {
+		return prepared.state() + "|" + prepared.op().text();
+	}
+
+	private static BlockPos pos(WorldOp op) {
+		return new BlockPos(op.x(), op.y(), op.z());
 	}
 
 	/** Undoes the log's entries from the newest back; the log shrinks as cells are handled. */
@@ -189,6 +285,11 @@ public final class StationBuildJob {
 		return placed;
 	}
 
+	/** Rebuild only: cells that already held what the new plan wants and were left as they stand. */
+	public int kept() {
+		return kept;
+	}
+
 	/** Cells a build changed that were not air before. */
 	public int terrainChanged() {
 		return terrainChanged;
@@ -224,7 +325,7 @@ public final class StationBuildJob {
 		int used = 0;
 		boolean blocked = false;
 		while (used < budget && done < total) {
-			final Step step = mode == Mode.BUILD ? buildNext() : undoNext();
+			final Step step = mode == Mode.UNDO || done < removals ? undoNext() : buildNext();
 			if (step == Step.WAIT) {
 				blocked = true;
 				break;
@@ -254,7 +355,7 @@ public final class StationBuildJob {
 		}
 		state = State.CANCELLED;
 		paused = false;
-		if (mode == Mode.BUILD) {
+		if (mode != Mode.UNDO) {
 			say(Formatting.YELLOW, "Build cancelled at " + done + "/" + total + ": " + placed + " blocks placed, " + terrainChanged
 					+ " terrain cells changed." + (log.isEmpty() ? "" : " /ata_station undo reverts them."));
 		} else {
@@ -266,7 +367,7 @@ public final class StationBuildJob {
 	// ---- build ------------------------------------------------------------------------------------------------------
 
 	private Step buildNext() {
-		final Prepared prepared = ops.get(done);
+		final Prepared prepared = ops.get(done - removals);
 		final WorldOp op = prepared.op();
 		if (!probe.loaded(op.x(), op.z())) {
 			return Step.WAIT;
@@ -276,14 +377,17 @@ public final class StationBuildJob {
 			done++;
 			return Step.DONE;
 		}
-		if (!allowed(op.kind(), kind)) {
+		final BlockPos pos = new BlockPos(op.x(), op.y(), op.z());
+		// a cell of the last build may be written over: it was surveyed as the site it replaced
+		final UndoLog.Entry last = ours.get(pos);
+		final BlockState original = last != null && stillPlaced(world.getBlockState(pos), last.placed()) ? last.previous() : null;
+		if (original == null && !allowed(op.kind(), kind)) {
 			stop("Stopped at " + op.x() + " " + op.y() + " " + op.z() + ": found " + probe.describe(op.x(), op.y(), op.z()) + " where "
 					+ op.blockId() + " was planned (" + kind.name().toLowerCase(java.util.Locale.ROOT)
 					+ "). The cell changed since the survey; nothing more was placed. ", true);
 			return Step.STOP;
 		}
-		final BlockPos pos = new BlockPos(op.x(), op.y(), op.z());
-		final BlockState before = world.getBlockState(pos);
+		final BlockState before = original != null ? original : world.getBlockState(pos);
 		final BlockState wanted = postProcessAsPlanned(prepared.state(), pos);
 		if (wanted.getBlock() != prepared.state().getBlock()) {
 			stop("Stopped at " + op.x() + " " + op.y() + " " + op.z() + ": " + op.blockId() + " would not stay there next to its neighbours; nothing more was placed. ", true);
@@ -293,9 +397,9 @@ public final class StationBuildJob {
 		if (below.getBlock() instanceof SpreadableBlock && !wanted.isAir()) {
 			log.coverSoil(pos.down(), below);
 		}
-		world.setBlockState(pos, wanted, Block.NOTIFY_ALL);
+		world.setBlockState(pos, wanted, original != null ? removalFlags(world.getBlockState(pos)) : Block.NOTIFY_ALL);
 		final BlockState after = world.getBlockState(pos);
-		log.add(new UndoLog.Entry(pos, before, after));
+		log.add(new UndoLog.Entry(pos, before, after), key(prepared));
 		done++;
 		if (op.kind() != WorldOp.Kind.CLEAR) {
 			placed++;
@@ -306,9 +410,6 @@ public final class StationBuildJob {
 		if (after.getBlock() != wanted.getBlock()) {
 			stop("Stopped at " + op.x() + " " + op.y() + " " + op.z() + ": " + op.blockId() + " was removed again by a neighbour update; nothing more was placed. ", true);
 			return Step.STOP;
-		}
-		if (escalator(wanted)) {
-			escalatorCells.add(pos);
 		}
 		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock) {
 			screenCells.add(pos);
@@ -355,7 +456,7 @@ public final class StationBuildJob {
 	private void stop(String reason, boolean undoHint) {
 		state = State.STOPPED;
 		paused = false;
-		final String tail = mode == Mode.BUILD
+		final String tail = mode != Mode.UNDO
 				? done + " of " + total + " ops done." + (undoHint && !log.isEmpty() ? " /ata_station undo reverts them." : "")
 				: restored + " restored, " + skipped + " skipped, " + (total - done) + " left; /ata_station undo continues.";
 		say(Formatting.RED, reason + tail);
@@ -364,13 +465,14 @@ public final class StationBuildJob {
 	private void finish() {
 		state = State.DONE;
 		paused = false;
-		if (mode == Mode.BUILD) {
+		if (mode != Mode.UNDO) {
 			escalators();
 			screens();
 			nameSigns();
 			lifts();
 			MtrStationContract.register(world, zone, log, out);
-			out.accept(Text.literal("Station built: " + placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
+			out.accept(Text.literal((mode == Mode.REBUILD ? "Station rebuilt: " + kept + " cells kept as they stood, " + restored + " taken back, " : "Station built: ")
+					+ placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
 					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
 		} else {
 			say(Formatting.GREEN, "Undo finished: " + restored + " cells restored"
@@ -384,9 +486,16 @@ public final class StationBuildJob {
 		return id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_");
 	}
 
-	/** Each escalator step takes its landing, transition or slope shape from the finished flight around it. */
+	/** Each escalator step takes its landing, transition or slope shape from the finished flight around it, kept steps too. */
 	private void escalators() {
-		for (final BlockPos pos : escalatorCells) {
+		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
+			if (!escalator(cell.getValue())) {
+				continue;
+			}
+			final BlockPos pos = cell.getKey();
+			if (!probe.loaded(pos.getX(), pos.getZ())) {
+				continue;
+			}
 			final BlockState state = world.getBlockState(pos);
 			final BlockState shaped = escalator(state) ? Block.postProcessState(state, world, pos) : state;
 			if (shaped != state && escalator(shaped)) {
