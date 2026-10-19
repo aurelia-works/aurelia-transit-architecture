@@ -100,6 +100,10 @@ final class BoardModel {
 	float[] sv = new float[4];
 	/** True to move in whole font pixels, as an LED board steps column by column. */
 	boolean[] sq = new boolean[4];
+	/** The window last drawn for each scrolling line and its text, so a frame that shows the same characters reuses it. */
+	int[] sFirst = new int[4];
+	int[] sEnd = new int[4];
+	OrderedText[] sVisible = new OrderedText[4];
 
 	void reset() {
 		rectCount = 0;
@@ -111,6 +115,7 @@ final class BoardModel {
 		Arrays.fill(ts, null);
 		Arrays.fill(ss, null);
 		Arrays.fill(sa, null);
+		Arrays.fill(sVisible, null);
 	}
 
 	void rect(float x, float y, float w, float h, int argb, int layer) {
@@ -184,6 +189,9 @@ final class BoardModel {
 			sc = Arrays.copyOf(sc, n);
 			sv = Arrays.copyOf(sv, n);
 			sq = Arrays.copyOf(sq, n);
+			sFirst = Arrays.copyOf(sFirst, n);
+			sEnd = Arrays.copyOf(sEnd, n);
+			sVisible = Arrays.copyOf(sVisible, n);
 		}
 		ss[scrollCount] = text;
 		sf[scrollCount] = font;
@@ -195,7 +203,18 @@ final class BoardModel {
 		sc[scrollCount] = argb;
 		sv[scrollCount] = speed;
 		sq[scrollCount] = stepped;
+		sVisible[scrollCount] = null;
 		scrollCount++;
+	}
+
+	/** Characters {@code first..end} of scrolling line {@code i} as drawable text, rebuilt only when the window moves. */
+	OrderedText visible(int i, int first, int end) {
+		if (sVisible[i] == null || sFirst[i] != first || sEnd[i] != end) {
+			sVisible[i] = sf[i].ordered(ss[i].substring(first, end));
+			sFirst[i] = first;
+			sEnd[i] = end;
+		}
+		return sVisible[i];
 	}
 
 	/**

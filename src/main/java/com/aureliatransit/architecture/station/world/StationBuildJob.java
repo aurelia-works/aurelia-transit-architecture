@@ -27,6 +27,7 @@ import net.minecraft.util.math.Direction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -86,6 +87,12 @@ public final class StationBuildJob {
 	/** MTR escalator cells placed, shaped against the finished station when the build is done. */
 	private final List<BlockPos> escalatorCells = new ArrayList<>();
 	private final List<String> signTexts = new ArrayList<>();
+	/** MTR lift stops and call buttons placed, so forming the lifts reads these instead of every planned cell. */
+	private final Set<BlockPos> liftStopCells = new LinkedHashSet<>();
+	private final Set<BlockPos> liftButtonCells = new LinkedHashSet<>();
+	/** The two lift blocks, or null when MTR does not register them. */
+	private final Block liftStopBlock = Registries.BLOCK.getOrEmpty(new Identifier(StylePalette.MTR_LIFT_FLOOR)).orElse(null);
+	private final Block liftButtonBlock = Registries.BLOCK.getOrEmpty(new Identifier(StylePalette.MTR_LIFT_BUTTONS)).orElse(null);
 
 	private State state = State.RUNNING;
 	private int done;
@@ -117,12 +124,16 @@ public final class StationBuildJob {
 		}
 	}
 
-	/** @throws IllegalArgumentException when an op names a block that does not exist */
-	public static StationBuildJob build(ServerWorld world, UUID owner, List<WorldOp> ops, boolean approved, Consumer<Text> out) {
-		final BlockStateResolver.Resolution resolution = BlockStateResolver.resolve(ops);
+	private static void requireResolved(BlockStateResolver.Resolution resolution) {
 		if (!resolution.ok()) {
 			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
 		}
+	}
+
+	/** @throws IllegalArgumentException when an op names a block that does not exist */
+	public static StationBuildJob build(ServerWorld world, UUID owner, List<WorldOp> ops, boolean approved, Consumer<Text> out) {
+		final BlockStateResolver.Resolution resolution = BlockStateResolver.resolve(ops);
+		requireResolved(resolution);
 		return build(world, owner, resolution, approved, out, null);
 	}
 
@@ -133,9 +144,7 @@ public final class StationBuildJob {
 	/** @param zone the MTR station area to register once built, or null */
 	public static StationBuildJob build(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out,
 										StationZone zone) {
-		if (!resolution.ok()) {
-			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
-		}
+		requireResolved(resolution);
 		return new StationBuildJob(world, owner, Mode.BUILD, resolution.ops(), approved, new UndoLog(world.getRegistryKey()), resolution.ops().size(), out, zone);
 	}
 
@@ -315,6 +324,11 @@ public final class StationBuildJob {
 		if (escalator(wanted)) {
 			escalatorCells.add(pos);
 		}
+		if (wanted.getBlock() == liftStopBlock) {
+			liftStopCells.add(pos);
+		} else if (wanted.getBlock() == liftButtonBlock) {
+			liftButtonCells.add(pos);
+		}
 		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock) {
 			screenCells.add(pos);
 			screenStyles.add(op.text());
@@ -446,16 +460,14 @@ public final class StationBuildJob {
 	 */
 	private void lifts() {
 		final Map<Long, TreeMap<Integer, BlockPos>> columns = new HashMap<>();
-		final List<BlockPos> buttons = new ArrayList<>();
-		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
-			final String id = Registries.BLOCK.getId(cell.getValue().getBlock()).toString();
-			final BlockPos pos = cell.getKey();
-			if (!probe.loaded(pos.getX(), pos.getZ()) || world.getBlockState(pos).getBlock() != cell.getValue().getBlock()) {
-				continue;
-			}
-			if (id.equals(StylePalette.MTR_LIFT_FLOOR)) {
+		for (final BlockPos pos : liftStopCells) {
+			if (probe.loaded(pos.getX(), pos.getZ()) && world.getBlockState(pos).getBlock() == liftStopBlock) {
 				columns.computeIfAbsent(BlockPos.asLong(pos.getX(), 0, pos.getZ()), key -> new TreeMap<>()).put(pos.getY(), pos);
-			} else if (id.equals(StylePalette.MTR_LIFT_BUTTONS)) {
+			}
+		}
+		final List<BlockPos> buttons = new ArrayList<>();
+		for (final BlockPos pos : liftButtonCells) {
+			if (probe.loaded(pos.getX(), pos.getZ()) && world.getBlockState(pos).getBlock() == liftButtonBlock) {
 				buttons.add(pos);
 			}
 		}
