@@ -24,7 +24,8 @@ class PlatformListTest {
 		assertEquals(6, spec.trackCount());
 		final TrackLayout layout = StationGeometry.layout(spec);
 		assertEquals(4, layout.platforms().size());
-		assertEquals(List.of(12, 8, spec.platformWidth(), 5), layout.platforms().stream().map(TrackLayout.PlatformBand::width).toList());
+		// an island left on auto takes an island's default width, not the side platforms'
+		assertEquals(List.of(12, 8, StationSpec.DEFAULT_ISLAND_WIDTH, 5), layout.platforms().stream().map(TrackLayout.PlatformBand::width).toList());
 		assertTrue(layout.platforms().get(1).island());
 		assertFalse(layout.platforms().get(3).island());
 	}

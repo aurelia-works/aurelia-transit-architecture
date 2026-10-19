@@ -14,6 +14,7 @@ public final class StylePalette {
 	public static final String MTR_LIFT_FLOOR = "mtr:lift_track_floor_1";
 	public static final String MTR_LIFT_DOOR = "mtr:lift_door_1";
 	public static final String MTR_LIFT_BUTTONS = "mtr:lift_buttons_1";
+	public static final String MTR_ROUTE_SIGN = "mtr:route_sign_wall_light";
 	/** MTR's escalator: a step, with its handrail block in the cell above. */
 	public static final String MTR_ESCALATOR_STEP = "mtr:escalator_step";
 	public static final String MTR_ESCALATOR_SIDE = "mtr:escalator_side";
@@ -182,7 +183,8 @@ public final class StylePalette {
 					ata("metro_recessed_light"), ata("platform_lamp"), ata("steel_bench"), ata("station_name_sign"));
 		};
 		final StylePalette palette = new StylePalette(surfaceOverride(spec.surface(), base.surface), base.edge, base.column, base.cap,
-				roofOverride(spec.roofMaterial(), hall, base.roof), base.roofEdge, base.roofLight, base.lamp, base.bench, base.sign);
+				roofOverride(spec.roofMaterial(), hall, base.roof), base.roofEdge, base.roofLight, base.lamp, base.bench,
+				spec.operator() == Operator.NONE ? base.sign : spec.operator().signId());
 		palette.building = Building.of(spec.building());
 		palette.buildingStyle = spec.building();
 		palette.style = spec.style();
@@ -214,7 +216,8 @@ public final class StylePalette {
 			case MODERN, AMSTERDAM, ANTWERP -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;
 			case GOTHIC_BRICK, MUMBAI -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
 			case SANDSTONE, CONCRETE, BERLIN, CLINKER, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_DB;
-			case BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
+			case TOKYO -> com.aureliatransit.architecture.live.DisplayStyle.JAPAN_COMMUTER;
+			case BEAUX_ARTS, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
 			case NONE -> switch (style) {
 				case MODERN, METRO -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
 				case DUTCH -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;

@@ -64,6 +64,9 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	/** Narrowest island and side platform that take an escalator or second stair beside the stair and keep a walkway past both. */
 	public static final int MIN_ESCALATOR_ISLAND = 11;
 	public static final int MIN_ESCALATOR_SIDE = 9;
+	/** Narrowest platforms that take a travelator lane (two columns) with a walkway either side of it, clear of the edges. */
+	public static final int MIN_TRAVELATOR_ISLAND = 10;
+	public static final int MIN_TRAVELATOR_SIDE = 9;
 
 	public StationLayout {
 		served = List.copyOf(served);
@@ -296,6 +299,19 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	private Flight reverseFlight(TrackLayout.PlatformBand band, List<Integer> columns) {
 		return new Flight(columns, -stairSide, bridgeV - StationGeometry.bridgeWallOffset(bridgeWidth) * stairSide);
+	}
+
+	/**
+	 * The second flight, from the corridor's other side, as an up escalator rather than a stair: with escalators and stairs
+	 * both ways, where the platform runs past its foot. So each side of the corridor has a way up that is not a stair (the
+	 * lift is beside it). Null otherwise.
+	 */
+	public Flight reverseEscalator(TrackLayout.PlatformBand band) {
+		if (!hasEscalator(band) || !hasReverse(band)) {
+			return null;
+		}
+		final Flight reverse = reverseFlight(band, pair(band));
+		return band.runs(reverse.wallV() + reverse.side() * (ESCALATOR_TOP + 1)) ? reverse : null;
 	}
 
 	/** Stair and escalator columns together: every column that opens out of the corridor and is kept clear down to the platform. */

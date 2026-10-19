@@ -40,6 +40,8 @@ import java.util.List;
  * stops above a large destination, the platform number on the right, following trains below and a white band scrolling
  * notices. Concourse: Time, Train, Via, Destination, Platform.</li>
  * <li>{@link DisplayStyle#METRO_COUNTDOWN}: black, line-coloured route badges, destinations and minutes to go.</li>
+ * <li>{@link DisplayStyle#JAPAN_COMMUTER}: a dark panel, the platform number and an arrow at one end, the clock at the other, a black window of
+ * train-type badge, destination and time between them.</li>
  * </ul>
  * Times are clock times of the real world, like MTR's own timetable; the clocks on the boards show the same time.
  */
@@ -106,7 +108,148 @@ final class BoardBuilder {
 					metroPlatform(b);
 				}
 			}
+			case JAPAN_COMMUTER -> {
+				if (b.concourse) {
+					jpConcourse(b);
+				} else {
+					jpPlatform(b);
+				}
+			}
 		}
+	}
+
+	// ------------------------------------------------------------------------------------------------------- Japan
+
+	/**
+	 * Hanging platform board: the platform number with an arrow at the left, the clock at the right, and between them a black
+	 * window of rows (train-type badge, destination, departure time).
+	 */
+	private static void jpPlatform(Board b) {
+		final DisplayStyle st = b.style;
+		final List<ServiceSnapshot> list = b.services;
+		final int rows = Math.max(1, Math.min(b.config.rows(), 4));
+		final float rowH = 13;
+		final float bodyH = rows * rowH + 6;
+		final float stripH = b.messages.isEmpty() ? 0 : 11;
+		final float sideL = 26;
+		final float sideR = 36;
+		final float y0 = b.frame(bodyH + stripH, 180, 0);
+		final float windowL = sideL;
+		final float windowR = b.vw - sideR;
+		// platform number and arrow
+		final String here = BoardSummary.platformName(b.snapshot.platforms(), b.nearest);
+		b.put("\u2190", Font.DEFAULT, MARGIN + 2, y0 + 3, 1.4F, st.text());
+		if (!here.isEmpty()) {
+			final float k = Math.min(2.4F, (sideL - MARGIN) / Math.max(7, b.w(here, Font.DEFAULT, 1)));
+			b.put(here, Font.DEFAULT, MARGIN + (sideL - MARGIN - b.w(here, Font.DEFAULT, k)) / 2 - 1, y0 + bodyH - 7 * k - 3, k, st.text());
+		}
+		// the clock and the station
+		final float cx = windowR + 3;
+		b.m.rect(cx, y0 + 3, sideR - 6, 14, st.rowBand(), BoardModel.LAYER_BAND);
+		final String clock = clock();
+		b.put(clock, Font.DEFAULT, cx + (sideR - 6 - b.w(clock, Font.DEFAULT, 0.9F)) / 2, y0 + 7, 0.9F, st.text());
+		if (!b.station.isEmpty()) {
+			b.fit(b.station, Font.DEFAULT, cx, y0 + 20, 0.6F, sideR - 6, st.dim());
+		}
+		// the window
+		b.m.rect(windowL, y0 + 2, windowR - windowL, bodyH - 4, st.rowBand(), BoardModel.LAYER_BAND);
+		if (list.isEmpty()) {
+			b.idle(Font.DEFAULT, Font.DEFAULT, y0 + 2, bodyH - 4);
+			messageStrip(b, Font.DEFAULT);
+			return;
+		}
+		final int shown = Math.min(rows, list.size());
+		final float badgeW = jpBadgeColumn(b, list.subList(0, shown));
+		for (int i = 0; i < shown; i++) {
+			jpRow(b, list.get(i), y0 + 3 + i * rowH, rowH, windowL + 4, windowR - 4, badgeW, false);
+		}
+		messageStrip(b, Font.DEFAULT);
+	}
+
+	/** Departures list: time, train-type badge, destination, platform. */
+	private static void jpConcourse(Board b) {
+		final DisplayStyle st = b.style;
+		final int rows = b.config.rows();
+		final float headerH = 13;
+		final float rowH = 13;
+		final String summary = b.summary();
+		final float summaryH = summary.isEmpty() ? 0 : 9;
+		final float stripH = b.messages.isEmpty() ? 0 : 11;
+		final float y0 = b.frame(headerH + rows * rowH + summaryH + stripH, 170, 0);
+		final Page page = b.services.isEmpty() ? null : b.page(rows);
+		b.header(y0, headerH, Font.DEFAULT, Font.DEFAULT, page);
+		final float rowsTop = y0 + headerH;
+		b.m.rect(0, rowsTop, b.vw, rows * rowH, st.rowBand(), BoardModel.LAYER_BAND);
+		if (page == null) {
+			b.idle(Font.DEFAULT, Font.DEFAULT, rowsTop, rows * rowH);
+		} else {
+			final float badgeW = jpBadgeColumn(b, b.services.subList(page.from, page.to));
+			for (int i = page.from; i < page.to; i++) {
+				jpRow(b, b.services.get(i), rowsTop + (i - page.from) * rowH, rowH, MARGIN, b.vw - MARGIN, badgeW, true);
+			}
+		}
+		if (!summary.isEmpty()) {
+			b.fit(summary, Font.DEFAULT, MARGIN, rowsTop + rows * rowH + 1.5F, 0.7F, b.vw - 2 * MARGIN, st.dim());
+		}
+		messageStrip(b, Font.DEFAULT);
+	}
+
+	/**
+	 * One row: the badge, the destination, and the time at the right (a platform board puts it last; a concourse board first
+	 * and the platform last).
+	 */
+	private static void jpRow(Board b, ServiceSnapshot s, float y, float h, float left, float right, float badgeW, boolean concourse) {
+		final DisplayStyle st = b.style;
+		final float textY = y + (h - 7) / 2;
+		final String time = hhmm(scheduled(s));
+		final boolean late = s.realtime() && s.deviationMillis() >= 60_000;
+		final float timeW = b.w("00:00", Font.DEFAULT, 1);
+		float x = left;
+		float end = right;
+		if (concourse) {
+			b.put(time, Font.DEFAULT, x, textY, 1, late ? st.delay() : st.accent());
+			x += timeW + 5;
+			final String platform = s.platformName();
+			if (!platform.isEmpty()) {
+				final float pw = Math.max(12, b.w(platform, Font.DEFAULT, 1) + 4);
+				b.m.rect(end - pw, y + (h - 10) / 2, pw, 10, st.chip(), BoardModel.LAYER_CHIP);
+				b.put(platform, Font.DEFAULT, end - pw + (pw - b.w(platform, Font.DEFAULT, 1)) / 2, textY, 1, st.text());
+				end -= pw + 4;
+			}
+		} else {
+			b.put(time, Font.DEFAULT, end - timeW, textY, 1, late ? st.delay() : st.accent());
+			end -= timeW + 5;
+			if (late) {
+				final String behind = "+" + Math.max(1, s.deviationMillis() / 60_000);
+				final float lw = b.w(behind, Font.DEFAULT, 0.8F);
+				b.put(behind, Font.DEFAULT, end - lw, textY + 1, 0.8F, st.delay());
+				end -= lw + 4;
+			}
+		}
+		jpBadge(b, s, x, y + (h - 10) / 2, badgeW, 10);
+		b.fit(b.place(b.arrivals ? s.origin() : s.destination()), Font.DEFAULT, x + badgeW + 5, textY, 1, end - x - badgeW - 5, st.text());
+	}
+
+	private static float jpBadgeColumn(Board b, List<ServiceSnapshot> shown) {
+		float widest = 14;
+		for (final ServiceSnapshot s : shown) {
+			widest = Math.max(widest, b.w(b.trainType(s), Font.DEFAULT, 0.9F) + 6);
+		}
+		return Math.min(widest, 40);
+	}
+
+	/** A rounded badge in the route's colour carrying its number or name (the train type on a Japanese board). */
+	private static void jpBadge(Board b, ServiceSnapshot s, float x, float y, float w, float h) {
+		final int color = s.routeColor() == 0 ? b.style.chip() : 0xFF000000 | s.routeColor();
+		b.m.rect(x + 1, y, w - 2, h, color, BoardModel.LAYER_CHIP);
+		b.m.rect(x, y + 1, w, h - 2, color, BoardModel.LAYER_CHIP);
+		final String label = b.trainType(s);
+		if (label.isEmpty()) {
+			return;
+		}
+		final int textColor = luminance(color) > 0.6F ? 0xFF101010 : 0xFFFFFFFF;
+		final String shown = b.trim(label, Font.DEFAULT, 0.9F, w - 2);
+		b.put(shown, Font.DEFAULT, x + (w - b.w(shown, Font.DEFAULT, 0.9F)) / 2, y + (h - 6.3F) / 2, 0.9F, textColor);
 	}
 
 	// ---------------------------------------------------------------------------------------------------------- UK

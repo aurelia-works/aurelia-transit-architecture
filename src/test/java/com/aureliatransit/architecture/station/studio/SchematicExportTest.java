@@ -231,7 +231,7 @@ class SchematicExportTest {
 					final String want = heading.name().toLowerCase();
 					final String away = heading.opposite().name().toLowerCase();
 					assertTrue(props.get("facing").equals(want) || props.get("facing").equals(away) && (block.blockId().equals("mtr:ticket_machine")
-							|| block.blockId().equals("mtr:tactile_map")), words + " " + block + " as " + state);
+							|| block.blockId().equals("mtr:tactile_map") || block.blockId().equals("mtr:route_sign_wall_light")), words + " " + block + " as " + state);
 				}
 				if (props.containsKey("axis") && !block.state().contains("axis=")) {
 					assertEquals(heading.alongX() ? "x" : "z", props.get("axis"), words + " " + block);

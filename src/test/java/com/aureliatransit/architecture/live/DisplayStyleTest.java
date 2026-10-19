@@ -23,7 +23,8 @@ class DisplayStyleTest {
 		assertEquals(DisplayStyle.DUTCH_NS, DisplayStyle.byOrdinal(2));
 		assertEquals(DisplayStyle.GERMAN_DB, DisplayStyle.byOrdinal(3));
 		assertEquals(DisplayStyle.METRO_COUNTDOWN, DisplayStyle.byOrdinal(99));
-		assertEquals(4, DisplayStyle.values().length);
+		assertEquals(5, DisplayStyle.values().length);
+		assertEquals(DisplayStyle.JAPAN_COMMUTER, DisplayStyle.byOrdinal(4));
 		final Set<String> ids = new HashSet<>();
 		for (final DisplayStyle style : DisplayStyle.values()) {
 			assertTrue(ids.add(style.id()), style.id());
@@ -61,6 +62,7 @@ class DisplayStyleTest {
 		assertEquals(DisplayStyle.GERMAN_DB.id(), screenText("4 tracks hamburg station building 64 long"));
 		assertEquals(DisplayStyle.DUTCH_NS.id(), screenText("4 tracks utrecht station building 64 long"));
 		assertEquals(DisplayStyle.METRO_COUNTDOWN.id(), screenText("2 tracks island 64 long footbridge"));
+		assertEquals(DisplayStyle.JAPAN_COMMUTER.id(), screenText("4 tracks tokyo station building 64 long"));
 	}
 
 	private static String screenText(String description) {

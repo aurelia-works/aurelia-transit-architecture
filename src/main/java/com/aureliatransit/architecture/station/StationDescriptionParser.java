@@ -173,7 +173,7 @@ public final class StationDescriptionParser {
 			"from", "into", "please", "build", "make", "create", "generate", "give", "me", "i", "we", "want", "need", "would", "like", "some",
 			"any", "very", "really", "also", "plus", "station", "stations", "railway", "rail", "train", "trains", "platform", "platforms",
 			"track", "tracks", "style", "styled", "type", "kind", "it", "its", "that", "this", "is", "are", "be", "have", "has", "new", "nice",
-			"little", "no", "not", "without", "only", "s", "u");
+			"little", "no", "not", "without", "only", "s", "u", "operator", "logo", "logos");
 
 	private StationDescriptionParser() {
 	}
@@ -232,6 +232,7 @@ public final class StationDescriptionParser {
 		private Boolean stepFree;
 		private Boolean tactile;
 		private TrackBed trackBed;
+		private Operator operator;
 		private boolean escalators;
 		private boolean bothWays;
 		private boolean enclosedStairs;
@@ -854,7 +855,8 @@ public final class StationDescriptionParser {
 				use(i, j);
 				return true;
 			}
-			if (METRE_UNITS.contains(unit)) {
+			// "300 blocks" alone is a length too, once it is long enough to be one
+			if (METRE_UNITS.contains(unit) || (unit.equals("blocks") || unit.equals("block")) && n >= StationSpec.MIN_LENGTH) {
 				setLength(n, i);
 				use(i, i + 1);
 				return true;
@@ -1073,7 +1075,39 @@ public final class StationDescriptionParser {
 			}
 		}
 
+		/**
+		 * An operator word ("ns", "deutsche bahn", "gvb"), with the noun after it ("ns operator", "gvb logo"): 0 when it is not one,
+		 * 1 for the bare word, 2 when the noun made it plainly the operator.
+		 */
+		private int operatorWord(int i, String token) {
+			final boolean two = token.equals("deutsche") && at(i + 1).equals("bahn") || token.equals("nederlandse") && at(i + 1).equals("spoorwegen");
+			final Operator named = Operator.of(two ? token + " " + at(i + 1) : token);
+			if (named == null || named == Operator.NONE) {
+				return 0;
+			}
+			if (operator == null) {
+				operator = named;
+				note(i, named.name() + " signs");
+			} else if (operator != named) {
+				warn("two operators given; the first (" + operator.name() + ") is used");
+			}
+			final int end = two ? i + 1 : i;
+			if (two) {
+				use(i + 1, i + 1);
+			}
+			if (at(end + 1).equals("operator") || at(end + 1).equals("logo") || at(end + 1).equals("signs")) {
+				use(end + 1, end + 1);
+				return 2;
+			}
+			return 1;
+		}
+
 		private void keyword(int i, String token) {
+			// a bare "ns" or "db" also names a look (Dutch, German), which it keeps setting; "ns operator" is only the signs
+			final int operatorKind = operatorWord(i, token);
+			if (operatorKind == 2 || operatorKind == 1 && !STYLE_WORDS.containsKey(token)) {
+				return;
+			}
 			if (buildingWord(i, token)) {
 				return;
 			}
@@ -1701,6 +1735,7 @@ public final class StationDescriptionParser {
 			// a second stair or an up escalator needs a wider platform beside the lift: asking for one widens the platforms to fit
 			final boolean stairGroup = (bothWays || escalators) && Boolean.TRUE.equals(footbridge);
 			final int groupWidth = layout == PlatformLayout.ISLAND ? StationLayout.MIN_ESCALATOR_ISLAND : StationLayout.MIN_ESCALATOR_SIDE;
+			final boolean autoWidth = width == null && !narrow && !wide && !small;
 			final int defaultWidth = stairGroup ? groupWidth : layout == PlatformLayout.ISLAND ? StationSpec.DEFAULT_ISLAND_WIDTH
 					: bridgeSide ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : StationSpec.DEFAULT_SIDE_WIDTH;
 			if (width != null) {
@@ -1756,8 +1791,12 @@ public final class StationDescriptionParser {
 						final boolean inner = innerAt[k];
 						// without a building a side platform on the edge is the way up to the footbridge, so it needs the lift too
 						final boolean entry = !inner && !buildingComing && !liftedEntry;
-						final int need = p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed
+						int need = p.kind() == PlatformSpec.Kind.ISLAND ? islandNeed
 								: (inner || entry) && lift ? StationSpec.DEFAULT_FOOTBRIDGE_SIDE_WIDTH : 0;
+						// an island left on "auto" gets an island's default width, not the side platforms' (the list's first platform sets the base)
+						if (p.kind() == PlatformSpec.Kind.ISLAND && p.width() == 0 && autoWidth) {
+							need = Math.max(need, stairGroup ? groupWidth : StationSpec.DEFAULT_ISLAND_WIDTH);
+						}
 						if (p.widthIn(narrowest) < need) {
 							widened.add(new PlatformSpec(p.kind(), need, p.length(), p.roof(), p.bay()));
 							if (p.width() != 0) {
@@ -1831,9 +1870,18 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
+			if (operator != null) {
+				builder.operator(operator);
+			}
 			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine);
-			if (travelators && StationGeometry.layout(builder.build()).platforms().stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
-				warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
+			if (travelators) {
+				final List<TrackLayout.PlatformBand> built = StationGeometry.layout(builder.build()).platforms();
+				if (built.stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
+					warn("travelators need platforms " + (StationPlanner.TRAVELATOR_PLATFORM - 1) + " long or more; these are too short for any");
+				} else if (built.stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM
+						&& b.width() >= (b.island() ? StationLayout.MIN_TRAVELATOR_ISLAND : StationLayout.MIN_TRAVELATOR_SIDE))) {
+					warn("travelators need platforms " + StationLayout.MIN_TRAVELATOR_SIDE + " wide (islands " + StationLayout.MIN_TRAVELATOR_ISLAND + "); these are too narrow for any");
+				}
 			}
 			if (tactile != null) {
 				builder.tactile(tactile);

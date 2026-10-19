@@ -23,6 +23,7 @@ import java.util.Objects;
  * @param platforms      each platform's own settings, left to right, when they are not all alike (empty otherwise); the list
  *                       fixes the tracks, up to {@link #MAX_LISTED_TRACKS}
  * @param trackBed       what fills the ground under the tracks
+ * @param operator       whose mark the name signs carry, or {@link Operator#NONE}
  * @param escalators     an up escalator beside each footbridge stair where the platform is wide enough
  * @param stairsBothWays a second footbridge stair to each platform wide enough, from the corridor's other side
  * @param enclosedStairs walls round every footbridge stairwell instead of glass
@@ -40,7 +41,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, CanopyShape canopy, StationScale scale, boolean hub,
 		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
 		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, boolean underpass, boolean tram, boolean mezzanine, long seed, StationClass stationClass, StationEra era,
-		Facing facing) {
+		Facing facing, Operator operator) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -78,6 +79,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(canopy, "canopy");
 		Objects.requireNonNull(scale, "scale");
 		Objects.requireNonNull(trackBed, "trackBed");
+		Objects.requireNonNull(operator, "operator");
 		Objects.requireNonNull(stationClass, "stationClass");
 		Objects.requireNonNull(era, "era");
 		Objects.requireNonNull(facing, "facing");
@@ -142,7 +144,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).canopy(canopy).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
 				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine).seed(seed)
-				.stationClass(stationClass).era(era).facing(facing);
+				.stationClass(stationClass).era(era).facing(facing).operator(operator);
 	}
 
 	public boolean hasBuilding() {
@@ -184,6 +186,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private boolean hub;
 		private List<PlatformSpec> platforms = List.of();
 		private TrackBed trackBed = TrackBed.NONE;
+		private Operator operator = Operator.NONE;
 		private boolean escalators;
 		private boolean stairsBothWays;
 		private boolean enclosedStairs;
@@ -290,6 +293,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder operator(Operator value) {
+			operator = value;
+			return this;
+		}
+
 		public Builder trackBed(TrackBed value) {
 			trackBed = value;
 			return this;
@@ -373,7 +381,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
 					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, canopy, scale, hub, platforms, trackBed, escalators,
-					stairsBothWays, enclosedStairs, travelators, parking, underpass, tram, mezzanine, seed, stationClass, era, facing);
+					stairsBothWays, enclosedStairs, travelators, parking, underpass, tram, mezzanine, seed, stationClass, era, facing, operator);
 		}
 	}
 }

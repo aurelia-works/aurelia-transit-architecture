@@ -12,8 +12,14 @@ import com.aureliatransit.architecture.text.SignStyle;
  * @param backZ   z of the back (south) face, or a negative value for single-sided signs
  * @param joins   whether identical signs placed side by side merge into one wide sign
  * @param style   what the sign can show (secondary line, arrow, platform badge, route badges ...) and its text colours
+ * @param textInset model pixels kept clear of text at the left end of the sign, where an operator's mark is painted
  */
-public record TextLayout(float centerY, float height, float width, float frontZ, float backZ, boolean joins, SignStyle style) {
+public record TextLayout(float centerY, float height, float width, float frontZ, float backZ, boolean joins, SignStyle style, float textInset) {
+
+	public TextLayout(float centerY, float height, float width, float frontZ, float backZ, boolean joins, SignStyle style) {
+		this(centerY, height, width, frontZ, backZ, joins, style, 0F);
+	}
+
 
 	public boolean doubleSided() {
 		return backZ >= 0;

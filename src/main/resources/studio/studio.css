@@ -442,3 +442,13 @@ code { font: 12px var(--mono); color: var(--accent-text); }
 
 /* the view buttons size to their words (equal flex-basis 0 squeezed "Passenger" and "Overview" past their pills) */
 .viewbar .views button { flex: 1 1 auto; }
+#presets { display: none; }
+
+/* the sidebar and report keep what a first-time builder needs up front; the rest folds into "More options" and "Extra tools" */
+.adv.extra { margin-top: 10px; }
+.adv.extra > summary { font-size: 14px; padding: 12px; color: var(--fg); }
+.adv.extra > summary:hover { background: var(--panel-2); }
+.adv.extra > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.extra-body { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.extra-body > .group { margin: 0; }
+#words .help { margin-bottom: 8px; }

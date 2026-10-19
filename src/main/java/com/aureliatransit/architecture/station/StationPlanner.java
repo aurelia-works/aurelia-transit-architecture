@@ -86,6 +86,7 @@ public final class StationPlanner {
 		planning.columns();
 		planning.canopyRoofs();
 		planning.hallRoof();
+		planning.stairFeet();
 		planning.numberSigns();
 		planning.lamps();
 		planning.shelters();
@@ -215,6 +216,8 @@ public final class StationPlanner {
 
 	/** Platforms at least this long (rows, both ends included) get travelators along them. */
 	static final int TRAVELATOR_PLATFORM = 72;
+	/** Cells of platform kept clear in front of a stair or escalator foot (about 4.5 m of queuing space). */
+	static final int STAIR_APPROACH = 5;
 
 	/** One announcement speaker per this many blocks of platform. */
 	static final int SPEAKER_SPACING = 32;
@@ -610,6 +613,30 @@ public final class StationPlanner {
 			return false;
 		}
 
+		/** True when a platform runs along the building's platform wall, so a doorway in it leads onto that platform. */
+		private boolean platformBesideBuilding() {
+			return layout.platforms().stream().anyMatch(band -> band.uMin() == layout.buildingWidth());
+		}
+
+		/**
+		 * A doorway three wide centred on {@code centre} in the platform wall at {@code uP}; where a track rather than a
+		 * platform runs along that wall, a window instead, so nobody can step out onto the track.
+		 */
+		private void platformDoorway(int uP, int centre, String window) {
+			for (int v = centre - 1; v <= centre + 1; v++) {
+				if (platformBesideBuilding()) {
+					for (int y = 1; y <= 3; y++) {
+						keepClear(uP, y, v);
+					}
+					doorV.add(v);
+				} else {
+					for (int y = 2; y <= 3; y++) {
+						put(Role.WINDOW, uP, y, v, LocalDir.PLUS_U, window);
+					}
+				}
+			}
+		}
+
 		/**
 		 * The station building shell beside the tracks: floor, entrance ramps, perimeter walls with pilasters and windows,
 		 * the band and upper slab with lights, the flat roof with a cornice parapet, the street entrance and platform
@@ -634,7 +661,12 @@ public final class StationPlanner {
 				}
 			}
 			if (site.bridge()) {
+				// (a wide corridor's mouth leaves the lift shaft's side wall standing)
+				final StationLayout.Lift shaft = site.buildingLift(layout);
 				for (int v = site.bridgeV() - bridgeHalf(); v <= site.bridgeV() + bridgeHalf(); v++) {
+					if (shaft != null && v >= shaft.vMin() && v <= shaft.vMax()) {
+						continue;
+					}
 					for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
 						keepClear(uP, y, v);
 					}
@@ -645,11 +677,17 @@ public final class StationPlanner {
 				final StationLayout.Lift lift = site.buildingLift(layout);
 				final boolean clearOfLift = lift == null || centre + 1 < lift.vMin() || centre - 1 > lift.vMax();
 				if (clearOfLift && (centre + 1 < site.innerStairMin() || centre - 1 > site.innerStairMax())) {
-					for (int v = centre - 1; v <= centre + 1; v++) {
-						for (int y = 1; y <= 3; y++) {
-							keepClear(uP, y, v);
-						}
-						doorV.add(v);
+					platformDoorway(uP, centre, b.window());
+				}
+			}
+			// with wings, the paid side opens into their waiting rooms through a three-wide doorway in each end wall; the wall
+			// stays down to the floor either side of it
+			if (wingBays > 0) {
+				final int doorCentre = (uS + 6 + uP - 2) / 2;
+				for (int u = doorCentre - 1; u <= doorCentre + 1; u++) {
+					for (int y = 1; y <= 3; y++) {
+						keepClear(u, y, vS);
+						keepClear(u, y, vE);
 					}
 				}
 			}
@@ -745,17 +783,20 @@ public final class StationPlanner {
 					}
 				}
 			}
-			// upper slab with light panels, leaving the stair well open; a panel that falls in the well moves to the slab beside
-			// it, so the stair's landing is not left dark
+			// upper slab with light panels, leaving the stair well open over the flight only (the top step is part of the slab), and
+			// running on past both ends of the flight, so there is no gap to fall through. A panel that falls
+			// in the well moves to the slab beside it, so the stair's landing is not left dark
+			final int wellMin = Math.min(site.innerStairV(StationGeometry.STAIR_STEPS), site.innerStairV(1));
+			final int wellMax = Math.max(site.innerStairV(StationGeometry.STAIR_STEPS), site.innerStairV(1));
 			final Set<Cell> moved = new HashSet<>();
 			for (int u = uA; u <= uB; u++) {
-				for (int v = site.innerStairMin(); v <= site.innerStairMax(); v++) {
+				for (int v = wellMin; v <= wellMax; v++) {
 					if ((u + v) % 4 != 0) {
 						continue;
 					}
-					for (final int[] c : new int[][]{{uA - 1, v}, {uB + 1, v}, {u, site.innerStairMin() - 1}, {u, site.innerStairMax() + 1}}) {
-						if (c[0] > uS && c[0] < uP && c[1] > vS && c[1] < vE && !(c[0] >= uA && c[0] <= uB && c[1] >= site.innerStairMin()
-								&& c[1] <= site.innerStairMax())) {
+					for (final int[] c : new int[][]{{uA - 1, v}, {uB + 1, v}, {u, wellMin - 1}, {u, wellMax + 1}}) {
+						if (c[0] > uS && c[0] < uP && c[1] > vS && c[1] < vE && !(c[0] >= uA && c[0] <= uB && c[1] >= wellMin
+								&& c[1] <= wellMax)) {
 							moved.add(new Cell(c[0], StationGeometry.UPPER_FLOOR_Y, c[1]));
 							break;
 						}
@@ -764,7 +805,7 @@ public final class StationPlanner {
 			}
 			for (int u = uS + 1; u <= uP - 1; u++) {
 				for (int v = vS + 1; v <= vE - 1; v++) {
-					if (u >= uA && u <= uB && v >= site.innerStairMin() && v <= site.innerStairMax()) {
+					if (u >= uA && u <= uB && v >= wellMin && v <= wellMax) {
 						continue;
 					}
 					if ((u + v) % 4 == 0 || moved.contains(new Cell(u, StationGeometry.UPPER_FLOOR_Y, v))) {
@@ -789,6 +830,22 @@ public final class StationPlanner {
 				for (int u = uA; u <= uB; u++) {
 					put(Role.STAIR, u, y, v, site.innerStairFront(), b.stair());
 				}
+			}
+			// the flight's open side: a wall under the steps with a glass barrier along them, carried on round the well upstairs
+			// and across its far end, so nobody steps off the stair or the upper floor into the drop
+			final int side = site.innerStairSide();
+			for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
+				final int v = site.innerStairV(y);
+				for (int h = 1; h <= y; h++) {
+					put(Role.WALL, uA - 1, h, v, LocalDir.MINUS_U, b.interiorWall());
+				}
+				put(Role.BARRIER, uA - 1, y + 1, v, LocalDir.PLUS_U);
+				if (y < StationGeometry.STAIR_STEPS) {
+					put(Role.BARRIER, uA - 1, StationGeometry.UPPER_WALK_Y, v, LocalDir.PLUS_U);
+				}
+			}
+			for (int u = uA; u <= uB; u++) {
+				put(Role.BARRIER, u, StationGeometry.UPPER_WALK_Y, site.innerStairV(1) + side, side < 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V);
 			}
 		}
 
@@ -1106,13 +1163,7 @@ public final class StationPlanner {
 				final int end = inner + side * wingBays * StationGeometry.BAY;
 				final int pavilionFrom = inner + side * (wingBays - 1) * StationGeometry.BAY;
 				for (int j = 0; j < wingBays; j++) {
-					final int centre = inner + side * (StationGeometry.BAY * j + 3);
-					for (int v = centre - 1; v <= centre + 1; v++) {
-						for (int y = 1; y <= 3; y++) {
-							keepClear(uP, y, v);
-						}
-						doorV.add(v);
-					}
+					platformDoorway(uP, inner + side * (StationGeometry.BAY * j + 3), b.window());
 				}
 				final int lo = Math.min(inner + side, end);
 				final int hi = Math.max(inner + side, end);
@@ -1216,6 +1267,49 @@ public final class StationPlanner {
 		 * landing against a corner post, on whichever side of the doors has a free landing cell (a corridor's glass wall takes
 		 * one side at the footbridge); then against the wall; and only with both sides taken does it stay in the shaft wall.
 		 */
+		/**
+		 * The approach to every stair and escalator foot is kept clear of screens, signs, benches, bins and lamps: {@link #STAIR_APPROACH}
+		 * cells out along the platform, one cell either side, from the platform floor to head height. Real platforms keep the
+		 * queuing space in front of a stair free; furnishing is planned after this, so it goes elsewhere. (A route map used to stand
+		 * on each enclosure's end post, right in that space; MTR shows a route on it only once it is picked with the brush, so a
+		 * plan could not fill it in anyway.)
+		 */
+		void stairFeet() {
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
+					for (final StationLayout.Flight flight : bridge.flights(band)) {
+						final List<Integer> columns = opening(band, flight);
+						final int from = Math.min(flight.wallV(), flight.landingV()) - (flight.side() < 0 ? STAIR_APPROACH : 0);
+						final int to = Math.max(flight.wallV(), flight.landingV()) + (flight.side() > 0 ? STAIR_APPROACH : 0);
+						clearApproach(columns, from, to);
+					}
+					if (bridge.hasEscalator(band)) {
+						clearApproach(bridge.flightColumns(band), bridge.escalatorFootV() - STAIR_APPROACH, bridge.escalatorFootV() + STAIR_APPROACH);
+					}
+				}
+			}
+		}
+
+		private void clearApproach(List<Integer> columns, int vFrom, int vTo) {
+			if (columns.isEmpty()) {
+				return;
+			}
+			final int u0 = columns.stream().mapToInt(Integer::intValue).min().getAsInt() - 1;
+			final int u1 = columns.stream().mapToInt(Integer::intValue).max().getAsInt() + 1;
+			for (int u = u0; u <= u1; u++) {
+				for (int v = vFrom; v <= vTo; v++) {
+					for (int y = StationGeometry.WALK_Y; y < StationGeometry.WALK_Y + StationGeometry.HEADROOM + 1; y++) {
+						air.add(new Cell(u, y, v));
+					}
+				}
+			}
+		}
+
+		private String blockId(int u, int y, int v) {
+			final PlannedBlock block = cells.get(new Cell(u, y, v));
+			return block == null ? null : block.blockId();
+		}
+
 		void liftButtons() {
 			final String post = palette.building().pier();
 			for (final LiftButton button : buttons) {
@@ -1230,6 +1324,18 @@ public final class StationPlanner {
 					}
 				}
 				if (at != null) {
+					// MTR's button plate is a full block wide and the post only half, so the plate would hang in the air beside
+					// it: the post is clad full width from foot to head where the button is fixed
+					for (final int step : new int[]{-1, 1}) {
+						for (int y = step < 0 ? button.y() : button.y() + 1; ; y += step) {
+							final PlannedBlock holder = cells.get(new Cell(at, y, button.v()));
+							if (holder == null || !holder.blockId().equals(post)) {
+								break;
+							}
+							cells.put(new Cell(at, y, button.v()), new PlannedBlock(at, y, button.v(), holder.role(), palette.building().plinth(),
+									holder.front(), holder.text(), holder.state()));
+						}
+					}
 					put(Role.LIFT, at, button.y(), landing, button.in(), StylePalette.MTR_LIFT_BUTTONS, "unlocked=true");
 				} else {
 					final Cell wall = new Cell(button.u(), button.y(), button.v());
@@ -2282,9 +2388,8 @@ public final class StationPlanner {
 					final boolean lit = Math.floorMod(u + v, 3) == 0;
 					put(lit ? Role.LIGHT_PANEL : Role.FLOOR, u, StationGeometry.UPPER_FLOOR_Y, v, LocalDir.PLUS_V, lit ? b.light() : b.upperFloor());
 				}
-				if (v > lift.doorV()) {
-					put(Role.RAILING, edge, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U);
-				}
+				// the rail runs the whole open edge, the lift's door row too, whose corner is otherwise open on two sides
+				put(Role.RAILING, edge, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U);
 				// a pier under the open edge every bay, clear of the lift's landing
 				if (v > lift.doorV() + 1 && Math.floorMod(v - vL, StationGeometry.BAY) == 0) {
 					for (int y = 1; y < StationGeometry.UPPER_FLOOR_Y; y++) {
@@ -2604,14 +2709,17 @@ public final class StationPlanner {
 					final int right = columns.get(columns.size() - 1) + 1;
 					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 						final int v = flight.stepV(y);
-						for (int rail = StationGeometry.WALK_Y; rail <= y; rail++) {
+						for (int rail = StationGeometry.WALK_Y; rail <= y + 1; rail++) {
 							if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
 								continue;
 							}
-							if (!isEdge(band, left)) {
+							// on a boarding edge the rail starts above head height (the edge stays clear to board from) and runs up
+							// to the cell a passenger stands in, so nobody steps off the high steps onto the platform below
+							final boolean edgeRail = rail >= EDGE_RAIL_Y;
+							if (isEdge(band, left) ? edgeRail : rail <= y) {
 								put(Role.RAILING, left, rail, v, LocalDir.MINUS_U);
 							}
-							if (!isEdge(band, right)) {
+							if (isEdge(band, right) ? edgeRail : rail <= y) {
 								put(Role.RAILING, right, rail, v, LocalDir.PLUS_U);
 							}
 						}
@@ -2806,43 +2914,57 @@ public final class StationPlanner {
 				if (columns.isEmpty()) {
 					continue;
 				}
-				final LocalDir up = site.stairFront();
-				// MTR's left half is on the left looking up the escalator; +U is to the right of +V
-				final int left = up == LocalDir.PLUS_V ? columns.get(0) : columns.get(1);
-				for (int i = 0; i <= StationLayout.ESCALATOR_TOP; i++) {
-					final int v = site.escalatorV(i);
-					final int y = StationLayout.escalatorY(i);
-					for (final int u : columns) {
-						final String side = u == left ? "left" : "right";
-						put(Role.ESCALATOR, u, y, v, up, StylePalette.MTR_ESCALATOR_STEP, "side=" + side + ",direction=true,status=true");
-						put(Role.ESCALATOR, u, y + 1, v, up, StylePalette.MTR_ESCALATOR_SIDE, "side=" + side);
-						for (int below = StationGeometry.WALK_Y; below < y; below++) {
-							put(Role.BRIDGE_PIER, u, below, v, up, palette.building().pier());
-						}
-						if (i < StationLayout.ESCALATOR_TOP) {
-							keepClear(u, y + 2, v);
-							keepClear(u, y + 3, v);
-						}
+				escalator(columns, site.stairSide(), site.stairWallV());
+				// the second flight, on the corridor's other side, is an escalator too
+				final StationLayout.Flight reverse = site.reverseEscalator(band);
+				if (reverse != null) {
+					escalator(reverse.columns(), reverse.side(), reverse.wallV());
+				}
+			}
+		}
+
+		/**
+		 * An up escalator on {@code columns} from the corridor wall at {@code wallV} down towards {@code side}: its top landing
+		 * in the wall row at deck level, the bottom landing at platform level, a clear row at its foot.
+		 */
+		private void escalator(List<Integer> columns, int side, int wallV) {
+			final LocalDir up = side > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
+			// MTR's left half is on the left looking up the escalator; +U is to the right of +V
+			final int left = up == LocalDir.PLUS_V ? columns.get(0) : columns.get(1);
+			for (int i = 0; i <= StationLayout.ESCALATOR_TOP; i++) {
+				final int v = wallV + side * (StationLayout.ESCALATOR_TOP - i);
+				final int y = StationLayout.escalatorY(i);
+				for (final int u : columns) {
+					final String half = u == left ? "left" : "right";
+					put(Role.ESCALATOR, u, y, v, up, StylePalette.MTR_ESCALATOR_STEP, "side=" + half + ",direction=true,status=true");
+					put(Role.ESCALATOR, u, y + 1, v, up, StylePalette.MTR_ESCALATOR_SIDE, "side=" + half);
+					for (int below = StationGeometry.WALK_Y; below < y; below++) {
+						put(Role.BRIDGE_PIER, u, below, v, up, palette.building().pier());
+					}
+					if (i < StationLayout.ESCALATOR_TOP) {
+						keepClear(u, y + 2, v);
+						keepClear(u, y + 3, v);
 					}
 				}
-				for (final int u : columns) {
-					for (int y = StationGeometry.WALK_Y; y <= 3; y++) {
-						keepClear(u, y, site.escalatorFootV());
-					}
+			}
+			for (final int u : columns) {
+				for (int y = StationGeometry.WALK_Y; y <= 3; y++) {
+					keepClear(u, y, wallV + side * (StationLayout.ESCALATOR_TOP + 1));
 				}
 			}
 		}
 
 		/** Shortest travelator run, landings included; and the longest platform stretch before a gap to cross. */
 		private static final int MIN_TRAVELATOR = 8;
+		/** The lowest rail beside a stair flight on a boarding edge: above the clearway kept for people on the platform. */
+		private static final int EDGE_RAIL_Y = StationGeometry.WALK_Y + StationGeometry.HEADROOM;
 		private static final int MAX_PLATFORM_TRAVELATOR = 16;
 
 		/**
 		 * MTR escalators laid flat as moving walkways, planned before the floors so those leave them their cells. Only on the
 		 * platforms (in the footbridge corridor they looked wrong and are left out). Along a platform at least {@link #TRAVELATOR_PLATFORM} long: two wide in a lane
 		 * clear of the column lines, away from the stairs and platform ends, in stretches of at most
-		 * {@link #MAX_PLATFORM_TRAVELATOR} with a gap to cross between, each carrying passengers towards the footbridge or the
-		 * terminus head (outwards to the platform ends without either).
+		 * {@link #MAX_PLATFORM_TRAVELATOR} with a gap to cross between, a lane each way in every stretch, the same hand all along the platform.
 		 */
 		void travelators() {
 			if (!spec.travelators()) {
@@ -2862,22 +2984,24 @@ public final class StationPlanner {
 			}
 			// rows kept for the stairs, escalators, lifts and the bridge's own piers
 			final java.util.Set<Integer> blocked = new java.util.HashSet<>();
-			for (final StationLayout.Flight flight : site.flights(band)) {
-				final int a = Math.min(flight.wallV(), flight.landingV());
-				final int z = Math.max(flight.wallV(), flight.landingV());
-				for (int v = a - 3; v <= z + 3; v++) {
-					blocked.add(v);
+			for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
+				for (final StationLayout.Flight flight : bridge.flights(band)) {
+					final int a = Math.min(flight.wallV(), flight.landingV());
+					final int z = Math.max(flight.wallV(), flight.landingV());
+					for (int v = a - 3; v <= z + 3; v++) {
+						blocked.add(v);
+					}
 				}
-			}
-			if (site.hasEscalator(band)) {
-				for (int v = site.escalatorFootV() - 3; v <= site.escalatorFootV() + 3; v++) {
-					blocked.add(v);
+				if (bridge.hasEscalator(band)) {
+					for (int v = bridge.escalatorFootV() - 3; v <= bridge.escalatorFootV() + 3; v++) {
+						blocked.add(v);
+					}
 				}
-			}
-			final StationLayout.Lift lift = site.platformLift(band, layout);
-			if (lift != null) {
-				for (int v = lift.vMin() - 2; v <= lift.vMax() + 2; v++) {
-					blocked.add(v);
+				final StationLayout.Lift lift = bridge.platformLift(band, layout);
+				if (lift != null) {
+					for (int v = lift.vMin() - 2; v <= lift.vMax() + 2; v++) {
+						blocked.add(v);
+					}
 				}
 			}
 			for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
@@ -2887,7 +3011,6 @@ public final class StationPlanner {
 					}
 				}
 			}
-			final int target = site.bridge() ? site.bridgeV() : layout.terminus() ? layout.platformLength() : -1;
 			final int first = band.vFrom() + 6;
 			final int last = band.vTo() - 6;
 			int v = first;
@@ -2901,14 +3024,18 @@ public final class StationPlanner {
 					end++;
 				}
 				if (end - v + 1 >= MIN_TRAVELATOR) {
-					final int middle = (v + end) / 2;
-					final boolean plus = target >= 0 ? target > middle : middle > (band.vFrom() + band.vTo()) / 2;
-					final LocalDir way = plus ? LocalDir.PLUS_V : LocalDir.MINUS_V;
 					for (int w = v; w <= end; w++) {
+						// a row has both lanes or neither: a cell something else holds must not leave a lane running one way alone
+						if (!freeColumn(c, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)
+								|| !freeColumn(c + 1, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)) {
+							continue;
+						}
 						// two lanes side by side, one each way, as real paired walkways run: the balustrades meet in the
-						// middle (both "right" of their own direction) and passengers step on from the outside
-						travelatorStep(c, StationGeometry.PLATFORM_Y, w, way, "right");
-						travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, way.opposite(), "right");
+						// middle (both "right" of their own direction) and passengers step on from the outside. The lower
+						// column always runs towards +v, so a stretch past the footbridge keeps the same hand as one before it
+						// (choosing the lane by the footbridge crossed the pair over from one stretch to the next)
+						travelatorStep(c, StationGeometry.PLATFORM_Y, w, LocalDir.PLUS_V, "right");
+						travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, LocalDir.MINUS_V, "right");
 					}
 				}
 				// a gap of three to cross before the next stretch
@@ -2921,7 +3048,7 @@ public final class StationPlanner {
 		 * walkway beside both, nearest the platform's middle; -1 if the platform has no room.
 		 */
 		private int travelatorLane(TrackLayout.PlatformBand band) {
-			if (band.width() < (band.island() ? StationLayout.MIN_ESCALATOR_ISLAND : StationLayout.MIN_ESCALATOR_SIDE)) {
+			if (band.width() < (band.island() ? StationLayout.MIN_TRAVELATOR_ISLAND : StationLayout.MIN_TRAVELATOR_SIDE)) {
 				return -1;
 			}
 			final java.util.Set<Integer> columns = new java.util.HashSet<>(columnLines(band, roof(band)));
@@ -3465,10 +3592,17 @@ public final class StationPlanner {
 						if (!clear) {
 							continue;
 						}
-						// a girder under the raised roof, where it meets the sloping blocks
+						// a girder under the raised roof, where it meets the sloping blocks; over a column line's girder it is a post
+						// in the column's block instead (it carries the roof, so it cannot be left out, but it would stack girders)
 						if (rise > 0 && piece.braced() && (armRow || !butterfly)) {
+							final PlannedBlock under = cells.get(new Cell(u, y - 1, v));
+							final boolean onGirder = under != null && under.role() == Role.BEAM;
 							for (int level = y; level < y + rise; level++) {
-								put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.RIB), kind);
+								if (onGirder) {
+									put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.COLUMN), "");
+								} else {
+									put(Role.RIB, u, level, v, LocalDir.PLUS_V, palette.blockId(Role.RIB), kind);
+								}
 							}
 						}
 						if (edge) {
@@ -4297,8 +4431,13 @@ public final class StationPlanner {
 			}
 			tallFixture(uS + 1, 1, vEntr - 2, LocalDir.PLUS_U, StylePalette.MTR_TACTILE_MAP);
 			// departure boards on both end walls, facing into the hall
-			put(Role.FIXTURE, (uS + uP) / 2, 2, vS + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
-			put(Role.FIXTURE, (uS + uP) / 2, 2, vE - 1, LocalDir.MINUS_V, "aurelia_transit_architecture:concourse_board");
+			// (with wings the end walls are open there, so the ground-floor boards hang only where a wall is behind them)
+			if (cells.containsKey(new Cell((uS + uP) / 2, 2, vS))) {
+				put(Role.FIXTURE, (uS + uP) / 2, 2, vS + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+			}
+			if (cells.containsKey(new Cell((uS + uP) / 2, 2, vE))) {
+				put(Role.FIXTURE, (uS + uP) / 2, 2, vE - 1, LocalDir.MINUS_V, "aurelia_transit_architecture:concourse_board");
+			}
 			put(Role.FIXTURE, (uS + uP) / 2, StationGeometry.UPPER_WALK_Y + 1, vS + 1, LocalDir.PLUS_V,
 					"aurelia_transit_architecture:concourse_board");
 		}
@@ -4350,8 +4489,8 @@ public final class StationPlanner {
 
 		/**
 		 * Departure screens on every platform of a furnished station: one screen point on platforms shorter than 48, two (at a
-		 * quarter and three quarters of the length) on longer ones. Under a roof the screen hangs from the ceiling, double-sided
-		 * and facing along the platform, four blocks wide where the platform and the ceiling have room, else two (never over an
+		 * quarter and three quarters of the length) on longer ones. A screen is fixed to a column where the platform has one;
+		 * under a roof without, it hangs from the ceiling, double-sided and facing along the platform, four blocks wide where the platform and the ceiling have room, else two (never over an
 		 * edge cell); on an open
 		 * platform a standing screen is fixed to the back of a lamp post. Points keep clear of footbridge stairs and their
 		 * landings. Each platform also gets one help point, a wall unit, fixed to the post nearest its first screen.
@@ -4363,9 +4502,10 @@ public final class StationPlanner {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final List<Integer> targets = screenTargets(band);
 				for (final int target : targets) {
-					// a screen is always a proper board: hung, across a column pair, fixed to a column, or two blocks on a post.
+					// a screen is always a proper board: fixed to a column where there is one (it joins the pole rather than hanging
+					// beside it), else hung, across a column pair, or two blocks on a post.
 					// Never a lone single block on the floor.
-					if (!hangScreen(band, target) && !screenBetweenColumns(band, target) && !screenOnColumn(band, target)) {
+					if (!screenOnColumn(band, target) && !hangScreen(band, target) && !screenBetweenColumns(band, target)) {
 						screenOnPost(band, target);
 					}
 				}
@@ -4551,7 +4691,7 @@ public final class StationPlanner {
 		}
 
 		/**
-		 * Where the roof is too high to hang a screen from (a train shed), a screen two blocks wide fixed to the column nearest
+		 * The first choice for a departure screen: a screen two blocks wide fixed to the column nearest
 		 * {@code target} above head height, its middle against the column so the two blocks join into one display; on both
 		 * faces of the column along the platform where there is room, so it reads from either way. True if one was fixed.
 		 */

@@ -921,6 +921,7 @@ POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True
 POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
                "hanging_wayfinding_sign", "exit_sign", "pictogram_sign",
                "dutch_station_sign", "dutch_platform_sign", "german_station_sign",
+               "ns_station_sign", "db_station_sign", "gvb_station_sign",
                "uk_car_stop_marker", "german_stop_board", "dutch_stop_board")
 
 
@@ -978,7 +979,7 @@ def icon():
     return make_logo.wave_canopy().resize((128, 128), Image.NEAREST)
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_metro", "assets_car_stops", "assets_station_wrench", "assets_station_structure", "assets_platform_slabs", "assets_blockbench")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_operators", "assets_metro", "assets_car_stops", "assets_station_wrench", "assets_station_structure", "assets_platform_slabs", "assets_blockbench")
 
 
 def load_extensions():

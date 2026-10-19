@@ -49,6 +49,16 @@
 	<main class="app">
 		<aside class="rail" id="settings" aria-label="Station settings" tabindex="-1">
 			<div class="rail-scroll">
+				<section class="group" aria-labelledby="g-words">
+					<h2 class="label" id="g-words">What do you want to build?</h2>
+					<div id="words">
+						<p class="help">Type it like you would say it, for example: <i>six-track Amsterdam station</i>.</p>
+						<div class="chips presets" id="presets" role="group" aria-label="Presets"></div>
+						<textarea id="text" rows="3" aria-label="Station description" placeholder="e.g. six-track Amsterdam station with a big glass roof"></textarea>
+						<div class="clash" id="clash" hidden role="status"><span id="clashText"></span></div>
+						<div class="field-foot"><span id="count"></span></div>
+					</div>
+				</section>
 				<section class="group" aria-labelledby="g-station">
 					<h2 class="label" id="g-station">Station</h2>
 					<div class="field">
@@ -56,9 +66,6 @@
 						<div class="looks" id="looks" role="group" aria-labelledby="cityLabel"></div>
 						<select id="look" hidden></select>
 					</div>
-					<label class="field row" for="mix"><span class="f-name">Mix in</span>
-						<select id="mix" title="Takes the train shed (or the platforms) from a second city"></select>
-					</label>
 					<div class="field">
 						<span class="f-name" id="typeLabel">Type</span>
 						<div class="seg" id="modeSeg" role="group" aria-labelledby="typeLabel"></div>
@@ -66,8 +73,36 @@
 						<select id="mode" hidden><option value="through">Through</option><option value="terminus">Terminus</option><option value="hub">Hub</option></select>
 					</div>
 				</section>
+				<section class="group" aria-labelledby="g-shape">
+					<h2 class="label" id="g-shape">Size</h2>
+					<div class="field">
+						<div class="range-head"><label for="tracks" class="f-name">Tracks</label><output id="tracksOut" for="tracks"></output></div>
+						<input type="range" id="tracks" step="1">
+						<p class="help" id="tracksNote"></p>
+					</div>
+					<div class="field">
+						<div class="range-head"><label for="length" class="f-name">Platform length</label><output id="lengthOut" for="length"></output></div>
+						<input type="range" id="length" step="1">
+						<p class="help" id="lengthNote"></p>
+					</div>
+				</section>
+				<section class="group" aria-labelledby="g-name">
+					<h2 class="label" id="g-name">Name and logo</h2>
+					<input type="text" id="name" maxlength="32" placeholder="e.g. Leidsche Rijn" aria-labelledby="g-name">
+				<div class="field">
+						<span class="f-name" id="operatorLabel">Operator logo on the signs</span>
+						<div class="seg wrap" id="operatorSeg" role="group" aria-labelledby="operatorLabel"></div>
+						<select id="operator" hidden><option value="">None</option><option value="ns">NS</option><option value="db">DB</option><option value="gvb">GVB</option></select>
+					</div>
+				</section>
+				<details class="adv extra" id="more">
+					<summary>More options</summary>
+					<div class="extra-body">
+										<label class="field row" for="mix"><span class="f-name">Mix in</span>
+						<select id="mix" title="Takes the train shed (or the platforms) from a second city"></select>
+					</label>
 
-				<section class="group" aria-labelledby="g-class">
+<section class="group" aria-labelledby="g-class">
 					<h2 class="label" id="g-class">Class and era</h2>
 					<div class="field">
 						<span class="f-name" id="classLabel">Station class</span>
@@ -87,8 +122,7 @@
 						<p class="help">Auto is the way you look when you build it in game.</p>
 					</div>
 				</section>
-
-				<section class="group seed-group" aria-labelledby="g-seed">
+<section class="group seed-group" aria-labelledby="g-seed">
 					<h2 class="label" id="g-seed">Seed</h2>
 					<div class="seed-row">
 						<div class="seed" id="seedBox">
@@ -110,27 +144,13 @@
 						<button type="button" class="lock" data-lock="building" aria-pressed="false" title="Keep whether there is a building, its size and roof form, the stairs, travelators and track bed">Building</button>
 					</div>
 				</section>
-
-				<section class="group" aria-labelledby="g-shape">
-					<h2 class="label" id="g-shape">Shape</h2>
 					<div class="field">
-						<div class="range-head"><label for="tracks" class="f-name">Tracks</label><output id="tracksOut" for="tracks"></output></div>
-						<input type="range" id="tracks" step="1">
-						<p class="help" id="tracksNote"></p>
-					</div>
-					<div class="field">
-						<div class="range-head"><label for="length" class="f-name">Platform length</label><output id="lengthOut" for="length"></output></div>
-						<input type="range" id="length" step="1">
-						<p class="help" id="lengthNote"></p>
-					</div>
-					<div class="field">
-						<span class="f-name" id="platLabel">Platforms</span>
+						<span class="f-name" id="platLabel">Platform type</span>
 						<div class="seg" id="layoutSeg" role="group" aria-labelledby="platLabel"></div>
 						<select id="layout" hidden></select>
 					</div>
-				</section>
 
-				<section class="group" aria-labelledby="g-building">
+<section class="group" aria-labelledby="g-building">
 					<h2 class="label" id="g-building">Building</h2>
 					<div class="field">
 						<span class="f-name" id="bldLabel">Station building</span>
@@ -156,23 +176,7 @@
 						<select id="trav" hidden><option value="">None</option><option value="1" selected>Where there is room</option></select>
 					</div>
 				</section>
-
-				<section class="group" aria-labelledby="g-name">
-					<h2 class="label" id="g-name">Name</h2>
-					<input type="text" id="name" maxlength="32" placeholder="e.g. Leidsche Rijn" aria-labelledby="g-name">
-				</section>
-
-				<section class="group" aria-labelledby="g-adv">
-					<h2 class="label" id="g-adv">Advanced</h2>
-					<details class="adv" id="words">
-						<summary>Describe it in words</summary>
-						<p class="help">Type what you want, or start from a preset. Your words win: whatever they say beats the settings above, and the settings fill in the rest.</p>
-						<div class="chips presets" id="presets" role="group" aria-label="Presets"></div>
-						<textarea id="text" rows="5" aria-label="Station description" placeholder="e.g. sandstone terminus with an arched glass train shed and a clock tower"></textarea>
-						<div class="clash" id="clash" hidden role="status"><span id="clashText"></span></div>
-						<div class="field-foot"><span id="count"></span></div>
-					</details>
-					<details class="adv" id="perPlatform">
+<details class="adv" id="perPlatform">
 						<summary>Platforms one by one</summary>
 						<p class="help">Give each platform its own type, width, length and roof. The list sets the tracks: one per side platform, two per island.</p>
 						<label class="check"><input type="checkbox" id="listOn"> Set each platform myself</label>
@@ -188,7 +192,8 @@
 						</div>
 						<input type="hidden" id="platforms">
 					</details>
-				</section>
+					</div>
+				</details>
 			</div>
 		</aside>
 
@@ -217,7 +222,7 @@
 					<button type="button" id="walkClick" class="walk-click">Click to walk around</button>
 					<p id="walkTip" class="walk-tip" role="status"></p>
 					<div class="walk-keys">
-						<p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Shift</kbd> run · <kbd>Space</kbd> jump · <kbd>F</kbd> fly (<kbd>Space</kbd> up, <kbd>C</kbd> down)</p>
+						<p id="walkKeysHelp"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>Ctrl</kbd> or double-tap <kbd>W</kbd> sprint · <kbd>Shift</kbd> sneak · <kbd>Space</kbd> jump, double-tap to fly (<kbd>Space</kbd> up, <kbd>Shift</kbd> down)</p>
 						<p><kbd>E</kbd> lift · <kbd>1</kbd> platform · <kbd>2</kbd> street · <kbd>Esc</kbd> free the mouse, again to leave</p>
 					</div>
 				</div>

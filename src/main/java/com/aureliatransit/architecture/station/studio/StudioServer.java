@@ -139,6 +139,9 @@ public final class StudioServer {
 			} else if (path.equals("/api/version")) {
 				exchange.getResponseHeaders().set("Cache-Control", "no-store");
 				reply(exchange, 200, "application/json", "{\"boot\":\"" + boot + "\",\"files\":\"" + filesVersion() + "\"}");
+			} else if (path.equals("/api/keys")) {
+				exchange.getResponseHeaders().set("Cache-Control", "no-store");
+				reply(exchange, 200, "application/json", StudioKeys.json());
 			} else if (path.equals("/api/options")) {
 				reply(exchange, 200, "application/json", api.options());
 			} else if (path.equals("/api/plan") && method.equals("POST")) {

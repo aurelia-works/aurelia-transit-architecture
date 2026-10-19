@@ -23,6 +23,7 @@ import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.StationRecipe;
 import com.aureliatransit.architecture.station.StationSeed;
+import com.aureliatransit.architecture.station.Operator;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.Violation;
@@ -180,6 +181,10 @@ public final class StudioApi {
 		if (facing != Facing.AUTO) {
 			text = (text.isEmpty() ? "" : text + ", ") + "facing " + facing.key();
 		}
+		final Operator operator = Operator.of(q.getOrDefault("operator", ""));
+		if (operator != null && operator != Operator.NONE) {
+			text = (text.isEmpty() ? "" : text + ", ") + operator.key() + " operator";
+		}
 		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
 		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
 	}
@@ -268,6 +273,30 @@ public final class StudioApi {
 		}
 	}
 
+	/** The city button whose words build {@code building} (Hamburg's brick hall is the CLINKER building), or null. */
+	static StationRecipe.Look lookOf(BuildingStyle building) {
+		if (building == BuildingStyle.NONE) {
+			return null;
+		}
+		for (final StationRecipe.Look look : StationRecipe.Look.values()) {
+			if (look != StationRecipe.Look.AUTO && StationDescriptionParser.parse(look.words()).spec().building() == building) {
+				return look;
+			}
+		}
+		return null;
+	}
+
+	/** The headline of a station the typed words describe: what they came to, not what the settings above them say. */
+	static String wordsTitle(StationSpec spec) {
+		final StationRecipe.Look look = lookOf(spec.building());
+		final String label = look != null ? look.label() : spec.building() == BuildingStyle.NONE ? "Custom" : spec.building().label();
+		final String name = Character.toUpperCase(label.charAt(0)) + label.substring(1);
+		final int tracks = spec.trackCount();
+		final String size = spec.listed() ? spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") : "";
+		return name + (spec.hub() ? " hub" : spec.terminus() ? " terminus" : " station") + ", " + size + tracks + (tracks == 1 ? " track, " : " tracks, ")
+				+ spec.platformLength() + " long";
+	}
+
 	private static Planned planned(Map<String, String> q) {
 		final StationRecipe recipe = recipe(q);
 		final String typed = typed(q);
@@ -334,10 +363,13 @@ public final class StudioApi {
 		final StringBuilder out = new StringBuilder("{");
 		out.append("\"text\":").append(Json.quote(text));
 		// a platform list sets the tracks (and may lengthen the station), so the title says what it built
-		final String title = !spec.listed() ? recipe.title() : recipe.title().replaceFirst(", \\d+ tracks?, \\d+ long$", ", "
+		final String title = !typed.isEmpty() ? wordsTitle(spec) : !spec.listed() ? recipe.title() : recipe.title().replaceFirst(", \\d+ tracks?, \\d+ long$", ", "
 				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
+		// the city button the words came to, so the page's buttons follow what was typed
+		final StationRecipe.Look wordsLook = typed.isEmpty() ? null : lookOf(spec.building());
+		out.append(",\"wordsLook\":").append(Json.quote(wordsLook == null ? "" : wordsLook.name()));
 		out.append(",\"seed\":").append(Json.quote(StationSeed.format(spec.seed())));
 		out.append(",\"fingerprint\":").append(Json.quote(PlanFingerprint.of(plan)));
 		// the roof and building size this station was planned with, as the page's options, so a locked "Auto" can keep them

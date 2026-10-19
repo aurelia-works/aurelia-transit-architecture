@@ -52,6 +52,11 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		public String label() {
 			return label;
 		}
+
+		/** The words that describe this city's station to the parser. */
+		public String words() {
+			return words;
+		}
 	}
 
 	public enum Platforms {

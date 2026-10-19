@@ -1,0 +1,75 @@
+package com.aureliatransit.architecture.station.studio;
+
+import com.aureliatransit.architecture.station.BuildingStyle;
+import com.aureliatransit.architecture.station.StationDescriptionParser;
+import com.aureliatransit.architecture.station.Role;
+import com.aureliatransit.architecture.station.StationPlan;
+import com.aureliatransit.architecture.station.StationPlanner;
+import com.aureliatransit.architecture.station.StationSpec;
+import org.junit.jupiter.api.Test;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/** Typing plain words into the Studio: the station, the headline and the city button all follow them, not the dice behind. */
+class StudioWordsTest {
+
+	private static StationSpec spec(String text) {
+		return StationDescriptionParser.parse(text).spec();
+	}
+
+	@Test
+	void aHyphenatedNumberWordAndACityAreUnderstood() {
+		final StationSpec spec = spec("six-track Amsterdam Damn Station");
+		assertEquals(6, spec.trackCount());
+		assertEquals(BuildingStyle.AMSTERDAM, spec.building());
+	}
+
+	@Test
+	void aBareBlockCountIsALength() {
+		assertEquals(200, spec("a station, 200 blocks").platformLength());
+		assertEquals(300, spec("2 tracks 300 block station").platformLength());
+	}
+
+	@Test
+	void theHeadlineSaysWhatTheWordsCameTo() {
+		final String title = StudioApi.wordsTitle(spec("six-track Amsterdam station, 120 long"));
+		assertEquals("Amsterdam station, 6 tracks, 120 long", title);
+	}
+
+	@Test
+	void typedWordsSetTheHeadlineAndTheCityButtonNotTheDice() {
+		final String json = new StudioApi(new BlockModels((namespace, path) -> {
+			final Path file = Path.of("src/main/resources/assets", namespace, path);
+			return Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
+		})).plan(Map.of("text", "six-track Amsterdam station", "look", "TOKYO", "tracks", "4", "length", "200",
+				"pinned", "text", "mode", "through", "layout", "AUTO", "roof", "AUTO", "building", "1", "size", "AUTO"));
+		assertTrue(json.contains("\"title\":\"Amsterdam station, 6 tracks"), json.substring(0, Math.min(400, json.length())));
+		assertTrue(json.contains("\"wordsLook\":\"AMSTERDAM\""));
+	}
+
+	@Test
+	void anOperatorWordPutsItsMarkOnTheNameSigns() {
+		for (final String[] row : new String[][]{{"ns", "ns_station_sign"}, {"deutsche bahn", "db_station_sign"}, {"gvb operator", "gvb_station_sign"}}) {
+			final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse("2 tracks side, 64 long, named Halt, " + row[0]).spec());
+			final long signs = plan.blocks().stream().filter(b -> b.role() == Role.NAME_SIGN).count();
+			assertTrue(signs > 0, row[0]);
+			assertTrue(plan.blocks().stream().filter(b -> b.role() == Role.NAME_SIGN).allMatch(b -> b.blockId().endsWith(row[1])), row[0]);
+		}
+		assertTrue(StationPlanner.plan(StationDescriptionParser.parse("2 tracks side, 64 long, named Halt").spec()).blocks().stream()
+				.filter(b -> b.role() == Role.NAME_SIGN).noneMatch(b -> b.blockId().contains("ns_station_sign")));
+	}
+
+	@Test
+	void anOperatorNounLeavesTheLookAlone() {
+		final StationSpec tokyoNs = StationDescriptionParser.parse("2 tracks side, 64 long, tokyo, ns operator").spec();
+		final StationSpec tokyo = StationDescriptionParser.parse("2 tracks side, 64 long, tokyo").spec();
+		assertEquals(tokyo.style(), tokyoNs.style());
+		assertEquals(com.aureliatransit.architecture.station.Operator.NS, tokyoNs.operator());
+		assertEquals(com.aureliatransit.architecture.station.StationStyle.DUTCH, StationDescriptionParser.parse("2 tracks, ns").spec().style());
+	}
+}

@@ -27,7 +27,7 @@ public final class BlockModels {
 		byte[] read(String namespace, String path) throws IOException;
 	}
 
-	private static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine", "mtr:tactile_map");
+	private static final Set<String> FACING_AWAY = Set.of("mtr:ticket_machine", "mtr:tactile_map", "mtr:route_sign_wall_light");
 	private static final String[] FACES = {"down", "up", "north", "south", "west", "east"};
 
 	private final AssetSource assets;
@@ -51,7 +51,7 @@ public final class BlockModels {
 	 */
 	private static final Set<String> SIX_WAY_FACING = Set.of("minecraft:barrel", "minecraft:lightning_rod", "minecraft:end_rod");
 	/** MTR blocks that face the way the plan's front says, for when their blockstate files are not at hand (a studio without MTR's jar). */
-	private static final Set<String> MTR_FACING = Set.of("mtr:ticket_machine", "mtr:tactile_map", "mtr:station_name_entrance", "mtr:lift_buttons_1",
+	private static final Set<String> MTR_FACING = Set.of("mtr:ticket_machine", "mtr:tactile_map", "mtr:route_sign_wall_light", "mtr:station_name_entrance", "mtr:lift_buttons_1",
 			"mtr:lift_door_1", "mtr:lift_track_1", "mtr:lift_track_floor_1", "mtr:escalator_step", "mtr:escalator_side");
 
 	/**

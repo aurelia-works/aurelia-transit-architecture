@@ -28,7 +28,13 @@ public enum SignStyle {
 	/** 1.5 Dutch-style platform plate: a large dark blue number on yellow. */
 	DUTCH_PLATFORM(false, false, true, false, false, true, 0xFF0B2A6B, 0xFF28477F),
 	/** 1.5 German-style station sign: black text on white. */
-	GERMAN_STATION(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52);
+	GERMAN_STATION(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
+	/** Operator station signs: the operator's mark at the left end of the row, the name beside it (white on the operator's blue). */
+	OPERATOR_NS(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFC8D8F0),
+	/** Operator station sign, white panel, black text. */
+	OPERATOR_DB(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
+	/** Operator station sign, white on the operator's lighter blue. */
+	OPERATOR_GVB(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFD6E6F5);
 
 	public static final int MAX_ROUTES = 4;
 

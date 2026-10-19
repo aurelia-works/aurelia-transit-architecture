@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav", "class", "era", "facing"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav", "class", "era", "facing", "operator"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";
@@ -230,6 +230,7 @@
 			t.step = hub ? 2 : 1;
 			t.value = value;
 		});
+		segmented("operator", "operatorSeg");
 		segmented("class", "classSeg");
 		segmented("era", "eraSeg");
 		segmented("facing", "facingSeg");
@@ -862,7 +863,8 @@
 		if ((!$("text").value.trim() && $("class").value === "auto" && $("era").value === "auto") || $("listOn").checked) {
 			return;
 		}
-		const pins = pinnedNow();
+		// what the dice rolled is not the player's choice: typed words move it
+		const pins = new Set([...pinnedNow()].filter((f) => !rolled.has(f) || seeds.locks.look && f === "look"));
 		const b = plan.built;
 		const want = {
 			mode: /^terminus/i.test(b.mode) ? "terminus" : /^hub/i.test(b.mode) ? "hub" : "through",
@@ -872,6 +874,10 @@
 		};
 		if ($("layout").value !== "AUTO") {
 			want.layout = /island/i.test(b.layout) ? "ISLAND" : "SIDE";
+		}
+		if (plan.wordsLook) {
+			want.look = plan.wordsLook;
+			want.mix = "";
 		}
 		let moved = false;
 		for (const [f, v] of Object.entries(want)) {
@@ -1834,6 +1840,23 @@
 	// close once you are past them. Lift doors let you through, as a lift car would.
 
 	const BODY = { half: 0.3, height: 1.8, eye: 1.62, step: 0.6, gravity: 32, jump: 8.9, walk: 4.3, run: 7, fly: 11, flyRun: 24 };
+	/** The walk keys are Minecraft's own: the player's bindings when the studio is opened from the game, the defaults otherwise. */
+	const KEYS = { forward: "KeyW", back: "KeyS", left: "KeyA", right: "KeyD", jump: "Space", sneak: "ShiftLeft", sprint: "ControlLeft" };
+	const KEY_LABELS = { Space: "Space", ShiftLeft: "Shift", ShiftRight: "Right Shift", ControlLeft: "Ctrl", ControlRight: "Right Ctrl", AltLeft: "Alt",
+		AltRight: "Right Alt", ArrowUp: "↑", ArrowDown: "↓", ArrowLeft: "←", ArrowRight: "→", Tab: "Tab", CapsLock: "Caps" };
+	const keyLabel = (code) => KEY_LABELS[code] || code.replace(/^Key|^Digit/, "");
+	const kbd = (action) => "<kbd>" + keyLabel(KEYS[action]) + "</kbd>";
+	function showKeyHelp() {
+		const el = document.getElementById("walkKeysHelp");
+		if (el) {
+			el.innerHTML = kbd("forward") + kbd("left") + kbd("back") + kbd("right") + " walk · " + kbd("sprint") + " or double-tap " + kbd("forward")
+				+ " sprint · " + kbd("sneak") + " sneak · " + kbd("jump") + " jump, double-tap to fly (" + kbd("jump") + " up, " + kbd("sneak") + " down)";
+		}
+	}
+	fetch("api/keys").then((r) => r.json()).then((k) => {
+		Object.assign(KEYS, k);
+		showKeyHelp();
+	}).catch(() => {});
 	const NO_COLLIDE = new Set(["RAIL_NODE"]);
 	/** Roles that stand fence-high in the game (1.5 blocks of collision) although their model is one block tall. */
 	const FENCE_ROLES = new Set(["RAILING", "BARRIER"]);
@@ -1842,10 +1865,13 @@
 	const GATE_PADDLE = [4 / 16, 0, 7 / 16, 1, 1.5, 9 / 16];
 	/** An end cabinet's collision: a solid panel across the whole cell (FareGateBlock END_PANEL), so no end is a free gap. */
 	const GATE_END = [0, 0, 4 / 16, 1, 1.5, 12 / 16];
-	/** As in the game: the centre this close to the paddle line is walking into them, this far has cleared them; a gate left
-	 * alone shuts after 2 s. */
+	/** As in the game: the centre this close to the paddle line is walking into them, this far has cleared them (the body's
+	 * near side past the paddle); a gate left alone shuts after 2 s. Clear is further out than at, or a body between the two
+	 * would open and shut the gate every frame. */
 	const GATE_AT = 0.45;
-	const GATE_CLEAR = 0.4;
+	const GATE_CLEAR = 0.6;
+	/** Seconds for a paddle to slide fully in or out. */
+	const GATE_SLIDE_S = 0.35;
 	const GATE_CLOSE_MS = 2000;
 	const ESCALATOR_SPEED = 2.2;
 	/** Falling further than this takes you back to where you last stood. */
@@ -2028,8 +2054,10 @@
 	const _gateMat = new THREE.Matrix4();
 	function gateInstanceMatrix(gate) {
 		const p = gate.paddle;
-		const dx = p.axis === "x" ? p.dir * p.move * gate.slide : 0;
-		const dz = p.axis === "z" ? p.dir * p.move * gate.slide : 0;
+		// eased in and out, so the paddle starts and stops gently instead of snapping
+		const s = gate.slide * gate.slide * (3 - 2 * gate.slide);
+		const dx = p.axis === "x" ? p.dir * p.move * s : 0;
+		const dz = p.axis === "z" ? p.dir * p.move * s : 0;
 		return _gateMat.makeTranslation(gate.x + dx, gate.y, gate.z + dz);
 	}
 
@@ -2053,12 +2081,10 @@
 			if (!g.paddle) {
 				continue;
 			}
+			// a steady slide (eased in gateInstanceMatrix), reversing smoothly from wherever it is if the gate changes its mind
 			const target = g.open ? 1 : 0;
-			const k = Math.min(1, dt * 14);
-			g.slide += (target - g.slide) * k;
-			if (Math.abs(g.slide - target) < 0.004) {
-				g.slide = target;
-			}
+			const stepBy = dt / GATE_SLIDE_S;
+			g.slide = target > g.slide ? Math.min(target, g.slide + stepBy) : Math.max(target, g.slide - stepBy);
 			g.paddle.mesh.setMatrixAt(g.paddle.n, gateInstanceMatrix(g));
 			dirty.add(g.paddle.mesh);
 		}
@@ -2201,6 +2227,11 @@
 	}
 
 	const keys = new Set();
+	/** A walk key is held: either side of a key pair counts (Left and Right Shift). */
+	const down = (action) => keys.has(KEYS[action]) || keys.has(KEYS[action].replace("Left", "Right"));
+	let lastJumpTap = 0;
+	let lastForwardTap = 0;
+	let sprintLatch = false;
 
 	function stepWalk(dt) {
 		const world = walk.world;
@@ -2220,27 +2251,27 @@
 		const forward = new THREE.Vector3(-Math.sin(walk.yaw), 0, -Math.cos(walk.yaw));
 		const right = new THREE.Vector3(Math.cos(walk.yaw), 0, -Math.sin(walk.yaw));
 		const wish = new THREE.Vector3();
-		if (keys.has("KeyW") || keys.has("ArrowUp")) wish.add(forward);
-		if (keys.has("KeyS") || keys.has("ArrowDown")) wish.sub(forward);
-		if (keys.has("KeyD") || keys.has("ArrowRight")) wish.add(right);
-		if (keys.has("KeyA") || keys.has("ArrowLeft")) wish.sub(right);
+		if (down("forward") || keys.has("ArrowUp")) wish.add(forward);
+		if (down("back") || keys.has("ArrowDown")) wish.sub(forward);
+		if (down("right") || keys.has("ArrowRight")) wish.add(right);
+		if (down("left") || keys.has("ArrowLeft")) wish.sub(right);
 		if (wish.lengthSq() > 0) {
 			wish.normalize();
 		}
-		const running = keys.has("ShiftLeft") || keys.has("ShiftRight");
+		const running = down("sprint") || sprintLatch;
 		if (walk.fly) {
 			const speed = running ? BODY.flyRun : BODY.fly;
-			const up = (keys.has("Space") ? 1 : 0) - (keys.has("KeyC") || keys.has("ControlLeft") ? 1 : 0);
+			const up = (down("jump") ? 1 : 0) - (down("sneak") ? 1 : 0);
 			const target = wish.multiplyScalar(speed).add(new THREE.Vector3(0, up * speed * 0.7, 0));
 			walk.vel.lerp(target, 1 - Math.exp(-dt * 8));
 		} else {
-			const speed = running ? BODY.run : BODY.walk;
+			const speed = running ? BODY.run : down("sneak") ? BODY.walk * 0.35 : BODY.walk;
 			const grip = walk.onGround ? 14 : 2.5;
 			const k = 1 - Math.exp(-dt * grip);
 			walk.vel.x += (wish.x * speed - walk.vel.x) * k;
 			walk.vel.z += (wish.z * speed - walk.vel.z) * k;
 			walk.vel.y = Math.max(-60, walk.vel.y - BODY.gravity * dt);
-			if (walk.onGround && keys.has("Space")) {
+			if (walk.onGround && down("jump")) {
 				walk.vel.y = BODY.jump;
 				walk.onGround = false;
 			}
@@ -2288,7 +2319,7 @@
 			const next = here.at + 1 < here.lift.stops.length ? here.at + 1 : here.at - 1;
 			tip = "In the lift · E to go to " + floorName(here.lift, next);
 		} else if (walk.fly) {
-			tip = walk.ghost ? "Flying through walls · G to stop" : "Flying · F to land · G to fly through walls";
+			tip = walk.ghost ? "Flying through walls · G to stop" : "Flying · double-tap " + keyLabel(KEYS.jump) + " to land · G to fly through walls";
 		}
 		if ($("walkTip").textContent !== tip) {
 			$("walkTip").textContent = tip;
@@ -2447,11 +2478,23 @@
 			return;
 		}
 		keys.add(e.code);
-		if (e.code === "KeyF") {
-			walk.fly = !walk.fly;
-			walk.ghost = walk.ghost && walk.fly;
-			walk.vel.set(0, 0, 0);
-		} else if (e.code === "KeyG" && walk.fly) {
+		// as in the game: a double tap of jump starts and stops flying, a double tap of forward sprints
+		const now = performance.now();
+		if (e.code === KEYS.jump && !e.repeat) {
+			if (now - lastJumpTap < 300) {
+				walk.fly = !walk.fly;
+				walk.ghost = walk.ghost && walk.fly;
+				walk.vel.set(0, 0, 0);
+				lastJumpTap = 0;
+			} else {
+				lastJumpTap = now;
+			}
+		}
+		if (e.code === KEYS.forward && !e.repeat) {
+			sprintLatch = sprintLatch || now - lastForwardTap < 300;
+			lastForwardTap = now;
+		}
+		if (e.code === "KeyG" && walk.fly) {
 			walk.ghost = !walk.ghost;
 		} else if (e.code === "KeyE") {
 			takeLift();
@@ -2460,12 +2503,20 @@
 		} else if (e.code === "Digit2") {
 			startAt(spotFor("street"));
 		}
-		if (/^(Space|Arrow|Key[WASDCEFG]$|Digit[12]$)/.test(e.code)) {
+		if (Object.values(KEYS).includes(e.code) || /^(Space|Arrow|Key[EG]$|Digit[12]$)/.test(e.code)) {
 			e.preventDefault();
 		}
 	});
-	window.addEventListener("keyup", (e) => keys.delete(e.code));
-	window.addEventListener("blur", () => keys.clear());
+	window.addEventListener("keyup", (e) => {
+		keys.delete(e.code);
+		if (e.code === KEYS.forward) {
+			sprintLatch = false;
+		}
+	});
+	window.addEventListener("blur", () => {
+		keys.clear();
+		sprintLatch = false;
+	});
 	$("walkBtn").addEventListener("click", () => (walk ? leaveWalk() : enterWalk()));
 	$("compass").addEventListener("click", () => setView("plan", true));
 	$("walkClick").addEventListener("click", lockMouse);

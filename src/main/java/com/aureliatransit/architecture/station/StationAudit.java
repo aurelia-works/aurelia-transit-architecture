@@ -25,7 +25,7 @@ public final class StationAudit {
 
 	public enum Topic {
 		TRACKS("Tracks"), FACES("Boarding edges"), RAIL_NODES("Rail nodes"), ROOF("Roof cover"), HEADROOM("Headroom"), ACCESS("Step-free access"),
-		NAME_SIGNS("Name signs"), GROUNDED("Nothing floating"), SIZE("Size"), LIGHTING("Lighting"), FURNISHING("Furnishing");
+		NAME_SIGNS("Name signs"), GROUNDED("Nothing floating"), FALLS("No falls"), SIZE("Size"), LIGHTING("Lighting"), FURNISHING("Furnishing");
 
 		private final String title;
 
@@ -204,6 +204,7 @@ public final class StationAudit {
 			access();
 			nameSigns();
 			grounded();
+			falls();
 			lighting();
 			furnishing();
 			return size();
@@ -1049,6 +1050,49 @@ public final class StationAudit {
 		}
 
 		/** Every block must be joined, through faces or edges, to a block standing on the station's support layer. */
+		/** What a passenger stands on inside the station; a platform is left out, as its edge is meant to face the track. */
+		private static final Set<Role> STANDING = Set.of(Role.FLOOR, Role.BRIDGE_DECK, Role.LIGHT_PANEL, Role.STAIR, Role.ESCALATOR);
+
+		/**
+		 * Nowhere a passenger stands may open onto a track (a doorway in a wall a track runs along) or, above the ground, onto a
+		 * drop of three or more (a hole in a slab, an unguarded stair side).
+		 */
+		private void falls() {
+			final List<String> found = new ArrayList<>();
+			for (final PlannedBlock floor : plan.blocks()) {
+				final int u = floor.u(), y = floor.y() + 1, v = floor.v();
+				// paving below platform level is open ground (a forecourt), not a floor of the station
+				if (!STANDING.contains(floor.role()) || floor.y() < StationGeometry.PLATFORM_Y || !open(u, y, v)) {
+					continue;
+				}
+				for (final int[] side : SIDES) {
+					final int nu = u + side[0], nv = v + side[1];
+					if (!open(nu, y, nv)) {
+						continue;
+					}
+					int drop = 0;
+					while (drop < 3 && at(nu, y - 1 - drop, nv) == null) {
+						drop++;
+					}
+					final boolean track = plan.trackEnvelopes().stream().anyMatch(box -> box.contains(nu, y, nv));
+					if (track || floor.y() >= StationGeometry.WALK_Y && drop >= 3) {
+						found.add((track ? "onto a track" : "a drop") + " at u=" + nu + " y=" + y + " v=" + nv);
+					}
+				}
+			}
+			if (found.isEmpty()) {
+				pass(Topic.FALLS, "No open edge onto a track or a drop");
+			} else {
+				fail(Topic.FALLS, found.size() + " open edges, first " + found.get(0),
+						"Plan again; if it stays, copy the description and report it: an edge needs a wall, window or barrier.");
+			}
+		}
+
+		/** True when a passenger fits at (u, y, v): that cell and the one above are empty. */
+		private boolean open(int u, int y, int v) {
+			return at(u, y, v) == null && at(u, y + 1, v) == null;
+		}
+
 		private void grounded() {
 			// a dense grid over the plan's bounds: 0 empty, 1 a block, 2 a block joined to the ground
 			int uLo = Integer.MAX_VALUE, uHi = Integer.MIN_VALUE, yLo = Integer.MAX_VALUE, yHi = Integer.MIN_VALUE, vLo = Integer.MAX_VALUE, vHi = Integer.MIN_VALUE;

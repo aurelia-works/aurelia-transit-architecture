@@ -16,6 +16,7 @@ import com.aureliatransit.architecture.registry.ModItems;
 import com.aureliatransit.architecture.registry.ElevatedBlocks;
 import com.aureliatransit.architecture.registry.StationBlocksNlBe;
 import com.aureliatransit.architecture.registry.StationBlocksDeIt;
+import com.aureliatransit.architecture.registry.StationBlocksOperators;
 import com.aureliatransit.architecture.registry.MetroBlocks;
 import com.aureliatransit.architecture.registry.WayfindingBlocks;
 import com.aureliatransit.architecture.station.world.StationSystems;
@@ -47,6 +48,7 @@ public final class AureliaTransitArchitecture implements ModInitializer {
 		GlassBlocks.init();
 		StationBlocksNlBe.init();
 		StationBlocksDeIt.init();
+		StationBlocksOperators.init();
 		MetroBlocks.init();
 		ModBlockEntities.init();
 		ModItems.init();

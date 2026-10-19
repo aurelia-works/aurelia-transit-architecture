@@ -70,7 +70,7 @@ Examples:
 | Escalators | `escalator`/`escalators`: an MTR up escalator beside each footbridge stair, with a rail between, on islands at least 11 wide and side platforms at least 9 wide (narrower platforms keep the stair only). Studio: *Footbridge stairs* | stairs only |
 | Stairs both ways | `stairs both ways`, `reverse stairs`: a second stair down to each platform wide enough (islands 11, side platforms 9), from the corridor's other side beside the lift, facing the other way. Studio: *Footbridge stairs* | one stair per platform |
 | Enclosed stairs | `enclosed stairs`, `walled stairwells`: solid walls round every footbridge stairwell instead of glass. Studio: *Stairwells* | glass |
-| Travelators | `travelators`, `moving walkways`: flat MTR escalators, only on the platforms (none in the footbridge corridor): along platforms at least 71 long and wide enough (islands 11, side 9), in a lane clear of the column lines, in stretches of up to 16 with 3-row gaps to cross, moving towards the footbridge or the terminus head. Studio: *Travelators* | none |
+| Travelators | `travelators`, `moving walkways`: flat MTR escalators, only on the platforms (none in the footbridge corridor): along platforms at least 71 long and wide enough (islands 10, side 9; the parser warns when none is), in a lane clear of the column lines, in stretches of up to 16 with 3-row gaps to cross, moving towards the footbridge or the terminus head. Studio: *Travelators* | none |
 | Car park | `parking`, `car park`, `park and ride`: a surface car park in front of a station building's street wall, 14 deep and about 29 along: a kerb along the street edge with a driveway at the entrance, two runs of bays with their heads and separators marked out, a lane either side of a central planter (vanilla leaves), from the platform paving and bus kerb blocks. The lot moves the building back by its own depth, so it stands inside the footprint. It needs a station building beside the platforms (a terminus's street, past its head building, has no room yet) | none |
 | Underpass | `underpass`: a stairs-only pedestrian tunnel a storey under the tracks at the end away from the footbridges, with a walled stair well down from every platform wide enough. It digs, so build it with `replace-terrain`. Not at a terminus | none |
 | Mezzanine | `mezzanine`, `upper concourse`, `multi-level`: the footbridge widened into a 9-wide concourse over the tracks, with piers under its edges, benches facing out over the tracks and a hanging departure screen at each end. Asks for a footbridge; not at a terminus or with one track | none |
@@ -185,6 +185,19 @@ A building stands on the street side over the middle of the platforms: 9 deep wh
 The generator places **unconnected MTR rail nodes** at both platform ends of every platform track. The summary prints their coordinates. Connect them with an MTR **Platform Rail Connector**, so MTR's platform matches the built platform, then extend the line with normal rail connectors.
 
 The generator never creates rail connections itself, because those live in MTR's simulation core. Undo leaves a node alone once you have connected it (MTR sets `is_connected`), since removing it with a block change would orphan MTR's rail data. Without MTR loaded, the nodes are skipped and the summary says so.
+
+## Walk-through fixes (Studio)
+
+- **No falls** is an audit topic: wherever a passenger can stand (floor, deck, stair, escalator) the audit looks sideways for an open cell with a drop of three or more below it, or one inside a track envelope. A stair flank on a boarding edge takes its rail from y = 4 up to the cell the passenger stands in (below that the edge stays clear to board from).
+- A doorway in the building's platform wall exists only where a platform stands beside it; where a track runs along the wall it is a window.
+- Escalators can be the second flight too (`reverseEscalator`). The approach to every stair and escalator foot (5 cells out along the platform, one either side, floor to head height) is kept clear of screens, signs, benches, bins and lamps (`stairFeet`); route maps no longer stand on the enclosure posts there (MTR shows a route on one only once the player picks the platform with its brush, so a plan could not fill it in).
+- Travelators keep clear of the stairs, escalators and lifts of both footbridges, the far one included. Each stretch is a pair, one lane each way, and the lower column always runs towards +v, so the pair keeps one hand along the whole platform.
+- The hall's end-wall departure boards hang only where a wall is behind them (with wings the end walls are open).
+- Open: the "no three stacked girders" rule is not in. A rib under a raised roof carries the roof, so leaving it out over a column line's girder floated the whole row; a different fix is needed.
+
+## Operator logo signs, and the simpler Studio
+- **Operator signs:** `ns`, `deutsche bahn` / `db` and `gvb` (with or without "operator", "logo" or "signs" after) put that operator's name sign on every platform: `ns_station_sign`, `db_station_sign`, `gvb_station_sign`. They are the ordinary joined name sign (editable text, no new block entity, no ticking); the mark is painted at the left end of a row (model pixels 0-8, `StationBlocksOperators.MARK`, `TextLayout.textInset`) and the station name sits beside it. A bare `ns` or `db` still sets the Dutch or German look as before; `ns operator` is only the signs. Marks are in `tools/logos/` (SVG and a rendered PNG each) and painted into the sign textures by `tools/assets_operators.py`. The repo no longer limits itself to generic designs (Jah, 2026-10-19); these are real operators' marks, so a public release page may draw a takedown.
+- **Studio, simpler:** the sidebar opens with "What do you want to build?" (the words box), then City, Type, Size (tracks, length), Name and logo. Everything else (mix, class and era, seed, platform type, building details, platforms one by one) is under *More options*; the report's layers, cutaway, materials and raw data are under *Extra tools*. Typing words updates the headline, the city buttons, tracks, length and type from what they came to (`StudioApi.wordsTitle`, `wordsLook`), not from the dice behind them. "300 blocks" alone is read as a length.
 
 ## Performance and safety
 
@@ -311,7 +324,9 @@ client serves it on `http://127.0.0.1:25680/` (the next free port up to 25689) a
   and ramps), falls and jumps. Fare gates stand open and lift doors let you through. Escalators and travelators carry you the
   way they run in the game (the plan's `moving` list gives each step's direction, which MTR's model does not show). In a lift
   car, *E* rides to the next floor. A fall of more than 4.5 blocks, or below the ground, puts you back where you last stood.
-  Keys: WASD or arrows, Shift to run, Space to jump, F to fly (Space up, C down, G through walls), 1 for platform 1, 2 for the
+  Keys are Minecraft's: WASD or arrows, Ctrl or a double tap of W to sprint, Shift to sneak, Space to jump and a double tap of Space to fly
+  (Space up, Shift down; G through walls). Opened from the game they are the player's own bindings for those keys (`/api/keys`, read
+  from the game's options; a browser reserves some combinations, e.g. Ctrl+W closes a tab on Windows, so double-tap W works anywhere). 1 for platform 1, 2 for the
   street, Esc to free the mouse and Esc again to leave. Changing a setting while walking re-plans around you.
 - **Report:** requested and built side by side, what the parser recognised, filled in or did not understand, and every station
   check and design rule, with *Show raw blueprint JSON* for the plan itself.

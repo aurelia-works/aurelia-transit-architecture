@@ -27,7 +27,13 @@ public enum DisplayStyle {
 	 * German platform screen: blue, white sans lettering, time and train on the left with a white delay box, the stops
 	 * "via" above a large destination, following trains below and a white scrolling information band.
 	 */
-	GERMAN_DB("german_db", 0xFF0C2F78, 0xFF0C2F78, 0xFF0C2F78, 0xFFFFFFFF, 0xFFC4D1EC, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF);
+	GERMAN_DB("german_db", 0xFF0C2F78, 0xFF0C2F78, 0xFF0C2F78, 0xFFFFFFFF, 0xFFC4D1EC, 0xFFFFFFFF, 0xFFFFFFFF, 0xFFFFFFFF),
+	/**
+	 * Japanese hanging platform board: a dark panel with the platform number and an arrow at one end and the clock at the
+	 * other, between them a black window of rows: a coloured train-type badge, the destination and the departure time.
+	 * Written in Minecraft's own font, so Japanese route and station names show.
+	 */
+	JAPAN_COMMUTER("japan_commuter", 0xFF202022, 0xFF000000, 0xFF000000, 0xFFFFFFFF, 0xFFB4B4B8, 0xFFF2F2F2, 0xFFFF6A5A, 0xFF4B3BD0);
 
 	/**
 	 * Ids of older styles and the board each now shows. The first three styles were saved by ordinal in 1.4 and 1.5 and keep

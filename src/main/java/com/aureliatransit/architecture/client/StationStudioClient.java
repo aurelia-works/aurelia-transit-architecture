@@ -80,6 +80,14 @@ public final class StationStudioClient {
 
 	private static synchronized StudioServer start() throws IOException {
 		if (server == null) {
+			// walk mode uses the player's own movement keys
+			com.aureliatransit.architecture.station.studio.StudioKeys.source(() -> {
+				final net.minecraft.client.option.GameOptions options = MinecraftClient.getInstance().options;
+				return java.util.Map.of("forward", options.forwardKey.getBoundKeyTranslationKey(), "back", options.backKey.getBoundKeyTranslationKey(),
+						"left", options.leftKey.getBoundKeyTranslationKey(), "right", options.rightKey.getBoundKeyTranslationKey(),
+						"jump", options.jumpKey.getBoundKeyTranslationKey(), "sneak", options.sneakKey.getBoundKeyTranslationKey(),
+						"sprint", options.sprintKey.getBoundKeyTranslationKey());
+			});
 			final net.minecraft.client.util.Session session = MinecraftClient.getInstance().getSession();
 			server = StudioServer.start(StationStudioClient::asset, StationStudioClient::send,
 					new StudioServer.Player(session.getUsername(), session.getUuid()));

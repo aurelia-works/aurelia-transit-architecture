@@ -86,7 +86,7 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 				cached.rowLength = rowLength;
 				cached.primary = primary;
 				cached.status = status;
-				final float width = layout.joins() ? rowLength * 16 - JOIN_MARGIN : layout.width();
+				final float width = (layout.joins() ? rowLength * 16 - JOIN_MARGIN : layout.width()) - layout.textInset();
 				cached.panel = SignPanels.layout(data, primary, layout.style(), status, width, layout.height(), s -> textRenderer.getWidth(s));
 			}
 		}
@@ -94,7 +94,12 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 			return;
 		}
 
-		final float centerX = layout.joins() ? cached.rowLength * 8 : 8;
+		final float middleX = layout.joins() ? cached.rowLength * 8 : 8;
+		// the mark is at the viewer's left of each face: the row's +X end seen from the front, its -X end seen from behind, so the
+		// text gives way towards the other end (the front face's text runs the other way round: see PanelDrawer.beginFace)
+		final float centerX = middleX - layout.textInset() / 2;
+		final float backCenterX = middleX + layout.textInset() / 2;
+
 		final int textLight = state.getLuminance() > 0 ? LightmapTextureManager.MAX_LIGHT_COORDINATE : light;
 
 		matrices.push();
@@ -106,7 +111,7 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 		PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight);
 		PanelDrawer.endFace(matrices);
 		if (layout.doubleSided()) {
-			PanelDrawer.beginFace(matrices, centerX, layout.centerY(), layout.backZ(), false);
+			PanelDrawer.beginFace(matrices, backCenterX, layout.centerY(), layout.backZ(), false);
 			PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight);
 			PanelDrawer.endFace(matrices);
 		}

@@ -93,6 +93,7 @@ public class AureliaGameTests implements FabricGameTest {
 			Map.entry("psd_text_panel", "TextSignBlock"), Map.entry("stand_back_sign", "TextSignBlock"),
 			Map.entry("dutch_station_sign", "TextSignBlock"), Map.entry("dutch_platform_sign", "TextSignBlock"),
 			Map.entry("german_station_sign", "TextSignBlock"),
+			Map.entry("ns_station_sign", "TextSignBlock"), Map.entry("db_station_sign", "TextSignBlock"), Map.entry("gvb_station_sign", "TextSignBlock"),
 			// LiftStatusPanelBlock extends TextSignBlock: lift name and levels
 			Map.entry("lift_status_panel", "TextSignBlock"),
 			// WayfindingPlateBlock and subclasses (WayfindingSignBlock, EntrancePylonBlock): configurable wayfinding and terminal panels
