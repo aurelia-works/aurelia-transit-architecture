@@ -54,6 +54,11 @@ abstract class PlanRoofs extends PlanColumns {
 				purlinRight[i] = right > StationGeometry.MAX_CANTILEVER ? Math.min(armRight[i], right - StationGeometry.MAX_CANTILEVER) : 0;
 			}
 			for (int v = band.vFrom(); v <= band.vTo(); v++) {
+				// under a real station's hall its floor is the roof: no canopy and no girders under it, but in its two edge rows,
+				// where the canopy's girders run in to the piers inside its walls and carry the canopy's end
+				if (underHall(v) && Math.abs(v - site.bridgeV()) < bridgeWall() - 1) {
+					continue;
+				}
 				// on every column: an arm across the platform on its cap; between columns a girder along the line and an edge
 				// girder along each arm's end, resting on the arms
 				for (int i = 0; i < lines.size(); i++) {

@@ -31,10 +31,22 @@ abstract class PlanLifts extends PlanBuilding {
 				shaft(lift, b.bridgeWall(), true, b.bridgeRoof(), band.runs(lift.doorV() + 4 * lift.out()));
 			}
 		}
-		if (site.street() != null) {
-			final StationLayout.Lift street = site.platformLift(site.street(), layout);
+		for (final TrackLayout.PlatformBand band : site.streets()) {
+			final StationLayout.Lift street = site.platformLift(band, layout);
 			if (street != null) {
-				shaft(street, b.bridgeWall(), true, b.bridgeRoof(), site.street().runs(street.doorV() + 4 * street.out()));
+				shaft(street, b.bridgeWall(), true, b.bridgeRoof(), band.runs(street.doorV() + 4 * street.out()));
+			}
+			// a real station's square at the hall's level: the lift from the square below, its lobby kept open before walls go up
+			final StationLayout.Lift square = site.plateauLift(band);
+			if (square != null) {
+				// the lobby in front of the lower doors, and its way in from the square through the hall's end wall line
+				final int outer = band.equals(site.street()) ? square.c0() - 1 : square.c0() + 2;
+				for (final int c : new int[]{outer, square.c0(), square.c0() + 1}) {
+					for (int y = StationGeometry.WALK_Y; y <= StationGeometry.WALK_Y + 2; y++) {
+						keepClear(c, y, square.doorV() - 1);
+					}
+				}
+				shaft(square, b.bridgeWall(), true, b.bridgeRoof(), false);
 			}
 		}
 		final StationLayout.Lift hall = site.buildingLift(layout);

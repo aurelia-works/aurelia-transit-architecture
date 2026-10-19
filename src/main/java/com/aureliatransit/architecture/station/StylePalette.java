@@ -165,7 +165,13 @@ public final class StylePalette {
 	public static StylePalette of(StationSpec spec) {
 		final boolean hall = spec.roof() == RoofType.HALL;
 		final boolean tactile = spec.tactile();
-		final StylePalette base = switch (spec.style()) {
+		// a real station's platforms: what its sources show, not a look (Utrecht Centraal's canopies were renewed from 2010, some
+		// with solar cells; their shape and material are not in the sources, so plain steel canopies on round columns stand in,
+		// see docs/REAL_STATIONS.md)
+		final StylePalette base = spec.real() != RealStation.NONE ? new StylePalette(ata("platform_paving_light"),
+				ata(tactile ? "platform_edge_warning" : "platform_edge"), ata("steel_column_round"), ata("steel_column_round"),
+				ata("canopy_flat"), ata("canopy_edge"), ata("canopy_light"), ata("platform_lamp"), ata("steel_bench"), ata("dutch_station_sign"))
+				: switch (spec.style()) {
 			case MODERN -> new StylePalette(ata("platform_paving_light"), ata(tactile ? "platform_edge_warning" : "platform_edge"),
 					ata("steel_column_square"), ata("steel_column_square"), ata("canopy_flat"), ata("canopy_edge"), ata("canopy_light"),
 					ata("platform_lamp"), ata("steel_bench"), ata("station_name_sign"));

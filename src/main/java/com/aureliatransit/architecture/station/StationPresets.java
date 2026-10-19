@@ -19,8 +19,8 @@ public final class StationPresets {
 	}
 
 	public static final List<Preset> ALL = List.of(
-			new Preset("utrecht", BuildingStyle.MODERN,
-					"four track utrecht station, two island platforms, 96 long, glass canopy, station building with footbridge, named Utrecht Centraal"),
+			// the real station: its hall, platforms and operator (see RealStation), not a look after it
+			new Preset("utrecht", BuildingStyle.NONE, "utrecht centraal"),
 			new Preset("amsterdam", BuildingStyle.AMSTERDAM,
 					"two track amsterdam station, side platforms, 64 long, station building with footbridge, named Amsterdam Centraal"),
 			new Preset("st_pancras", BuildingStyle.GOTHIC_BRICK,
@@ -54,7 +54,9 @@ public final class StationPresets {
 			new Preset("kuala_lumpur", BuildingStyle.KUALA_LUMPUR,
 					"four track kuala lumpur station, two island platforms, 160 long, station building with footbridge, named Kuala Lumpur"),
 			new Preset("mumbai", BuildingStyle.MUMBAI,
-					"ten track mumbai terminus, five island platforms, 280 long, train shed, named Mumbai CSMT"));
+					"ten track mumbai terminus, five island platforms, 280 long, train shed, named Mumbai CSMT"),
+			new Preset("modern", BuildingStyle.MODERN,
+					"four track modern station, two island platforms, 96 long, glass canopy, station building with footbridge"));
 
 	private StationPresets() {
 	}

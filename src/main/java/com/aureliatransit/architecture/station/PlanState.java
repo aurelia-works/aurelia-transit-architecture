@@ -167,6 +167,16 @@ abstract class PlanState {
 		return cells.containsKey(cell) || air.contains(cell);
 	}
 
+	/** True when the cell must stay empty (a stair's headroom, an opening in a floor). */
+	boolean cleared(int u, int y, int v) {
+		return air.contains(new Cell(u, y, v));
+	}
+
+	/** The block planned at a cell, or null. */
+	PlannedBlock at(int u, int y, int v) {
+		return cells.get(new Cell(u, y, v));
+	}
+
 	/** True when no cell from y0 to y1 at (u, v) is taken or kept clear. */
 	boolean freeColumn(int u, int y0, int y1, int v) {
 		for (int y = y0; y <= y1; y++) {
@@ -212,6 +222,11 @@ abstract class PlanState {
 	/** Row offset from the corridor's centre line to its long wall. */
 	int bridgeWall() {
 		return StationGeometry.bridgeWallOffset(site.bridgeWidth());
+	}
+
+	/** True on a row under a real station's hall, between its long walls: its floor covers the platforms there. */
+	boolean underHall(int v) {
+		return spec.real() != RealStation.NONE && site.bridge() && Math.abs(v - site.bridgeV()) <= bridgeWall();
 	}
 
 	/** A platform's colour at the gate line. */

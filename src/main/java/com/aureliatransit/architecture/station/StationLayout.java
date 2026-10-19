@@ -26,9 +26,15 @@ import java.util.List;
  * @param bothWays      a second stair down to each platform wide enough, from the corridor's other side, facing the other way
  * @param street        the street entrance beside the first track, with a stair and a lift up to the footbridge, laid out like
  *                      a side platform with no track of its own (number 0); null without one
+ * @param farStreet     the second street entrance, beside the last track, laid out like the first: a real station's hall
+ *                      is entered from the street at both sides; null without one
+ * @param flightOffset  rows from the bridge line to where the platform stairs, escalators and lifts leave the deck: the
+ *                      corridor wall ({@link StationGeometry#bridgeWallOffset}), or inside a real station's hall, as close
+ *                      to its middle as a corridor's wall would be
  */
 public record StationLayout(boolean building, int bays, int vStart, int vEnd, int entranceV, int innerStairSide, boolean bridge, int bridgeV,
-		int bridgeWidth, int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays, TrackLayout.PlatformBand street) {
+		int bridgeWidth, int deckFrom, int deckTo, int stairSide, List<Integer> served, boolean escalators, boolean bothWays, TrackLayout.PlatformBand street,
+		TrackLayout.PlatformBand farStreet, int flightOffset) {
 
 	/**
 	 * One stair flight down from the footbridge corridor to a platform.
@@ -107,9 +113,12 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 				&& (building || street || layout.platforms().size() >= 2);
 		final int bridgeV = entranceV;
 		final int bridgeWidth = StationGeometry.bridgeWidth(spec, layout);
+		final boolean hall = spec.real() != RealStation.NONE;
+		// a real station's flights leave its hall floor where a plain corridor's would leave its walls, around the middle
+		final int flightOffset = StationGeometry.bridgeWallOffset(hall ? StationGeometry.BRIDGE_WIDTH : bridgeWidth);
 		int stairSide = 0;
 		// the landing at the foot of a stair reaches this far from the bridge line: the wall plus the steps down
-		final int stairReach = StationGeometry.bridgeWallOffset(bridgeWidth) + StationGeometry.STAIR_STEPS + 1;
+		final int stairReach = flightOffset + StationGeometry.STAIR_STEPS + 1;
 		if (bridgeV + stairReach <= length - 1) {
 			stairSide = 1;
 		} else if (bridgeV - stairReach >= 0) {
@@ -118,19 +127,27 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		int deckFrom = 0;
 		int deckTo = 0;
 		if (bridge) {
-			deckFrom = building ? layout.buildingWidth() : street ? 0 : layout.platforms().get(0).uMin();
-			deckTo = layout.platforms().get(layout.platforms().size() - 1).uMax();
+			// a real station's floor starts past the broad stairs up from the squares at both ends
+			deckFrom = building ? layout.buildingWidth() : street ? (hall ? StationGeometry.PLATEAU_STAIR : 0) : layout.platforms().get(0).uMin();
+			deckTo = hall ? layout.width() - 1 - StationGeometry.PLATEAU_STAIR : layout.platforms().get(layout.platforms().size() - 1).uMax();
 		}
 		if (stairSide == 0) {
 			bridge = false;
 		}
-		// the street entrance runs along the first track as far as the footbridge's stairs and lift reach
+		// the street entrance runs along the first track as far as the footbridge's stairs and lift reach; under a real
+		// station's hall, the whole depth of the hall, and a second one along the last track
+		final int streetWidth = StationGeometry.streetWidth(spec);
+		final int reach = hall ? StationGeometry.bridgeWallOffset(bridgeWidth) : StationGeometry.BRIDGE_REACH;
+		final int streetFrom = Math.max(0, bridgeV - reach);
+		final int streetTo = Math.min(length - 1, bridgeV + reach);
 		final TrackLayout.PlatformBand streetBand = bridge && street
-				? new TrackLayout.PlatformBand(0, 0, StationGeometry.STREET_WIDTH - 1, false, true, Math.max(0, bridgeV - StationGeometry.BRIDGE_REACH),
-						Math.min(length - 1, bridgeV + StationGeometry.BRIDGE_REACH), false)
+				? new TrackLayout.PlatformBand(0, 0, streetWidth - 1, false, true, streetFrom, streetTo, false)
+				: null;
+		final TrackLayout.PlatformBand farStreet = bridge && street && hall
+				? new TrackLayout.PlatformBand(0, layout.width() - streetWidth, layout.width() - 1, true, false, streetFrom, streetTo, false)
 				: null;
 		return new StationLayout(building, bays, vStart, vEnd, entranceV, innerSide, bridge, bridgeV, bridgeWidth, deckFrom, deckTo, stairSide,
-				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays(), streetBand);
+				bridge ? served : List.of(), spec.escalators(), spec.stairsBothWays(), streetBand, farStreet, flightOffset);
 	}
 
 	/**
@@ -146,7 +163,8 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		// a big station with two ways down gets one; so does any footbridge station with platforms long enough that the far
 		// end is a long walk from the only way off
 		// (a street entrance stays the main bridge's: the far one spans the platforms only)
-		if (!bridge || layout.terminus() || !(building && bothWays && street == null || length >= LONG_PLATFORMS)) {
+		// a real station's hall is its only way across
+		if (!bridge || layout.terminus() || spec.real() != RealStation.NONE || !(building && bothWays && street == null || length >= LONG_PLATFORMS)) {
 			return null;
 		}
 		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);
@@ -166,7 +184,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			all.add(band.number());
 		}
 		return new StationLayout(false, 0, 0, 0, v, 1, true, v, bridgeWidth, layout.platforms().get(0).uMin(), deckTo, high ? -1 : 1, all,
-				false, false, null);
+				false, false, null, null, offset);
 	}
 
 	/** Platforms at least this long get a second footbridge at the far end at any footbridge station (Phase 5: a second access). */
@@ -207,8 +225,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 
 	/** v of the corridor's long wall that the platform stairs leave through. */
 	public int stairWallV() {
-		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);
-		return stairSide > 0 ? bridgeV + offset : bridgeV - offset;
+		return stairSide > 0 ? bridgeV + flightOffset : bridgeV - flightOffset;
 	}
 
 	/** v of the step at height y (1..{@link StationGeometry#STAIR_STEPS}) of a platform stair; the top step is next to the wall. */
@@ -226,18 +243,57 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		return stairSide > 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V;
 	}
 
-	/** A platform the footbridge's stairs come down to, or the street entrance. */
+	/** A platform the footbridge's stairs come down to, or a street entrance. */
 	private boolean reaches(TrackLayout.PlatformBand band) {
-		return served.contains(band.number()) || band.equals(street);
+		return served.contains(band.number()) || streets().contains(band);
 	}
 
-	/** The platforms, then the street entrance when there is one: every band a footbridge stair comes down to. */
+	/**
+	 * True for the ends of a real station's hall (only a real station has a second street): the squares there are at the
+	 * hall's level, reached by a broad stair and a lift from outside (see PlanBridges.plateaus), so no flight or lift goes
+	 * down from the hall to the ground beside the tracks.
+	 */
+	public boolean plateau(TrackLayout.PlatformBand band) {
+		return farStreet != null && (band.equals(street) || band.equals(farStreet));
+	}
+
+	/**
+	 * The lift between the square and a real station's hall at the end {@code band}: on the hall's floor just inside its end
+	 * wall, past the broad stair's side, its doors towards the stair; at the square it opens into a lobby off the square.
+	 */
+	public Lift plateauLift(TrackLayout.PlatformBand band) {
+		if (!plateau(band)) {
+			return null;
+		}
+		final int c0 = band.equals(street) ? deckFrom + 1 : deckTo - 2;
+		return new Lift(c0, bridgeV + PLATEAU_LIFT, 1);
+	}
+
+	/** Rows either side of the bridge line that the broad stair up to a real station's hall spans. */
+	public static final int PLATEAU_STAIR_HALF = 7;
+
+	/** Rows from the bridge line to a plateau lift's doors: past the broad stair and its side wall, with a lobby before them. */
+	public static final int PLATEAU_LIFT = PLATEAU_STAIR_HALF + 3;
+
+	/** The street entrances, the first then the second: none, one, or (a real station's hall) two. */
+	public List<TrackLayout.PlatformBand> streets() {
+		final List<TrackLayout.PlatformBand> all = new ArrayList<>();
+		if (street != null) {
+			all.add(street);
+		}
+		if (farStreet != null) {
+			all.add(farStreet);
+		}
+		return all;
+	}
+
+	/** The platforms, then the street entrances: every band a footbridge stair comes down to. */
 	public List<TrackLayout.PlatformBand> bridgeBands(TrackLayout layout) {
-		if (street == null) {
+		if (street == null && farStreet == null) {
 			return layout.platforms();
 		}
 		final List<TrackLayout.PlatformBand> all = new ArrayList<>(layout.platforms());
-		all.add(street);
+		all.addAll(streets());
 		return all;
 	}
 
@@ -290,7 +346,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	 */
 	public List<Flight> flights(TrackLayout.PlatformBand band) {
 		final List<Integer> stairs = stairs(band);
-		if (!bridge || !reaches(band) || stairs.isEmpty()) {
+		if (!bridge || !reaches(band) || stairs.isEmpty() || plateau(band)) {
 			return List.of();
 		}
 		final Flight main = new Flight(stairs, stairSide, stairWallV());
@@ -298,7 +354,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	}
 
 	private Flight reverseFlight(TrackLayout.PlatformBand band, List<Integer> columns) {
-		return new Flight(columns, -stairSide, bridgeV - StationGeometry.bridgeWallOffset(bridgeWidth) * stairSide);
+		return new Flight(columns, -stairSide, bridgeV - flightOffset * stairSide);
 	}
 
 	/**
@@ -416,7 +472,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 	 * walkway beside it) or the shaft would run off the platform end.
 	 */
 	public Lift platformLift(TrackLayout.PlatformBand band, TrackLayout layout) {
-		if (!bridge || !reaches(band)) {
+		if (!bridge || !reaches(band) || plateau(band)) {
 			return null;
 		}
 		final List<Integer> columns = stairs(band);
@@ -430,7 +486,7 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 			return null;
 		}
 		final int out = -stairSide;
-		final Lift lift = new Lift(c0, bridgeV + StationGeometry.bridgeWallOffset(bridgeWidth) * out, out);
+		final Lift lift = new Lift(c0, bridgeV + flightOffset * out, out);
 		return band.runs(lift.vMin()) && band.runs(lift.vMax()) ? lift : null;
 	}
 

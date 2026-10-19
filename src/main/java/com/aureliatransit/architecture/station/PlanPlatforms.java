@@ -58,14 +58,17 @@ abstract class PlanPlatforms extends PlanState {
 	}
 
 	void floors() {
-		final TrackLayout.PlatformBand street = site.street();
-		if (street != null) {
+		for (final TrackLayout.PlatformBand street : site.streets()) {
 			// the street entrance: paved like the platforms, railed off along the track, which nobody boards from here
+			final int trackSide = street.trackRight() ? street.uMax() : street.uMin();
 			for (int v = street.vFrom(); v <= street.vTo(); v++) {
 				for (int u = street.uMin(); u <= street.uMax(); u++) {
 					put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
 				}
-				put(Role.RAILING, street.uMax(), StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
+				// a real station's square is walled off from the track under its hall instead (see PlanBridges.plateaus)
+				if (!site.plateau(street)) {
+					put(Role.RAILING, trackSide, StationGeometry.WALK_Y, v, street.trackRight() ? LocalDir.PLUS_U : LocalDir.MINUS_U);
+				}
 			}
 		}
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {

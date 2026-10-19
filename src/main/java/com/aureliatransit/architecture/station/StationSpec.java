@@ -24,6 +24,8 @@ import java.util.Objects;
  *                       fixes the tracks, up to {@link #MAX_LISTED_TRACKS}
  * @param trackBed       what fills the ground under the tracks
  * @param operator       whose mark the name signs carry, or {@link Operator#NONE}
+ * @param real           the real station copied ("utrecht centraal"): its hall, platforms and operator; {@link RealStation#NONE}
+ *                       for a generated one
  * @param escalators     an up escalator beside each footbridge stair where the platform is wide enough
  * @param stairsBothWays a second footbridge stair to each platform wide enough, from the corridor's other side
  * @param enclosedStairs walls round every footbridge stairwell instead of glass
@@ -41,7 +43,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		boolean railNodes, String name, BuildingStyle building, boolean footbridge, boolean terminus, ShedShape shed, CanopyShape canopy, StationScale scale, boolean hub,
 		List<PlatformSpec> platforms, TrackBed trackBed, boolean escalators,
 		boolean stairsBothWays, boolean enclosedStairs, boolean travelators, boolean parking, boolean underpass, boolean tram, boolean mezzanine, long seed, StationClass stationClass, StationEra era,
-		Facing facing, Operator operator) {
+		Facing facing, Operator operator, RealStation real) {
 
 	public static final int MIN_TRACKS = 1;
 	public static final int MAX_TRACKS = 10;
@@ -80,6 +82,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		Objects.requireNonNull(scale, "scale");
 		Objects.requireNonNull(trackBed, "trackBed");
 		Objects.requireNonNull(operator, "operator");
+		Objects.requireNonNull(real, "real");
 		Objects.requireNonNull(stationClass, "stationClass");
 		Objects.requireNonNull(era, "era");
 		Objects.requireNonNull(facing, "facing");
@@ -104,6 +107,12 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		}
 		if (hub && (!terminus || platformLayout != PlatformLayout.ISLAND || trackCount < 4 || trackCount % 2 != 0)) {
 			throw new IllegalArgumentException("a hub is a terminus on island platforms with an even number of tracks, at least four");
+		}
+		if (real != RealStation.NONE && (terminus || building != BuildingStyle.NONE || !footbridge)) {
+			throw new IllegalArgumentException("a real station's hall stands over through tracks, reached from the street at both sides");
+		}
+		if (real != RealStation.NONE && !RealStation.islandsOnly(platformLayout, trackCount, platforms)) {
+			throw new IllegalArgumentException("a real station's hall stands over island platforms only, two tracks each");
 		}
 		if (name.length() > MAX_NAME) {
 			throw new IllegalArgumentException("name longer than " + MAX_NAME + " characters");
@@ -144,7 +153,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 				.style(style).roof(roof).surface(surface).roofMaterial(roofMaterial).stepFree(stepFree).tactile(tactile).furniture(furniture)
 				.railNodes(railNodes).name(name).building(building).footbridge(footbridge).terminus(terminus).shed(shed).canopy(canopy).scale(scale).hub(hub).platforms(platforms).trackBed(trackBed)
 				.escalators(escalators).stairsBothWays(stairsBothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine).seed(seed)
-				.stationClass(stationClass).era(era).facing(facing).operator(operator);
+				.stationClass(stationClass).era(era).facing(facing).operator(operator).real(real);
 	}
 
 	public boolean hasBuilding() {
@@ -187,6 +196,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		private List<PlatformSpec> platforms = List.of();
 		private TrackBed trackBed = TrackBed.NONE;
 		private Operator operator = Operator.NONE;
+		private RealStation real = RealStation.NONE;
 		private boolean escalators;
 		private boolean stairsBothWays;
 		private boolean enclosedStairs;
@@ -298,6 +308,11 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 			return this;
 		}
 
+		public Builder real(RealStation value) {
+			real = value;
+			return this;
+		}
+
 		public Builder trackBed(TrackBed value) {
 			trackBed = value;
 			return this;
@@ -381,7 +396,7 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 		public StationSpec build() {
 			return new StationSpec(trackCount, platformLayout, platformLength, platformWidth, style, roof, surface, roofMaterial, stepFree,
 					tactile, furniture, railNodes, name, building, footbridge, terminus, shed, canopy, scale, hub, platforms, trackBed, escalators,
-					stairsBothWays, enclosedStairs, travelators, parking, underpass, tram, mezzanine, seed, stationClass, era, facing, operator);
+					stairsBothWays, enclosedStairs, travelators, parking, underpass, tram, mezzanine, seed, stationClass, era, facing, operator, real);
 		}
 	}
 }

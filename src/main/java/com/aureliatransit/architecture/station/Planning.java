@@ -37,8 +37,10 @@ final class Planning extends PlanStairs {
 					continue;
 				}
 				final List<Integer> columns = flights.get(0).columns();
-				putText(Role.FIXTURE, columns.get(columns.size() / 2), y, bridge.bridgeV(), LocalDir.MINUS_U, WAYFINDING_SIGN,
-						"DOWN:Platform " + band.number());
+				if (putText(Role.FIXTURE, columns.get(columns.size() / 2), y, bridge.bridgeV(), LocalDir.MINUS_U, WAYFINDING_SIGN,
+						"DOWN:Platform " + band.number()) && spec.real() != RealStation.NONE) {
+					hangFromRoof(columns.get(columns.size() / 2), y, bridge.bridgeV());
+				}
 			}
 		}
 		if (site.building()) {
@@ -126,6 +128,13 @@ final class Planning extends PlanStairs {
 			put(Role.NAME_SIGN, u, StationGeometry.WALK_Y, v + i, front);
 		}
 		return true;
+	}
+
+	/** A real station's hall roof is far over its floor: a rod from a sign hung at the corridor's height up to the roof. */
+	void hangFromRoof(int u, int y, int v) {
+		for (int h = y + 1; h <= spec.real().roofTopY() && !taken(u, h, v); h++) {
+			put(Role.FIXTURE, u, h, v, LocalDir.PLUS_V, "minecraft:chain", "axis=y");
+		}
 	}
 
 	/** A car park: a kerb, a run of bays, a lane, a central planter, a lane and a second run of bays, across PARKING_DEPTH cells. */

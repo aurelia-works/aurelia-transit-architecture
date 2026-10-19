@@ -292,6 +292,13 @@ four descriptions.
 on any thread; any change to a block's position, id, facing, state or sign text changes it. Roles, and where or which way the
 station is built, are not part of it. Station Studio sends it as `fingerprint`.
 
+## Real stations
+
+`utrecht centraal` builds the real Utrecht Centraal rather than a look after it.
+It has a closed hall over 8 island platforms with a three-wave roof, glass walls, tree columns, and a gate line at each end, where a broad stair and a lift come up from the square.
+The facts, sources and what is simplified are in `docs/REAL_STATIONS.md`.
+The station wrench's "Utrecht" look is unchanged; the Studio/wrench preset "Utrecht Centraal" now builds the real station, and the old modern look moved to the "Modern" preset.
+
 ## Known limitations
 
 - Ground-level stations only: no underground or elevated. Straight stations along one axis. No curves, no catenary, no platform screen doors.

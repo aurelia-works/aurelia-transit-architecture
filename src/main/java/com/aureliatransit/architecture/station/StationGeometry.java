@@ -185,6 +185,10 @@ public final class StationGeometry {
 	 * accessor is kept so a wider corridor can be introduced in one place.
 	 */
 	public static int bridgeWidth(StationSpec spec, TrackLayout layout) {
+		if (spec.real() != RealStation.NONE) {
+			// a real station's hall over the tracks is its footbridge, as deep along the tracks as the real one
+			return spec.real().hallDepth(layout.platformLength());
+		}
 		return spec.mezzanine() ? MEZZANINE_WIDTH : bridgeWidth(spec.buildingScale());
 	}
 
@@ -271,7 +275,7 @@ public final class StationGeometry {
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
 		final StationScale scale = spec.buildingScale();
 		final int parking = spec.parking() && spec.sideBuilding() ? PARKING_DEPTH : 0;
-		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? STREET_WIDTH : 0);
+		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? streetWidth(spec) : 0);
 		if (shift == 0) {
 			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
 					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, forecourtDepth(spec));
@@ -285,12 +289,32 @@ public final class StationGeometry {
 			shiftedPlatforms.add(new TrackLayout.PlatformBand(band.number(), band.uMin() + shift, band.uMax() + shift, band.trackLeft(), band.trackRight(),
 					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
-		return new TrackLayout(railWidth + shift, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms,
+		// a real station's hall is entered from the street beside the last track too
+		final int farStreet = spec.real() != RealStation.NONE && streetEntrance(spec) ? streetWidth(spec) : 0;
+		return new TrackLayout(railWidth + shift + farStreet, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms,
 				spec.sideBuilding() ? shift : 0, 0, 0, parking);
 	}
 
 	/** Columns of the street entrance beside the first track: a side platform's width, so its stair and lift fit as on one. */
 	public static final int STREET_WIDTH = 6;
+	/**
+	 * Columns beside the tracks at each end of a real station's hall (Utrecht Centraal: the Stationsplein and the
+	 * Jaarbeursplein, both at the hall's level): a broad stair up from the square, {@link #PLATEAU_STAIR} columns, then the
+	 * hall's floor inside its glass end wall, the unpaid end before the gate line, with ticket machines and a lift down to the
+	 * square.
+	 */
+	public static final int REAL_STREET_WIDTH = 18;
+
+	/**
+	 * Columns before a real station's hall floor at each end: a landing on the square, then the broad stair up, one step a
+	 * column, to the floor.
+	 */
+	public static final int PLATEAU_STAIR = STAIR_STEPS + 1;
+
+	/** Columns of the street entrance of this spec. */
+	public static int streetWidth(StationSpec spec) {
+		return spec.real() != RealStation.NONE ? REAL_STREET_WIDTH : STREET_WIDTH;
+	}
 
 	/**
 	 * A through station with a footbridge but no building, whose outermost bands are both tracks (island platforms), gets a

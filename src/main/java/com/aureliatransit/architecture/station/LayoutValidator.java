@@ -611,6 +611,12 @@ public final class LayoutValidator {
 			final List<Violation> found = new ArrayList<>();
 			for (final Map.Entry<Long, TreeMap<Integer, PlannedBlock>> entry : lines.entrySet()) {
 				final TreeMap<Integer, PlannedBlock> line = entry.getValue();
+				// a real station's hall floor is one slab over the whole site: an opening in it (a flight, a lift) is framed by
+				// the rows either side, so each row is carried from wall to wall
+				if (plan.spec().real() != RealStation.NONE) {
+					checkDeckRun(found, line.firstEntry().getValue(), line.firstKey(), line.lastKey());
+					continue;
+				}
 				int runStart = Integer.MIN_VALUE;
 				int previous = Integer.MIN_VALUE;
 				for (final int u : line.keySet()) {
@@ -655,6 +661,10 @@ public final class LayoutValidator {
 					piers.add(0, uStart - 1);
 					break;
 				}
+			}
+			// and a wall rising through the slab just past its end (a lift shaft beside a real station's floor) carries that end
+			if (has(uEnd + 1, y, v, Role.WALL) && has(uEnd + 1, y - 1, v, Role.WALL)) {
+				piers.add(uEnd + 1);
 			}
 			if (piers.isEmpty()) {
 				found.add(new Violation(Violation.Kind.ROOF_SPAN, uStart, y, v,

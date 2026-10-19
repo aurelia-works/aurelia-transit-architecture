@@ -51,6 +51,7 @@ abstract class PlanBridges extends PlanConcourse {
 		final int to = site.deckTo();
 		final int wallLo = vB - bridgeWall();
 		final int wallHi = vB + bridgeWall();
+		final boolean hall = spec.real() != RealStation.NONE;
 		// keep the stair corridors and landings clear before the deck and walls go up
 		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 			for (final StationLayout.Flight flight : site.flights(band)) {
@@ -80,62 +81,77 @@ abstract class PlanBridges extends PlanConcourse {
 				}
 			}
 		}
-		// corridor walls (glass, facing outwards); each wall opens where a flight leaves through it
-		for (int u = from; u <= to; u++) {
-			boolean exitLo = false;
-			boolean exitHi = false;
-			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-				if (u < band.uMin() || u > band.uMax()) {
-					continue;
+		// a real station's hall builds its own walls and roof, and its flights open in its floor (see realHall)
+		if (!hall) {
+			// corridor walls (glass, facing outwards); each wall opens where a flight leaves through it
+			for (int u = from; u <= to; u++) {
+				boolean exitLo = false;
+				boolean exitHi = false;
+				for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+					if (u < band.uMin() || u > band.uMax()) {
+						continue;
+					}
+					for (final StationLayout.Flight flight : site.flights(band)) {
+						if (opening(band, flight).contains(u)) {
+							exitLo |= flight.wallV() == wallLo;
+							exitHi |= flight.wallV() == wallHi;
+						}
+					}
 				}
-				for (final StationLayout.Flight flight : site.flights(band)) {
-					if (opening(band, flight).contains(u)) {
-						exitLo |= flight.wallV() == wallLo;
-						exitHi |= flight.wallV() == wallHi;
+				for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
+					final boolean low = y <= StationGeometry.UPPER_WALK_Y + 1;
+					if (!(low && exitLo)) {
+						put(Role.WINDOW, u, y, wallLo, LocalDir.MINUS_V, b.bridgeWall());
+					}
+					if (!(low && exitHi)) {
+						put(Role.WINDOW, u, y, wallHi, LocalDir.PLUS_V, b.bridgeWall());
 					}
 				}
 			}
-			for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
-				final boolean low = y <= StationGeometry.UPPER_WALK_Y + 1;
-				if (!(low && exitLo)) {
-					put(Role.WINDOW, u, y, wallLo, LocalDir.MINUS_V, b.bridgeWall());
+			// glass across the corridor's open ends (the building closes its own end)
+			for (final int u : site.building() ? new int[]{to} : new int[]{from, to}) {
+				for (int v = wallLo + 1; v < wallHi; v++) {
+					for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
+						put(Role.WINDOW, u, y, v, u == to ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bridgeWall());
+					}
 				}
-				if (!(low && exitHi)) {
-					put(Role.WINDOW, u, y, wallHi, LocalDir.PLUS_V, b.bridgeWall());
+			}
+			// roof over the corridor and the stairs
+			for (int u = from; u <= to; u++) {
+				for (int v = wallLo; v <= wallHi; v++) {
+					if ((u + v) % 4 == 0) {
+						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeLight());
+					} else {
+						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeRoof());
+					}
+				}
+			}
+			// each flight glazed (or walled) and roofed like the corridor it leaves
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					if (roof(band) == RoofType.CANOPY) {
+						stairShaft(band, flight, b);
+					} else {
+						stairHood(band, flight, b);
+					}
 				}
 			}
 		}
-		// glass across the corridor's open ends (the building closes its own end)
-		for (final int u : site.building() ? new int[]{to} : new int[]{from, to}) {
-			for (int v = wallLo + 1; v < wallHi; v++) {
-				for (int y = StationGeometry.UPPER_WALK_Y; y <= StationGeometry.BUILDING_ROOF_Y - 1; y++) {
-					put(Role.WINDOW, u, y, v, u == to ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bridgeWall());
-				}
-			}
-		}
-		// roof over the corridor and the stairs
-		for (int u = from; u <= to; u++) {
-			for (int v = wallLo; v <= wallHi; v++) {
-				if ((u + v) % 4 == 0) {
-					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeLight());
-				} else {
-					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, b.bridgeRoof());
-				}
-			}
-		}
-		// each flight glazed (or walled) and roofed like the corridor it leaves
-		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-			for (final StationLayout.Flight flight : site.flights(band)) {
-				if (roof(band) == RoofType.CANOPY) {
-					stairShaft(band, flight, b);
-				} else {
-					stairHood(band, flight, b);
+		if (hall) {
+			// under a hall the flights go down through openings in its floor: glass on both flanks from the platform up to
+			// the floor (never on a boarding edge); round the openings above it, see hallOpenings
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				for (final StationLayout.Flight flight : site.flights(band)) {
+					hallFlanks(band, flight, b);
 				}
 			}
 		}
 		// piers on every platform at the bridge line, up to the deck: down the middle, or evenly spaced on a platform too wide
-		// for the deck to overhang one
+		// for the deck to overhang one (a real station's floor rests on the walls under its ends instead, see plateaus)
 		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+			if (site.plateau(band)) {
+				continue;
+			}
 			for (final int uPier : bridgePierLines(band)) {
 				for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 					put(Role.BRIDGE_PIER, uPier, y, vB, LocalDir.PLUS_V, b.pier());
@@ -145,6 +161,24 @@ abstract class PlanBridges extends PlanConcourse {
 					if (freeColumn(uPier, StationGeometry.WALK_Y, StationGeometry.UPPER_FLOOR_Y - 1, vEdge)) {
 						for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
 							put(Role.BRIDGE_PIER, uPier, y, vEdge, LocalDir.PLUS_V, b.pier());
+						}
+					}
+				}
+			}
+		}
+		// a hall's floor is carried on more rows of piers than its middle one: out to its walls, wherever the platform is free
+		for (final int vRow : pierRows()) {
+			if (vRow == vB) {
+				continue;
+			}
+			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
+				if (site.plateau(band)) {
+					continue;
+				}
+				for (final int uPier : bridgePierLines(band)) {
+					if (freeColumn(uPier, StationGeometry.WALK_Y, StationGeometry.UPPER_FLOOR_Y - 1, vRow)) {
+						for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+							put(Role.BRIDGE_PIER, uPier, y, vRow, LocalDir.PLUS_V, b.pier());
 						}
 					}
 				}
@@ -213,11 +247,104 @@ abstract class PlanBridges extends PlanConcourse {
 				}
 			}
 		}
-		// six-foot piers where the deck span between supports exceeds 12
+		// six-foot piers where the deck span between supports exceeds 12, on every pier row
+		for (final int vRow : pierRows()) {
+			sixFootPiers(from, to, vRow, b);
+		}
+		if (hall) {
+			plateaus(from, to, wallLo, wallHi);
+			realHall(from, to, wallLo, wallHi);
+		}
+	}
+
+	/** The solid block under a real station's broad stairs, their side walls and the walls closing the space under its floor. */
+	static final String PLATEAU_WALL = ata("metro_pale_concrete");
+
+	/**
+	 * The ends of a real station's hall (Utrecht Centraal: the Stationsplein and the Jaarbeursplein are at the hall's level,
+	 * with a broad stair down to the street): from the square a broad stair up to an opening in the hall's glass end wall, on
+	 * solid ground, with a side wall and a rail each side; the space under the hall's floor walled in from the square and the
+	 * track, so nothing is left at track level beside the tracks; and a lobby off the square for the lift up to the hall.
+	 */
+	void plateaus(int from, int to, int wallLo, int wallHi) {
+		final StylePalette.Building b = palette.building();
+		final int vB = site.bridgeV();
+		final int half = StationLayout.PLATEAU_STAIR_HALF;
+		final int floor = StationGeometry.UPPER_FLOOR_Y;
+		for (final TrackLayout.PlatformBand band : site.streets()) {
+			final boolean west = band.equals(site.street());
+			// the hall's end wall column, the way out to the square, and the column against the track
+			final int edge = west ? from : to;
+			final int out = west ? -1 : 1;
+			final int track = west ? band.uMax() : band.uMin();
+			final LocalDir up = west ? LocalDir.PLUS_U : LocalDir.MINUS_U;
+			// the opening in the end wall the stair arrives at, three high
+			for (int v = vB - half; v <= vB + half; v++) {
+				for (int y = StationGeometry.UPPER_WALK_Y; y < StationGeometry.UPPER_WALK_Y + 3; y++) {
+					keepClear(edge, y, v);
+				}
+			}
+			// step k at the k-th column out from the wall, k high, solid underneath; a side wall up to each step with a rail on it
+			for (int k = 1; k <= StationGeometry.STAIR_STEPS; k++) {
+				final int u = edge + out * (StationGeometry.STAIR_STEPS + 1 - k);
+				for (int v = vB - half - 1; v <= vB + half + 1; v++) {
+					final boolean side = Math.abs(v - vB) > half;
+					for (int y = StationGeometry.WALK_Y; y < (side ? k + 1 : k); y++) {
+						put(Role.WALL, u, y, v, up, PLATEAU_WALL);
+					}
+					if (side) {
+						put(Role.RAILING, u, k + 1, v, v < vB ? LocalDir.MINUS_V : LocalDir.PLUS_V);
+					} else {
+						put(Role.STAIR, u, k, v, up, b.stair());
+					}
+				}
+			}
+			// under the floor: walled from the square and from the track, and across at the long walls
+			for (int y = StationGeometry.WALK_Y; y < floor; y++) {
+				for (int v = wallLo; v <= wallHi; v++) {
+					put(Role.WALL, edge, y, v, up.opposite(), PLATEAU_WALL);
+					put(Role.WALL, track, y, v, up, PLATEAU_WALL);
+				}
+				for (int u = Math.min(edge, track) + 1; u < Math.max(edge, track); u++) {
+					put(Role.WALL, u, y, wallLo, LocalDir.MINUS_V, PLATEAU_WALL);
+					put(Role.WALL, u, y, wallHi, LocalDir.PLUS_V, PLATEAU_WALL);
+				}
+			}
+			// the lift's lobby, three high, closed on its inner side, towards the stair and overhead
+			final StationLayout.Lift lift = site.plateauLift(band);
+			final int row = lift.doorV() - 1;
+			final int inner = west ? lift.c0() + 2 : lift.c0() - 1;
+			for (int y = StationGeometry.WALK_Y; y < floor; y++) {
+				put(Role.WALL, inner, y, row, up, PLATEAU_WALL);
+				for (final int c : new int[]{edge, lift.c0(), lift.c0() + 1}) {
+					put(Role.WALL, c, y, row - 1, LocalDir.MINUS_V, PLATEAU_WALL);
+					if (y > StationGeometry.WALK_Y + 2) {
+						put(Role.WALL, c, y, row, LocalDir.PLUS_V, PLATEAU_WALL);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Piers between the tracks on row {@code vRow} where the deck span between its supports (the deck's ends and the piers
+	 * on the platforms) exceeds 12. On the bridge line every column is planned; on a hall's other rows only free ones.
+	 */
+	void sixFootPiers(int from, int to, int vRow, StylePalette.Building b) {
+		final boolean line = vRow == site.bridgeV();
 		final List<Integer> supports = new ArrayList<>();
 		supports.add(from);
 		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-			supports.addAll(bridgePierLines(band));
+			if (site.plateau(band)) {
+				// the wall under the floor along the track
+				supports.add(band.equals(site.street()) ? band.uMax() : band.uMin());
+				continue;
+			}
+			for (final int u : bridgePierLines(band)) {
+				if (line || has(u, StationGeometry.UPPER_FLOOR_Y - 1, vRow, Role.BRIDGE_PIER)) {
+					supports.add(u);
+				}
+			}
 		}
 		supports.add(to);
 		supports.sort(Comparator.naturalOrder());
@@ -229,7 +356,7 @@ abstract class PlanBridges extends PlanConcourse {
 				// would leave both halves too long)
 				int pierU = -1;
 				for (int u = Math.min(a + StationGeometry.MAX_BEAM_SPAN, b2 - 1); u > a && pierU < 0; u--) {
-					if (nearestFreeColumn(u) == u) {
+					if (nearestFreeColumn(u, vRow) == u && (line || freeColumn(u, 0, StationGeometry.UPPER_FLOOR_Y - 1, vRow))) {
 						pierU = u;
 					}
 				}
@@ -237,10 +364,192 @@ abstract class PlanBridges extends PlanConcourse {
 					break;
 				}
 				for (int y = 0; y < StationGeometry.UPPER_FLOOR_Y; y++) {
-					put(Role.BRIDGE_PIER, pierU, y, vB, LocalDir.PLUS_V, b.pier());
+					put(Role.BRIDGE_PIER, pierU, y, vRow, LocalDir.PLUS_V, b.pier());
 				}
-				extraSupport.add(new Box(pierU, -1, vB, pierU, -1, vB));
+				extraSupport.add(new Box(pierU, -1, vRow, pierU, -1, vRow));
 				a = pierU;
+			}
+		}
+	}
+
+	boolean has(int u, int y, int v, Role role) {
+		final PlannedBlock block = at(u, y, v);
+		return block != null && block.role() == role;
+	}
+
+	/** Rows a hall's piers keep from its middle: clear of the flights, their landings and the way off them. */
+	static final int HALL_CLEAR = 16;
+	/** Rows between a hall's pier rows; every other one carries a column up to the roof as well. */
+	static final int HALL_BAY = 12;
+	/** Rows of the public passage along a hall's low wall, open from street to street without gates. */
+	static final int HALL_PASSAGE = 6;
+	/** Gates either side of a gate bank's middle. */
+	static final int HALL_GATES = 6;
+	/** Rows from a hall's middle to its ticket machines and name signs: past the flights' openings in the floor. */
+	static final int HALL_FITTINGS = 12;
+	/** Height of a hall's eaves over its floor. */
+	static final int HALL_EAVES = 9;
+	/** Columns between a hall roof's light strips. */
+	static final int HALL_LIGHTS = 6;
+	static final String HALL_ROOF = ata("utrecht_wave_roof_panel");
+	static final String HALL_RISER = ata("metro_steel_cladding");
+	static final String HALL_LIGHT = ata("canopy_light");
+	static final String HALL_GLASS = ata("utrecht_hall_glass_facade");
+	static final String HALL_SHAFT = ata("steel_column_round");
+	static final String HALL_CROWN = ata("utrecht_tree_column_white");
+
+	/** Rows of piers under the deck: the bridge line, and under a real station's hall every HALL_BAY rows out to its walls. */
+	List<Integer> pierRows() {
+		final List<Integer> rows = new ArrayList<>();
+		rows.add(site.bridgeV());
+		if (spec.real() != RealStation.NONE) {
+			final int vB = site.bridgeV();
+			for (int k = HALL_CLEAR; k < bridgeWall() - 1; k += HALL_BAY) {
+				rows.add(vB - k);
+				rows.add(vB + k);
+			}
+			// and one inside each wall, so the floor's edge is carried
+			rows.add(vB - bridgeWall() + 1);
+			rows.add(vB + bridgeWall() - 1);
+		}
+		return rows;
+	}
+
+	/**
+	 * A real station's hall, on the deck that spans the whole site at the bridge line (Utrecht Centraal: one hall over all the
+	 * tracks, reached from the street at both ends). Glass walls all round; the roof's waves across the tracks, the middle
+	 * one highest, with light strips under it; white tree columns up to it on the platforms' pier lines; glass round every
+	 * opening in the floor where the flights go down; gate lines just inside each street end, with a bank at the way up from
+	 * the street and glass along the rest; a public passage along the low wall from street to street, fenced from the paid
+	 * area and gateless; ticket machines and the station's name in the unpaid ends.
+	 */
+	void realHall(int from, int to, int wallLo, int wallHi) {
+		final int vB = site.bridgeV();
+		final int floor = StationGeometry.UPPER_WALK_Y;
+		final int[] surface = spec.real().roofProfile(to - from, floor + HALL_EAVES);
+		// full blocks under each step up, meeting the lower neighbour's top, so the shell is closed
+		final int[] low = steps(surface, true);
+		for (int u = from; u <= to; u++) {
+			final int i = u - from;
+			for (int v = wallLo; v <= wallHi; v++) {
+				for (int y = low[i]; y < surface[i]; y++) {
+					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, HALL_RISER);
+				}
+				final boolean light = i % HALL_LIGHTS == HALL_LIGHTS / 2 && v > wallLo && v < wallHi && Math.floorMod(v - vB, 4) == 0;
+				put(Role.BUILDING_ROOF, u, surface[i], v, LocalDir.PLUS_V, light ? HALL_LIGHT : HALL_ROOF);
+			}
+			// the long walls, glass up to the roof
+			for (int y = floor; y < low[i]; y++) {
+				put(Role.WINDOW, u, y, wallLo, LocalDir.MINUS_V, HALL_GLASS);
+				put(Role.WINDOW, u, y, wallHi, LocalDir.PLUS_V, HALL_GLASS);
+			}
+		}
+		// the street ends, glass up to the roof
+		for (final int u : new int[]{from, to}) {
+			for (int v = wallLo + 1; v < wallHi; v++) {
+				for (int y = floor; y < low[u - from]; y++) {
+					put(Role.WINDOW, u, y, v, u == to ? LocalDir.PLUS_U : LocalDir.MINUS_U, HALL_GLASS);
+				}
+			}
+		}
+		// tree columns on every other pier row, over the piers on the platforms
+		for (int k = HALL_CLEAR + HALL_BAY; k < bridgeWall() - 1; k += 2 * HALL_BAY) {
+			for (final int v : new int[]{vB - k, vB + k}) {
+				for (final TrackLayout.PlatformBand band : layout.platforms()) {
+					for (final int u : bridgePierLines(band)) {
+						final int crown = low[u - from] - 1;
+						if (has(u, StationGeometry.UPPER_FLOOR_Y - 1, v, Role.BRIDGE_PIER) && freeColumn(u, floor, crown, v)) {
+							for (int y = floor; y < crown; y++) {
+								put(Role.BRIDGE_PIER, u, y, v, LocalDir.PLUS_V, HALL_SHAFT);
+							}
+							put(Role.BRIDGE_PIER, u, crown, v, LocalDir.PLUS_V, HALL_CROWN);
+						}
+					}
+				}
+			}
+		}
+		hallOpenings(from, to, wallLo, wallHi);
+		// gate lines just inside each street end: a bank at the way up from the street, glass along the rest (green towards
+		// the street, where people come in); the passage along the low wall stays open
+		final int fence = wallLo + HALL_PASSAGE + 1;
+		final int gateLo = site.street().uMax() + 1;
+		final int gateHi = site.farStreet().uMin() - 1;
+		for (final int u : new int[]{gateLo, gateHi}) {
+			final LocalDir green = u == gateLo ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+			for (int v = fence; v < wallHi; v++) {
+				final int d = v - vB;
+				if (Math.abs(d) <= HALL_GATES) {
+					final String kind = Math.abs(d) == HALL_GATES ? "kind=end" : d % 4 == 0 ? "kind=wide" : "kind=gate";
+					put(Role.GATE, u, floor, v, green, palette.blockId(Role.GATE), kind);
+				} else {
+					put(Role.BARRIER, u, floor, v, LocalDir.PLUS_U);
+				}
+			}
+		}
+		for (int u = gateLo + 1; u < gateHi; u++) {
+			put(Role.BARRIER, u, floor, fence, LocalDir.PLUS_V);
+		}
+		// ticket machines along each end wall, either side of the way up from the street, and the station's name facing the
+		// street by each gate line: past the openings in the floor and inside the walls even in the shallowest hall
+		for (final int side : new int[]{-1, 1}) {
+			for (int i = 0; i < 3; i++) {
+				final int v = vB + side * (HALL_FITTINGS + i);
+				if (v > wallLo && v < wallHi) {
+					tallFixture(from + 1, floor, v, LocalDir.PLUS_U, "mtr:ticket_machine");
+					tallFixture(to - 1, floor, v, LocalDir.MINUS_U, "mtr:ticket_machine");
+				}
+			}
+		}
+		if (!spec.name().isEmpty()) {
+			for (int i = 0; i < 3 && vB + HALL_FITTINGS + i < wallHi; i++) {
+				put(Role.NAME_SIGN, gateLo - 1, floor, vB + HALL_FITTINGS + i, LocalDir.MINUS_U);
+				put(Role.NAME_SIGN, gateHi + 1, floor, vB + HALL_FITTINGS + i, LocalDir.PLUS_U);
+			}
+		}
+	}
+
+	/** Glass on both flanks of a flight under a hall's floor, from its top step to its foot, where the flank is on the platform. */
+	void hallFlanks(TrackLayout.PlatformBand band, StationLayout.Flight flight, StylePalette.Building b) {
+		final List<Integer> open = opening(band, flight);
+		final int top = flight.stepV(StationGeometry.STAIR_STEPS);
+		final int foot = flight.stepV(1);
+		for (final int u : new int[]{open.get(0) - 1, open.get(open.size() - 1) + 1}) {
+			if (u < band.uMin() || u > band.uMax() || isEdge(band, u)) {
+				continue;
+			}
+			final LocalDir out = u < open.get(0) ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+			for (int v = top; v != foot + flight.side(); v += flight.side()) {
+				for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+					put(Role.WINDOW, u, y, v, out, b.bridgeWall());
+				}
+			}
+		}
+	}
+
+	/**
+	 * Glass round every opening in a hall's floor, on the floor's edge: where a flight goes down, the way onto its top step
+	 * (a step one below the floor, straight ahead along the tracks) stays open.
+	 */
+	void hallOpenings(int from, int to, int wallLo, int wallHi) {
+		final int deck = StationGeometry.UPPER_FLOOR_Y;
+		for (int u = from + 1; u < to; u++) {
+			for (int v = wallLo + 1; v < wallHi; v++) {
+				if (!has(u, deck, v, Role.BRIDGE_DECK)) {
+					continue;
+				}
+				for (final int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+					final int nu = u + d[0];
+					final int nv = v + d[1];
+					if (!cleared(nu, deck, nv)) {
+						continue;
+					}
+					final PlannedBlock step = at(nu, deck - 1, nv);
+					if (d[0] == 0 && step != null && (step.role() == Role.STAIR || step.role() == Role.ESCALATOR)) {
+						continue;
+					}
+					put(Role.BARRIER, u, StationGeometry.UPPER_WALK_Y, v, d[0] == 0 ? LocalDir.PLUS_V : LocalDir.PLUS_U);
+					break;
+				}
 			}
 		}
 	}
@@ -257,6 +566,11 @@ abstract class PlanBridges extends PlanConcourse {
 
 	/** A free column near u0 at the bridge line that is not inside any track envelope or on a boarding edge; -1 if none nearby. */
 	int nearestFreeColumn(int u0) {
+		return nearestFreeColumn(u0, site.bridgeV());
+	}
+
+	/** {@link #nearestFreeColumn(int)} on row v. */
+	int nearestFreeColumn(int u0, int v) {
 		for (int d = 0; d <= 6; d++) {
 			for (final int u : new int[]{u0 - d, u0 + d}) {
 				if (u < 0 || u >= layout.width()) {
@@ -269,7 +583,7 @@ abstract class PlanBridges extends PlanConcourse {
 						break;
 					}
 				}
-				if (!envelope && !onEdge(u) && !taken(u, 1, site.bridgeV())) {
+				if (!envelope && !onEdge(u) && !taken(u, 1, v)) {
 					return u;
 				}
 				if (d == 0) {

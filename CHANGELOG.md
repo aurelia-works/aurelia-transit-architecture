@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Station generator
+
+- **Real stations, starting with Utrecht Centraal:** `utrecht centraal` builds the real station from published facts. It has one closed hall over its 8 island platforms (16 tracks), 127 blocks deep (85 m) and up to y 27 (18 m). The roof has three waves, the middle one the highest, and the hall has glass walls, white tree columns, ticket machines, signs hung from the roof, and a gate line at each end. Each end of the hall is entered from its square by a broad stair and a lift; nothing is walkable at track level beside the tracks. Under the hall the platforms have its floor overhead, with no canopy girders. Outside it there are plain steel canopies; the station is NS-operated and has escalators. Shorter platforms get a shallower hall, with a warning. Words that contradict the real station (terminus, station building, mezzanine, side platforms) are dropped, each with a warning. Sources and simplifications: `docs/REAL_STATIONS.md`.
+- **Presets:** "Utrecht" is now "Utrecht Centraal", the real station; the earlier modern look is the new "Modern" preset.
+- **No lift or stair to nowhere:** a test walks every preset and common station from outside the way a passenger would; every lift must open at two levels someone reaches, every stair and escalator must be walked from foot to top, and every platform must be reached.
+
 ## 1.6.0
 
 ### Passenger experience

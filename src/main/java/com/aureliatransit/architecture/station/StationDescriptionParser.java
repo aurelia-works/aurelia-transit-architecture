@@ -50,6 +50,8 @@ public final class StationDescriptionParser {
 
 	private static final Pattern QUOTED_NAME = Pattern.compile("(?i)\\b(?:named|called|name)\\s*\"([^\"]*)\"");
 	private static final Pattern QUOTED = Pattern.compile("\"([^\"]*)\"");
+	/** Platform length a real station is built at when the words give none: its hall and canopies past both ends. */
+	static final int REAL_LENGTH = 240;
 	private static final Pattern BARE_NAME = Pattern.compile("(?i)\\b(?:named|called)\\s+([^,.;\"]+)");
 	private static final Pattern NAME_STOP = Pattern.compile("(?i)\\s+\\b(?:with|and|having|style|styled|in|using)\\b.*$");
 	/** One platform of a platform list: "platform 2: island 12 wide 120 long open;" (Station Studio writes these). */
@@ -233,6 +235,9 @@ public final class StationDescriptionParser {
 		private Boolean tactile;
 		private TrackBed trackBed;
 		private Operator operator;
+		/** The real station named ("utrecht centraal"), or null. */
+		private RealStation real;
+		private int realAt = -1;
 		private boolean escalators;
 		private boolean bothWays;
 		private boolean enclosedStairs;
@@ -1226,6 +1231,19 @@ public final class StationDescriptionParser {
 
 		/** Landmarks, city looks, building and footbridge words; true if the token was used here. */
 		private boolean buildingWord(int i, String token) {
+			final RealStation named = RealStation.of(token + " " + at(i + 1));
+			if (named != null) {
+				if (real == null) {
+					real = named;
+					realAt = i;
+					note(i, "the real " + named.label() + ": its hall over the tracks, " + named.islands() + " island platforms and "
+							+ named.operator().name() + " signs");
+				} else if (real != named) {
+					warn("two real stations given; the first (" + real.label() + ") is built");
+				}
+				use(i, i + 1);
+				return true;
+			}
 			if (token.equals("grand") && at(i + 1).equals("central") || token.equals("union") && at(i + 1).equals("station")
 					|| token.equals("30th") && at(i + 1).equals("street")) {
 				setBuildingStyle(BuildingStyle.BEAUX_ARTS);
@@ -1579,7 +1597,73 @@ public final class StationDescriptionParser {
 			return n;
 		}
 
+		/**
+		 * A real station fixes what it really is: a through station with no building beside the tracks, its own platforms (unless
+		 * the words count the tracks or list the platforms), escalators, its operator and name, Dutch platforms. Words that
+		 * contradict it are dropped with a warning; words it leaves open (length, width, seed) still apply.
+		 */
+		private void applyReal() {
+			if (real == null) {
+				return;
+			}
+			final String who = real.label();
+			if (terminus || hub) {
+				warn(who + " is a through station; the terminus is left out");
+				terminus = false;
+				hub = false;
+			}
+			if (Boolean.TRUE.equals(building) || buildingStyle != null || !looks.isEmpty()) {
+				warn(who + " has its hall over the tracks, not a building beside them; the building words are left out");
+			}
+			building = false;
+			buildingStyle = null;
+			looks.clear();
+			lookOnlyWord = null;
+			if (mezzanine) {
+				warn(who + "'s hall is its concourse; the mezzanine is left out");
+				mezzanine = false;
+			}
+			if (Boolean.FALSE.equals(footbridge)) {
+				warn(who + "'s platforms are reached from its hall over the tracks; \"no footbridge\" is left out");
+			}
+			footbridge = true;
+			if (roof == RoofType.HALL) {
+				warn(who + " has its hall over the middle of the platforms and canopies past it; the train shed is left out");
+				roof = null;
+			}
+			if (listed.isEmpty() && tracks == null && islandPlatforms == null) {
+				for (int number = 1; number <= real.islands(); number++) {
+					listed.put(number, PlatformSpec.of(PlatformSpec.Kind.ISLAND));
+				}
+				note(realAt, real.islands() + " island platforms, " + real.tracks() + " tracks (as at " + who + ")");
+			} else {
+				note(realAt, who + " has " + real.islands() + " island platforms; building the ones asked for");
+			}
+			if (sidePlatforms) {
+				warn(who + " has island platforms only; the side platforms are left out");
+				sidePlatforms = false;
+			}
+			if (length == null && lengthAdjective == null && listed.values().stream().allMatch(p -> p.length() == 0)) {
+				length = REAL_LENGTH;
+				note(realAt, "length " + REAL_LENGTH + " (the real platforms are longer; " + REAL_LENGTH + " keeps the build to a size a PC can take)");
+			}
+			if (!escalators) {
+				escalators = true;
+				note(realAt, "escalators beside the stairs (as at " + who + ")");
+			}
+			if (operator == null) {
+				operator = real.operator();
+			}
+			if (style == null) {
+				style = StationStyle.DUTCH;
+			}
+			if (name.isEmpty()) {
+				name = who;
+			}
+		}
+
 		private StationSpec resolve(boolean blank) {
+			applyReal();
 			final StationSpec.Builder builder = StationSpec.builder();
 			if (blank) {
 				defaulted.add("no description: using defaults");
@@ -1667,6 +1751,10 @@ public final class StationDescriptionParser {
 			} else if (sidePlatforms) {
 				layout = PlatformLayout.SIDE;
 				note(sideAt, "side platforms");
+			} else if (real != null && trackCount >= 2) {
+				// a real station's platforms are what they really are, whatever the track count
+				layout = PlatformLayout.ISLAND;
+				defaulted.add("island platforms (as at " + real.label() + ")");
 			} else {
 				layout = trackCount <= 2 ? PlatformLayout.SIDE : PlatformLayout.ISLAND;
 				defaulted.add((layout == PlatformLayout.SIDE ? "side" : "island") + " platforms (default for " + trackCount
@@ -1994,6 +2082,23 @@ public final class StationDescriptionParser {
 				builder.shed(shed != null ? shed : swap ? (own == ShedShape.ARCH ? ShedShape.MULTI_ARCH : ShedShape.ARCH) : own);
 				if (swap) {
 					seeded.add(own == ShedShape.ARCH ? "a train shed of several arches" : "one arched train shed");
+				}
+			}
+			if (real != null) {
+				final StationSpec sized = builder.build();
+				final int depth = real.hallDepth(StationGeometry.builtLength(sized.platformLength()));
+				if (depth == 0) {
+					warn(real.label() + "'s hall needs platforms " + (RealStation.MIN_HALL_DEPTH + 2 * RealStation.HALL_MARGIN - 1)
+							+ " long or more; building plain platforms with a footbridge");
+				} else if (!RealStation.islandsOnly(sized)) {
+					warn(real.label() + " has island platforms only, two tracks each; building plain platforms with a footbridge");
+				} else {
+					builder.real(real);
+					final int full = real.hallDepth(real.fullLength());
+					if (depth < full) {
+						warn("the platforms are too short for " + real.label() + "'s hall at its real " + full + " blocks; it is " + depth
+								+ " deep (platforms " + (real.fullLength() - 1) + " long take all of it)");
+					}
 				}
 			}
 			builder.name(name);
