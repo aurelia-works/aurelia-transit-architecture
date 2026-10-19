@@ -22,7 +22,7 @@ MTR 4.0.5 addon, Minecraft 1.20.1 Fabric, Java. Read this file, then `HANDOFF.md
 ## Hard rules
 - No mixins and no MTR core changes. Where MTR lacks data, build the honest subset and say so.
 - Potato-PC contract: no per-tick block-entity work, no new server polling, bounded caches.
-- Generic designs only: no real operator branding or copyrighted looks.
+- Real stations, operator looks and logos are allowed (Jah, 2026-10-19). Use them in the Studio/generator freely.
 - Every new pure-logic class gets a unit test. Keep blockstates, models, lang, loot and recipes complete.
 - `main` = `release/1.6.0` until Jah approves 1.6.0 in game. Work on a branch; merge one branch at a time.
 - Unit tests in `src/test/java`, game tests via `runGametest`. Never claim a visual works unless you saw it.
