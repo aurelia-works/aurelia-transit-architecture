@@ -22,6 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Hosts Station Studio for this player: a local web page (on 127.0.0.1 only) with the station generator's controls, a 3D
@@ -30,6 +34,8 @@ import java.util.Optional;
  */
 public final class StationStudioClient {
 
+	/** How long the studio page waits for the game thread to take a design (a loading screen can hold it up). */
+	private static final long SEND_TIMEOUT_SECONDS = 10;
 	private static final Map<String, StationWrenchItem.Action> ACTIONS = Map.of("plan", StationWrenchItem.Action.PLAN, "build",
 			StationWrenchItem.Action.CONFIRM, "cancel", StationWrenchItem.Action.CANCEL, "undo", StationWrenchItem.Action.UNDO, "save",
 			StationWrenchItem.Action.SAVE);
@@ -127,17 +133,31 @@ public final class StationStudioClient {
 			return "Unknown action.";
 		}
 		final MinecraftClient client = MinecraftClient.getInstance();
-		if (client.player == null || client.getNetworkHandler() == null) {
-			return "Join a world first, then try again.";
-		}
+		// the player and the connection are the game thread's to read, so the web thread asks it and waits for the answer
+		final CompletableFuture<String> answer = new CompletableFuture<>();
 		client.execute(() -> {
-			if (client.player != null && ClientPlayNetworking.canSend(ModPackets.STATION_STUDIO)) {
+			if (client.player == null || client.getNetworkHandler() == null) {
+				answer.complete("Join a world first, then try again.");
+			} else if (ClientPlayNetworking.canSend(ModPackets.STATION_STUDIO)) {
 				ClientPlayNetworking.send(ModPackets.STATION_STUDIO, ModPackets.writeStationStudio(wanted, description, encoded));
-			} else if (client.player != null) {
+				answer.complete(sentAnswer(wanted));
+			} else {
 				client.player.sendMessage(Text.literal("This server does not have Aurelia Transit Architecture's Station Studio.")
 						.formatted(Formatting.RED), false);
+				answer.complete("This server does not have Station Studio.");
 			}
 		});
+		try {
+			return answer.get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			return "Interrupted; try again.";
+		} catch (ExecutionException | TimeoutException e) {
+			return "The game did not answer in time; try again.";
+		}
+	}
+
+	private static String sentAnswer(StationWrenchItem.Action wanted) {
 		return switch (wanted) {
 			case PLAN -> "Sent. The plan appears in front of you, facing the way you look; chat has the details.";
 			case CONFIRM -> "Sent. Building starts if the plan passed its checks; see chat.";
