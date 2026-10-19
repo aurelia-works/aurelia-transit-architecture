@@ -42,6 +42,8 @@ public final class StationDescriptionParser {
 	private static final Pattern NAME_STOP = Pattern.compile("(?i)\\s+\\b(?:with|and|having|style|styled|in|using)\\b.*$");
 	/** One platform of a platform list: "platform 2: island 12 wide 120 long open;" (Station Studio writes these). */
 	private static final Pattern PLATFORM_CLAUSE = Pattern.compile("(?i)\\bplatform\\s+(\\d{1,2})\\s*:\\s*([^;]*);?");
+	/** "seed k7f2ra": the generator seed, base 36 (Station Studio's dice), up to twelve letters and digits. */
+	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\s+([a-z0-9]{1,12})\\b");
 	private static final Pattern SEPARATORS = Pattern.compile("[-_/,.;:!?()\"]+");
 	private static final Pattern DIGITS_THEN_LETTERS = Pattern.compile("(\\d+)([a-z]+)");
 
@@ -217,6 +219,20 @@ public final class StationDescriptionParser {
 		/** The size came from a landmark (Grand Central is grand), so a size word said after it still wins. */
 		private boolean scaleFromLandmark;
 		private int scaleAt = -1;
+		private long seed;
+		private String seedText = "";
+		/** What the seed chose, for the understood list. */
+		private final List<String> seeded = new ArrayList<>();
+
+		/** One stream of the seed's dice per choice, so changing one choice's odds never moves the others. */
+		private java.util.SplittableRandom dice(int choice) {
+			return new java.util.SplittableRandom(seed * 0x9E3779B97F4A7C15L + choice);
+		}
+
+		@SafeVarargs
+		private static <T> T pick(java.util.SplittableRandom dice, T... choices) {
+			return choices[dice.nextInt(choices.length)];
+		}
 
 		ParseResult run(String description) {
 			String text = description;
@@ -226,6 +242,7 @@ public final class StationDescriptionParser {
 			}
 			text = extractPlatforms(text);
 			text = extractName(text);
+			text = extractSeed(text);
 			tokens = tokenize(text);
 			used = new boolean[tokens.length];
 			for (int i = 0; i < tokens.length; i++) {
@@ -309,6 +326,17 @@ public final class StationDescriptionParser {
 		// ---- name -------------------------------------------------------------------------------------------------------
 
 		/** Takes the station name out of the text so words inside it are never read as keywords. */
+		/** Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). */
+		private String extractSeed(String text) {
+			final Matcher matcher = SEED.matcher(text);
+			if (!matcher.find()) {
+				return text;
+			}
+			seed = Long.parseLong(matcher.group(1).toLowerCase(Locale.ROOT), 36);
+			seedText = matcher.group(1).toLowerCase(Locale.ROOT);
+			return text.substring(0, matcher.start()) + " " + text.substring(matcher.end());
+		}
+
 		private String extractName(String text) {
 			Matcher matcher = QUOTED_NAME.matcher(text);
 			if (!matcher.find()) {
@@ -1401,6 +1429,17 @@ public final class StationDescriptionParser {
 			}
 			if (surface != null) {
 				builder.surface(surface);
+			} else if (seed != 0 && dice(1).nextInt(5) < 3) {
+				// the seed picks a platform floor three times in five; the other two keep the style's own
+				final SurfaceMaterial floor = pick(dice(2), SurfaceMaterial.LIGHT_PAVING, SurfaceMaterial.DARK_PAVING, SurfaceMaterial.CONCRETE,
+						SurfaceMaterial.TERRAZZO, SurfaceMaterial.GRANITE);
+				builder.surface(floor);
+				seeded.add(floor.name().toLowerCase(Locale.ROOT).replace("_", " ") + " platforms");
+			}
+			if (roofMaterial == null && !roofNone && seed != 0 && dice(3).nextInt(2) == 0) {
+				final RoofMaterial deck = pick(dice(4), RoofMaterial.STEEL, RoofMaterial.GLASS, RoofMaterial.TIMBER);
+				builder.roofMaterial(deck);
+				seeded.add(deck.name().toLowerCase(Locale.ROOT) + " roof");
 			}
 			if (stepFree != null) {
 				builder.stepFree(stepFree);
@@ -1469,19 +1508,36 @@ public final class StationDescriptionParser {
 			}
 			if (roof != RoofType.HALL && !roofNone) {
 				final BuildingStyle look = wantsBuilding ? builder.build().building() : buildingStyle != null ? buildingStyle : BuildingStyle.NONE;
-				final CanopyShape shape = canopy != null ? canopy : CanopyShape.forLook(look, style != null ? style : StationStyle.MODERN);
+				final CanopyShape own = CanopyShape.forLook(look, style != null ? style : StationStyle.MODERN);
+				// the seed swaps the look's own canopy for another two times in five
+				final CanopyShape shape = canopy != null ? canopy : seed != 0 && dice(5).nextInt(5) < 2
+						? pick(dice(6), Arrays.stream(CanopyShape.values()).filter(c -> c != own).toArray(CanopyShape[]::new)) : own;
 				builder.canopy(shape);
-				if (canopy == null && shape != CanopyShape.FLAT) {
+				if (canopy == null && shape != own) {
+					seeded.add(shape.label() + " canopies");
+				} else if (canopy == null && shape != CanopyShape.FLAT) {
 					defaulted.add(shape.label() + " canopies (default for this look)");
 				}
 			} else if (canopy != null) {
 				warn("a canopy shape was given but the station has " + (roofNone ? "no roof" : "a train shed"));
 			}
 			if (roof == RoofType.HALL && !roofNone) {
-				builder.shed(shed != null ? shed : ShedShape.forLook(wantsBuilding ? builder.build().building() : BuildingStyle.NONE,
-						style != null ? style : StationStyle.MODERN));
+				final ShedShape own = ShedShape.forLook(wantsBuilding ? builder.build().building() : BuildingStyle.NONE,
+						style != null ? style : StationStyle.MODERN);
+				// one wide arch and a row of arches are both a city's barrel-vaulted shed, so the seed may swap them; a pointed
+				// (St Pancras) or flat shed is the look itself and stays
+				final boolean swap = shed == null && seed != 0 && (own == ShedShape.ARCH || own == ShedShape.MULTI_ARCH) && dice(7).nextInt(5) < 2;
+				builder.shed(shed != null ? shed : swap ? (own == ShedShape.ARCH ? ShedShape.MULTI_ARCH : ShedShape.ARCH) : own);
+				if (swap) {
+					seeded.add(own == ShedShape.ARCH ? "a train shed of several arches" : "one arched train shed");
+				}
 			}
 			builder.name(name);
+			if (seed != 0) {
+				builder.seed(seed);
+				understood.add(new Note(Integer.MAX_VALUE, "seed " + seedText + (seeded.isEmpty() ? ": benches and platform colours"
+						: ": " + String.join(", ", seeded) + ", benches and platform colours")));
+			}
 			return builder.build();
 		}
 	}

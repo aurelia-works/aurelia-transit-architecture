@@ -81,7 +81,9 @@ public final class StationStudioClient {
 
 	private static synchronized StudioServer start() throws IOException {
 		if (server == null) {
-			server = StudioServer.start(StationStudioClient::asset, StationStudioClient::send);
+			final net.minecraft.client.util.Session session = MinecraftClient.getInstance().getSession();
+			server = StudioServer.start(StationStudioClient::asset, StationStudioClient::send,
+					new StudioServer.Player(session.getUsername(), session.getUuid()));
 			AureliaTransitArchitecture.LOGGER.info("Station Studio at {}", server.url());
 		}
 		return server;

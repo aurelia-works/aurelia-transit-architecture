@@ -93,6 +93,11 @@ public final class StudioApi {
 		if (q.getOrDefault("trav", "").equals("1")) {
 			text = "travelators " + text;
 		}
+		// the dice's seed, in front so a long description never cuts it off
+		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
+		if (seed.matches("[a-z0-9]{1,12}")) {
+			text = "seed " + seed + " " + text;
+		}
 		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
 	}
@@ -195,6 +200,7 @@ public final class StudioApi {
 				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
+		out.append(",\"seed\":").append(Json.quote(spec.seed() == 0 ? "" : Long.toString(spec.seed(), 36)));
 		out.append(",\"encoded\":").append(Json.quote(recipe.encode()));
 		out.append(",\"typed\":").append(Json.quote(typed));
 		out.append(",\"understood\":").append(Json.strings(parse.understood()));

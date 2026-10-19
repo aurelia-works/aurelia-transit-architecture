@@ -34,6 +34,8 @@
 		for (const f of fields) {
 			q[f] = $(f).value;
 		}
+		// the generator seed: the dice's, or the one kept while Details is locked
+		q.seed = seeds.detail;
 		return q;
 	}
 
@@ -45,18 +47,23 @@
 			saved = null;
 		}
 		if (!saved) {
-			return;
+			return false;
+		}
+		if (saved.seeds) {
+			Object.assign(seeds, saved.seeds);
+			seeds.locks = Object.assign({}, saved.seeds.locks);
 		}
 		for (const f of fields) {
 			if (saved[f] !== undefined && $(f)) {
 				$(f).value = saved[f];
 			}
 		}
+		return true;
 	}
 
 	function remember() {
 		try {
-			localStorage.setItem(STORE, JSON.stringify(values()));
+			localStorage.setItem(STORE, JSON.stringify(Object.assign(values(), { seeds })));
 		} catch (e) {
 			// private window or storage blocked: the page still works, it just forgets
 		}
@@ -72,7 +79,13 @@
 		} else {
 			$("tracksOut").textContent = $("tracks").value + ($("tracks").value === "1" ? " track" : " tracks");
 		}
+		$("tracks").disabled = $("listOn").checked;
 		$("lengthOut").textContent = $("length").value + " blocks";
+		$("lengthNote").textContent = lengthNote(+$("length").value);
+		for (const id of ["tracks", "length", "cutAt"]) {
+			const r = $(id);
+			r.style.setProperty("--fill", ((r.value - r.min) / Math.max(1, r.max - r.min)) * 100 + "%");
+		}
 		$("count").textContent = $("text").value.length + " / " + options.maxTyped;
 		syncButtons();
 	}
@@ -168,22 +181,21 @@
 			synced.push(() => press(b, $("building").value === has && (has === "0" || $("size").value === size)));
 		}
 
-		// A hub needs an even number of tracks, at least 4 (two run through, the rest end), so it steps by two.
-		const hub = () => $("mode").value === "hub";
-		const lowest = () => hub() ? 4 : +$("tracks").min;
-		const step = (delta) => {
-			const t = $("tracks");
-			const next = Math.max(lowest(), Math.min(+t.max, +t.value + delta * (hub() ? 2 : 1)));
-			if (String(next) !== t.value) {
-				set("tracks", next);
-			}
-		};
-		$("tracksDown").addEventListener("click", () => step(-1));
-		$("tracksUp").addEventListener("click", () => step(1));
+		// A hub needs an even number of tracks, at least 4 (two run through, the rest end), so its slider steps by two from 4.
 		synced.push(() => {
-			$("tracksDown").disabled = +$("tracks").value <= lowest();
-			$("tracksUp").disabled = +$("tracks").value + (hub() ? 2 : 1) > +$("tracks").max;
+			const t = $("tracks");
+			const hub = $("mode").value === "hub";
+			// changing min before step re-snaps the value to the old step from the new min (6 became 7), so keep it across both
+			const value = t.value;
+			t.step = 1;
+			t.min = hub ? 4 : options.tracks[0];
+			t.step = hub ? 2 : 1;
+			t.value = value;
 		});
+		segmented("walls", "wallsSeg");
+		segmented("bed", "bedSeg");
+		$("travSwitch").addEventListener("click", () => set("trav", $("trav").value ? "" : "1"));
+		synced.push(() => $("travSwitch").setAttribute("aria-checked", String($("trav").value === "1")));
 
 		const presets = $("presets");
 		presets.innerHTML = "";
@@ -220,8 +232,39 @@
 	}
 
 	function showWhere() {
-		$("where").innerHTML = IN_GAME ? "Connected to <b>your game</b>" : "Design mode · not connected to a game";
+		$("where").innerHTML = IN_GAME ? "Connected to <b>your game</b>" : "Design mode, no game";
 		$("where").classList.toggle("live", IN_GAME);
+	}
+
+	/** The sidebar's player card and the version: the Minecraft name and face when the game opened the studio. */
+	function showProfile() {
+		const player = document.body.dataset.player;
+		const uuid = document.body.dataset.uuid;
+		const version = (document.body.dataset.version || "").replace(/^\{\{.*\}\}$/, "");
+		$("ver").textContent = version ? "v" + version.replace(/\+.*$/, "") : "dev";
+		const avatar = $("avatar");
+		if (player && !/^\{\{/.test(player)) {
+			$("mcName").textContent = player;
+			$("mcBadge").textContent = "In game";
+			$("mcBadge").classList.add("live");
+			avatar.textContent = player.charAt(0).toUpperCase();
+			if (/^[0-9a-f]{32}$/i.test(uuid)) {
+				// the player's face from their public skin; the initial stays when it does not load (offline)
+				const img = new Image();
+				img.onload = () => {
+					avatar.textContent = "";
+					avatar.style.backgroundImage = "url('" + img.src + "')";
+				};
+				img.src = "https://mc-heads.net/avatar/" + uuid + "/72";
+			}
+		} else {
+			avatar.innerHTML = "<svg viewBox='0 0 16 16' width='20' height='20'><rect x='3' y='2' width='10' height='9' rx='1' fill='none' stroke='currentColor' stroke-width='1.3'/><path d='M5 14h6M8 11v3' stroke='currentColor' stroke-width='1.3'/></svg>";
+		}
+	}
+
+	/** What the length slider sets: every boarding edge, one block a metre. */
+	function lengthNote(length) {
+		return "Every boarding edge is " + length + " m long";
 	}
 
 	let timer = 0;
@@ -381,6 +424,229 @@
 		renderPlats();
 	}
 
+	// ---- seed --------------------------------------------------------------------------------------------------------------
+	// One seed, two jobs. The page rolls every setting that is not locked from it (Look, Shape, Building), so typing a seed
+	// gives the same settings again; and it goes to the planner as the words "seed k7f2ra", which vary what the settings
+	// leave open (canopy profile, floors, roof material, platform colours, benches). Locking Details keeps the planner's seed
+	// while the rest re-rolls.
+
+	const SEED_CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+	const SEED_LENGTH = 6;
+	const seeds = { value: "", detail: "", edited: false, locks: {} };
+	let rolling = false;
+	const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+	function freshSeed() {
+		const bytes = new Uint32Array(SEED_LENGTH);
+		crypto.getRandomValues(bytes);
+		return Array.from(bytes, (n) => SEED_CHARS[n % SEED_CHARS.length]).join("");
+	}
+
+	/** A repeatable random stream for one part of the settings (xmur3 hash into mulberry32), so locking one never moves the others. */
+	function stream(seed, part) {
+		let h = 1779033703 ^ (seed + ":" + part).length;
+		for (const ch of seed + ":" + part) {
+			h = Math.imul(h ^ ch.charCodeAt(0), 3432918353);
+			h = (h << 13) | (h >>> 19);
+		}
+		let a = h >>> 0;
+		return () => {
+			a = (a + 0x6D2B79F5) >>> 0;
+			let t = a;
+			t = Math.imul(t ^ (t >>> 15), t | 1);
+			t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+			return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+		};
+	}
+
+	const choose = (rand, list) => list[Math.floor(rand() * list.length)];
+	const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+	/** Sets every unlocked setting from the seed. Writes the hidden selects directly; the caller plans once afterwards. */
+	function rollSettings(seed) {
+		if (!seeds.locks.look) {
+			const r = stream(seed, "look");
+			const cities = options.looks.map(([v]) => v).filter((v) => v !== "AUTO");
+			const look = choose(r, cities);
+			$("look").value = look;
+			$("mix").value = r() < 0.3 ? choose(r, cities.filter((v) => v !== look)) : "";
+		}
+		if (!seeds.locks.shape) {
+			const r = stream(seed, "shape");
+			const p = r();
+			const mode = p < 0.55 ? "through" : p < 0.85 ? "terminus" : "hub";
+			const [lo, hi] = options.tracks;
+			const tracks = mode === "hub" ? choose(r, [4, 6, 8]) : mode === "terminus" ? choose(r, [3, 4, 6, 8]) : choose(r, [1, 2, 2, 3, 4, 4, 6]);
+			const length = choose(r, mode === "through" ? [32, 48, 64, 64, 80, 96, 120] : [80, 96, 120, 140, 160]);
+			$("mode").value = mode;
+			// free the slider from a hub's 4-and-up, steps of two, before it takes the new count
+			$("tracks").step = 1;
+			$("tracks").min = lo;
+			$("tracks").value = clamp(tracks, lo, hi);
+			$("length").value = clamp(length, options.length[0], options.length[1]);
+			$("layout").value = mode === "hub" ? "AUTO" : tracks === 1 ? choose(r, ["AUTO", "SIDE"]) : choose(r, ["AUTO", "AUTO", "SIDE", "ISLAND"]);
+		}
+		if (!seeds.locks.building) {
+			const r = stream(seed, "building");
+			$("building").value = $("mode").value !== "through" || r() < 0.75 ? "1" : "0";
+			$("size").value = choose(r, options.sizes.map(([v]) => v));
+			$("roof").value = r() < 0.4 ? "AUTO" : choose(r, options.roofs.map(([v]) => v).filter((v) => v !== "AUTO" && v !== "OPEN"));
+			$("esc").value = choose(r, ["", "", "1", "reverse", "both"]);
+			$("walls").value = r() < 0.25 ? "1" : "";
+			$("trav").value = r() < 0.25 ? "1" : "";
+			$("bed").value = choose(r, ["", "gravel", "andesite"]);
+		}
+		if ($("listOn").checked && !seeds.locks.shape) {
+			rebuildPlats();
+		}
+	}
+
+	/** Rolls the settings from a seed and plans the station; the letters flip like a departure board while it builds. */
+	function applySeed(seed) {
+		seeds.value = seed;
+		if (!seeds.locks.details || !seeds.detail) {
+			seeds.detail = seed;
+		}
+		rolling = true;
+		rollSettings(seed);
+		rolling = false;
+		seeds.edited = false;
+		$("seed").value = seed;
+		flip(seed);
+		showSeed();
+		updateOutputs();
+		remember();
+		clearTimeout(timer);
+		generate();
+	}
+
+	function roll() {
+		applySeed(freshSeed());
+	}
+
+	function renderFlaps(text) {
+		const box = $("flaps");
+		if (box.children.length !== SEED_LENGTH) {
+			box.innerHTML = "";
+			for (let i = 0; i < SEED_LENGTH; i++) {
+				const cell = document.createElement("span");
+				cell.className = "flap";
+				box.append(cell);
+			}
+		}
+		[...box.children].forEach((cell, i) => {
+			cell.textContent = text[i] || "";
+			cell.classList.toggle("empty", !text[i]);
+		});
+	}
+
+	// each cell runs through a few letters before it lands, left to right, like a split-flap board settling
+	let flipping = [];
+	function flip(seed) {
+		flipping.forEach(clearTimeout);
+		flipping = [];
+		renderFlaps(seed);
+		if (reduceMotion()) {
+			return;
+		}
+		[...$("flaps").children].forEach((cell, i) => {
+			const turns = 3 + i * 2;
+			for (let k = 0; k <= turns; k++) {
+				flipping.push(setTimeout(() => {
+					cell.textContent = k === turns ? seed[i] : SEED_CHARS[Math.floor(Math.random() * SEED_CHARS.length)];
+					cell.classList.remove("turn");
+					void cell.offsetWidth;
+					cell.classList.add("turn");
+				}, k * 60));
+			}
+		});
+	}
+
+	function showSeed() {
+		$("seedBox").classList.toggle("edited", seeds.edited);
+		for (const b of document.querySelectorAll("[data-lock]")) {
+			b.setAttribute("aria-pressed", String(!!seeds.locks[b.dataset.lock]));
+		}
+		const note = $("seedNote");
+		note.classList.toggle("seed-note-edited", seeds.edited);
+		note.textContent = seeds.edited ? "Changed since the roll, so this seed alone no longer makes this station."
+			: seeds.locks.details && seeds.detail !== seeds.value ? "Details kept from seed " + seeds.detail + "."
+				: "The same seed makes the same station. Press R to roll.";
+	}
+
+	function setupSeed() {
+		const input = $("seed");
+		input.addEventListener("input", () => {
+			input.value = input.value.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, SEED_LENGTH);
+			renderFlaps(input.value);
+		});
+		const commit = () => {
+			if (input.value && input.value !== seeds.value) {
+				applySeed(input.value);
+			} else {
+				input.value = seeds.value;
+				renderFlaps(seeds.value);
+			}
+		};
+		input.addEventListener("change", commit);
+		input.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				commit();
+				input.blur();
+			} else if (e.key === "Escape") {
+				input.value = seeds.value;
+				renderFlaps(seeds.value);
+				input.blur();
+			}
+		});
+		$("roll").addEventListener("click", roll);
+		$("copySeed").addEventListener("click", () => copy(seeds.value, $("seedNote"), "Seed " + seeds.value + " copied."));
+		for (const b of document.querySelectorAll("[data-lock]")) {
+			b.addEventListener("click", () => {
+				seeds.locks[b.dataset.lock] = !seeds.locks[b.dataset.lock];
+				if (!seeds.locks.details) {
+					// unlocking Details brings the planner back to the seed on show
+					const was = seeds.detail;
+					seeds.detail = seeds.value;
+					if (was !== seeds.detail) {
+						changed();
+					}
+				}
+				showSeed();
+				remember();
+			});
+		}
+		document.addEventListener("keydown", (e) => {
+			const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
+			if (!typing && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "r" || e.key === "R")) {
+				e.preventDefault();
+				roll();
+			}
+		});
+		input.value = seeds.value;
+		renderFlaps(seeds.value);
+		showSeed();
+	}
+
+	/** Copies text and says so in the note for a moment. */
+	async function copy(text, note, said) {
+		const before = note.textContent;
+		try {
+			await navigator.clipboard.writeText(text);
+			note.textContent = said;
+		} catch (e) {
+			note.textContent = "Copy did not work here. Select the text and copy it yourself.";
+		}
+		setTimeout(() => {
+			if (note.textContent === said) {
+				note.textContent = before;
+				if (note === $("seedNote")) {
+					showSeed();
+				}
+			}
+		}, 1800);
+	}
+
 	async function init() {
 		options = await (await fetch("api/options")).json();
 		fillSelect($("layout"), options.layouts);
@@ -399,10 +665,22 @@
 		$("text").maxLength = options.maxTyped;
 		$("name").maxLength = options.maxName;
 		buildButtons();
-		restore();
+		const returning = restore();
 		setupPlatforms();
-		updateOutputs();
 		showWhere();
+		showProfile();
+		// a first visit starts from a rolled station; a returning one keeps its settings and seed
+		if (!returning || !seeds.value) {
+			seeds.value = freshSeed();
+			seeds.detail = seeds.value;
+			rolling = true;
+			rollSettings(seeds.value);
+			rolling = false;
+		}
+		setupSeed();
+		setupLayers();
+		flip(seeds.value);
+		updateOutputs();
 		$("game").hidden = !IN_GAME;
 		$("offline").hidden = IN_GAME;
 		// A terminus is a city's main station: one still at the default size becomes 8 tracks, 160 long (as on the wrench).
@@ -418,8 +696,24 @@
 			}
 		});
 		for (const f of fields) {
-			$(f).addEventListener("input", changed);
+			$(f).addEventListener("input", () => {
+				// a setting changed by hand after the roll: the seed alone no longer makes this station (the name is not rolled)
+				if (!rolling && f !== "name" && f !== "text" && !seeds.edited) {
+					seeds.edited = true;
+					showSeed();
+				}
+				changed();
+			});
 		}
+		$("copyCmd").addEventListener("click", () => {
+			if (!current) {
+				return;
+			}
+			const command = "/ata_station plan " + current.text;
+			copy(command, $("cmdNote"), command.length > 256
+				? "Copied, but it is " + command.length + " characters and Minecraft chat takes 256. Shorten the words or use the wrench."
+				: "Copied. Paste it in chat in your world, then /ata_station confirm to build.");
+		});
 		if ($("text").value) {
 			$("words").open = true;
 		}
@@ -634,6 +928,90 @@
 		return new THREE.Color().setHSL((h % 360) / 360, 0.35, 0.55).getHex();
 	}
 
+	// The Layers buttons: every block role belongs to one layer, which the view can hide.
+	const LAYERS = [
+		["platforms", "Platforms", ["PLATFORM_SURFACE", "PLATFORM_EDGE", "RAMP_LOWER", "RAMP_UPPER"]],
+		["track", "Track", ["RAIL_NODE", "TRACK_BED", "BUFFER_STOP"]],
+		["structure", "Structure", ["COLUMN", "COLUMN_CAP", "BEAM", "RIB", "BRIDGE_PIER", "FOUNDATION"]],
+		["roof", "Roof", ["ROOF", "ROOF_EDGE", "ROOF_LIGHT"]],
+		["building", "Building", ["WALL", "WINDOW", "FLOOR", "LIGHT_PANEL", "BUILDING_ROOF"]],
+		["access", "Stairs, lifts", ["STAIR", "ESCALATOR", "LIFT", "BRIDGE_DECK"]],
+		["furniture", "Furniture", ["BENCH", "BIN", "LAMP", "GATE", "BARRIER", "RAILING"]],
+		["signs", "Signs, screens", ["NAME_SIGN", "FIXTURE"]],
+		["ground", "Ground", []]
+	];
+	const LAYER_OF = {};
+	for (const [key, , roles] of LAYERS) {
+		for (const role of roles) {
+			LAYER_OF[role] = key;
+		}
+	}
+	const hiddenLayers = new Set();
+
+	function setupLayers() {
+		const box = $("layers");
+		for (const [key, label] of LAYERS) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.textContent = label;
+			b.dataset.layer = key;
+			b.setAttribute("aria-pressed", "true");
+			b.title = "Show or hide " + label.toLowerCase();
+			b.addEventListener("click", () => {
+				if (hiddenLayers.has(key)) {
+					hiddenLayers.delete(key);
+				} else {
+					hiddenLayers.add(key);
+				}
+				showLayers();
+			});
+			box.append(b);
+		}
+	}
+
+	function showLayers() {
+		const present = new Set(meshes.map((m) => m.userData.layer).concat("ground"));
+		for (const b of $("layers").children) {
+			b.setAttribute("aria-pressed", String(!hiddenLayers.has(b.dataset.layer)));
+			b.disabled = !present.has(b.dataset.layer);
+		}
+		for (const m of meshes) {
+			m.visible = !hiddenLayers.has(m.userData.layer);
+		}
+		ground.visible = !hiddenLayers.has("ground");
+		draw();
+	}
+
+	const NUMBER = new Intl.NumberFormat("en");
+	function blockName(id) {
+		const name = id.replace(/^[a-z_]+:/, "").replace(/_/g, " ");
+		return name.charAt(0).toUpperCase() + name.slice(1) + (id.startsWith("minecraft:") ? "" : id.startsWith("mtr:") ? " (MTR)" : "");
+	}
+
+	/** The Build card, the status lines and the materials list. */
+	function showFacts(plan) {
+		const facts = [["Size", plan.size.width + " × " + plan.size.length + " × " + plan.size.height], ["Blocks", NUMBER.format(plan.size.blocks)],
+			["Tracks", plan.built.tracks + " · " + plan.built.faces + " faces"], ["Planned", plan.ms + " ms"]];
+		$("facts").innerHTML = facts.map(([k, v]) => "<div><dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd></div>").join("");
+		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc(plan.built.roof.charAt(0).toUpperCase() + plan.built.roof.slice(1)) + " · "
+			+ esc(plan.built.building === "no building" ? "no building" : plan.built.building + (plan.built.scale !== "-" ? ", " + plan.built.scale : ""))
+			+ (plan.built.footbridge ? " · footbridge" : "") + (plan.built.name ? " · " + esc(plan.built.name) : "");
+		$("status").textContent = "Planned in " + plan.ms + " ms · " + NUMBER.format(plan.size.blocks) + " blocks · " + ($("stage").classList.contains("no-gl") ? "no WebGL" : "WebGL");
+		$("topStatus").textContent = (plan.seed ? "seed " + plan.seed + " · " : "") + plan.title;
+		$("tracksNote").textContent = $("listOn").checked ? "Set by the platform list" : plan.built.platforms + (plan.built.platforms === 1 ? " platform, " : " platforms, ")
+			+ plan.built.faces + (plan.built.faces === 1 ? " boarding face" : " boarding faces");
+		const counts = new Map();
+		for (let i = 3; i < plan.cells.length; i += 5) {
+			const id = plan.models[plan.cells[i]].id;
+			counts.set(id, (counts.get(id) || 0) + 1);
+		}
+		const rows = [...counts].sort((a, b) => b[1] - a[1]);
+		const stacks = (n) => n < 64 ? String(n) : Math.floor(n / 64) + " × 64" + (n % 64 ? " + " + (n % 64) : "");
+		$("materials").innerHTML = "<tr><th>Block</th><th class='num'>Count</th><th class='num'>Stacks</th></tr>"
+			+ rows.map(([id, n]) => "<tr><td title='" + esc(id) + "'>" + esc(blockName(id)) + "</td><td>" + NUMBER.format(n) + "</td><td>" + stacks(n) + "</td></tr>").join("");
+		$("matFold").querySelector("summary").textContent = "Block counts and stacks (" + rows.length + " kinds)";
+	}
+
 	let meshes = [];
 	function showPlan(plan) {
 		for (const m of meshes) {
@@ -646,16 +1024,19 @@
 		const byModel = new Map();
 		bounds = new THREE.Box3();
 		for (let i = 0; i < cells.length; i += 5) {
-			const model = cells[i + 3];
-			if (!byModel.has(model)) {
-				byModel.set(model, []);
+			// one group per model and layer, so a block used in two layers hides with each
+			const key = cells[i + 3] + "|" + (LAYER_OF[plan.roles[cells[i + 4]]] || "structure");
+			if (!byModel.has(key)) {
+				byModel.set(key, []);
 			}
-			byModel.get(model).push(i);
+			byModel.get(key).push(i);
 			bounds.expandByPoint(new THREE.Vector3(cells[i], cells[i + 1], cells[i + 2]));
 		}
 		bounds.max.addScalar(1);
 		const matrix = new THREE.Matrix4();
-		for (const [index, list] of byModel) {
+		for (const [key, list] of byModel) {
+			const index = +key.split("|")[0];
+			const layer = key.split("|")[1];
 			const entry = plan.models[index];
 			const role = plan.roles[cells[list[0] + 4]];
 			for (const [texPath, geo] of modelGeometry(entry.model)) {
@@ -664,7 +1045,7 @@
 					matrix.makeTranslation(cells[at], cells[at + 1], cells[at + 2]);
 					mesh.setMatrixAt(n, matrix);
 				});
-				mesh.userData = { model: index, cells: list };
+				mesh.userData = { model: index, cells: list, layer };
 				mesh.frustumCulled = false;
 				station.add(mesh);
 				meshes.push(mesh);
@@ -673,8 +1054,7 @@
 		const size = bounds.getSize(new THREE.Vector3());
 		ground.scale.set(size.x + 40, size.z + 40, 1);
 		ground.position.set((bounds.min.x + bounds.max.x) / 2, bounds.min.y - 0.02, (bounds.min.z + bounds.max.z) / 2);
-		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + plan.size.blocks.toLocaleString() + " blocks · " + plan.size.width + " wide, "
-			+ plan.size.length + " long, " + plan.size.height + " high";
+		showFacts(plan);
 		$("raw").textContent = JSON.stringify(Object.assign({}, plan, { cells: "[" + plan.cells.length / 5 + " blocks]", models: "[" + plan.models.length + " models]" }), null, 2);
 		// frame the first station, and again when a station grows or shrinks a lot (a preset, many more tracks), so it fits
 		const reach = Math.max(size.x, size.z);
@@ -692,7 +1072,7 @@
 			setView("head");
 		}
 		updateCut();
-		draw();
+		showLayers();
 	}
 
 	let currentView = "overview";
@@ -870,6 +1250,7 @@
 			draw();
 			return;
 		}
+		$("cutAt").style.setProperty("--fill", $("cutAt").value + "%");
 		const t = $("cutAt").value / 100;
 		let plane;
 		if (mode === "height") {
@@ -932,7 +1313,7 @@
 		}
 		const r = canvas.getBoundingClientRect();
 		ray.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camera);
-		const hit = ray.intersectObjects(meshes, false).find((h) => {
+		const hit = ray.intersectObjects(meshes.filter((m) => m.visible), false).find((h) => {
 			if (!renderer.clippingPlanes.length) {
 				return true;
 			}
@@ -1002,12 +1383,13 @@
 
 		const chips = (list, cls) => list.length ? "<div class='chips'>" + list.map((t) => "<span class='chip " + (cls || "") + "'>" + esc(t) + "</span>").join("") + "</div>" : "<p class='note'>None</p>";
 		$("fromText").innerHTML =
-			"<div class='group'><h3>Recognised</h3>" + chips(plan.understood) + "</div>" +
-			"<div class='group'><h3>Conflicts and limits</h3>" + chips(plan.warnings, "warn") + "</div>" +
-			"<div class='group'><h3>Not understood</h3>" + chips(plan.ignored, "muted") + "</div>" +
-			"<div class='group'><h3>Filled in</h3>" + chips(plan.defaulted, "muted") + "</div>" +
+			"<div class='read-group'><h3>Recognised</h3>" + chips(plan.understood) + "</div>" +
+			"<div class='read-group'><h3>Conflicts and limits</h3>" + chips(plan.warnings, "warn") + "</div>" +
+			"<div class='read-group'><h3>Not understood</h3>" + chips(plan.ignored, "muted") + "</div>" +
+			"<div class='read-group'><h3>Filled in</h3>" + chips(plan.defaulted, "muted") + "</div>" +
 			"<p class='note'>The planner read: “" + esc(plan.text) + "”</p>";
 
+		// problems first, then the passed checks, as one list of ticks
 		const problems = plan.violations.map((v) => ({ status: "FAIL", message: v.message + " (x " + v.x + ", y " + v.y + ", z " + v.z + ")" }))
 			.concat(plan.checks.filter((c) => c.status !== "PASS"));
 		const passed = plan.checks.filter((c) => c.status === "PASS");
@@ -1018,11 +1400,22 @@
 			? ["bad", "!", "Can't build this yet", plural(fails, "problem") + " to fix first"]
 			: warns ? ["warned", "!", "Ready to build", plural(warns, "thing") + " worth a look"]
 				: ["good", "✓", "Ready to build", "All " + plural(passed.length, "check") + " passed"];
-		$("checks").innerHTML = "<div class='verdict " + verdict[0] + "'><span class='icon' aria-hidden='true'>" + verdict[1] + "</span><div><h2>"
-			+ verdict[2] + "</h2><p>" + verdict[3] + "</p></div></div>"
-			+ (problems.length ? "<ul class='issues'>" + problems.map((c) => "<li class='" + c.status + "'>" + esc(c.message) + "</li>").join("") + "</ul>" : "")
-			+ (passed.length ? "<details class='fold'><summary>Passed checks (" + passed.length + ")</summary><ul class='list'>"
-				+ passed.map((c) => "<li>" + esc(c.message) + "</li>").join("") + "</ul></details>" : "");
+		const all = problems.concat(passed);
+		const shown = report.open ? all : all.slice(0, Math.max(problems.length, 8));
+		$("checks").innerHTML = "<div class='verdict " + verdict[0] + "'><span class='icon' aria-hidden='true'>" + verdict[1] + "</span><div><h3>"
+			+ verdict[2] + "</h3><p>" + verdict[3] + "</p></div></div>"
+			+ "<ul class='checks'>" + shown.map((c) => "<li class='" + c.status + "'><span class='sr'>" + (c.status === "PASS" ? "Passed: " : c.status === "FAIL" ? "Failed: " : "Warning: ")
+				+ "</span>" + esc(c.message) + "</li>").join("") + "</ul>"
+			+ (all.length > shown.length ? "<button type='button' class='more' id='moreChecks'>Show all " + all.length + " checks</button>"
+				: report.open && all.length > 8 ? "<button type='button' class='more' id='moreChecks'>Show fewer</button>" : "");
+		const more = $("moreChecks");
+		if (more) {
+			more.addEventListener("click", () => {
+				report.open = !report.open;
+				report(plan);
+				$("moreChecks") && $("moreChecks").focus();
+			});
+		}
 	}
 
 	// ---- reload on change ----------------------------------------------------------------------------------------------
