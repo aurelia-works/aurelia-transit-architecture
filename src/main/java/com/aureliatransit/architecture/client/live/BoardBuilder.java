@@ -74,10 +74,10 @@ final class BoardBuilder {
 	 * @param nearestPlatformId when non-zero, only this platform's services are shown (AUTO platform displays)
 	 * @param topInsetPixels    pixels of the top block edge not usable by the screen (hanging rods)
 	 */
-	static void build(BoardModel m, TextRenderer tr, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearestPlatformId,
+	static void build(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearestPlatformId,
 					  int widthBlocks, int heightBlocks, float topInsetPixels, long now) {
 		m.reset();
-		final Board b = new Board(m, tr, kind, config, snapshot, nearestPlatformId, widthBlocks - 2 * FRAME,
+		final Board b = new Board(m, tr, widths, kind, config, snapshot, nearestPlatformId, widthBlocks - 2 * FRAME,
 				heightBlocks - 2 * FRAME - topInsetPixels / 16F, now);
 		switch (config.style()) {
 			case UK_DOT_MATRIX -> {
@@ -965,6 +965,7 @@ final class BoardBuilder {
 
 		final BoardModel m;
 		final TextRenderer tr;
+		final WidthCache widths;
 		final DisplayConfig config;
 		final DisplayStyle style;
 		final StationSnapshot snapshot;
@@ -980,10 +981,11 @@ final class BoardBuilder {
 		float vw;
 		float vh;
 
-		Board(BoardModel m, TextRenderer tr, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearest, float boardW, float boardH,
+		Board(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearest, float boardW, float boardH,
 			  long now) {
 			this.m = m;
 			this.tr = tr;
+			this.widths = widths;
 			this.config = config;
 			this.style = config.style();
 			this.snapshot = snapshot;
@@ -1109,14 +1111,25 @@ final class BoardBuilder {
 		}
 
 		float w(String text, Font font, float k) {
-			return tr.getWidth(font.ordered(text)) * k;
+			Float width = widths.string(font.ordinal(), text);
+			if (width == null) {
+				width = (float) tr.getWidth(font.ordered(text));
+				widths.putString(font.ordinal(), text, width);
+			}
+			return width * k;
 		}
 
 		/** Each character's left edge in unscaled font units, plus the end. */
 		float[] advances(String text, Font font) {
 			final float[] at = new float[text.length() + 1];
 			for (int i = 0; i < text.length(); i++) {
-				at[i + 1] = at[i] + tr.getWidth(font.ordered(String.valueOf(text.charAt(i))));
+				final char c = text.charAt(i);
+				float width = widths.character(font.ordinal(), c);
+				if (Float.isNaN(width)) {
+					width = tr.getWidth(font.ordered(String.valueOf(c)));
+					widths.putCharacter(font.ordinal(), c, width);
+				}
+				at[i + 1] = at[i] + width;
 			}
 			return at;
 		}

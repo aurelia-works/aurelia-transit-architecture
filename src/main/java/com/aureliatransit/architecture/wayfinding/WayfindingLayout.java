@@ -453,7 +453,7 @@ public final class WayfindingLayout {
 		private final List<Label> labels = new ArrayList<>();
 		private final ToIntFunction<String> measure;
 
-		private Canvas(ToIntFunction<String> measure) {
+		Canvas(ToIntFunction<String> measure) {
 			this.measure = measure;
 		}
 

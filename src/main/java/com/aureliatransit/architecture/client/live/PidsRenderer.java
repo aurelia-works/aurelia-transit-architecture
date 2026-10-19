@@ -69,6 +69,8 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 
 	private final TextRenderer textRenderer;
 	private final Matrix4f scratch = new Matrix4f();
+	/** Minecraft recreates renderers on a resource reload, which is when font widths can change. */
+	private final WidthCache widths = new WidthCache(BoardModel.Font.values().length);
 
 	public PidsRenderer(BlockEntityRendererFactory.Context context) {
 		this.textRenderer = context.getTextRenderer();
@@ -163,7 +165,7 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		if (snapshot == null) {
 			snapshot = provider.resolve(entity.getPos(), config.association(), true, config.callingTimes() && config.callingAt());
 		}
-		BoardBuilder.build(cache.model, textRenderer, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now);
+		BoardBuilder.build(cache.model, textRenderer, widths, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now);
 		cache.nextRebuild = now + (cache.model.stripScroll ? MessageRotation.STEP_MILLIS : cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
 		if (cache.model.seconds) {
 			// a clock with seconds ticks on the second, like the real board

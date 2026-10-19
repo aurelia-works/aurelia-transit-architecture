@@ -28,6 +28,7 @@ import net.minecraft.util.math.Direction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -63,6 +64,14 @@ public final class StationBuildJob {
 		STOPPED
 	}
 
+	/** The planned blocks the finishing steps look for. */
+	private enum Part {
+		NONE,
+		LIFT_STOP,
+		LIFT_BUTTONS,
+		ESCALATOR
+	}
+
 	private enum Step {
 		DONE,
 		WAIT,
@@ -83,6 +92,8 @@ public final class StationBuildJob {
 	/** What each cell will hold, so a block is checked against the neighbours it is planned to have (a lower half its upper). */
 	private final Map<BlockPos, BlockState> planned = new HashMap<>();
 	private final List<BlockPos> signCells = new ArrayList<>();
+	/** What each distinct planned block is to the finishing steps, worked out once per block instead of once per cell. */
+	private final Map<Block, Part> parts = new IdentityHashMap<>();
 	/** Departure screens placed with the display style they are set to, applied to each screen's owner when the build is done. */
 	private final List<BlockPos> screenCells = new ArrayList<>();
 	private final List<String> screenStyles = new ArrayList<>();
@@ -435,7 +446,7 @@ public final class StationBuildJob {
 	private BlockState postProcessAsPlanned(BlockState state, BlockPos pos) {
 		// MTR's escalator reads its step or handrail partner from the world, not the neighbour it is given; it is shaped once
 		// the station is finished (escalators())
-		if (escalator(state)) {
+		if (part(state.getBlock()) == Part.ESCALATOR) {
 			return state;
 		}
 		BlockState result = state;
@@ -487,6 +498,17 @@ public final class StationBuildJob {
 		}
 	}
 
+	private Part part(Block block) {
+		return parts.computeIfAbsent(block, key -> {
+			final Identifier id = Registries.BLOCK.getId(key);
+			if (id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_")) {
+				return Part.ESCALATOR;
+			}
+			final String text = id.toString();
+			return text.equals(StylePalette.MTR_LIFT_FLOOR) ? Part.LIFT_STOP : text.equals(StylePalette.MTR_LIFT_BUTTONS) ? Part.LIFT_BUTTONS : Part.NONE;
+		});
+	}
+
 	private static boolean escalator(BlockState state) {
 		final Identifier id = Registries.BLOCK.getId(state.getBlock());
 		return id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_");
@@ -495,7 +517,7 @@ public final class StationBuildJob {
 	/** Each escalator step takes its landing, transition or slope shape from the finished flight around it, kept steps too. */
 	private void escalators() {
 		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
-			if (!escalator(cell.getValue())) {
+			if (part(cell.getValue().getBlock()) != Part.ESCALATOR) {
 				continue;
 			}
 			final BlockPos pos = cell.getKey();
@@ -578,14 +600,17 @@ public final class StationBuildJob {
 		final Map<Long, TreeMap<Integer, BlockPos>> columns = new HashMap<>();
 		final List<BlockPos> buttons = new ArrayList<>();
 		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
-			final String id = Registries.BLOCK.getId(cell.getValue().getBlock()).toString();
+			final Part part = part(cell.getValue().getBlock());
+			if (part != Part.LIFT_STOP && part != Part.LIFT_BUTTONS) {
+				continue;
+			}
 			final BlockPos pos = cell.getKey();
 			if (!probe.loaded(pos.getX(), pos.getZ()) || world.getBlockState(pos).getBlock() != cell.getValue().getBlock()) {
 				continue;
 			}
-			if (id.equals(StylePalette.MTR_LIFT_FLOOR)) {
+			if (part == Part.LIFT_STOP) {
 				columns.computeIfAbsent(BlockPos.asLong(pos.getX(), 0, pos.getZ()), key -> new TreeMap<>()).put(pos.getY(), pos);
-			} else if (id.equals(StylePalette.MTR_LIFT_BUTTONS)) {
+			} else {
 				buttons.add(pos);
 			}
 		}
