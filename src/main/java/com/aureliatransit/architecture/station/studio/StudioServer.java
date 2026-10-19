@@ -1,7 +1,10 @@
 package com.aureliatransit.architecture.station.studio;
 
+import com.aureliatransit.architecture.station.StationRecipe;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -22,6 +25,10 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Station Studio's local web server: the page, its scripts, the planner ({@link StudioApi}) and block textures, on
@@ -49,14 +56,19 @@ public final class StudioServer {
 	public record Player(String name, String uuid) {
 	}
 
+	private static final Logger LOGGER = LoggerFactory.getLogger("Aurelia Transit Architecture");
 	public static final int FIRST_PORT = 25680;
 	private static final int PORTS = 10;
 	private static final int MAX_BODY = 16 * 1024;
+	/** How long a request waits for the planner before the page is told to try again. */
+	static final long PLAN_TIMEOUT_SECONDS = 30;
 	/** The page's own files; a change to any of them reloads open pages. */
 	static final String[] PAGE_FILES = {"index.html", "studio.js", "silk.js", "studio.css", "three.min.js"};
 
 	private final HttpServer server;
 	private final ExecutorService executor;
+	/** Planning runs here, one at a time, so a slow plan never holds both of the web threads. */
+	private final ExecutorService planner;
 	private final StudioApi api;
 	private final BlockModels.AssetSource assets;
 	private final Sender sender;
@@ -78,6 +90,11 @@ public final class StudioServer {
 		this.boot = HexFormat.of().formatHex(random, 0, 8);
 		this.executor = Executors.newFixedThreadPool(2, runnable -> {
 			final Thread thread = new Thread(runnable, "ATA Station Studio");
+			thread.setDaemon(true);
+			return thread;
+		});
+		this.planner = Executors.newSingleThreadExecutor(runnable -> {
+			final Thread thread = new Thread(runnable, "ATA Station Studio planner");
 			thread.setDaemon(true);
 			return thread;
 		});
@@ -113,48 +130,76 @@ public final class StudioServer {
 	public void stop() {
 		server.stop(0);
 		executor.shutdownNow();
+		planner.shutdownNow();
 	}
 
 	private void handle(HttpExchange exchange) throws IOException {
 		try (exchange) {
-			final String host = exchange.getRequestHeaders().getFirst("Host");
-			if (host == null || !(host.startsWith("127.0.0.1:") || host.startsWith("localhost:"))) {
-				reply(exchange, 403, "text/plain", "Station Studio only answers on this computer.");
+			try {
+				dispatch(exchange);
+			} catch (RuntimeException e) {
+				// inside the try-with-resources: the exchange is still open to answer on
+				LOGGER.warn("Station Studio request failed: {}", exchange.getRequestURI().getPath(), e);
+				reply(exchange, 500, "text/plain", "Station Studio could not do that. The game log has the details.");
+			}
+		}
+	}
+
+	private void dispatch(HttpExchange exchange) throws IOException {
+		final String host = exchange.getRequestHeaders().getFirst("Host");
+		if (host == null || !(host.startsWith("127.0.0.1:") || host.startsWith("localhost:"))) {
+			reply(exchange, 403, "text/plain", "Station Studio only answers on this computer.");
+			return;
+		}
+		final String path = exchange.getRequestURI().getPath();
+		final String method = exchange.getRequestMethod();
+		if (path.equals("/") || path.equals("/index.html")) {
+			final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null))
+					.replace("{{VERSION}}", html(VERSION)).replace("{{PLAYER}}", player == null ? "" : html(player.name()))
+					.replace("{{UUID}}", player == null || player.uuid() == null ? "" : html(player.uuid().replace("-", "")));
+			reply(exchange, 200, "text/html; charset=utf-8", page);
+		} else if (path.equals("/studio.js") || path.equals("/silk.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
+			reply(exchange, 200, path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", resource(path.substring(1)));
+		} else if (path.equals("/api/version")) {
+			exchange.getResponseHeaders().set("Cache-Control", "no-store");
+			reply(exchange, 200, "application/json", "{\"boot\":\"" + boot + "\",\"files\":\"" + filesVersion() + "\"}");
+		} else if (path.equals("/api/options")) {
+			reply(exchange, 200, "application/json", api.options());
+		} else if (path.equals("/api/plan") && method.equals("POST")) {
+			// the token keeps another web page from making the game plan stations in a loop (it could send the request,
+			// though not read the answer)
+			if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token"))) {
+				reply(exchange, 403, "text/plain", "Reload the studio page.");
 				return;
 			}
-			final String path = exchange.getRequestURI().getPath();
-			final String method = exchange.getRequestMethod();
-			if (path.equals("/") || path.equals("/index.html")) {
-				final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null))
-						.replace("{{VERSION}}", html(VERSION)).replace("{{PLAYER}}", player == null ? "" : html(player.name()))
-						.replace("{{UUID}}", player == null || player.uuid() == null ? "" : html(player.uuid().replace("-", "")));
-				reply(exchange, 200, "text/html; charset=utf-8", page);
-			} else if (path.equals("/studio.js") || path.equals("/silk.js") || path.equals("/three.min.js") || path.equals("/studio.css")) {
-				reply(exchange, 200, path.endsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8", resource(path.substring(1)));
-			} else if (path.equals("/api/version")) {
-				exchange.getResponseHeaders().set("Cache-Control", "no-store");
-				reply(exchange, 200, "application/json", "{\"boot\":\"" + boot + "\",\"files\":\"" + filesVersion() + "\"}");
-			} else if (path.equals("/api/options")) {
-				reply(exchange, 200, "application/json", api.options());
-			} else if (path.equals("/api/plan") && method.equals("POST")) {
-				// the token keeps another web page from making the game plan stations in a loop (it could send the request,
-				// though not read the answer)
-				if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token"))) {
-					reply(exchange, 403, "text/plain", "Reload the studio page.");
-					return;
-				}
-				reply(exchange, 200, "application/json", api.plan(form(body(exchange))));
-			} else if (path.equals("/api/send") && method.equals("POST")) {
-				send(exchange);
-			} else if (path.matches("/thumbs/[A-Z_]{1,32}\\.jpg")) {
-				thumbnail(exchange, path.substring(1));
-			} else if (path.startsWith("/tex/") && path.endsWith(".png")) {
-				texture(exchange, path.substring("/tex/".length(), path.length() - 4));
-			} else {
-				reply(exchange, 404, "text/plain", "Not found");
+			plan(exchange, form(body(exchange)));
+		} else if (path.equals("/api/send") && method.equals("POST")) {
+			send(exchange);
+		} else if (path.matches("/thumbs/[A-Z_]{1,32}\\.jpg")) {
+			thumbnail(exchange, path.substring(1));
+		} else if (path.startsWith("/tex/") && path.endsWith(".png")) {
+			texture(exchange, path.substring("/tex/".length(), path.length() - 4));
+		} else {
+			reply(exchange, 404, "text/plain", "Not found");
+		}
+	}
+
+	private void plan(HttpExchange exchange, Map<String, String> query) throws IOException {
+		final Future<String> result = planner.submit(() -> api.plan(query));
+		try {
+			reply(exchange, 200, "application/json", result.get(PLAN_TIMEOUT_SECONDS, TimeUnit.SECONDS));
+		} catch (TimeoutException e) {
+			result.cancel(true);
+			reply(exchange, 503, "text/plain", "Planning took too long. Try a smaller station.");
+		} catch (InterruptedException e) {
+			result.cancel(true);
+			Thread.currentThread().interrupt();
+			reply(exchange, 503, "text/plain", "Station Studio is shutting down.");
+		} catch (ExecutionException e) {
+			if (e.getCause() instanceof RuntimeException runtime) {
+				throw runtime;
 			}
-		} catch (RuntimeException e) {
-			reply(exchange, 500, "text/plain", "Station Studio could not do that: " + e);
+			throw new IllegalStateException(e.getCause());
 		}
 	}
 
@@ -169,7 +214,8 @@ public final class StudioServer {
 		}
 		final Map<String, String> q = form(body(exchange));
 		final String action = q.getOrDefault("action", "");
-		final String answer = sender.send(action, StudioApi.recipe(q).text(StudioApi.typed(q)), StudioApi.recipe(q).encode());
+		final StationRecipe recipe = StudioApi.recipe(q);
+		final String answer = sender.send(action, recipe.text(StudioApi.typed(q)), recipe.encode());
 		reply(exchange, 200, "text/plain; charset=utf-8", answer);
 	}
 

@@ -208,6 +208,27 @@ class StudioTest {
 	}
 
 	@Test
+	void aFailureAnswersWithoutLeakingTheExceptionText() throws IOException, InterruptedException {
+		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> {
+			throw new IllegalStateException("secret detail from /Users/someone");
+		});
+		try {
+			final HttpClient http = HttpClient.newHttpClient();
+			final String base = server.url();
+			final HttpResponse<String> page = http.send(HttpRequest.newBuilder(URI.create(base)).build(), HttpResponse.BodyHandlers.ofString());
+			final String token = page.body().replaceAll("(?s).*data-token=\"([0-9a-f]+)\".*", "$1");
+			final HttpRequest send = HttpRequest.newBuilder(URI.create(base + "api/send")).header("X-Studio-Token", token)
+					.POST(HttpRequest.BodyPublishers.ofString("action=plan")).build();
+			final HttpResponse<String> failed = http.send(send, HttpResponse.BodyHandlers.ofString());
+			assertEquals(500, failed.statusCode());
+			assertTrue(failed.body().contains("game log"), failed.body());
+			assertTrue(!failed.body().contains("secret") && !failed.body().contains("IllegalStateException"), failed.body());
+		} finally {
+			server.stop();
+		}
+	}
+
+	@Test
 	void pagesReloadWhenTheirFilesChangeOrTheServerRestarts() throws Exception {
 		final HttpClient http = HttpClient.newHttpClient();
 		final StudioServer first = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok");

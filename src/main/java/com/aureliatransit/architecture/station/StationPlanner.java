@@ -1834,11 +1834,11 @@ public final class StationPlanner {
 			for (int i = 0; i + 1 < supports.size(); i++) {
 				int a = supports.get(i);
 				int b2 = supports.get(i + 1);
-				while (b2 - a > 12) {
+				while (b2 - a > StationGeometry.MAX_BEAM_SPAN) {
 					// the farthest free column within 12 of the last support, so no span is left longer (halving a span over 24
 					// would leave both halves too long)
 					int pierU = -1;
-					for (int u = Math.min(a + 12, b2 - 1); u > a && pierU < 0; u--) {
+					for (int u = Math.min(a + StationGeometry.MAX_BEAM_SPAN, b2 - 1); u > a && pierU < 0; u--) {
 						if (nearestFreeColumn(u) == u) {
 							pierU = u;
 						}
