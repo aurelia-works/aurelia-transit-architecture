@@ -921,7 +921,8 @@ POLE_VARIANTS = (("", False, False), ("_up", True, False), ("_down", False, True
 POLE_MOUNTS = ("station_name_sign", "hanging_station_sign", "platform_number_sign", "direction_sign", "composition_board",
                "hanging_wayfinding_sign", "exit_sign", "pictogram_sign",
                "dutch_station_sign", "dutch_platform_sign", "german_station_sign",
-               "ns_station_sign", "db_station_sign", "gvb_station_sign",
+               "ns_station_sign", "db_station_sign", "gvb_station_sign", "underground_station_sign", "national_rail_station_sign",
+               "sbahn_station_sign", "sbb_station_sign", "jr_station_sign",
                "uk_car_stop_marker", "german_stop_board", "dutch_stop_board")
 
 

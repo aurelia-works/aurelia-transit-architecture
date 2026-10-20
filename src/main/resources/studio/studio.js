@@ -1050,27 +1050,200 @@
 		return textures.get(path);
 	}
 
-	function material(path, roleColor) {
+	function material(path, roleColor, glow) {
 		const useTex = $("textures").checked && path;
-		const key = useTex ? "t:" + path : "c:" + roleColor;
+		const time = TIMES[sky.time];
+		const lit = shaded();
+		const key = (useTex ? "t:" + path : "c:" + roleColor) + (glow ? "|glow" : "") + "|" + sky.time + (lit ? "|lit" : "");
 		if (!materials.has(key)) {
 			const glassy = useTex && /glass|window|pane/.test(path);
-			const m = new THREE.MeshBasicMaterial({
+			const options = {
 				vertexColors: true,
 				side: THREE.DoubleSide,
 				alphaTest: glassy ? 0.02 : 0.1,
 				transparent: glassy,
 				opacity: 1,
 				depthWrite: !glassy
-			});
+			};
+			const m = lit ? new THREE.MeshLambertMaterial(options) : new THREE.MeshBasicMaterial(options);
 			if (useTex) {
 				m.map = texture(path);
 			} else {
 				m.color = new THREE.Color(roleColor);
 			}
+			if (time && glow) {
+				// a light or a screen keeps its own brightness at any time of day; with shaders it shines
+				if (lit) {
+					m.emissive = new THREE.Color(0xffffff).multiplyScalar(0.25 + 0.65 * time.glow);
+					m.emissiveMap = m.map;
+				}
+			} else if (time && !lit) {
+				// Minecraft's own light: the sky's level and colour over every block that does not give light
+				m.color.multiply(new THREE.Color(time.tint).multiplyScalar(time.level));
+			}
 			materials.set(key, m);
 		}
 		return materials.get(key);
+	}
+
+	// ---- time of day and shaders ------------------------------------------------------------------------------------------
+	// The preview at a time of day, as the game draws it: plain (Minecraft's flat light, dark at night but for the blocks
+	// that give light) or with shaders (sun and shadows, a sky, a glow round every light). Off ("Studio") is the plain
+	// backdrop. Shaders cost a shadow map, so they are only on when asked for.
+	const GLOW = /light|lamp|lantern|glowstone|shroomlight|froglight|pids|screen|board|clock|led_|_led|kiosk|help_point|torch|end_rod|beacon|station_sign|name_sign|wayfinding|exit_sign|roundel/;
+	const TIMES = {
+		day: { top: 0x6f9fd8, horizon: 0xc9dcec, tint: 0xffffff, level: 1, sun: [0.45, 1, 0.3], sunColour: 0xfff1dc, sunPower: 1.5,
+			sky: 0xbcd4ff, earth: 0x6b6250, ambient: 0.65, glow: 0 },
+		sunset: { top: 0x2c3a6e, horizon: 0xf09a55, tint: 0xffd2a8, level: 0.78, sun: [1, 0.16, 0.4], sunColour: 0xff9a50, sunPower: 1.35,
+			sky: 0x8a7fb0, earth: 0x4a3a30, ambient: 0.45, glow: 0.55 },
+		night: { top: 0x02040a, horizon: 0x0f1a30, tint: 0x8090c8, level: 0.2, sun: [-0.35, 0.85, -0.25], sunColour: 0x9fb4ff, sunPower: 0.22,
+			sky: 0x2a3a66, earth: 0x080a10, ambient: 0.1, glow: 1 }
+	};
+	const sky = { time: "", shaders: false };
+	const sun = new THREE.DirectionalLight(0xffffff, 1);
+	const skyLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+	sun.visible = false;
+	skyLight.visible = false;
+	scene.add(sun, sun.target, skyLight);
+	const skies = new Map();
+	let glows = null;
+
+	function shaded() {
+		return sky.shaders && !!TIMES[sky.time];
+	}
+
+	// a sky from its colour overhead down to the horizon, drawn behind everything
+	function skyTexture(time) {
+		if (!skies.has(time)) {
+			const t = TIMES[time];
+			const c = document.createElement("canvas");
+			c.width = 2;
+			c.height = 256;
+			const g = c.getContext("2d");
+			const grad = g.createLinearGradient(0, 0, 0, 256);
+			grad.addColorStop(0, "#" + new THREE.Color(t.top).getHexString());
+			grad.addColorStop(0.75, "#" + new THREE.Color(t.horizon).getHexString());
+			grad.addColorStop(1, "#" + new THREE.Color(t.horizon).getHexString());
+			g.fillStyle = grad;
+			g.fillRect(0, 0, 2, 256);
+			const tex = new THREE.CanvasTexture(c);
+			tex.encoding = THREE.sRGBEncoding;
+			skies.set(time, tex);
+		}
+		return skies.get(time);
+	}
+
+	// a soft round spot, the glow sprite's texture
+	let glowTex = null;
+	function glowTexture() {
+		if (!glowTex) {
+			const c = document.createElement("canvas");
+			c.width = c.height = 64;
+			const g = c.getContext("2d");
+			const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+			grad.addColorStop(0, "rgba(255,255,255,1)");
+			grad.addColorStop(0.35, "rgba(255,255,255,.35)");
+			grad.addColorStop(1, "rgba(255,255,255,0)");
+			g.fillStyle = grad;
+			g.fillRect(0, 0, 64, 64);
+			glowTex = new THREE.CanvasTexture(c);
+		}
+		return glowTex;
+	}
+
+	// Sky, lights, shadows and glows for the chosen time; called after every plan is drawn and when the time changes.
+	function applyLook() {
+		const time = TIMES[sky.time];
+		const lit = shaded();
+		scene.background = time ? skyTexture(sky.time) : walk ? SKY : NIGHT;
+		const haze = time ? new THREE.Color(time.horizon) : SKY;
+		scene.fog = walk ? new THREE.Fog(haze, 80, 420) : null;
+		if (renderer.shadowMap) {
+			renderer.shadowMap.enabled = lit;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			renderer.toneMapping = lit ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
+			renderer.toneMappingExposure = 1.1;
+		}
+		sun.visible = lit;
+		skyLight.visible = lit;
+		if (lit) {
+			const centre = bounds.getCenter(new THREE.Vector3());
+			const size = bounds.getSize(new THREE.Vector3());
+			const reach = Math.max(size.x, size.z, size.y) / 2 + 8;
+			const dir = new THREE.Vector3(...time.sun).normalize();
+			sun.color.set(time.sunColour);
+			sun.intensity = time.sunPower;
+			sun.position.copy(centre).addScaledVector(dir, reach * 2);
+			sun.target.position.copy(centre);
+			sun.castShadow = true;
+			const s = sun.shadow;
+			const map = reach > 120 ? 4096 : 2048;
+			if (s.mapSize.x !== map) {
+				s.mapSize.set(map, map);
+				if (s.map) {
+					s.map.dispose();
+					s.map = null;
+				}
+			}
+			s.camera.left = -reach;
+			s.camera.right = reach;
+			s.camera.top = reach;
+			s.camera.bottom = -reach;
+			s.camera.near = 1;
+			s.camera.far = reach * 4;
+			s.camera.updateProjectionMatrix();
+			s.bias = -0.0004;
+			s.normalBias = 0.04;
+			skyLight.color.set(time.sky);
+			skyLight.groundColor.set(time.earth);
+			skyLight.intensity = time.ambient;
+		}
+		for (const m of meshes) {
+			// glass lets the sun through
+			m.castShadow = lit && !m.material.transparent;
+			m.receiveShadow = lit;
+		}
+		// with shaders the ground takes the light and the station's shadow
+		if (lit !== !!ground.material.isMeshLambertMaterial) {
+			ground.material.dispose();
+			ground.material = lit ? new THREE.MeshLambertMaterial() : new THREE.MeshBasicMaterial();
+		}
+		ground.receiveShadow = lit;
+		ground.material.color.set(time ? new THREE.Color(walk ? 0x5b6168 : 0x3a4048).multiplyScalar(lit ? 1 : time.level) : walk ? 0x5b6168 : 0x23282e);
+		if (glows) {
+			glows.visible = !!time && time.glow > 0;
+			glows.material.opacity = time ? (lit ? 0.75 : 0.45) * time.glow : 0;
+			glows.material.size = lit ? 3.2 : 2.2;
+		}
+		for (const b of document.querySelectorAll("[data-time]")) {
+			b.setAttribute("aria-pressed", String(b.dataset.time === sky.time));
+		}
+		draw();
+	}
+
+	// one glow sprite per block that gives light (at most a few thousand, spread over the station)
+	function makeGlows(points) {
+		if (glows) {
+			station.remove(glows);
+			glows.geometry.dispose();
+			glows.material.dispose();
+			glows = null;
+		}
+		if (!points.length) {
+			return;
+		}
+		const step = Math.max(1, Math.ceil(points.length / 3 / 3000));
+		const pos = [];
+		for (let i = 0; i < points.length; i += 3 * step) {
+			pos.push(points[i], points[i + 1], points[i + 2]);
+		}
+		const geo = new THREE.BufferGeometry();
+		geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+		glows = new THREE.Points(geo, new THREE.PointsMaterial({ map: glowTexture(), color: 0xffd9a0, size: 3, sizeAttenuation: true,
+			transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+		glows.frustumCulled = false;
+		glows.visible = false;
+		station.add(glows);
 	}
 
 	// The four corners of each face as seen from outside: top-left, top-right, bottom-right, bottom-left (matching uv u1v1..u2v2).
@@ -1151,6 +1324,8 @@
 			geo.setAttribute("position", new THREE.Float32BufferAttribute(g.pos, 3));
 			geo.setAttribute("uv", new THREE.Float32BufferAttribute(g.uv, 2));
 			geo.setAttribute("color", new THREE.Float32BufferAttribute(g.col, 3));
+			// flat normals per face, for the sun when shaders are on
+			geo.computeVertexNormals();
 			out.set(key, geo);
 		}
 		return out;
@@ -1282,13 +1457,20 @@
 		}
 		bounds.max.addScalar(1);
 		const matrix = new THREE.Matrix4();
+		const lights = [];
 		for (const [key, list] of byModel) {
 			const index = +key.split("|")[0];
 			const layer = key.split("|")[1];
 			const entry = plan.models[index];
 			const role = plan.roles[cells[list[0] + 4]];
+			const glow = GLOW.test(entry.id || "");
+			if (glow) {
+				for (const at of list) {
+					lights.push(cells[at] + 0.5, cells[at + 1] + 0.5, cells[at + 2] + 0.5);
+				}
+			}
 			for (const [texPath, geo] of modelGeometry(entry.model)) {
-				const mesh = new THREE.InstancedMesh(geo, material(texPath, roleColour(role)), list.length);
+				const mesh = new THREE.InstancedMesh(geo, material(texPath, roleColour(role), glow), list.length);
 				list.forEach((at, n) => {
 					matrix.makeTranslation(cells[at], cells[at + 1], cells[at + 2]);
 					mesh.setMatrixAt(n, matrix);
@@ -1314,6 +1496,8 @@
 		}
 		const size = bounds.getSize(new THREE.Vector3());
 		sizeGround();
+		makeGlows(lights);
+		applyLook();
 		showFacts(plan);
 		$("raw").textContent = JSON.stringify(Object.assign({}, plan, { cells: "[" + plan.cells.length / 5 + " blocks]", models: "[" + plan.models.length + " models]" }), null, 2);
 		if (walk) {
@@ -1734,6 +1918,28 @@
 	$("cutAt").addEventListener("input", updateCut);
 	$("faces").addEventListener("change", draw);
 	$("textures").addEventListener("change", () => current && showPlan(current));
+	// materials depend on the time and on shaders (plain or lit), so a change redraws the station
+	for (const b of document.querySelectorAll("[data-time]")) {
+		b.addEventListener("click", () => {
+			sky.time = b.dataset.time;
+			if (current) {
+				showPlan(current);
+			} else {
+				applyLook();
+			}
+		});
+	}
+	$("shaders").addEventListener("change", () => {
+		sky.shaders = $("shaders").checked;
+		if (sky.shaders && !sky.time) {
+			sky.time = "day";
+		}
+		if (current) {
+			showPlan(current);
+		} else {
+			applyLook();
+		}
+	});
 	window.addEventListener("resize", draw);
 
 	// ---- walk audio ----------------------------------------------------------------------------------------------------
@@ -2394,9 +2600,8 @@
 		$("walkHud").hidden = false;
 		$("stage").classList.add("walking");
 		$("pick").hidden = true;
-		scene.background = SKY;
-		scene.fog = new THREE.Fog(SKY, 80, 420);
 		sizeGround();
+		applyLook();
 		lockMouse();
 		requestAnimationFrame(walkLoop);
 	}
@@ -2413,9 +2618,8 @@
 		$("walkBtn").setAttribute("aria-pressed", "false");
 		$("walkHud").hidden = true;
 		$("stage").classList.remove("walking");
-		scene.background = NIGHT;
-		scene.fog = null;
 		sizeGround();
+		applyLook();
 	}
 
 	function lockMouse() {

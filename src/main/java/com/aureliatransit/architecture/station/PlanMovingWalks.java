@@ -138,12 +138,13 @@ abstract class PlanMovingWalks extends PlanBridges {
 							|| !freeColumn(c + 1, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)) {
 						continue;
 					}
-					// two lanes side by side, one each way, as real paired walkways run: the balustrades meet in the
-					// middle (both "right" of their own direction) and passengers step on from the outside. The lower
+					// two lanes side by side, one each way: both MTR "left" halves, so each lane's balustrade is on its
+					// outer side and MTR finds each lane's partner in the other (a "right" half looks for its partner on
+					// its left, outside the pair, and stood the balustrades back to back in the middle). The lower
 					// column always runs towards +v, so a stretch past the footbridge keeps the same hand as one before it
 					// (choosing the lane by the footbridge crossed the pair over from one stretch to the next)
-					travelatorStep(c, StationGeometry.PLATFORM_Y, w, LocalDir.PLUS_V, "right");
-					travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, LocalDir.MINUS_V, "right");
+					travelatorStep(c, StationGeometry.PLATFORM_Y, w, LocalDir.PLUS_V, "left");
+					travelatorStep(c + 1, StationGeometry.PLATFORM_Y, w, LocalDir.MINUS_V, "left");
 				}
 			}
 			// a gap of three to cross before the next stretch

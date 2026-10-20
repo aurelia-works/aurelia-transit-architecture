@@ -430,6 +430,7 @@ table.mat th.num { text-align: right; padding: 0 0 6px 8px; }
 .clash[hidden] { display: none; }
 
 .seg.wrap { flex-wrap: wrap; }
+.seg.times button { flex: 0 0 auto; padding: 5px 9px; font-size: 12px; }
 .seg.wrap button { flex: 1 1 auto; padding: 6px 9px; }
 .dock-row.export { display: grid; grid-template-columns: 1fr; margin-bottom: 6px; }
 .dock-row.export button { border: 1px solid var(--line-strong); background: var(--panel-2); border-radius: var(--r); padding: 9px 12px; cursor: pointer; }

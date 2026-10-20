@@ -92,7 +92,7 @@
 				<div class="field">
 						<span class="f-name" id="operatorLabel">Operator logo on the signs</span>
 						<div class="seg wrap" id="operatorSeg" role="group" aria-labelledby="operatorLabel"></div>
-						<select id="operator" hidden><option value="">None</option><option value="ns">NS</option><option value="db">DB</option><option value="gvb">GVB</option></select>
+						<select id="operator" hidden><option value="">None</option><option value="ns">NS</option><option value="db">DB</option><option value="gvb">GVB</option><option value="tfl">Underground</option><option value="nationalrail">National Rail</option><option value="sbahn">S-Bahn</option><option value="sbb">SBB</option><option value="jr">JR</option></select>
 					</div>
 				</section>
 				<details class="adv extra" id="more">
@@ -243,6 +243,13 @@
 					<button type="button" class="chip-btn" data-view="head" id="headView" hidden>Head</button>
 					<button type="button" class="chip-btn" data-view="reverse">Back</button>
 				</div>
+				<div class="seg times" role="group" aria-label="Time of day">
+					<button type="button" data-time="" aria-pressed="true" title="The plain studio backdrop">Studio</button>
+					<button type="button" data-time="day" aria-pressed="false" title="Midday in game">Day</button>
+					<button type="button" data-time="sunset" aria-pressed="false" title="Sunset in game">Sunset</button>
+					<button type="button" data-time="night" aria-pressed="false" title="Night in game: only lights and screens stay bright">Night</button>
+				</div>
+				<label class="mini-switch" title="Sun and shadows, a sky, and a glow round every light, as a shader pack draws it"><input type="checkbox" id="shaders"> Shaders</label>
 				<label class="mini-switch"><input type="checkbox" id="textures" checked> In-game look</label>
 				<label class="mini-switch"><input type="checkbox" id="faces" checked> Numbers</label>
 				<details class="menu">

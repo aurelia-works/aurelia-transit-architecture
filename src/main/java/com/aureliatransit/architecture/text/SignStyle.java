@@ -34,7 +34,17 @@ public enum SignStyle {
 	/** Operator station sign, white panel, black text. */
 	OPERATOR_DB(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
 	/** Operator station sign, white on the operator's lighter blue. */
-	OPERATOR_GVB(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFD6E6F5);
+	OPERATOR_GVB(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFD6E6F5),
+	/** Operator station sign, London Underground: the roundel's blue on white. */
+	OPERATOR_UNDERGROUND(true, true, true, true, false, false, 0xFF000F9F, 0xFF3A4691),
+	/** Operator station sign, National Rail: black on white. */
+	OPERATOR_NATIONAL_RAIL(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
+	/** Operator station sign, S-Bahn: black on white. */
+	OPERATOR_SBAHN(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
+	/** Operator station sign, SBB: white on Swiss station blue. */
+	OPERATOR_SBB(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFCAD6E8),
+	/** Operator station sign, JR East: black on white. */
+	OPERATOR_JR(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52);
 
 	public static final int MAX_ROUTES = 4;
 

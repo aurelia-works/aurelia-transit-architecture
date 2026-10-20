@@ -22,6 +22,12 @@ OPERATORS = (
     ("ns", (0, 48, 130), (255, 255, 255), 1.0, "NS Station Sign"),
     ("db", (236, 236, 236), None, 1.0, "DB Station Sign"),
     ("gvb", (11, 99, 181), (255, 255, 255), 0.45, "GVB Station Sign"),
+    # on white, so the roundel's blue bar stays visible; the name in the bar's blue
+    ("underground", (236, 236, 236), None, 1.0, "Underground Station Sign"),
+    ("national_rail", (236, 236, 236), None, 1.0, "National Rail Station Sign"),
+    ("sbahn", (236, 236, 236), None, 1.0, "S-Bahn Station Sign"),
+    ("sbb", (45, 50, 125), None, 1.0, "SBB Station Sign"),
+    ("jr", (236, 236, 236), None, 1.0, "JR Station Sign"),
 )
 
 
@@ -94,7 +100,9 @@ def lang():
 def recipes():
     r = {}
     for name, background, *_ in OPERATORS:
-        dye = {"ns": "minecraft:blue_dye", "db": "minecraft:white_dye", "gvb": "minecraft:light_blue_dye"}[name]
+        dye = {"ns": "minecraft:blue_dye", "db": "minecraft:white_dye", "gvb": "minecraft:light_blue_dye",
+               "underground": "minecraft:lapis_lazuli", "national_rail": "minecraft:red_dye", "sbahn": "minecraft:green_dye",
+               "sbb": "minecraft:redstone", "jr": "minecraft:lime_dye"}[name]
         r[f"{name}_station_sign"] = {"type": "minecraft:crafting_shapeless", "category": "building",
                                      "ingredients": [g.item("minecraft:iron_ingot"), g.item(dye), g.item("minecraft:paper"), g.item("minecraft:glowstone_dust")],
                                      "result": {"item": f"{MOD}:{name}_station_sign", "count": 2}}

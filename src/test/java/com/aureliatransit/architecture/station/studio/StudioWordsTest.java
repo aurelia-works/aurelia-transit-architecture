@@ -54,7 +54,9 @@ class StudioWordsTest {
 
 	@Test
 	void anOperatorWordPutsItsMarkOnTheNameSigns() {
-		for (final String[] row : new String[][]{{"ns", "ns_station_sign"}, {"deutsche bahn", "db_station_sign"}, {"gvb operator", "gvb_station_sign"}}) {
+		for (final String[] row : new String[][]{{"ns", "ns_station_sign"}, {"deutsche bahn", "db_station_sign"}, {"gvb operator", "gvb_station_sign"},
+				{"tfl", "underground_station_sign"}, {"london underground signs", "underground_station_sign"}, {"national rail", "national_rail_station_sign"},
+				{"sbahn signs", "sbahn_station_sign"}, {"sbb", "sbb_station_sign"}, {"jr east", "jr_station_sign"}, {"nationalrail operator", "national_rail_station_sign"}}) {
 			final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse("2 tracks side, 64 long, named Halt, " + row[0]).spec());
 			final long signs = plan.blocks().stream().filter(b -> b.role() == Role.NAME_SIGN).count();
 			assertTrue(signs > 0, row[0]);
@@ -62,6 +64,18 @@ class StudioWordsTest {
 		}
 		assertTrue(StationPlanner.plan(StationDescriptionParser.parse("2 tracks side, 64 long, named Halt").spec()).blocks().stream()
 				.filter(b -> b.role() == Role.NAME_SIGN).noneMatch(b -> b.blockId().contains("ns_station_sign")));
+	}
+
+	@Test
+	void aLookOrStationTypeWordNamesAnOperatorOnlyWithItsNoun() {
+		// "sbahn" is the German look and "london underground" a London station underground: neither alone changes the signs
+		assertEquals(com.aureliatransit.architecture.station.Operator.NONE, StationDescriptionParser.parse("2 tracks side, 64 long, sbahn").spec().operator());
+		final StationSpec london = StationDescriptionParser.parse("2 tracks side, 64 long, london underground").spec();
+		assertEquals(com.aureliatransit.architecture.station.Operator.NONE, london.operator());
+		final StationSpec apart = StationDescriptionParser.parse("2 tracks side, 64 long, london, underground").spec();
+		assertEquals(apart.style(), london.style());
+		assertEquals(apart.building(), london.building());
+		assertEquals(com.aureliatransit.architecture.station.Operator.SBAHN, StationDescriptionParser.parse("2 tracks side, 64 long, sbahn signs").spec().operator());
 	}
 
 	@Test

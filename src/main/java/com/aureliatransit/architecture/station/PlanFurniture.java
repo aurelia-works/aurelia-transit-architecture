@@ -367,7 +367,8 @@ abstract class PlanFurniture extends PlanRoofs {
 
 	/**
 	 * Departure screens on every platform of a furnished station: one screen point on platforms shorter than 48, two (at a
-	 * quarter and three quarters of the length) on longer ones. A screen is fixed to a column where the platform has one;
+	 * quarter and three quarters of the length) on longer ones. A screen spans from pole to pole where the platform has two
+	 * column lines, else is fixed to a column where it has one;
 	 * under a roof without, it hangs from the ceiling, double-sided and facing along the platform, four blocks wide where the platform and the ceiling have room, else two (never over an
 	 * edge cell); on an open
 	 * platform a standing screen is fixed to the back of a lamp post. Points keep clear of footbridge stairs and their
@@ -380,10 +381,10 @@ abstract class PlanFurniture extends PlanRoofs {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			final List<Integer> targets = screenTargets(band);
 			for (final int target : targets) {
-				// a screen is always a proper board: fixed to a column where there is one (it joins the pole rather than hanging
-				// beside it), else hung, across a column pair, or two blocks on a post.
-				// Never a lone single block on the floor.
-				if (!screenOnColumn(band, target) && !hangScreen(band, target) && !screenBetweenColumns(band, target)) {
+				// a screen is always a proper board: from pole to pole across a column pair where the platform has one (raised
+				// clear of heads, under a girder of its own), else fixed to a column (it joins the pole rather than hanging
+				// beside it), hung, or two blocks on a post. Never a lone single block on the floor.
+				if (!screenBetweenColumns(band, target) && !screenOnColumn(band, target) && !hangScreen(band, target)) {
 					screenOnPost(band, target);
 				}
 			}
@@ -519,13 +520,19 @@ abstract class PlanFurniture extends PlanRoofs {
 	}
 
 	/**
-	 * Where the roof is too high to hang a screen from (a train shed) and the platform has two column lines, one
-	 * double-sided screen across the whole gap between a pair of columns, in their own row, under a girder from column to
-	 * column it hangs from: a single display read from both ways, like a screen on a gantry. The pair nearest {@code target}
-	 * with the gap clear is taken. True if hung.
+	 * The first choice where the platform has two column lines: one double-sided screen across the whole gap between a pair
+	 * of columns, in their own row, under a girder from column to column it hangs from: a single display read from both
+	 * ways, like a screen on a gantry. It hangs {@link #GANTRY_SCREEN_Y} up where the columns reach its girder, else two
+	 * blocks lower. The pair nearest {@code target} with the gap clear is taken. True if hung.
 	 */
 	boolean screenBetweenColumns(TrackLayout.PlatformBand band, int target) {
-		final int y = StationGeometry.WALK_Y + 2;
+		return screenBetweenColumns(band, target, GANTRY_SCREEN_Y) || screenBetweenColumns(band, target, StationGeometry.WALK_Y + 2);
+	}
+
+	/** Height of a screen hung from pole to pole: four blocks of clear space under it. */
+	static final int GANTRY_SCREEN_Y = StationGeometry.WALK_Y + 4;
+
+	boolean screenBetweenColumns(TrackLayout.PlatformBand band, int target, int y) {
 		final Map<Integer, List<Integer>> rows = new TreeMap<>();
 		for (final PlannedBlock block : cells.values()) {
 			if (block.role() == Role.COLUMN && block.y() == StationGeometry.WALK_Y && band.contains(block.u(), block.v())) {

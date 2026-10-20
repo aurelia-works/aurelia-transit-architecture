@@ -184,10 +184,14 @@ abstract class PlanBridges extends PlanConcourse {
 				}
 			}
 		}
-		// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; under a canopy
-		// they stop below it, so the canopy runs over them
+		// flanking piers at the stair landings (never on the landing itself) so the canopy ends stay carried; they stop below
+		// the canopy, so it runs over them. Under a hall or shed roof, or none, there is no canopy end to carry and they
+		// stood as two short posts carrying nothing at the stair's foot
 		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
-			final int flankTop = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : StationGeometry.UPPER_FLOOR_Y;
+			if (roof(band) != RoofType.CANOPY) {
+				continue;
+			}
+			final int flankTop = StationGeometry.CANOPY_Y;
 			for (final StationLayout.Flight flight : site.flights(band)) {
 				final List<Integer> open = opening(band, flight);
 				final int landing = flight.landingV();

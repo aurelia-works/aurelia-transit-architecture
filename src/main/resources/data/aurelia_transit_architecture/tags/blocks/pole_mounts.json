@@ -15,6 +15,11 @@
     "aurelia_transit_architecture:ns_station_sign",
     "aurelia_transit_architecture:db_station_sign",
     "aurelia_transit_architecture:gvb_station_sign",
+    "aurelia_transit_architecture:underground_station_sign",
+    "aurelia_transit_architecture:national_rail_station_sign",
+    "aurelia_transit_architecture:sbahn_station_sign",
+    "aurelia_transit_architecture:sbb_station_sign",
+    "aurelia_transit_architecture:jr_station_sign",
     "aurelia_transit_architecture:uk_car_stop_marker",
     "aurelia_transit_architecture:german_stop_board",
     "aurelia_transit_architecture:dutch_stop_board"

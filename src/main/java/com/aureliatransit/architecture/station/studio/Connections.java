@@ -41,7 +41,8 @@ public final class Connections {
 	private static final Set<String> JOINING_SIGNS = Set.of(ATA + "bus_epaper_board", ATA + "composition_board", ATA + "direction_sign",
 			ATA + "dutch_station_sign", ATA + "exit_sign", ATA + "german_station_sign", ATA + "hanging_station_sign",
 			ATA + "hanging_wayfinding_sign", ATA + "passenger_info_terminal", ATA + "psd_text_panel", ATA + "station_info_board",
-			ATA + "station_name_sign", ATA + "wall_wayfinding_sign", ATA + "ns_station_sign", ATA + "db_station_sign", ATA + "gvb_station_sign");
+			ATA + "station_name_sign", ATA + "wall_wayfinding_sign", ATA + "ns_station_sign", ATA + "db_station_sign", ATA + "gvb_station_sign",
+			ATA + "underground_station_sign", ATA + "national_rail_station_sign", ATA + "sbahn_station_sign", ATA + "sbb_station_sign", ATA + "jr_station_sign");
 	private static final Set<String> RAILINGS = Set.of(ATA + "handrail", ATA + "station_fence");
 	private static final String GIRDER = ATA + "station_girder";
 	private static final String SIGN_POLE = ATA + "sign_pole";

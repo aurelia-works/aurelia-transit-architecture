@@ -33,6 +33,17 @@ public final class StationBlocksOperators {
 	public static final Block GVB_STATION_SIGN = ModBlocks.register("gvb_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
 			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_GVB), SHAPE), TIP_EDITABLE, TIP_JOINS);
 
+	public static final Block UNDERGROUND_STATION_SIGN = ModBlocks.register("underground_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_UNDERGROUND), SHAPE), TIP_EDITABLE, TIP_JOINS);
+	public static final Block NATIONAL_RAIL_STATION_SIGN = ModBlocks.register("national_rail_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_NATIONAL_RAIL), SHAPE), TIP_EDITABLE, TIP_JOINS);
+	public static final Block SBAHN_STATION_SIGN = ModBlocks.register("sbahn_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_SBAHN), SHAPE), TIP_EDITABLE, TIP_JOINS);
+	public static final Block SBB_STATION_SIGN = ModBlocks.register("sbb_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_SBB), SHAPE), TIP_EDITABLE, TIP_JOINS);
+	public static final Block JR_STATION_SIGN = ModBlocks.register("jr_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_JR), SHAPE), TIP_EDITABLE, TIP_JOINS);
+
 	private static TextLayout layout(SignStyle style) {
 		return new TextLayout(11.5F, 8, 16, 6.5F, 9.5F, true, style, MARK);
 	}

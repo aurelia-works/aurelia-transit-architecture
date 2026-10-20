@@ -1085,9 +1085,16 @@ public final class StationDescriptionParser {
 		 * 1 for the bare word, 2 when the noun made it plainly the operator.
 		 */
 		private int operatorWord(int i, String token) {
-			final boolean two = token.equals("deutsche") && at(i + 1).equals("bahn") || token.equals("nederlandse") && at(i + 1).equals("spoorwegen");
-			final Operator named = Operator.of(two ? token + " " + at(i + 1) : token);
+			final Operator pair = Operator.of(token + " " + at(i + 1));
+			final boolean two = pair != null && pair != Operator.NONE;
+			final Operator named = two ? pair : Operator.of(token);
 			if (named == null || named == Operator.NONE) {
+				return 0;
+			}
+			// a look word ("sbahn") or a station type ("london underground") is the operator only with the noun after it
+			final String noun = at(i + (two ? 2 : 1));
+			final boolean plain = noun.equals("operator") || noun.equals("logo") || noun.equals("signs");
+			if (!plain && (!named.bare() || two && at(i + 1).equals("underground"))) {
 				return 0;
 			}
 			if (operator == null) {
