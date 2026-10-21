@@ -12,6 +12,8 @@ MTR 4.0.5 addon, Minecraft 1.20.1 Fabric, Java. Read this file, then `HANDOFF.md
 
 ## Live testing
 - Jah play-tests in the dev client. Never launch `runClient` or `runServer`, and never kill Java, unless Jah asks. A hook blocks a second client.
+- When asked, launch the client as `./gradlew runClient --offline --args="--username ATATester"`. ATATester is the op in `run/server/ops.json` and `tools/station_tour.py`'s player; without `--username` the client gets a random `PlayerNNN` with no op. Dev server port: 25599.
+- `run/` exists only in this checkout. To test a branch from a worktree, symlink `run/server` and `run/client` from here into the worktree and launch there.
 - Live-test recipes and the screenshot hook: `docs/LIVE_TESTING.md`. Station Studio is served by `StudioServer`.
 
 ## Where things are
