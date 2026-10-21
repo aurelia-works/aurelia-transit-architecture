@@ -1,0 +1,80 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/live_body",
+    "b": "aurelia_transit_architecture:block/live_body"
+  },
+  "elements": [
+    {
+      "from": [
+        3,
+        0,
+        7.5
+      ],
+      "to": [
+        4,
+        16,
+        8.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            3,
+            7.5,
+            4,
+            8.5
+          ],
+          "texture": "#b",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            3,
+            7.5,
+            4,
+            8.5
+          ],
+          "texture": "#b",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            12,
+            0.0,
+            13,
+            16.0
+          ],
+          "texture": "#b"
+        },
+        "south": {
+          "uv": [
+            3,
+            0.0,
+            4,
+            16.0
+          ],
+          "texture": "#b"
+        },
+        "west": {
+          "uv": [
+            7.5,
+            0.0,
+            8.5,
+            16.0
+          ],
+          "texture": "#b"
+        },
+        "east": {
+          "uv": [
+            7.5,
+            0.0,
+            8.5,
+            16.0
+          ],
+          "texture": "#b"
+        }
+      }
+    }
+  ],
+  "ambientocclusion": false
+}

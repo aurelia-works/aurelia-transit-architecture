@@ -1,0 +1,61 @@
+{
+  "variants": {
+    "facing=north,hanger=none": {
+      "model": "aurelia_transit_architecture:block/drop_rod"
+    },
+    "facing=north,hanger=both": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger"
+    },
+    "facing=north,hanger=low": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_low"
+    },
+    "facing=north,hanger=high": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_high"
+    },
+    "facing=east,hanger=none": {
+      "model": "aurelia_transit_architecture:block/drop_rod"
+    },
+    "facing=east,hanger=both": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger",
+      "y": 90
+    },
+    "facing=east,hanger=low": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_low",
+      "y": 90
+    },
+    "facing=east,hanger=high": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_high",
+      "y": 90
+    },
+    "facing=south,hanger=none": {
+      "model": "aurelia_transit_architecture:block/drop_rod"
+    },
+    "facing=south,hanger=both": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger",
+      "y": 180
+    },
+    "facing=south,hanger=low": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_low",
+      "y": 180
+    },
+    "facing=south,hanger=high": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_high",
+      "y": 180
+    },
+    "facing=west,hanger=none": {
+      "model": "aurelia_transit_architecture:block/drop_rod"
+    },
+    "facing=west,hanger=both": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger",
+      "y": 270
+    },
+    "facing=west,hanger=low": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_low",
+      "y": 270
+    },
+    "facing=west,hanger=high": {
+      "model": "aurelia_transit_architecture:block/drop_rod_hanger_high",
+      "y": 270
+    }
+  }
+}

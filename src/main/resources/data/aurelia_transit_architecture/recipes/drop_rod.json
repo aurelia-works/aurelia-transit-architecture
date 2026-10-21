@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:chain"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:drop_rod",
+    "count": 8
+  }
+}

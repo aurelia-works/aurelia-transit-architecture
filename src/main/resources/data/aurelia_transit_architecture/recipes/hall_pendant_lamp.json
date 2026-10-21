@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "building",
+  "ingredients": [
+    {
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "item": "minecraft:glowstone_dust"
+    },
+    {
+      "item": "minecraft:green_dye"
+    }
+  ],
+  "result": {
+    "item": "aurelia_transit_architecture:hall_pendant_lamp",
+    "count": 2
+  }
+}

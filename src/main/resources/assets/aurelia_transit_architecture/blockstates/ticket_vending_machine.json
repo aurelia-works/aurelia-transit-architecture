@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,half=lower": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine"
+    },
+    "facing=east,half=lower": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine",
+      "y": 90
+    },
+    "facing=south,half=lower": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine",
+      "y": 180
+    },
+    "facing=west,half=lower": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine",
+      "y": 270
+    },
+    "facing=north,half=upper": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine_upper"
+    },
+    "facing=east,half=upper": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine_upper",
+      "y": 90
+    },
+    "facing=south,half=upper": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine_upper",
+      "y": 180
+    },
+    "facing=west,half=upper": {
+      "model": "aurelia_transit_architecture:block/ticket_vending_machine_upper",
+      "y": 270
+    }
+  }
+}
