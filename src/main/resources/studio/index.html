@@ -57,6 +57,16 @@
 						<textarea id="text" rows="3" aria-label="Station description" placeholder="e.g. six-track Amsterdam station with a big glass roof"></textarea>
 						<div class="clash" id="clash" hidden role="status"><span id="clashText"></span></div>
 						<div class="field-foot"><span id="count"></span></div>
+						<div class="photo-row">
+							<button type="button" class="chip-btn" id="photoBtn" title="Claude looks at a photo of a station and writes the description for you">From a photo</button>
+							<input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" hidden>
+							<span class="help" id="photoNote" role="status"></span>
+						</div>
+						<div class="photo-prompt" id="photoPrompt" hidden>
+							<p class="help">No Anthropic API key is set for the Studio (ANTHROPIC_API_KEY). Instead: open Claude, attach the photo, paste this prompt, and put Claude's answer in the box above.</p>
+							<textarea id="photoPromptText" rows="4" readonly aria-label="Prompt for Claude"></textarea>
+							<button type="button" class="chip-btn" id="photoCopy">Copy prompt</button>
+						</div>
 					</div>
 				</section>
 				<section class="group" aria-labelledby="g-station">
@@ -175,6 +185,24 @@
 						<button type="button" class="switch" id="travSwitch" role="switch" aria-checked="true" aria-label="Travelators"><span></span></button>
 						<select id="trav" hidden><option value="">None</option><option value="1" selected>Where there is room</option></select>
 					</div>
+					<div class="field">
+						<span class="f-name" id="gatesLabel">Ticket gates</span>
+						<div class="seg" id="gatesSeg" role="group" aria-labelledby="gatesLabel"></div>
+						<select id="gates" hidden><option value="">MTR barriers</option><option value="ata">ATA two-way gates</option></select>
+					</div>
+					<label class="field" for="door"><span class="f-name">Street entrance</span><select id="door"><option value="">Auto (5 wide, 7 when grand)</option><option value="3">3 wide</option><option value="5">5 wide</option><option value="7">7 wide</option><option value="9">9 wide</option></select></label>
+				</section>
+				<section class="group" aria-labelledby="g-blocks">
+					<h2 class="label" id="g-blocks">Blocks</h2>
+					<p class="help">Swap any block of this station for another. Its slabs, stairs and walls follow where the new block has them.</p>
+					<div class="swap-row">
+						<select id="swapFrom" aria-label="Block to replace"></select>
+						<input id="swapTo" list="blockList" placeholder="e.g. stone bricks" aria-label="Block to use instead" spellcheck="false" autocomplete="off">
+						<button type="button" class="chip-btn" id="swapAdd">Swap</button>
+					</div>
+					<datalist id="blockList"></datalist>
+					<div class="chips swap-chips" id="swapChips"></div>
+					<input type="hidden" id="swaps">
 				</section>
 <details class="adv" id="perPlatform">
 						<summary>Platforms one by one</summary>

@@ -453,3 +453,16 @@ code { font: 12px var(--mono); color: var(--accent-text); }
 .extra-body { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
 .extra-body > .group { margin: 0; }
 #words .help { margin-bottom: 8px; }
+
+/* block swapper */
+.swap-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; margin: 6px 0; }
+.swap-row select { grid-column: 1 / -1; }
+.swap-row select, .swap-row input { min-width: 0; width: 100%; }
+.swap-chips .chip { display: inline-flex; align-items: center; gap: 6px; }
+.swap-chips .chip button { border: 0; background: none; color: inherit; cursor: pointer; padding: 0 2px; font-size: 13px; line-height: 1; }
+.photo-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.photo-row .help { margin: 0; }
+.photo-prompt { margin-top: 8px; display: grid; gap: 6px; }
+.photo-prompt[hidden] { display: none; }
+.photo-prompt textarea { font: 11.5px var(--mono); }
+.photo-prompt .chip-btn { justify-self: start; }

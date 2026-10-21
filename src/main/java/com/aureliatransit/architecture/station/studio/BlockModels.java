@@ -52,7 +52,7 @@ public final class BlockModels {
 	private static final Set<String> SIX_WAY_FACING = Set.of("minecraft:barrel", "minecraft:lightning_rod", "minecraft:end_rod");
 	/** MTR blocks that face the way the plan's front says, for when their blockstate files are not at hand (a studio without MTR's jar). */
 	private static final Set<String> MTR_FACING = Set.of("mtr:ticket_machine", "mtr:tactile_map", "mtr:route_sign_wall_light", "mtr:station_name_entrance", "mtr:lift_buttons_1",
-			"mtr:lift_door_1", "mtr:lift_track_1", "mtr:lift_track_floor_1", "mtr:escalator_step", "mtr:escalator_side");
+			"mtr:lift_door_1", "mtr:lift_track_1", "mtr:lift_track_floor_1", "mtr:escalator_step", "mtr:escalator_side", "mtr:glass_fence_plain");
 
 	/**
 	 * The block state properties the game gives a planned block before its neighbours join it, sorted by name: FACING or the axis
@@ -424,6 +424,12 @@ public final class BlockModels {
 			out.append(d == Math.rint(d) ? Long.toString((long) d) : Double.toString(d));
 		}
 		return out.append(']').toString();
+	}
+
+	/** Whether the game has a block with this id (its blockstate file is in the assets), so a block swap to it would build. */
+	public synchronized boolean known(String blockId) {
+		final int colon = blockId.indexOf(':');
+		return colon > 0 && file(blockId.substring(0, colon), "blockstates/" + blockId.substring(colon + 1) + ".json") != null;
 	}
 
 	private Map<String, Object> file(String namespace, String path) {

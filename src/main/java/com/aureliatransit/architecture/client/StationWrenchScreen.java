@@ -35,7 +35,7 @@ public class StationWrenchScreen extends Screen {
 
 	private static final int WIDTH = 320;
 	private static final int HALF = (WIDTH - 4) / 2;
-	private static final int COLUMNS = 4;
+	private static final int COLUMNS = 5;
 	private static final int ROW = 22;
 	/** The look and preset grids: shorter buttons, so sixteen cities fit on a small screen. */
 	private static final int GRID_ROW = 18;

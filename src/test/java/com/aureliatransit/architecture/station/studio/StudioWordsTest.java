@@ -68,10 +68,11 @@ class StudioWordsTest {
 
 	@Test
 	void aLookOrStationTypeWordNamesAnOperatorOnlyWithItsNoun() {
-		// "sbahn" is the German look and "london underground" a London station underground: neither alone changes the signs
+		// "sbahn" is the German look: alone it leaves the signs plain. "london underground" is a London station underground, so the
+		// city's operator for one, the Underground (Jah, 10-20: the city picks the operator), not the word as an operator
 		assertEquals(com.aureliatransit.architecture.station.Operator.NONE, StationDescriptionParser.parse("2 tracks side, 64 long, sbahn").spec().operator());
 		final StationSpec london = StationDescriptionParser.parse("2 tracks side, 64 long, london underground").spec();
-		assertEquals(com.aureliatransit.architecture.station.Operator.NONE, london.operator());
+		assertEquals(com.aureliatransit.architecture.station.Operator.UNDERGROUND, london.operator());
 		final StationSpec apart = StationDescriptionParser.parse("2 tracks side, 64 long, london, underground").spec();
 		assertEquals(apart.style(), london.style());
 		assertEquals(apart.building(), london.building());

@@ -59,6 +59,8 @@ public final class StudioServer {
 	public static final int FIRST_PORT = 25680;
 	private static final int PORTS = 10;
 	private static final int MAX_BODY = 16 * 1024;
+	/** A photo is being described: the next waits, so a held button cannot run up the player's API bill. */
+	private final java.util.concurrent.atomic.AtomicBoolean describing = new java.util.concurrent.atomic.AtomicBoolean();
 	/** How long a request waits for the planner before the page is told to try again. */
 	static final long PLAN_TIMEOUT_SECONDS = 30;
 	/** The page's own files; a change to any of them reloads open pages. */
@@ -180,6 +182,12 @@ public final class StudioServer {
 				return;
 			}
 			plan(exchange, form(body(exchange)));
+		} else if (path.equals("/api/photo") && method.equals("POST")) {
+			if (!token.equals(exchange.getRequestHeaders().getFirst("X-Studio-Token"))) {
+				reply(exchange, 403, "text/plain", "Reload the studio page.");
+				return;
+			}
+			photo(exchange);
 		} else if (path.equals("/api/export") && (method.equals("GET") || method.equals("POST"))) {
 			export(exchange, method.equals("GET"));
 		} else if (path.equals("/api/send") && method.equals("POST")) {
@@ -190,6 +198,47 @@ public final class StudioServer {
 			texture(exchange, path.substring("/tex/".length(), path.length() - 4));
 		} else {
 			reply(exchange, 404, "text/plain", "Not found");
+		}
+	}
+
+	/**
+	 * A photo of a station into a description (see {@link PhotoDescriber}): the body is the image, its type in Content-Type. Without
+	 * an API key the answer is the prompt to paste into Claude with the photo instead. One photo at a time.
+	 */
+	private void photo(HttpExchange exchange) throws IOException {
+		final String key = PhotoDescriber.key();
+		if (key == null) {
+			exchange.getRequestBody().close();
+			reply(exchange, 200, "application/json", "{\"key\":false,\"prompt\":" + Json.quote(PhotoDescriber.prompt()) + "}");
+			return;
+		}
+		if (!describing.compareAndSet(false, true)) {
+			reply(exchange, 429, "text/plain", "Already reading a photo. Wait for it to finish.");
+			return;
+		}
+		try {
+			final byte[] image;
+			try (InputStream in = exchange.getRequestBody()) {
+				image = in.readNBytes(PhotoDescriber.MAX_IMAGE_BYTES + 1);
+			}
+			if (image.length == 0 || image.length > PhotoDescriber.MAX_IMAGE_BYTES) {
+				reply(exchange, 400, "text/plain", "That photo is too large. The page shrinks it first; reload the page.");
+				return;
+			}
+			final String type = String.valueOf(exchange.getRequestHeaders().getFirst("Content-Type")).split(";")[0].trim();
+			final String description = PhotoDescriber.describe(image, type, key);
+			reply(exchange, 200, "application/json", "{\"key\":true,\"description\":" + Json.quote(description) + ",\"preset\":"
+					+ StudioApi.photoPreset(description) + "}");
+		} catch (IllegalStateException e) {
+			reply(exchange, 502, "text/plain", e.getMessage());
+		} catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			reply(exchange, 503, "text/plain", "Station Studio is shutting down.");
+		} catch (IOException e) {
+			LOGGER.warn("Station Studio could not reach the Anthropic API", e);
+			reply(exchange, 502, "text/plain", "Could not reach Claude. Check the internet connection.");
+		} finally {
+			describing.set(false);
 		}
 	}
 

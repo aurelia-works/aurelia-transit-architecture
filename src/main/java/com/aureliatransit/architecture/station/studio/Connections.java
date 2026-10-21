@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.studio;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.RailEdges;
 import com.aureliatransit.architecture.station.StylePalette;
 
 import java.util.Locale;
@@ -20,7 +21,7 @@ import java.util.Set;
  *     <li>panes and iron bars ({@code PaneBlock}): other panes and bars, walls, and any solid full side; the mod's own panes
  *     ({@code ArchGlassPaneBlock}) also the roof and frame blocks in its {@code glass_pane_joins} tag;</li>
  *     <li>railings ({@code RailingBlock}: handrails, station fences): other railings and any solid full side;</li>
- *     <li>station girders ({@code GirderBlock}): other girders on all six sides, and any solid full side beside them;</li>
+ *     <li>station girders and roof trusses ({@code GirderBlock}): other girders on all six sides, and any solid full side beside them;</li>
  *     <li>vanilla fences and walls: their own kind and any solid full side (walls as {@code low});</li>
  *     <li>sign poles ({@code SignPoleBlock}): a pole-mounted sign directly above or below.</li>
  * </ul>
@@ -45,6 +46,8 @@ public final class Connections {
 			ATA + "underground_station_sign", ATA + "national_rail_station_sign", ATA + "sbahn_station_sign", ATA + "sbb_station_sign", ATA + "jr_station_sign");
 	private static final Set<String> RAILINGS = Set.of(ATA + "handrail", ATA + "station_fence");
 	private static final String GIRDER = ATA + "station_girder";
+	/** Blocks of {@code GirderBlock}: the girder and the roof truss join each other as one family. */
+	private static final Set<String> GIRDERS = Set.of(GIRDER, ATA + "roof_truss");
 	private static final String SIGN_POLE = ATA + "sign_pole";
 	/** The {@code girder_joins} block tag: structural blocks (columns, piers, trusses) a girder frames into. */
 	private static final Set<String> GIRDER_JOINS = tag("girder_joins");
@@ -72,7 +75,7 @@ public final class Connections {
 		final int y = block.y();
 		final int z = frame.z(block.u(), block.v());
 		final Heading facing = frame.heading(block.front());
-		final StringBuilder out = new StringBuilder(block.state());
+		final StringBuilder out = new StringBuilder(RailEdges.worldState(block.state(), facing));
 		if (SCREENS.contains(id)) {
 			add(out, "left", same(frame, block, facing, beside(at, x, y, z, facing.right())));
 			add(out, "right", same(frame, block, facing, beside(at, x, y, z, facing.left())));
@@ -84,10 +87,10 @@ public final class Connections {
 		} else if (id.equals(SIGN_POLE)) {
 			add(out, "up", mounts(at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", mounts(at.get(StudioApi.cell(x, y - 1, z))));
-		} else if (id.equals(GIRDER)) {
+		} else if (GIRDERS.contains(id)) {
 			for (final Heading side : AROUND) {
 				final PlannedBlock other = beside(at, x, y, z, side);
-				add(out, name(side), other != null && (other.blockId().equals(GIRDER) || girderJoins(other) || solid(frame, other, side, full)));
+				add(out, name(side), other != null && (GIRDERS.contains(other.blockId()) || girderJoins(other) || solid(frame, other, side, full)));
 			}
 			add(out, "up", girder(at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", girder(at.get(StudioApi.cell(x, y - 1, z))));
@@ -222,7 +225,7 @@ public final class Connections {
 	}
 
 	private static boolean girder(PlannedBlock other) {
-		return other != null && (other.blockId().equals(GIRDER) || girderJoins(other));
+		return other != null && (GIRDERS.contains(other.blockId()) || girderJoins(other));
 	}
 
 	/** A structural block (a column, pier or truss) a girder frames into although it has no solid full side. */

@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.studio;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.PlanFingerprint;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.RailEdges;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationPlacement;
 import com.aureliatransit.architecture.station.StationPlan;
@@ -219,14 +220,15 @@ class SchematicExportTest {
 						props.put(pair.substring(0, pair.indexOf('=')), pair.substring(pair.indexOf('=') + 1));
 					}
 				}
-				// the plan's own extras are all there
-				for (final String pair : block.state().split(",")) {
+				// the plan's own extras are all there (edge sides as the world names them)
+				final Heading front = StudioApi.FRAME.heading(block.front());
+				for (final String pair : RailEdges.worldState(block.state(), front).split(",")) {
 					if (pair.indexOf('=') > 0) {
 						assertEquals(pair.substring(pair.indexOf('=') + 1).trim(), props.get(pair.substring(0, pair.indexOf('=')).trim()), words + " " + block + " as " + state);
 					}
 				}
 				// a facing or axis that is there follows the front
-				final Heading heading = StudioApi.FRAME.heading(block.front());
+				final Heading heading = front;
 				if (props.containsKey("facing") && !block.blockId().equals("mtr:rail") && !block.state().contains("facing=")) {
 					final String want = heading.name().toLowerCase();
 					final String away = heading.opposite().name().toLowerCase();

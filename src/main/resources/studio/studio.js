@@ -17,7 +17,7 @@
 
 	// ---- controls -------------------------------------------------------------------------------------------------------
 
-	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav", "class", "era", "facing", "operator"];
+	const fields = ["text", "mode", "layout", "tracks", "length", "look", "mix", "roof", "building", "size", "name", "platforms", "bed", "esc", "walls", "trav", "class", "era", "facing", "operator", "gates", "door", "swaps"];
 
 	function fillSelect(select, pairs, extra) {
 		select.innerHTML = "";
@@ -131,7 +131,8 @@
 		FRANKFURT: "frankfurt_sandstone_ashlar", ST_PANCRAS: "nlbe_brick_band_side", ANTWERP: "nlbe_limestone", NEW_YORK: "roma_travertine",
 		TOKYO: "minecraft/block/bricks", ZURICH: "minecraft/block/sandstone_top", PARIS: "minecraft/block/calcite",
 		MILAN: "minecraft/block/polished_diorite", BERLIN: "blue_tinted_glass", HONG_KONG: "minecraft/block/white_concrete", BEIJING: "grey_tinted_glass",
-		BANGKOK: "minecraft/block/sandstone_top", KUALA_LUMPUR: "minecraft/block/quartz_block_side", MUMBAI: "frankfurt_sandstone_ashlar"
+		BANGKOK: "minecraft/block/sandstone_top", KUALA_LUMPUR: "minecraft/block/quartz_block_side", MUMBAI: "frankfurt_sandstone_ashlar",
+		TEDDINGTON: "uk_yellow_stock_brick", SURBITON: "uk_white_render", COVENTRY: "uk_blue_engineering_brick"
 	};
 	const MODE_HELP = {
 		through: "Trains stop and carry on through the station.",
@@ -236,6 +237,19 @@
 		segmented("facing", "facingSeg");
 		segmented("walls", "wallsSeg");
 		segmented("bed", "bedSeg");
+		segmented("gates", "gatesSeg");
+		const blockList = $("blockList");
+		blockList.innerHTML = "";
+		for (const id of options.blocks || []) {
+			blockList.append(new Option(blockName(id), id));
+		}
+		$("swapAdd").addEventListener("click", addSwap);
+		$("swapTo").addEventListener("keydown", (e) => {
+			if (e.key === "Enter") {
+				e.preventDefault();
+				addSwap();
+			}
+		});
 		$("travSwitch").addEventListener("click", () => set("trav", $("trav").value ? "" : "1"));
 		synced.push(() => $("travSwitch").setAttribute("aria-checked", String($("trav").value === "1")));
 
@@ -249,32 +263,94 @@
 			b.title = p.description;
 			// the preset sets the buttons (they are always sent, so they would otherwise win over its numbers); the rest of its
 			// words, such as the roof and the footbridge, go in the description
-			b.addEventListener("click", () => {
-				$("text").value = p.text;
-				$("look").value = p.look;
-				$("mix").value = "";
-				$("mode").value = p.mode;
-				$("tracks").value = p.tracks;
-				$("length").value = p.length;
-				$("layout").value = p.layout;
-				$("roof").value = "AUTO";
-				$("building").value = "1";
-				$("size").value = "AUTO";
-				$("name").value = p.name;
-				// the preset's words already carry its look, type, tracks and length, so only its name (which they leave out)
-				// is pinned: the words stay authoritative and nothing is said twice
-				touched.clear();
-				rolled.clear();
-				touched.add("name");
-				// the preset replaced the rolled settings: the seed alone no longer makes this station
-				if (!seeds.edited) {
-					seeds.edited = true;
-					showSeed();
-				}
-				changed();
-			});
+			b.addEventListener("click", () => applyPreset(p));
 			presets.append(b);
 		}
+	}
+
+	/** A preset (or a photo's description) onto the controls. */
+	function applyPreset(p) {
+		$("text").value = p.text;
+		$("look").value = p.look;
+		$("mix").value = "";
+		$("mode").value = p.mode;
+		$("tracks").value = p.tracks;
+		$("length").value = p.length;
+		$("layout").value = p.layout;
+		$("roof").value = "AUTO";
+		$("building").value = "1";
+		$("size").value = "AUTO";
+		$("name").value = p.name;
+		// the preset's words already carry its look, type, tracks and length, so only its name (which they leave out)
+		// is pinned: the words stay authoritative and nothing is said twice
+		touched.clear();
+		rolled.clear();
+		touched.add("name");
+		// the preset replaced the rolled settings: the seed alone no longer makes this station
+		if (!seeds.edited) {
+			seeds.edited = true;
+			showSeed();
+		}
+		changed();
+	}
+
+	/**
+	 * From a photo: the page shrinks it (the server sends it on to Claude), and the description that comes back is applied like a
+	 * preset. Without an API key the server answers with the prompt to use in Claude by hand.
+	 */
+	function setupPhoto() {
+		const note = $("photoNote");
+		$("photoBtn").addEventListener("click", () => $("photoFile").click());
+		$("photoCopy").addEventListener("click", async () => {
+			try {
+				await navigator.clipboard.writeText($("photoPromptText").value);
+				note.textContent = "Prompt copied.";
+			} catch (e) {
+				$("photoPromptText").select();
+				note.textContent = "Select the prompt and copy it.";
+			}
+		});
+		$("photoFile").addEventListener("change", async () => {
+			const file = $("photoFile").files[0];
+			$("photoFile").value = "";
+			if (!file) {
+				return;
+			}
+			$("photoBtn").disabled = true;
+			note.textContent = "Reading the photo…";
+			try {
+				const r = await fetch("api/photo", { method: "POST", body: await shrink(file), headers: { "X-Studio-Token": TOKEN, "Content-Type": "image/jpeg" } });
+				if (!r.ok) {
+					throw new Error(await r.text());
+				}
+				const answer = await r.json();
+				if (!answer.key) {
+					$("photoPromptText").value = answer.prompt;
+					$("photoPrompt").hidden = false;
+					note.textContent = "";
+					return;
+				}
+				$("photoPrompt").hidden = true;
+				applyPreset(answer.preset);
+				note.textContent = "Read from the photo. Change anything in the words above.";
+			} catch (e) {
+				note.textContent = e.message || "Could not read the photo.";
+			} finally {
+				$("photoBtn").disabled = false;
+			}
+		});
+	}
+
+	/** A photo as a JPEG no larger than the model reads well. */
+	async function shrink(file) {
+		const MAX_EDGE = 1568;
+		const bitmap = await createImageBitmap(file);
+		const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+		const canvas = document.createElement("canvas");
+		canvas.width = Math.round(bitmap.width * scale);
+		canvas.height = Math.round(bitmap.height * scale);
+		canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+		return new Promise((resolve, reject) => canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Could not read that image.")), "image/jpeg", 0.85));
 	}
 
 	function syncButtons() {
@@ -797,6 +873,7 @@
 		}
 		setupSeed();
 		setupLayers();
+		setupPhoto();
 		flip(seeds.value);
 		updateOutputs();
 		$("game").hidden = !IN_GAME;
@@ -910,6 +987,62 @@
 			b.disabled = !on;
 		}
 	}
+	// ---- block swaps ----------------------------------------------------------------------------------------------------
+	// Enviro, 10-20: a way to replace the blocks he does not like. The swaps go to the planner as words ("replace X with Y").
+
+	function blockName(id) {
+		return id.replace(/^minecraft:/, "").replace(/^aurelia_transit_architecture:/, "ATA ").replace(/_/g, " ");
+	}
+
+	function swapList() {
+		return $("swaps").value.split(";").filter((p) => p.includes(">")).map((p) => p.split(">"));
+	}
+
+	function blockId(words) {
+		const w = words.trim().toLowerCase().replace(/\s+/g, "_");
+		return w.includes(":") ? w : w ? "minecraft:" + w : "";
+	}
+
+	function addSwap() {
+		const from = $("swapFrom").value;
+		const to = blockId($("swapTo").value);
+		if (!from || !to || from === to) {
+			return;
+		}
+		const list = swapList().filter(([f]) => f !== from && f !== to);
+		list.push([from, to]);
+		$("swapTo").value = "";
+		set("swaps", list.slice(-8).map((p) => p.join(">")).join(";"));
+	}
+
+	function showBlocks(plan) {
+		const from = $("swapFrom");
+		const keep = from.value;
+		from.innerHTML = "";
+		for (const m of plan.materials || []) {
+			from.append(new Option(blockName(m.id) + " (" + m.count + ")", m.id));
+		}
+		if ([...from.options].some((o) => o.value === keep)) {
+			from.value = keep;
+		}
+		const known = new Map((plan.swaps || []).map((s) => [s.to, s.known]));
+		const chips = $("swapChips");
+		chips.innerHTML = "";
+		for (const [f, t] of swapList()) {
+			const chip = document.createElement("span");
+			chip.className = "chip" + (known.get(t) === false ? " warn" : "");
+			chip.textContent = blockName(f) + " → " + blockName(t);
+			chip.title = known.get(t) === false ? t + " is not a block this game has" : f + " is built as " + t;
+			const x = document.createElement("button");
+			x.type = "button";
+			x.textContent = "×";
+			x.setAttribute("aria-label", "Undo this swap");
+			x.addEventListener("click", () => set("swaps", swapList().filter(([a]) => a !== f).map((p) => p.join(">")).join(";")));
+			chip.append(x);
+			chips.append(chip);
+		}
+	}
+
 	async function generate() {
 		const mine = ++request;
 		$("busy").hidden = false;
@@ -927,6 +1060,7 @@
 			current = plan;
 			showPlan(plan);
 			report(plan);
+			showBlocks(plan);
 			followWords(plan);
 			showClash(plan);
 		} catch (e) {
@@ -1269,6 +1403,20 @@
 		}
 	}
 
+	/**
+	 * The game's half-block nudge (FreePlacement's offset state) as a move in block units: left is the left of someone
+	 * looking at the front, which faces north (-z) before the model's turn. Flush nudges depend on the shape and are not drawn.
+	 */
+	function nudgeOf(entry) {
+		const m = /(?:^|,)offset=(left|right|front|back)(?:,|$)/.exec(entry.state || "");
+		if (!m) {
+			return new THREE.Vector3();
+		}
+		const move = { left: [0.5, 0], right: [-0.5, 0], front: [0, -0.5], back: [0, 0.5] }[m[1]];
+		const turnY = ((entry.model.parts[0] || { y: 0 }).y || 0) * Math.PI / 180;
+		return new THREE.Vector3(move[0], 0, move[1]).applyAxisAngle(AXES.y, -turnY);
+	}
+
 	const AXES = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
 
 	// One model's geometry, split by texture: { texturePath: BufferGeometry } in block units (0..1), rotated by its variant.
@@ -1344,7 +1492,9 @@
 		const size = bounds.getSize(new THREE.Vector3());
 		const margin = walk ? 1200 : 40;
 		ground.scale.set(size.x + margin, size.z + margin, 1);
-		ground.position.set((bounds.min.x + bounds.max.x) / 2, bounds.min.y - 0.02, (bounds.min.z + bounds.max.z) / 2);
+		// an underground station's ground is the street over it, unless the street is hidden to look into the box
+		const groundY = wasUnderground && !hiddenLayers.has("street") ? streetTop : bounds.min.y;
+		ground.position.set((bounds.min.x + bounds.max.x) / 2, groundY - 0.02, (bounds.min.z + bounds.max.z) / 2);
 		ground.material.color.set(walk ? 0x5b6168 : 0x23282e);
 	}
 
@@ -1358,6 +1508,8 @@
 		["access", "Stairs, lifts", ["STAIR", "ESCALATOR", "LIFT", "BRIDGE_DECK"]],
 		["furniture", "Furniture", ["BENCH", "BIN", "LAMP", "GATE", "BARRIER", "RAILING"]],
 		["signs", "Signs, screens", ["NAME_SIGN", "FIXTURE"]],
+		// an underground station's ceiling slab and everything on it: hidden at first, so the view looks into the box
+		["street", "Street", []],
 		["ground", "Ground", []]
 	];
 	const LAYER_OF = {};
@@ -1399,6 +1551,9 @@
 			m.visible = !hiddenLayers.has(m.userData.layer);
 		}
 		ground.visible = !hiddenLayers.has("ground");
+		if (wasUnderground) {
+			sizeGround();
+		}
 		draw();
 	}
 
@@ -1435,7 +1590,17 @@
 	let meshes = [];
 	/** Fare gate paddles by cell, so walk mode can swing each one open and shut as the game's gate does. */
 	let paddleAt = new Map();
+	/** Whether the last plan shown was underground: going underground hides the street once, so the view looks into the box. */
+	let wasUnderground = false;
+	/** The top of an underground station's ceiling slab: the street. */
+	let streetTop = 0;
 	function showPlan(plan) {
+		const underground = !!(plan.built && plan.built.underground);
+		if (underground && !wasUnderground) {
+			hiddenLayers.add("street");
+		}
+		wasUnderground = underground;
+		streetTop = underground ? plan.built.streetY + 1 : 0;
 		for (const m of meshes) {
 			station.remove(m);
 			m.geometry.dispose();
@@ -1448,7 +1613,8 @@
 		bounds = new THREE.Box3();
 		for (let i = 0; i < cells.length; i += 5) {
 			// one group per model and layer, so a block used in two layers hides with each
-			const key = cells[i + 3] + "|" + (LAYER_OF[plan.roles[cells[i + 4]]] || "structure");
+			const street = underground && cells[i + 1] >= plan.built.streetY;
+			const key = cells[i + 3] + "|" + (street ? "street" : LAYER_OF[plan.roles[cells[i + 4]]] || "structure");
 			if (!byModel.has(key)) {
 				byModel.set(key, []);
 			}
@@ -1469,10 +1635,11 @@
 					lights.push(cells[at] + 0.5, cells[at + 1] + 0.5, cells[at + 2] + 0.5);
 				}
 			}
+			const nudge = nudgeOf(entry);
 			for (const [texPath, geo] of modelGeometry(entry.model)) {
 				const mesh = new THREE.InstancedMesh(geo, material(texPath, roleColour(role), glow), list.length);
 				list.forEach((at, n) => {
-					matrix.makeTranslation(cells[at], cells[at + 1], cells[at + 2]);
+					matrix.makeTranslation(cells[at] + nudge.x, cells[at + 1], cells[at + 2] + nudge.z);
 					mesh.setMatrixAt(n, matrix);
 				});
 				// a fare gate's paddle is its own glass mesh: remember it so walk mode can slide it in and out of the cabinet
@@ -1537,6 +1704,8 @@
 		leaveWalk();
 		currentView = name;
 		glide = null;
+		camera.fov = 45;
+		camera.updateProjectionMatrix();
 		for (const b of document.querySelectorAll("[data-view]")) {
 			b.setAttribute("aria-pressed", String(b.dataset.view === name));
 		}
@@ -1685,6 +1854,19 @@
 		const radius = Math.max(off.length(), 0.01);
 		return { target: at.clone(), radius, yaw: Math.atan2(off.x, off.z), pitch: Math.asin(off.y / radius) };
 	}
+
+	// For scripted screenshots (the realism renders): look from eye to at in the view's own coordinates with a field of
+	// view, and read the plan and the station's bounds to aim by.
+	window.studioCamera = (eye, at, fov) => {
+		leaveWalk();
+		glide = null;
+		camera.fov = fov || 45;
+		camera.updateProjectionMatrix();
+		Object.assign(view, viewFrom(new THREE.Vector3(eye[0], eye[1], eye[2]), new THREE.Vector3(at[0], at[1], at[2])));
+		draw();
+	};
+	window.studioScene = () => ({ head: current && current.head, passenger: current && current.passenger, street: current && current.street,
+		min: bounds.min.toArray(), max: bounds.max.toArray() });
 
 	function orbitEye() {
 		const p = view.pitch;
@@ -2158,7 +2340,23 @@
 			}
 			// a railing or a glass barrier stands fence-high in the game though its model is one block tall: no jumping over
 			if (FENCE_ROLES.has(role)) {
-				add(x, y, z, { a: [x, y, z, x + 1, y + 1.5, z + 1], esc: 0 });
+				// a railing on the side of its block over a drop stops you only there; the rest of the block is walkable
+				const st = entry.state || "";
+				const sides = [["north", [x, z, x + 1, z + 0.125]], ["south", [x, z + 0.875, x + 1, z + 1]], ["west", [x, z, x + 0.125, z + 1]],
+					["east", [x + 0.875, z, x + 1, z + 1]]].filter(([side]) => new RegExp("edge_" + side + "=true").test(st));
+				if (/(^|,)edge=true/.test(st)) {
+					// a glass barrier's panel on its front side, which its model's turn gives (north before the turn)
+					const turnY = (((entry.model.parts[0] || { y: 0 }).y % 360) + 360) % 360;
+					const front = ["north", "east", "south", "west"][Math.round(turnY / 90) % 4];
+					sides.push(...[["north", [x, z, x + 1, z + 0.125]], ["south", [x, z + 0.875, x + 1, z + 1]], ["west", [x, z, x + 0.125, z + 1]],
+						["east", [x + 0.875, z, x + 1, z + 1]]].filter(([side]) => side === front));
+				}
+				if (!sides.length) {
+					add(x, y, z, { a: [x, y, z, x + 1, y + 1.5, z + 1], esc: 0 });
+				}
+				for (const [, b] of sides) {
+					add(x, y, z, { a: [b[0], y, b[1], b[2], y + 1.5, b[3]], esc: 0 });
+				}
 				continue;
 			}
 			if (/lift_track_floor/.test(entry.id)) {

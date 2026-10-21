@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station.studio;
 
+import com.aureliatransit.architecture.station.BlockFamilies;
 import com.aureliatransit.architecture.station.BuildingStyle;
 import com.aureliatransit.architecture.station.CanopyShape;
 import com.aureliatransit.architecture.station.Heading;
@@ -20,10 +21,12 @@ import com.aureliatransit.architecture.station.StationGeometry;
 import com.aureliatransit.architecture.station.StationPlacement;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StationPlanner;
+import com.aureliatransit.architecture.station.RealStation;
 import com.aureliatransit.architecture.station.StationPresets;
 import com.aureliatransit.architecture.station.StationRecipe;
 import com.aureliatransit.architecture.station.StationSeed;
 import com.aureliatransit.architecture.station.Operator;
+import com.aureliatransit.architecture.station.StationOptions;
 import com.aureliatransit.architecture.station.StationSpec;
 import com.aureliatransit.architecture.station.TrackLayout;
 import com.aureliatransit.architecture.station.Violation;
@@ -103,8 +106,38 @@ public final class StudioApi {
 		if (q.getOrDefault("trav", "").equals("1")) {
 			text = "travelators " + text;
 		}
+		if (q.getOrDefault("gates", "").equals("ata")) {
+			text = "ata gates " + text;
+		}
+		final int door = number(q.get("door"), 0);
+		if (door >= StationOptions.MIN_ENTRANCE && door <= StationOptions.MAX_ENTRANCE) {
+			text = "entrance " + door + " wide " + text;
+		}
+		text = text.strip() + swapWords(q.getOrDefault("swaps", ""));
 		text = text.strip();
 		return platforms.isEmpty() ? text : text.isEmpty() ? platforms : platforms + " " + text;
+	}
+
+	/** The most block swaps a request may carry ("from>to;from>to", block ids). */
+	static final int MAX_SWAPS = 8;
+
+	/** The page's block swaps ("minecraft:sandstone>minecraft:stone_bricks;...") as words: ", replace X with Y" each. */
+	static String swapWords(String list) {
+		final StringBuilder words = new StringBuilder();
+		int n = 0;
+		for (final String pair : list.split(";")) {
+			final String[] ends = pair.split(">");
+			if (ends.length != 2 || n >= MAX_SWAPS) {
+				continue;
+			}
+			final String from = ends[0].strip().toLowerCase(Locale.ROOT);
+			final String to = ends[1].strip().toLowerCase(Locale.ROOT);
+			if (from.matches("[a-z0-9_]+:[a-z0-9_/.]+") && to.matches("[a-z0-9_]+:[a-z0-9_/.]+") && !from.equals(to)) {
+				words.append(", replace ").append(from).append(" with ").append(to);
+				n++;
+			}
+		}
+		return words.toString();
 	}
 
 	/**
@@ -203,6 +236,26 @@ public final class StudioApi {
 				+ " letters or digits (a-z, 0-9)";
 	}
 
+	/** The most block kinds the page lists to swap. */
+	static final int MAX_MATERIALS = 48;
+
+	/** The plan's blocks by how many it has, most first, for the page's block swapper: [{"id","count"}]. */
+	static String materials(StationPlan plan) {
+		final Map<String, Integer> counts = new java.util.HashMap<>();
+		for (final PlannedBlock block : plan.blocks()) {
+			if (!block.blockId().equals("minecraft:air") && block.role() != Role.RAIL_NODE) {
+				counts.merge(block.blockId(), 1, Integer::sum);
+			}
+		}
+		final List<Map.Entry<String, Integer>> sorted = new ArrayList<>(counts.entrySet());
+		sorted.sort(Map.Entry.<String, Integer>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()));
+		final StringBuilder out = new StringBuilder("[");
+		for (int i = 0; i < Math.min(MAX_MATERIALS, sorted.size()); i++) {
+			out.append(i == 0 ? "" : ",").append("{\"id\":").append(Json.quote(sorted.get(i).getKey())).append(",\"count\":").append(sorted.get(i).getValue()).append('}');
+		}
+		return out.append(']').toString();
+	}
+
 	/** The choices the page offers and their limits. */
 	public String options() {
 		final StringBuilder out = new StringBuilder("{");
@@ -216,6 +269,7 @@ public final class StudioApi {
 		out.append(",\"classes\":").append(keys(StationClass.values(), StationClass::key, StationClass::label));
 		out.append(",\"eras\":").append(keys(StationEra.values(), StationEra::key, StationEra::label));
 		out.append(",\"facings\":").append(keys(Facing.values(), Facing::key, f -> f == Facing.AUTO ? "Auto" : f.key().substring(0, 1).toUpperCase(Locale.ROOT) + f.key().substring(1)));
+		out.append(",\"blocks\":").append(Json.strings(BlockFamilies.suggestions()));
 		out.append(",\"maxTyped\":").append(MAX_TYPED).append(",\"maxName\":").append(StationSpec.MAX_NAME);
 		out.append(",\"presets\":[");
 		for (int i = 0; i < StationPresets.ALL.size(); i++) {
@@ -228,15 +282,21 @@ public final class StudioApi {
 	/**
 	 * A preset as the page's controls: its tracks, length, type, platforms, city and name set the buttons, and the rest of its
 	 * words (the roof, the footbridge) go in the description. The controls are always sent, so without this they would win
-	 * over the preset's own numbers.
+	 * over the preset's own numbers. A real station takes no look: it is built as it is.
 	 */
 	static String preset(StationPresets.Preset preset) {
 		final StationSpec spec = StationDescriptionParser.parse(preset.description()).spec();
 		final String words = preset.description().replaceFirst(",?\\s*named .*$", "");
 		return "{\"key\":" + Json.quote(preset.key()) + ",\"description\":" + Json.quote(preset.description()) + ",\"text\":" + Json.quote(words)
 				+ ",\"tracks\":" + spec.trackCount() + ",\"length\":" + spec.platformLength() + ",\"mode\":" + Json.quote(spec.hub() ? "hub" : spec.terminus() ? "terminus" : "through")
-				+ ",\"layout\":" + Json.quote(spec.platformLayout().name()) + ",\"look\":" + Json.quote(look(preset.building()).name())
+				+ ",\"layout\":" + Json.quote(spec.platformLayout().name()) + ",\"look\":" + Json.quote((spec.real() == RealStation.NONE ? look(preset.building()) : StationRecipe.Look.AUTO).name())
 				+ ",\"name\":" + Json.quote(spec.name()) + "}";
+	}
+
+	/** A description read from a photo, as a preset the page applies the same way. */
+	static String photoPreset(String description) {
+		final StationSpec spec = StationDescriptionParser.parse(description).spec();
+		return preset(new StationPresets.Preset("photo", spec.building(), description));
 	}
 
 	/** The wrench's city button for a building look. */
@@ -259,6 +319,9 @@ public final class StudioApi {
 			case BANGKOK -> StationRecipe.Look.BANGKOK;
 			case KUALA_LUMPUR -> StationRecipe.Look.KUALA_LUMPUR;
 			case MUMBAI -> StationRecipe.Look.MUMBAI;
+			case VICTORIAN -> StationRecipe.Look.TEDDINGTON;
+			case ART_DECO -> StationRecipe.Look.SURBITON;
+			case MODERNIST -> StationRecipe.Look.COVENTRY;
 			case MODERN -> StationRecipe.Look.UTRECHT;
 			case NONE -> StationRecipe.Look.AUTO;
 		};
@@ -288,12 +351,16 @@ public final class StudioApi {
 
 	/** The headline of a station the typed words describe: what they came to, not what the settings above them say. */
 	static String wordsTitle(StationSpec spec) {
+		if (spec.real() != RealStation.NONE) {
+			// a real station is itself, not the look its building stone shares (Hamburg Hbf is not "Frankfurt station")
+			return spec.real().label() + ", " + spec.trackCount() + " tracks, " + spec.platformLength() + " long";
+		}
 		final StationRecipe.Look look = lookOf(spec.building());
 		final String label = look != null ? look.label() : spec.building() == BuildingStyle.NONE ? "Custom" : spec.building().label();
 		final String name = Character.toUpperCase(label.charAt(0)) + label.substring(1);
 		final int tracks = spec.trackCount();
 		final String size = spec.listed() ? spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") : "";
-		return name + (spec.hub() ? " hub" : spec.terminus() ? " terminus" : " station") + ", " + size + tracks + (tracks == 1 ? " track, " : " tracks, ")
+		return name + (spec.hub() ? " hub" : spec.terminus() ? " terminus" : spec.tram() ? " tram stop" : " station") + ", " + size + tracks + (tracks == 1 ? " track, " : " tracks, ")
 				+ spec.platformLength() + " long";
 	}
 
@@ -386,7 +453,21 @@ public final class StudioApi {
 		if (seedNote != null) {
 			warnings.add(seedNote);
 		}
+		for (final String to : new java.util.LinkedHashSet<>(spec.options().swaps().values())) {
+			if (!models.known(to)) {
+				warnings.add(to + " is not a block this game has, so it would not build; pick another to swap in");
+			}
+		}
 		out.append(",\"warnings\":").append(Json.strings(warnings));
+		out.append(",\"materials\":").append(materials(plan));
+		out.append(",\"swaps\":[");
+		int swapIndex = 0;
+		for (final Map.Entry<String, String> swap : spec.options().swaps().entrySet()) {
+			out.append(swapIndex++ == 0 ? "" : ",").append("{\"from\":").append(Json.quote(swap.getKey())).append(",\"to\":")
+					.append(Json.quote(swap.getValue())).append(",\"known\":").append(models.known(swap.getValue())).append('}');
+		}
+		out.append(']');
+		out.append(",\"gates\":").append(Json.quote(spec.options().gates().name().toLowerCase(Locale.ROOT)));
 		out.append(",\"ignored\":").append(Json.strings(parse.ignored()));
 		out.append(",\"wordsWon\":").append(Json.strings(wordsWon(q)));
 		out.append(",\"requested\":{\"mode\":").append(Json.quote(recipe.hub() ? "Hub" : recipe.terminus() ? "Terminus" : "Through station"))
@@ -402,6 +483,7 @@ public final class StudioApi {
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
 				.append(",\"scale\":").append(Json.quote(spec.hasBuilding() ? spec.buildingScale().label() : "-"))
 				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(StationLayout.of(spec, layout).bridge())
+				.append(",\"underground\":").append(spec.options().underground()).append(",\"streetY\":").append(StationGeometry.UPPER_FLOOR_Y)
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")
 				.append(audit.height()).append(",\"blocks\":").append(plan.blocks().size()).append('}');
@@ -644,6 +726,9 @@ public final class StudioApi {
 	}
 
 	private static String roof(StationSpec spec) {
+		if (spec.options().underground()) {
+			return "underground";
+		}
 		return switch (spec.roof()) {
 			case NONE -> "no roof";
 			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "platform canopies" : spec.canopy().label() + " platform canopies";
