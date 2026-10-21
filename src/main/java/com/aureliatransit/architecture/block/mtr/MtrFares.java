@@ -1,10 +1,13 @@
 package com.aureliatransit.architecture.block.mtr;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
+import org.mtr.mod.Init;
 import org.mtr.mod.SoundEvents;
 import org.mtr.mod.data.TicketSystem;
+import org.mtr.mod.packet.PacketOpenTicketMachineScreen;
 
 import java.util.function.Consumer;
 
@@ -34,5 +37,10 @@ final class MtrFares {
 
 	static void addBalance(World world, PlayerEntity player, int amount) {
 		TicketSystem.addBalance(new org.mtr.mapping.holder.World(world), new org.mtr.mapping.holder.PlayerEntity(player), amount);
+	}
+
+	/** What MTR's own ticket machine does on use ({@code BlockTicketMachine.onUse2}): its screen, with the player's balance. */
+	static void openTicketMachine(World world, ServerPlayerEntity player) {
+		Init.REGISTRY.sendPacketToClient(new org.mtr.mapping.holder.ServerPlayerEntity(player), new PacketOpenTicketMachineScreen(balance(world, player)));
 	}
 }

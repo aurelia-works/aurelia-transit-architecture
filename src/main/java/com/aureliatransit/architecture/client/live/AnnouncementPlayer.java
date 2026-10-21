@@ -16,9 +16,10 @@ import java.util.List;
 
 /**
  * Plays one announcement at a time as a timed sequence of sound events (chime first). The sentence is spoken as fully as
- * the active voice packs allow: fragments with a sound play in order and missing ones are skipped, while the full text
- * goes to the action bar so the missing word stays readable. All sounds use {@link SoundCategory#VOICE}, so the player's
- * Voice volume slider controls them.
+ * the active voice packs allow: fragments with a sound play in order. When a fragment has no sound (a pack never holds the
+ * player's own station names), the chime plays and then the computer's own voice ({@link SystemVoice}) says the whole
+ * sentence; without one, the missing fragments are skipped and the full text goes to the action bar so the missing word
+ * stays readable. All sounds use {@link SoundCategory#VOICE}, so the player's Voice volume slider controls them.
  */
 final class AnnouncementPlayer {
 
@@ -33,19 +34,22 @@ final class AnnouncementPlayer {
 	private double y;
 	private double z;
 	private float volume;
+	/** Said by the system voice once the chime has played; null when the recorded fragments speak. */
+	private String systemLine;
 
 	boolean busy(long now) {
-		return next < steps.size() || now < endAt;
+		return next < steps.size() || systemLine != null || now < endAt;
 	}
 
 	boolean active() {
-		return next < steps.size();
+		return next < steps.size() || systemLine != null;
 	}
 
 	void stop() {
 		steps.clear();
 		next = 0;
 		endAt = 0;
+		systemLine = null;
 	}
 
 	/**
@@ -71,8 +75,12 @@ final class AnnouncementPlayer {
 		}
 		final List<String> missing = new ArrayList<>();
 		final List<VoicePack.FragmentSound> spoken = stack.resolvePartial(announcement.fragments(), missing);
-		steps.addAll(spoken);
-		if (spoken.isEmpty()) {
+		if (!missing.isEmpty() && SystemVoice.available(client)) {
+			systemLine = announcement.subtitle();
+		} else {
+			steps.addAll(spoken);
+		}
+		if (spoken.isEmpty() && systemLine == null) {
 			LiveDebug.count(LiveDebug.Counter.ANNOUNCEMENTS_FALLBACK);
 		}
 		if (subtitle != null && client.inGameHud != null) {
@@ -96,6 +104,11 @@ final class AnnouncementPlayer {
 			}
 			nextAt = now + step.durationMillis() + GAP_MILLIS;
 			endAt = nextAt;
+		}
+		if (next >= steps.size() && systemLine != null && now >= nextAt) {
+			SystemVoice.say(systemLine);
+			endAt = now + SystemVoice.durationMillis(systemLine);
+			systemLine = null;
 		}
 		if (next >= steps.size()) {
 			steps.clear();

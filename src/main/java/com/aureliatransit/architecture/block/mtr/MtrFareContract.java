@@ -28,6 +28,34 @@ public final class MtrFareContract {
 		return AVAILABLE;
 	}
 
+	private static final boolean SCREEN = AVAILABLE && present("org.mtr.mod.packet.PacketOpenTicketMachineScreen");
+
+	/**
+	 * Opens MTR's own ticket machine screen for {@code player} (server side), so ATA's machine sells MTR tickets and tops up
+	 * the same balance. False, and nothing opens, without MTR fares or that screen.
+	 */
+	public static boolean openTicketMachine(World world, net.minecraft.server.network.ServerPlayerEntity player) {
+		if (!SCREEN) {
+			return false;
+		}
+		try {
+			MtrFares.openTicketMachine(world, player);
+			return true;
+		} catch (LinkageError e) {
+			AureliaTransitArchitecture.LOGGER.warn("MTR's ticket machine screen could not be opened", e);
+			return false;
+		}
+	}
+
+	private static boolean present(String name) {
+		try {
+			Class.forName(name, false, MtrFareContract.class.getClassLoader());
+			return true;
+		} catch (ClassNotFoundException | LinkageError e) {
+			return false;
+		}
+	}
+
 	/**
 	 * Asks MTR to let {@code player} through a gate at {@code pos} (server side). MTR decides entry or exit from the
 	 * player's record, charges the fare and plays the barrier sound; {@code opened} receives the answer, possibly a
