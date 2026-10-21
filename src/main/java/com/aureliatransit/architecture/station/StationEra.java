@@ -8,8 +8,7 @@ import java.util.Locale;
  * brick, gabled canopies, arched sheds); interwar the brick and stone of the 1920s and 30s; postwar the concrete of the 1950s to 70s;
  * modern glass and steel. {@link #AUTO} is "not asked": the plan then reports the era its building look belongs to ({@link #of}).
  *
- * <p>There is no look drawn from the 1920s and 30s yet, so interwar uses the nearest existing ones: Hamburg's clinker brick for
- * smaller stations and Milan's monumental stone for a grand one.
+ * <p>Interwar is Surbiton's art deco for smaller stations and Milan's monumental stone for a grand one.
  */
 public enum StationEra {
 	AUTO("Auto"), HISTORIC("Historic"), INTERWAR("Interwar"), POSTWAR("Postwar"), MODERN("Modern");
@@ -47,9 +46,9 @@ public enum StationEra {
 			return spec.era();
 		}
 		return switch (spec.building()) {
-			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, SANDSTONE, BEAUX_ARTS, TOKYO, ZURICH, PARIS, BANGKOK, KUALA_LUMPUR, MUMBAI -> HISTORIC;
-			case CLINKER, MILAN -> INTERWAR;
-			case CONCRETE -> POSTWAR;
+			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, SANDSTONE, BEAUX_ARTS, TOKYO, ZURICH, PARIS, BANGKOK, KUALA_LUMPUR, MUMBAI, VICTORIAN -> HISTORIC;
+			case CLINKER, MILAN, ART_DECO -> INTERWAR;
+			case CONCRETE, MODERNIST -> POSTWAR;
 			case MODERN, BERLIN, HONG_KONG, BEIJING -> MODERN;
 			case NONE -> switch (spec.style()) {
 				case GERMAN_SBAHN -> POSTWAR;

@@ -10,7 +10,7 @@ public enum ShedShape {
 	POINTED("pointed-arch train shed"),
 	/** A row of barrel vaults side by side, one over each group of tracks (Frankfurt, Leipzig, Milan). */
 	MULTI_ARCH("train shed of several arches"),
-	/** A row of pitched roofs side by side, ridge and furrow, one over each group of tracks (Mumbai, Kuala Lumpur, Zurich). */
+	/** A row of pitched roofs side by side, ridge and furrow, one over each group of tracks (Mumbai, Kuala Lumpur, Zurich, Victorian Britain). */
 	GABLED("train shed of pitched roofs");
 
 	private final String label;
@@ -25,8 +25,8 @@ public enum ShedShape {
 			case CLINKER, AMSTERDAM, ANTWERP, PARIS, BERLIN, BANGKOK -> ARCH;
 			case GOTHIC_BRICK -> POINTED;
 			case SANDSTONE, MILAN -> MULTI_ARCH;
-			case MUMBAI, KUALA_LUMPUR, ZURICH -> GABLED;
-			case MODERN, CONCRETE, BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING -> FLAT;
+			case MUMBAI, KUALA_LUMPUR, ZURICH, VICTORIAN -> GABLED;
+			case MODERN, CONCRETE, BEAUX_ARTS, TOKYO, HONG_KONG, BEIJING, ART_DECO, MODERNIST -> FLAT;
 			case NONE -> style == StationStyle.GERMAN_SBAHN ? ARCH : FLAT;
 		};
 	}

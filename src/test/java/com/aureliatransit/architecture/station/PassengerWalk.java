@@ -25,6 +25,8 @@ final class PassengerWalk {
 	/** Whether the ground past the low and the high end is street: no rail ends near that end. */
 	private boolean streetLo = true;
 	private boolean streetHi = true;
+	/** An underground station is come to from the street on its roof. */
+	private final boolean underground;
 	/** Every cell a passenger's feet reach. */
 	final Set<Long> reached = new HashSet<>();
 	/** Each lift: its landings (the cell in front of the bottom of each door), by level. */
@@ -33,6 +35,7 @@ final class PassengerWalk {
 	final List<List<int[]>> flights = new ArrayList<>();
 
 	PassengerWalk(StationPlan plan) {
+		underground = plan.spec().options().underground();
 		for (final PlannedBlock block : plan.blocks()) {
 			at.put(key(block.u(), block.y(), block.v()), block);
 			uLo = Math.min(uLo, block.u());
@@ -64,8 +67,9 @@ final class PassengerWalk {
 	}
 
 	/**
-	 * Air, a fare gate, a hanging chain, a sign overhead, or an escalator's upper half (MTR's escalator is two blocks high: you
-	 * stand on the step and between the balustrades of the block above it): nothing a passenger bumps into.
+	 * Air, a fare gate, a hanging chain, a sign overhead, a lift's call buttons (MTR's plate is a pixel thick on the wall), or an
+	 * escalator's upper half (MTR's escalator is two blocks high: you stand on the step and between the balustrades of the block
+	 * above it): nothing a passenger bumps into.
 	 */
 	private boolean open(int u, int y, int v) {
 		final PlannedBlock block = block(u, y, v);
@@ -73,7 +77,7 @@ final class PassengerWalk {
 			// the ground outside the station
 			return !(y <= 0 && outside(u, v));
 		}
-		return block.role().passable() || block.blockId().equals("minecraft:chain") || block.blockId().equals(StylePalette.MTR_ESCALATOR_SIDE)
+		return block.role().passable() || block.blockId().equals("minecraft:chain") || block.blockId().equals(StylePalette.MTR_LIFT_BUTTONS) || block.blockId().equals(StylePalette.MTR_ESCALATOR_SIDE)
 				|| block.role() == Role.NAME_SIGN && y >= 3;
 	}
 
@@ -88,7 +92,8 @@ final class PassengerWalk {
 			// beside the station, or past an end that is street, the ground is walkable
 			return y == 0 && outside(u, v) && (v >= vLo || streetLo) && (v <= vHi || streetHi);
 		}
-		return block.role().flatFloor() || sloped(block);
+		// an underground station's roof is the street
+		return block.role().flatFloor() || sloped(block) || underground && block.role() == Role.BUILDING_ROOF && y == StationGeometry.UPPER_FLOOR_Y;
 	}
 
 	private boolean outside(int u, int v) {
@@ -183,6 +188,11 @@ final class PassengerWalk {
 			for (int v = vLo - 1; v <= vHi + 1; v++) {
 				if (outside(u, v) && (u == uLo - 1 || u == uHi + 1 || v == vLo - 1 || v == vHi + 1) && stand(u, 1, v) && reached.add(key(u, 1, v))) {
 					queue.add(new int[]{u, 1, v});
+				}
+				// underground, in from the street on the roof at the box's edge
+				final int street = StationGeometry.UPPER_WALK_Y;
+				if (underground && (u == uLo || u == uHi || v == vLo || v == vHi) && stand(u, street, v) && reached.add(key(u, street, v))) {
+					queue.add(new int[]{u, street, v});
 				}
 			}
 		}

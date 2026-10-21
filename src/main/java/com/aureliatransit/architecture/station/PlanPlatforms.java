@@ -33,27 +33,42 @@ abstract class PlanPlatforms extends PlanState {
 			if (!site.served().contains(band.number()) || gateNumbered(band)) {
 				continue;
 			}
-			final int mid = (band.uMin() + band.uMax()) / 2;
-			for (int d = 0; d <= band.width(); d++) {
-				final int u = mid + (d % 2 == 0 ? d / 2 : -(d + 1) / 2);
-				if (u < band.uMin() || u > band.uMax() || isEdge(band, u)) {
-					continue;
-				}
-				final int y = ceiling(u, v) - 1;
-				if (y >= StationGeometry.WALK_Y + 2 && numberSign(band, u, y, v, LocalDir.PLUS_V)) {
-					break;
-				}
+			final List<Integer> numbers = layout.platformNumbers(band);
+			if (numbers.size() == 2) {
+				// an island: each face's number over its own half, so "1" hangs on the side trains for platform 1 stand
+				final int mid = (band.uMin() + band.uMax()) / 2;
+				numberSignIn(band, mid, band.uMin(), v, numbers.get(0));
+				numberSignIn(band, mid + 1, band.uMax(), v, numbers.get(1));
+			} else if (numbers.size() == 1) {
+				numberSignIn(band, band.uMin(), band.uMax(), v, numbers.get(0));
+			}
+		}
+	}
+
+	/** One number plate hung over columns {@code from}..{@code to} (either order), nearest the middle of that run first. */
+	private void numberSignIn(TrackLayout.PlatformBand band, int from, int to, int v, int number) {
+		final int lo = Math.min(from, to);
+		final int hi = Math.max(from, to);
+		final int mid = (lo + hi) / 2;
+		for (int d = 0; d <= hi - lo + 1; d++) {
+			final int u = mid + (d % 2 == 0 ? d / 2 : -(d + 1) / 2);
+			if (u < lo || u > hi || isEdge(band, u)) {
+				continue;
+			}
+			final int y = ceiling(u, v) - 1;
+			if (y >= StationGeometry.WALK_Y + 2 && numberSign(u, y, v, LocalDir.PLUS_V, Integer.toString(number))) {
+				return;
 			}
 		}
 	}
 
 	/** A big platform number plate hung from the structure above; double-sided, so it reads from both ways. */
-	boolean numberSign(TrackLayout.PlatformBand band, int u, int y, int v, LocalDir front) {
+	boolean numberSign(int u, int y, int v, LocalDir front, String number) {
 		final Cell cell = new Cell(u, y, v);
 		if (cells.containsKey(cell) || air.contains(cell)) {
 			return false;
 		}
-		cells.put(cell, new PlannedBlock(u, y, v, Role.FIXTURE, NUMBER_SIGN, front, Integer.toString(band.number()), ""));
+		cells.put(cell, new PlannedBlock(u, y, v, Role.FIXTURE, NUMBER_SIGN, front, number, ""));
 		return true;
 	}
 
@@ -86,11 +101,33 @@ abstract class PlanPlatforms extends PlanState {
 		}
 	}
 
-	void ramps() {
-		if (layout.rampLength() == 0) {
-			return;
+	/**
+	 * The platforms (and footbridge street landings) that ramp down at their ends for step-free access. A platform between
+	 * tracks (an island, or side platforms back to back) is left out when it has a way off that does not cross a track (a
+	 * footbridge, an underpass, the station building's bridge or a terminus's concourse): its ramp would only lead down onto
+	 * the track bed between the tracks (Enviro, 10-20: "some of the platform logic doesn't make sense"). It gets an end
+	 * railing instead.
+	 */
+	List<TrackLayout.PlatformBand> rampedBands() {
+		// underground the ends are the box's walls, and nobody walks the tunnels
+		if (layout.rampLength() == 0 || spec.options().underground()) {
+			return List.of();
 		}
-		for (final TrackLayout.PlatformBand band : site.street() != null ? site.bridgeBands(layout) : layout.platforms()) {
+		final List<TrackLayout.PlatformBand> all = site.street() != null ? site.bridgeBands(layout) : layout.platforms();
+		// a hub's outer platforms run past its head with the through tracks; their end ramps stay their step-free way on
+		if (spec.hub() || !spec.footbridge() && !spec.underpass() && !site.building() && !layout.terminus()) {
+			return all;
+		}
+		return all.stream().filter(band -> !betweenTracks(band)).toList();
+	}
+
+	/** A track runs somewhere on each side of the band. */
+	final boolean betweenTracks(TrackLayout.PlatformBand band) {
+		return layout.tracks().stream().anyMatch(t -> t.u() < band.uMin()) && layout.tracks().stream().anyMatch(t -> t.u() > band.uMax());
+	}
+
+	void ramps() {
+		for (final TrackLayout.PlatformBand band : rampedBands()) {
 			for (int u = band.uMin(); u <= band.uMax(); u++) {
 				put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 2, LocalDir.MINUS_V);
 				put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, band.vFrom() - 1, LocalDir.MINUS_V);
@@ -103,24 +140,59 @@ abstract class PlanPlatforms extends PlanState {
 	}
 
 	/**
-	 * A handrail across each end of every platform that has no ramp there, edge cells too, so nobody walks off the end
-	 * onto the tracks; a terminus's platforms run on into its concourse at the head end and stay open there. Planned last,
-	 * so it only takes cells nothing else wanted.
+	 * A handrail across each end of every platform that has no ramp at that end, edge cells too, so nobody walks off the end
+	 * onto the tracks: on the platform's last row of floor (past its run, the floor goes on to the buffer stops), wherever
+	 * there is a drop beyond it. A terminus's platforms run on into its concourse at the head end and stay open there. Planned
+	 * last, so it only takes cells nothing else wanted.
 	 */
 	void endFences() {
-		final Set<TrackLayout.PlatformBand> ramped = new HashSet<>(layout.rampLength() == 0 ? List.of()
-				: site.street() != null ? site.bridgeBands(layout) : layout.platforms());
+		final Set<TrackLayout.PlatformBand> ramped = new HashSet<>(rampedBands());
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			if (ramped.contains(band)) {
-				continue;
-			}
 			for (int u = band.uMin(); u <= band.uMax(); u++) {
-				put(Role.RAILING, u, StationGeometry.WALK_Y, band.vFrom(), LocalDir.MINUS_V);
-				if (!layout.terminus()) {
-					put(Role.RAILING, u, StationGeometry.WALK_Y, band.vTo(), LocalDir.PLUS_V);
+				for (final int step : new int[]{-1, 1}) {
+					// a ramp's end stays open (a terminus's platforms have one only at the far end)
+					if (ramped.contains(band) && (step < 0 || !layout.terminus())) {
+						continue;
+					}
+					// along the floor to its last row inside the platforms' zone; floor going on past the zone (a terminus's
+					// concourse) leaves the end open
+					int v = step < 0 ? band.vFrom() : band.vTo();
+					while (v + step >= layout.vMin() && v + step < layout.platformLength() && floorAt(u, v + step)) {
+						v += step;
+					}
+					if (!floorAt(u, v + step) && at(u, StationGeometry.PLATFORM_Y, v + step) == null) {
+						put(Role.RAILING, u, StationGeometry.WALK_Y, v, step < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V);
+					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * The fence behind each buffer stop carried on sideways across the pit, past the track's clearance, wherever the pit
+	 * beside the buffer is open and floor stands behind it (between two buffered tracks, nothing else closes that gap).
+	 * Planned once every floor is down.
+	 */
+	void pitEndFences() {
+		for (final TrackLayout.Track track : layout.tracks()) {
+			if (!layout.buffered(track)) {
+				continue;
+			}
+			final int buffer = layout.trackEnd(track) + 1;
+			for (final int step : new int[]{-1, 1}) {
+				int u = track.u() + step * (StationGeometry.ENVELOPE_HALF_WIDTH + 1);
+				while (at(u, StationGeometry.PLATFORM_Y, buffer) == null && floorAt(u, buffer + 1)
+						&& put(Role.RAILING, u, StationGeometry.WALK_Y, buffer + 1, LocalDir.PLUS_V, OVERRUN_FENCE)) {
+					u += step;
+				}
+			}
+		}
+	}
+
+	/** True when a platform's floor (or the floor it runs on into) is at {@code (u, PLATFORM_Y, v)}. */
+	private boolean floorAt(int u, int v) {
+		final PlannedBlock block = at(u, StationGeometry.PLATFORM_Y, v);
+		return block != null && block.role().flatFloor();
 	}
 
 	void railNodes() {
@@ -130,6 +202,10 @@ abstract class PlanPlatforms extends PlanState {
 		for (final TrackLayout.Track track : layout.tracks()) {
 			put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformFrom(track), LocalDir.PLUS_V);
 			put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.platformTo(track), LocalDir.PLUS_V);
+			// a dead end's last node, at the end of its overrun before the buffer stop: the build lays a turn-back rail to it
+			if (layout.buffered(track) && layout.trackEnd(track) > layout.platformTo(track)) {
+				put(Role.RAIL_NODE, track.u(), StationGeometry.PLATFORM_Y, layout.trackEnd(track), LocalDir.PLUS_V);
+			}
 		}
 	}
 
@@ -139,7 +215,52 @@ abstract class PlanPlatforms extends PlanState {
 	 * platform, and black concrete under every platform floor and ramp, so the platforms stand on something and the bed
 	 * has no holes.
 	 */
+	/**
+	 * A tram stop's street: the street track block (to lay the MTR rail on) under each track's centre and dark paving across
+	 * its envelope, the whole run of the stop, as on a hub's forecourt.
+	 */
+	void streetTrack() {
+		for (final TrackLayout.Track track : layout.tracks()) {
+			for (int v = layout.vMin(); v <= layout.trackEnd(track); v++) {
+				for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+					if (!taken(u, -1, v)) {
+						put(Role.TRACK_BED, u, -1, v, LocalDir.PLUS_V, u == track.u() ? Planning.TRAM_TRACK : Planning.LOT_MARK);
+					}
+				}
+			}
+		}
+		// and the street between neighbouring tracks
+		for (final Box gap : bedGaps()) {
+			for (int u = gap.uMin(); u <= gap.uMax(); u++) {
+				for (int v = gap.vMin(); v <= gap.vMax(); v++) {
+					if (!taken(u, -1, v)) {
+						put(Role.TRACK_BED, u, -1, v, LocalDir.PLUS_V, Planning.LOT_MARK);
+					}
+				}
+			}
+		}
+	}
+
+	/** A tram stop's sign at each end of each platform, by the edge the tram stops at. */
+	void tramSigns() {
+		if (!spec.tram() || spec.hub()) {
+			return;
+		}
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final int u = band.trackLeft() ? band.uMin() + 1 : band.uMax() - 1;
+			for (final int v : new int[]{band.vFrom() + 1, band.vTo() - 1}) {
+				if (!taken(u, StationGeometry.WALK_Y, v)) {
+					put(Role.FIXTURE, u, StationGeometry.WALK_Y, v, band.trackLeft() ? LocalDir.MINUS_U : LocalDir.PLUS_U, Planning.TRAM_STOP_SIGN);
+				}
+			}
+		}
+	}
+
 	void trackBed() {
+		if (spec.tram() && !spec.hub()) {
+			streetTrack();
+			return;
+		}
 		final TrackBed bed = spec.trackBed();
 		if (bed == TrackBed.NONE) {
 			return;
@@ -195,20 +316,121 @@ abstract class PlanPlatforms extends PlanState {
 	}
 
 	/**
-	 * A buffer stop across each bay track's clearance at rail level, just past its platform's end, on ground the build makes
-	 * sure of (a terminus has its own, on the head building's floor).
+	 * One buffer stop across a track's clearance at row v, its front towards the train (-v): the driver's left end at the lower
+	 * u, the right end at the higher, the cells between the middle.
+	 */
+	void bufferStop(TrackLayout.Track track, int y, int v) {
+		final int u0 = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH;
+		final int u1 = track.u() + StationGeometry.ENVELOPE_HALF_WIDTH;
+		for (int u = u0; u <= u1; u++) {
+			final String part = u0 == u1 ? "single" : u == u0 ? "left" : u == u1 ? "right" : "middle";
+			put(Role.BUFFER_STOP, u, y, v, LocalDir.MINUS_V, palette.blockId(Role.BUFFER_STOP), "part=" + part);
+		}
+	}
+
+	/**
+	 * Each dead-end track's end: past its platform the track runs on {@link StationGeometry#overrun} rows to its last rail
+	 * node, then a buffer stop across its clearance at rail level, on ballast, and a fence across the row behind it when
+	 * the station goes on. Level floor carries the platforms on beside the overruns (as a terminus's concourse meets its
+	 * platform ends); {@link #overrunFences} fences it along the pits.
 	 */
 	void bayEnds() {
+		final TrackBed bed = spec.trackBed();
 		for (final TrackLayout.Track track : layout.tracks()) {
-			if (!layout.deadEnd(track)) {
+			if (!layout.buffered(track)) {
 				continue;
 			}
-			final int v = layout.trackEnd(track) + 1;
-			for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
-				put(Role.BUFFER_STOP, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_U);
+			final int buffer = layout.trackEnd(track) + 1;
+			if (bed != TrackBed.NONE) {
+				for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+					put(Role.TRACK_BED, u, -1, buffer, LocalDir.PLUS_V, bed.blockId());
+				}
+			}
+			bufferStop(track, StationGeometry.PLATFORM_Y, buffer);
+			// the fence across the end, behind the buffer, when the station goes on past it
+			for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; buffer < layout.vMax() && u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
+				put(Role.RAILING, u, StationGeometry.WALK_Y, buffer + 1, LocalDir.PLUS_V, OVERRUN_FENCE);
+			}
+		}
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			overrunFloor(band);
+		}
+	}
+
+	/**
+	 * The last row of the floor carrying a platform on past its end: to the last buffer of the buffered tracks along it,
+	 * and at a terminus to the head (a hub's platforms between through tracks too); -1 if it stops at its end.
+	 */
+	int overrunTo(TrackLayout.PlatformBand band) {
+		int to = -1;
+		for (final TrackLayout.Track track : layout.tracks()) {
+			final boolean beside = track.u() == band.uMin() - StationGeometry.EDGE_OFFSET || track.u() == band.uMax() + StationGeometry.EDGE_OFFSET;
+			if (beside && layout.buffered(track)) {
+				to = Math.max(to, layout.trackEnd(track) + 1);
+			}
+		}
+		if (layout.terminus() && band.number() != 0) {
+			to = Math.max(to, layout.platformLength() - 1);
+		}
+		return to;
+	}
+
+	/**
+	 * The floor carrying a platform on past its end (see {@link #overrunTo}): the concourse floor, and along each side that
+	 * faces a track the platform's paving, without the edge line that marks where to board. {@link #overrunFences} fences
+	 * those sides once the footbridges are planned.
+	 */
+	private void overrunFloor(TrackLayout.PlatformBand band) {
+		final int to = overrunTo(band);
+		for (int v = band.vTo() + 1; v <= to; v++) {
+			for (int u = band.uMin(); u <= band.uMax(); u++) {
+				final boolean left = u == band.uMin() && band.trackLeft();
+				final boolean right = u == band.uMax() && band.trackRight();
+				if (left || right) {
+					put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, left ? LocalDir.MINUS_U : LocalDir.PLUS_U);
+				} else {
+					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, palette.building().floor());
+				}
 			}
 		}
 	}
+
+	/**
+	 * The fence along each side of the floor past a platform's end that faces a track, so nobody steps down beside an
+	 * overrun or a through track. Only where two cells stay free between the fences and a row of roof columns (a narrower
+	 * floor keeps its paving open, as at the platform beside it), and from two rows past the last thing standing in the
+	 * middle of the floor (a footbridge stair and its walls), so the lanes round it still lead on.
+	 */
+	void overrunFences() {
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final int to = overrunTo(band);
+			final int sides = (band.trackLeft() ? 1 : 0) + (band.trackRight() ? 1 : 0);
+			final RoofType roof = band.number() == 0 ? RoofType.NONE : StationGeometry.roof(spec, band.number());
+			final int columns = roof == RoofType.NONE ? 0 : StationPlanner.columnLines(band, roof).size();
+			if (to < 0 || sides == 0 || band.uMax() - band.uMin() + 1 - sides - columns < 2) {
+				continue;
+			}
+			int from = band.vTo() + 1;
+			for (int v = band.vTo() + 1; v <= to; v++) {
+				for (int u = band.uMin() + 1; u < band.uMax(); u++) {
+					if (taken(u, StationGeometry.WALK_Y, v)) {
+						from = v + 2;
+					}
+				}
+			}
+			for (int v = from; v <= to; v++) {
+				if (band.trackLeft() && !taken(band.uMin(), StationGeometry.WALK_Y, v)) {
+					put(Role.RAILING, band.uMin(), StationGeometry.WALK_Y, v, LocalDir.MINUS_U, OVERRUN_FENCE);
+				}
+				if (band.trackRight() && !taken(band.uMax(), StationGeometry.WALK_Y, v)) {
+					put(Role.RAILING, band.uMax(), StationGeometry.WALK_Y, v, LocalDir.PLUS_U, OVERRUN_FENCE);
+				}
+			}
+		}
+	}
+
+	/** The fence round a track's overrun: station fencing, which stops players like any railing (1.5 blocks). */
+	static final String OVERRUN_FENCE = "aurelia_transit_architecture:station_fence";
 
 	/**
 	 * True for a row of a building's walls that carries windows: tall windows through the ground storey (y = 2..5), and two

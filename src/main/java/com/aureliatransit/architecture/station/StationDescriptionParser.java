@@ -43,6 +43,9 @@ public final class StationDescriptionParser {
 	/** What the station classes default to when nothing says otherwise (blocks, 1.5 to the metre): see docs/STATION_GENERATOR.md. */
 	static final int HALT_LENGTH = 75;
 	static final int HALT_WIDTH = 5;
+	/** A tram stop's platforms, unless the words say: long enough for a three-car tram and its stop signs. */
+	static final int TRAM_LENGTH = 40;
+	static final int TRAM_WIDTH = 4;
 	static final int REGIONAL_LENGTH = 180;
 	static final int CITY_LENGTH = 200;
 	static final int GRAND_TRACKS = 6;
@@ -61,6 +64,22 @@ public final class StationDescriptionParser {
 	 * Whatever stands after the word is taken and checked, so a seed that is too long or has other characters in it is reported
 	 * and left out instead of being half read.
 	 */
+	private static final String SWAP_END = "(?=\\s*(?:[,.;!]|\\band\\b|$))";
+	/** "use stone bricks instead of sandstone", "replace sandstone with stone bricks", "swap sandstone for stone bricks", "sandstone -> stone bricks". */
+	private static final List<Pattern> SWAPS = List.of(
+			swap("\\b(?:use|using|with|build with)\\s+" + swapBlock("to") + "\\s+instead\\s+of\\s+" + swapBlock("from")),
+			swap("\\breplace\\s+" + swapBlock("from") + "\\s+(?:with|by)\\s+" + swapBlock("to")),
+			swap("\\bswap\\s+" + swapBlock("from") + "\\s+(?:for|with|to)\\s+" + swapBlock("to")),
+			swap("(?<![a-z0-9_:])" + swapBlock("from") + "\\s*(?:->|\u2192)\\s*" + swapBlock("to")));
+
+	/** A block named in a swap: words or an id, as few as reach the next part of the pattern. */
+	private static String swapBlock(String group) {
+		return "(?<" + group + ">[a-z0-9_:][a-z0-9_: -]*?)";
+	}
+
+	private static Pattern swap(String pattern) {
+		return Pattern.compile(pattern + SWAP_END, Pattern.CASE_INSENSITIVE);
+	}
 	private static final Pattern SEED = Pattern.compile("(?i)\\bseed\\b(?:\\s*[:=]?\\s*([^\\s,;!?:()\"]+))?");
 	/** "city class": the station's class (see {@link StationClass}); the bare size words "city", "halt" ... keep their older meaning. */
 	private static final Pattern CLASS = Pattern.compile("(?i)\\b(halt|regional|town|city|grand)\\s+class\\b");
@@ -82,6 +101,7 @@ public final class StationDescriptionParser {
 	private static final Set<String> PLATFORM_NOUNS = Set.of("platform", "platforms");
 	private static final Set<String> ROOF_NOUNS = Set.of("roof", "canopy", "canopies");
 
+	private static final String ATA = "aurelia_transit_architecture:";
 	private static final Map<String, StationStyle> STYLE_WORDS = Map.ofEntries(Map.entry("modern", StationStyle.MODERN),
 			Map.entry("contemporary", StationStyle.MODERN), Map.entry("generic", StationStyle.MODERN), Map.entry("default", StationStyle.MODERN),
 			Map.entry("simple", StationStyle.MODERN), Map.entry("standard", StationStyle.MODERN), Map.entry("dutch", StationStyle.DUTCH),
@@ -104,15 +124,21 @@ public final class StationDescriptionParser {
 			Map.entry("thai", StationStyle.MODERN), Map.entry("krungthep", StationStyle.MODERN), Map.entry("kuala lumpur", StationStyle.MODERN),
 			Map.entry("malaysia", StationStyle.MODERN), Map.entry("malaysian", StationStyle.MODERN), Map.entry("kl", StationStyle.MODERN),
 			Map.entry("moorish", StationStyle.MODERN), Map.entry("mumbai", StationStyle.MODERN), Map.entry("bombay", StationStyle.MODERN),
-			Map.entry("india", StationStyle.MODERN), Map.entry("indian", StationStyle.MODERN));
+			Map.entry("india", StationStyle.MODERN), Map.entry("indian", StationStyle.MODERN), Map.entry("teddington", StationStyle.MODERN),
+			Map.entry("surbiton", StationStyle.MODERN), Map.entry("coventry", StationStyle.MODERN));
 	private static final Set<String> UNDERGROUND_WORDS = Set.of("underground", "subway", "tunnel", "tube");
 	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct");
+	/** Colours an underground station's walls are tiled in ("orange tiles": Berlin's U8, Rosenthaler Platz). */
+	private static final Map<String, String> TILES = Map.of("orange", ATA + "metro_tile_orange", "green", ATA + "metro_tile_green",
+			"yellow", ATA + "metro_tile_yellow", "blue", ATA + "metro_tile_blue", "grey", ATA + "metro_blue_grey_tile", "gray",
+			ATA + "metro_blue_grey_tile", "ochre", ATA + "metro_ochre_tile");
+	private static final Set<String> TILE_NOUNS = Set.of("tile", "tiles", "tiled", "tiling");
 	/** City words that pick a station building's look when a building is asked for (some also pick the platform style). */
 	private static final Map<String, BuildingStyle> CITY_BUILDINGS = Map.ofEntries(Map.entry("utrecht", BuildingStyle.MODERN),
 			Map.entry("leidsche", BuildingStyle.MODERN), Map.entry("berlin", BuildingStyle.BERLIN),
 			Map.entry("amsterdam", BuildingStyle.AMSTERDAM), Map.entry("hamburg", BuildingStyle.CLINKER), Map.entry("munich", BuildingStyle.CONCRETE),
 			Map.entry("munchen", BuildingStyle.CONCRETE), Map.entry("frankfurt", BuildingStyle.SANDSTONE), Map.entry("london", BuildingStyle.GOTHIC_BRICK),
-			Map.entry("pancras", BuildingStyle.GOTHIC_BRICK), Map.entry("gothic", BuildingStyle.GOTHIC_BRICK), Map.entry("victorian", BuildingStyle.GOTHIC_BRICK),
+			Map.entry("pancras", BuildingStyle.GOTHIC_BRICK), Map.entry("gothic", BuildingStyle.GOTHIC_BRICK), Map.entry("victorian", BuildingStyle.VICTORIAN),
 			Map.entry("antwerp", BuildingStyle.ANTWERP), Map.entry("antwerpen", BuildingStyle.ANTWERP), Map.entry("belgian", BuildingStyle.ANTWERP),
 			Map.entry("philadelphia", BuildingStyle.BEAUX_ARTS), Map.entry("washington", BuildingStyle.BEAUX_ARTS), Map.entry("chicago", BuildingStyle.BEAUX_ARTS),
 			Map.entry("american", BuildingStyle.BEAUX_ARTS), Map.entry("beaux", BuildingStyle.BEAUX_ARTS), Map.entry("classical", BuildingStyle.BEAUX_ARTS),
@@ -120,8 +146,11 @@ public final class StationDescriptionParser {
 			Map.entry("marble", BuildingStyle.ANTWERP), Map.entry("clinker", BuildingStyle.CLINKER), Map.entry("brutalist", BuildingStyle.CONCRETE),
 			Map.entry("america", BuildingStyle.BEAUX_ARTS), Map.entry("usa", BuildingStyle.BEAUX_ARTS), Map.entry("us", BuildingStyle.BEAUX_ARTS),
 			Map.entry("amtrak", BuildingStyle.BEAUX_ARTS), Map.entry("nyc", BuildingStyle.BEAUX_ARTS), Map.entry("york", BuildingStyle.BEAUX_ARTS),
-			Map.entry("boston", BuildingStyle.BEAUX_ARTS), Map.entry("english", BuildingStyle.GOTHIC_BRICK), Map.entry("british", BuildingStyle.GOTHIC_BRICK),
-			Map.entry("uk", BuildingStyle.GOTHIC_BRICK), Map.entry("leipzig", BuildingStyle.SANDSTONE), Map.entry("cologne", BuildingStyle.CLINKER),
+			Map.entry("boston", BuildingStyle.BEAUX_ARTS), Map.entry("english", BuildingStyle.VICTORIAN), Map.entry("british", BuildingStyle.VICTORIAN),
+			Map.entry("uk", BuildingStyle.VICTORIAN), Map.entry("britain", BuildingStyle.VICTORIAN), Map.entry("england", BuildingStyle.VICTORIAN),
+			Map.entry("teddington", BuildingStyle.VICTORIAN), Map.entry("suburban", BuildingStyle.VICTORIAN), Map.entry("lswr", BuildingStyle.VICTORIAN), Map.entry("surbiton", BuildingStyle.ART_DECO),
+			Map.entry("deco", BuildingStyle.ART_DECO), Map.entry("artdeco", BuildingStyle.ART_DECO), Map.entry("coventry", BuildingStyle.MODERNIST),
+			Map.entry("modernist", BuildingStyle.MODERNIST), Map.entry("leipzig", BuildingStyle.SANDSTONE), Map.entry("cologne", BuildingStyle.CLINKER),
 			Map.entry("koln", BuildingStyle.CLINKER), Map.entry("brussels", BuildingStyle.ANTWERP), Map.entry("rotterdam", BuildingStyle.MODERN),
 			Map.entry("tokyo", BuildingStyle.TOKYO), Map.entry("marunouchi", BuildingStyle.TOKYO), Map.entry("japan", BuildingStyle.TOKYO),
 			Map.entry("japanese", BuildingStyle.TOKYO), Map.entry("zurich", BuildingStyle.ZURICH), Map.entry("zürich", BuildingStyle.ZURICH),
@@ -175,7 +204,7 @@ public final class StationDescriptionParser {
 			"from", "into", "please", "build", "make", "create", "generate", "give", "me", "i", "we", "want", "need", "would", "like", "some",
 			"any", "very", "really", "also", "plus", "station", "stations", "railway", "rail", "train", "trains", "platform", "platforms",
 			"track", "tracks", "style", "styled", "type", "kind", "it", "its", "that", "this", "is", "are", "be", "have", "has", "new", "nice",
-			"little", "no", "not", "without", "only", "s", "u", "operator", "logo", "logos");
+			"little", "no", "not", "without", "only", "s", "u", "operator", "logo", "logos", "art");
 
 	private StationDescriptionParser() {
 	}
@@ -241,10 +270,16 @@ public final class StationDescriptionParser {
 		private boolean escalators;
 		private boolean bothWays;
 		private boolean enclosedStairs;
+		/** The gates, entrance width and block swaps the words asked for. */
+		private StationOptions options = StationOptions.DEFAULTS;
 		private boolean travelators;
 		private boolean parking;
 		private boolean underpass;
 		private boolean tram;
+		/** "underground", "subway", "tube", "tunnel": a box under the street (Enviro, 10-20); the word's index, or -1. */
+		private int undergroundAt = -1;
+		/** "orange tiles" and the like: an underground station's wall tiles, or null. */
+		private String tile;
 		private boolean mezzanine;
 		private Boolean furniture;
 		private Boolean railNodes;
@@ -296,6 +331,7 @@ public final class StationDescriptionParser {
 				text = text.substring(0, MAX_INPUT);
 				warn("the description is longer than " + MAX_INPUT + " characters; the rest was ignored");
 			}
+			text = extractSwaps(text);
 			text = extractPlatforms(text);
 			text = extractName(text);
 			text = extractSeed(text);
@@ -438,6 +474,37 @@ public final class StationDescriptionParser {
 		 * Takes "seed k7f2ra" out of the text (after the name, so a station named Seed Lane keeps its name). A seed that is not one
 		 * to twelve letters or digits is ignored with a warning, never an error; the first valid one wins.
 		 */
+		/** Takes out the block swaps ({@link #SWAPS}), so their block words do not also pick a look or a material. */
+		private String extractSwaps(String text) {
+			String rest = text;
+			for (final Pattern pattern : SWAPS) {
+				final Matcher matcher = pattern.matcher(rest);
+				final StringBuilder kept = new StringBuilder();
+				int last = 0;
+				while (matcher.find()) {
+					final String from = BlockFamilies.resolve(matcher.group("from"));
+					final String to = BlockFamilies.resolve(matcher.group("to"));
+					if (from == null || to == null || from.equals(to)) {
+						continue;
+					}
+					kept.append(rest, last, matcher.start()).append(' ');
+					last = matcher.end();
+					final java.util.Map<String, String> pairs = BlockFamilies.expand(from, to);
+					if (options.swaps().size() + pairs.size() > StationOptions.MAX_SWAPS) {
+						warn("too many block swaps; " + from + " is not swapped (at most " + StationOptions.MAX_SWAPS + " blocks)");
+						continue;
+					}
+					for (final java.util.Map.Entry<String, String> pair : pairs.entrySet()) {
+						options = options.withSwap(pair.getKey(), pair.getValue());
+					}
+					understood.add(new Note(-1, "build " + to + " instead of " + from + (pairs.size() > 1 ? " (with its slabs, stairs and walls)" : "")));
+				}
+				kept.append(rest.substring(last));
+				rest = kept.toString();
+			}
+			return rest;
+		}
+
 		private String extractSeed(String text) {
 			final Matcher matcher = SEED.matcher(text);
 			final StringBuilder rest = new StringBuilder();
@@ -536,6 +603,13 @@ public final class StationDescriptionParser {
 		 */
 		private void applyClassAndEra() {
 			if (stationClass == StationClass.AUTO && era == StationEra.AUTO) {
+				return;
+			}
+			// a real station is built as it is: Studio rolls a class and an era with every seed, so leaving them out is no warning
+			if (real != null && real != RealStation.NONE) {
+				note(-1, real.label() + " is built as it is; the class and era are left out");
+				stationClass = StationClass.AUTO;
+				era = StationEra.AUTO;
 				return;
 			}
 			final StationClass c = stationClass;
@@ -649,13 +723,13 @@ public final class StationDescriptionParser {
 				final boolean grand = c == StationClass.GRAND;
 				final BuildingStyle lookBuilding = switch (e) {
 					case HISTORIC, AUTO -> BuildingStyle.SANDSTONE;
-					case INTERWAR -> grand ? BuildingStyle.MILAN : BuildingStyle.CLINKER;
+					case INTERWAR -> grand ? BuildingStyle.MILAN : BuildingStyle.ART_DECO;
 					case POSTWAR -> BuildingStyle.CONCRETE;
 					case MODERN -> grand ? BuildingStyle.BERLIN : BuildingStyle.MODERN;
 				};
 				final StationStyle platforms = switch (e) {
 					case HISTORIC, AUTO, POSTWAR -> StationStyle.GERMAN_SBAHN;
-					case INTERWAR -> grand ? StationStyle.MODERN : StationStyle.GERMAN_SBAHN;
+					case INTERWAR -> StationStyle.MODERN;
 					case MODERN -> grand ? StationStyle.GERMAN_SBAHN : c == StationClass.HALT ? StationStyle.MODERN : StationStyle.DUTCH;
 				};
 				style = platforms;
@@ -719,6 +793,24 @@ public final class StationDescriptionParser {
 			Arrays.fill(used, from, Math.min(to + 1, used.length), true);
 		}
 
+		/**
+		 * No operator named: the first city or country word with an operator of its own gives it (Hamburg DB, Zurich SBB); London
+		 * underground or metro is the Underground. "no operator" keeps the plain signs.
+		 */
+		private void cityOperator() {
+			for (final Look look : looks) {
+				Operator city = Operator.ofCity(look.word());
+				if (city == Operator.NATIONAL_RAIL && style == StationStyle.METRO) {
+					city = Operator.UNDERGROUND;
+				}
+				if (city != null) {
+					operator = city;
+					note(look.at(), city.name().toLowerCase(java.util.Locale.ROOT).replace('_', ' ') + " signs (from " + look.word() + "; say \"no operator\" for plain ones)");
+					return;
+				}
+			}
+		}
+
 		private void note(int at, String text) {
 			understood.add(new Note(at, text));
 		}
@@ -754,10 +846,96 @@ public final class StationDescriptionParser {
 
 		private void scan(int i) {
 			final String token = tokens[i];
-			if (negation(i) || number(i) || phrase(i)) {
+			if (negation(i) || entranceWords(i) || number(i) || gateWords(i) || phrase(i)) {
 				return;
 			}
 			keyword(i, token);
+		}
+
+		private static final Set<String> ENTRANCE_NOUNS = Set.of("entrance", "entrances", "door", "doors", "doorway", "doorways");
+
+		/**
+		 * The street doorway's width: "wide entrance" / "wider doors" (7), "narrow entrance" (3), "7 wide entrance",
+		 * "entrance 7 blocks wide", "entrance width 7". Each asks for a station building, which is where the doorway is.
+		 */
+		private boolean entranceWords(int i) {
+			final String token = tokens[i];
+			if ((token.equals("wide") || token.equals("wider") || token.equals("big") || token.equals("bigger") || token.equals("narrow"))
+					&& ENTRANCE_NOUNS.contains(at(i + 1))) {
+				return setEntrance(token.equals("narrow") ? StationOptions.MIN_ENTRANCE : 7, i, i + 1);
+			}
+			final Integer n = value(token);
+			if (n != null) {
+				int j = i + 1;
+				if (UNITS.contains(at(j))) {
+					j++;
+				}
+				if ((at(j).equals("wide") || at(j).equals("width")) && ENTRANCE_NOUNS.contains(at(j + 1))) {
+					return setEntrance(n, i, j + 1);
+				}
+				return false;
+			}
+			if (!ENTRANCE_NOUNS.contains(token)) {
+				return false;
+			}
+			int j = i + 1;
+			if (at(j).equals("width")) {
+				j++;
+			}
+			final Integer m = value(at(j));
+			if (m == null) {
+				return false;
+			}
+			int k = j + 1;
+			if (UNITS.contains(at(k))) {
+				k++;
+			}
+			if (at(k).equals("wide")) {
+				return setEntrance(m, i, k);
+			}
+			return j > i + 1 && setEntrance(m, i, k - 1);
+		}
+
+		private boolean setEntrance(int width, int from, int to) {
+			final int w = Math.max(StationOptions.MIN_ENTRANCE, Math.min(StationOptions.MAX_ENTRANCE, width));
+			if (w != width) {
+				warn("entrance width " + width + " is outside " + StationOptions.MIN_ENTRANCE + "-" + StationOptions.MAX_ENTRANCE + "; using " + w);
+			}
+			use(from, to);
+			options = options.withEntranceWidth(w);
+			askBuilding(from);
+			note(from, "street entrance " + (w % 2 == 0 ? w + 1 : w) + " wide");
+			return true;
+		}
+
+		/**
+		 * "mtr gates", "mtr ticket barriers", "default gates": MTR's own one-way barriers (the default); "ata gates",
+		 * "aurelia gates", "two-way gates": ATA's fare gates.
+		 */
+		private boolean gateWords(int i) {
+			final String token = tokens[i];
+			final StationOptions.GateStyle style = switch (token) {
+				case "mtr", "default", "standard" -> StationOptions.GateStyle.MTR;
+				case "ata", "aurelia", "twoway" -> StationOptions.GateStyle.ATA;
+				default -> null;
+			};
+			if (style == null) {
+				return false;
+			}
+			int j = i + 1;
+			if (at(j).equals("ticket") || at(j).equals("fare")) {
+				j++;
+			}
+			final String noun = at(j);
+			if (!noun.equals("gate") && !noun.equals("gates") && !noun.equals("barrier") && !noun.equals("barriers") && !noun.equals("gateline")
+					&& !noun.equals("faregates") && !noun.equals("turnstiles")) {
+				return false;
+			}
+			use(i, j);
+			options = options.withGates(style);
+			note(i, style == StationOptions.GateStyle.MTR ? "MTR's own ticket barriers in the gate lines (entry and exit lanes)"
+					: "ATA's two-way fare gates in the gate lines");
+			return true;
 		}
 
 		/** "no roof", "without ramps", "not accessible": the keyword may be up to 2 words later. */
@@ -927,7 +1105,7 @@ public final class StationDescriptionParser {
 				case "tramstop":
 					if (!tram) {
 						tram = true;
-						note(i, "a tram stop on the hub's forecourt in place of the taxi rank: street track blocks to lay the MTR rail on, a platform, shelter seats and stop signs");
+						note(i, "a tram stop: street track blocks to lay the MTR rail on, platforms, shelter seats and stop signs (on a hub, on its forecourt in place of the taxi rank)");
 					}
 					use(i, i);
 					return true;
@@ -1085,6 +1263,15 @@ public final class StationDescriptionParser {
 		 * 1 for the bare word, 2 when the noun made it plainly the operator.
 		 */
 		private int operatorWord(int i, String token) {
+			// "no operator": plain signs even where the city has an operator
+			if (token.equals("no") && (at(i + 1).equals("operator") || at(i + 1).equals("logo") || at(i + 1).equals("logos"))) {
+				if (operator == null) {
+					operator = Operator.NONE;
+					note(i, "plain name signs, no operator");
+				}
+				use(i + 1, i + 1);
+				return 2;
+			}
 			final Operator pair = Operator.of(token + " " + at(i + 1));
 			final boolean two = pair != null && pair != Operator.NONE;
 			final Operator named = two ? pair : Operator.of(token);
@@ -1124,8 +1311,18 @@ public final class StationDescriptionParser {
 				return;
 			}
 			final StationStyle styleWord = STYLE_WORDS.get(token);
-			if (UNDERGROUND_WORDS.contains(token)) {
-				warn("underground stations are not built yet; building at ground level with metro finishes");
+			if (UNDERGROUND_WORDS.contains(token) && undergroundAt < 0) {
+				undergroundAt = i;
+				note(i, "underground: a box under the street, stairs up to it");
+			}
+			final String tiled = TILES.get(token);
+			if (tiled != null && TILE_NOUNS.contains(at(i + 1))) {
+				if (tile == null) {
+					tile = tiled;
+					note(i, token + " wall tiles");
+				}
+				use(i, i + 1);
+				return;
 			}
 			if (styleWord != null) {
 				setStyle(styleWord, i);
@@ -1243,8 +1440,8 @@ public final class StationDescriptionParser {
 				if (real == null) {
 					real = named;
 					realAt = i;
-					note(i, "the real " + named.label() + ": its hall over the tracks, " + named.islands() + " island platforms and "
-							+ named.operator().name() + " signs");
+					note(i, "the real " + named.label() + ": its " + (named.trainShed() ? "train shed, building and bridges" : "hall over the tracks")
+							+ ", " + named.islands() + " island platforms and " + named.operator().name() + " signs");
 				} else if (real != named) {
 					warn("two real stations given; the first (" + real.label() + ") is built");
 				}
@@ -1391,11 +1588,13 @@ public final class StationDescriptionParser {
 					}
 				}
 			}
-			// the shed: from the last other look that has one, else from the first look
+			// the shed: from the last other look that has one, else from the first look (a British suburban station has
+			// canopies; its ridge-and-furrow shed comes only when a train shed is asked for)
 			Look shedLook = null;
 			for (int k = looks.size() - 1; k >= 0 && shedLook == null; k--) {
 				final Look look = looks.get(k);
-				if (ShedShape.forLook(look.building(), look.style() == null ? StationStyle.MODERN : look.style()).arched()) {
+				if (look.building() != BuildingStyle.VICTORIAN
+						&& ShedShape.forLook(look.building(), look.style() == null ? StationStyle.MODERN : look.style()).arched()) {
 					shedLook = look;
 				}
 			}
@@ -1613,6 +1812,10 @@ public final class StationDescriptionParser {
 			if (real == null) {
 				return;
 			}
+			if (real.trainShed()) {
+				applyShed();
+				return;
+			}
 			final String who = real.label();
 			if (terminus || hub) {
 				warn(who + " is a through station; the terminus is left out");
@@ -1669,8 +1872,166 @@ public final class StationDescriptionParser {
 			}
 		}
 
+		/**
+		 * A real station under a train shed (Hamburg): a grand through station with its building beside the tracks, one arched
+		 * shed over all its island platforms, the shed's length, footbridges across at both ends, escalators, its operator and
+		 * name. Words that contradict it are dropped with a warning; words it leaves open (width, seed, furniture) still apply.
+		 */
+		private void applyShed() {
+			final String who = real.label();
+			if (terminus || hub) {
+				warn(who + " is a through station; the terminus is left out");
+				terminus = false;
+				hub = false;
+			}
+			if (Boolean.FALSE.equals(building)) {
+				warn(who + " has its station building beside the tracks; \"no building\" is left out");
+			}
+			if (buildingStyle != null || !looks.isEmpty()) {
+				warn(who + " is built as it is; the look words are left out");
+			}
+			building = true;
+			buildingStyle = null;
+			looks.clear();
+			lookOnlyWord = null;
+			if (scale != null && scale != StationScale.GRAND) {
+				warn(who + " is a grand station; the smaller building is left out");
+			}
+			scale = StationScale.GRAND;
+			if (mezzanine) {
+				warn(who + "'s platforms are reached from bridges over the tracks; the mezzanine is left out");
+				mezzanine = false;
+			}
+			if (Boolean.FALSE.equals(footbridge)) {
+				warn(who + "'s platforms are reached from bridges over the tracks; \"no footbridge\" is left out");
+			}
+			footbridge = true;
+			if (roofNone || roof != null && roof != RoofType.HALL || shed != null && shed != ShedShape.ARCH) {
+				warn(who + " has one arched train shed over all its platforms; the other roof is left out");
+			}
+			roofNone = false;
+			roof = RoofType.HALL;
+			shed = ShedShape.ARCH;
+			if (listed.isEmpty() && tracks == null && islandPlatforms == null) {
+				for (int number = 1; number <= real.islands(); number++) {
+					listed.put(number, PlatformSpec.of(PlatformSpec.Kind.ISLAND));
+				}
+				note(realAt, real.islands() + " island platforms, " + real.tracks() + " tracks (as at " + who + "; the two through tracks"
+						+ " without platforms and the S-Bahn tunnel are not built)");
+			} else {
+				note(realAt, who + " has " + real.islands() + " island platforms; building the ones asked for");
+			}
+			if (sidePlatforms) {
+				warn(who + " has island platforms only; the side platforms are left out");
+				sidePlatforms = false;
+			}
+			if (length == null && lengthAdjective == null && listed.values().stream().allMatch(p -> p.length() == 0)) {
+				length = real.hallDepthBlocks();
+				note(realAt, "length " + length + ", the shed's " + real.hallDepth() + " m (the real platforms run on past it)");
+			}
+			if (!escalators) {
+				escalators = true;
+				note(realAt, "escalators beside the stairs (as at " + who + ")");
+			}
+			if (operator == null) {
+				operator = real.operator();
+			}
+			if (style == null) {
+				style = StationStyle.GERMAN_SBAHN;
+			}
+			if (name.isEmpty()) {
+				name = who;
+			}
+		}
+
+		/**
+		 * A tram stop on its own ("tram stop", not a hub's): what the words leave open is a tram's. Open platforms with
+		 * shelters, {@link #TRAM_LENGTH} long and {@link #TRAM_WIDTH} wide, no building or footbridge, modern platforms; the
+		 * planner lays street track under the rails and puts a tram stop sign at each platform's end.
+		 */
+		private void tramStopDefaults() {
+			if (!tram || hub || terminus) {
+				return;
+			}
+			if (roof == null && !roofNone) {
+				roofNone = true;
+				defaulted.add("open platforms with shelters (a tram stop)");
+			}
+			if (length == null && lengthAdjective == null && listed.isEmpty()) {
+				length = TRAM_LENGTH;
+				defaulted.add(TRAM_LENGTH + " long (a tram stop)");
+			}
+			if (width == null && !wide && listed.isEmpty()) {
+				width = TRAM_WIDTH;
+				defaulted.add(TRAM_WIDTH + " wide (a tram stop)");
+			}
+			if (footbridge == null) {
+				footbridge = false;
+			}
+			if (building == null && looks.isEmpty()) {
+				building = false;
+			}
+			if (style == null) {
+				style = StationStyle.MODERN;
+			}
+		}
+
+		/**
+		 * An underground station (Enviro, 10-20) is a through station in a box dug under the street: its platforms at the
+		 * bottom, the box's roof the street, and stairs from the platforms straight up to it (the footbridge's flights, with
+		 * the street for a deck). So it has no roof or building of its own, no ramps onto the tracks and no tram or underpass;
+		 * a look word picks its wall tiles instead of a building. A terminus underground is not built yet.
+		 */
+		private void undergroundDefaults() {
+			if (undergroundAt < 0) {
+				return;
+			}
+			// a terminus comes with its head building, which the warning about the terminus covers
+			final boolean askedBuilding = Boolean.TRUE.equals(building) && !terminus && !hub;
+			if (terminus || hub) {
+				warn("an underground terminus is not built yet; building an underground through station");
+				terminus = false;
+				hub = false;
+			}
+			if (askedBuilding) {
+				warn("an underground station is reached by stairs from the street; it has no station building");
+			}
+			building = false;
+			if (roof != null && roof != RoofType.NONE) {
+				warn("an underground station's roof is the street above it; no platform roof");
+			}
+			roof = null;
+			roofNone = true;
+			if (Boolean.FALSE.equals(footbridge)) {
+				warn("the stairs up to the street are an underground station's way in; they stay");
+			}
+			footbridge = true;
+			if (underpass || tram || mezzanine) {
+				warn("an underground station has stairs up to the street only: no " + (underpass ? "underpass" : tram ? "tram stop" : "mezzanine"));
+				underpass = false;
+				tram = false;
+				mezzanine = false;
+			}
+			if (style == null) {
+				style = StationStyle.METRO;
+			}
+			if (tile == null && buildingStyle != null) {
+				tile = switch (buildingStyle) {
+					case BERLIN, CLINKER, SANDSTONE -> ATA + "metro_tile_orange";
+					case CONCRETE -> ATA + "metro_ribbed_concrete";
+					case GOTHIC_BRICK, VICTORIAN, ART_DECO, MODERNIST -> ATA + "metro_tile_green";
+					case MODERN, AMSTERDAM -> ATA + "metro_pale_concrete";
+					case TOKYO, BEIJING, HONG_KONG -> "minecraft:smooth_quartz";
+					default -> null;
+				};
+			}
+			options = options.withUnderground(true).withTile(tile == null ? "" : tile);
+		}
+
 		private StationSpec resolve(boolean blank) {
 			applyReal();
+			undergroundDefaults();
+			tramStopDefaults();
 			final StationSpec.Builder builder = StationSpec.builder();
 			if (blank) {
 				defaulted.add("no description: using defaults");
@@ -1739,6 +2100,11 @@ public final class StationDescriptionParser {
 				if (trackCount >= 3) {
 					layout = PlatformLayout.ISLAND;
 					note(Math.min(islandAt, sideAt), "island and side platforms");
+					if (trackCount % 2 == 0) {
+						// islands pair the tracks off, so only an odd last track is left for a side platform
+						warn(trackCount + " tracks pair off onto island platforms, which leaves no track for a side platform; say "
+								+ (trackCount + 1) + " or " + (trackCount - 1) + " tracks for islands and a side platform");
+					}
 				} else if (trackCount == 2) {
 					layout = PlatformLayout.ISLAND;
 					note(islandAt, "island platforms");
@@ -1809,9 +2175,17 @@ public final class StationDescriptionParser {
 				if (footbridge == null) {
 					footbridge = true;
 					defaulted.add(sideEdge ? "footbridge (the platforms between the tracks need one)" : "footbridge with a street entrance (the platforms between the tracks need a way in)");
-				} else if (!footbridge) {
+				} else if (!footbridge && !(tram && !hub)) {
 					warn("with no footbridge the platforms between the tracks are reached by walking across a track");
 				}
+			}
+			// side platforms facing each other across the tracks: with no way over, the far one is reached only across a track
+			// (Enviro, 10-20). A footbridge goes over, unless the words say otherwise, the station is a halt (open platforms,
+			// each with its own path) or an underpass goes under. An empty description still plans the plain defaults.
+			final boolean acrossTracks = !terminus && !islands && bands.platforms().size() > 1;
+			if (acrossTracks && !blank && footbridge == null && !underpass && !roofNone && stationClass != StationClass.HALT) {
+				footbridge = true;
+				defaulted.add("footbridge (the platforms face each other across the tracks)");
 			}
 
 			// a shorter building has no room for its stair up a storey on one side of the entrance and its lift on the other
@@ -1965,10 +2339,14 @@ public final class StationDescriptionParser {
 			if (trackBed != null) {
 				builder.trackBed(trackBed);
 			}
+			if (operator == null) {
+				cityOperator();
+			}
 			if (operator != null) {
 				builder.operator(operator);
 			}
-			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine);
+			builder.escalators(escalators).stairsBothWays(bothWays).enclosedStairs(enclosedStairs).travelators(travelators).parking(parking).underpass(underpass).tram(tram).mezzanine(mezzanine)
+					.options(options);
 			if (travelators) {
 				final List<TrackLayout.PlatformBand> built = StationGeometry.layout(builder.build()).platforms();
 				if (built.stream().noneMatch(b -> b.length() >= StationPlanner.TRAVELATOR_PLATFORM)) {
@@ -2003,7 +2381,8 @@ public final class StationDescriptionParser {
 				final BuildingStyle look = buildingStyle != null ? buildingStyle : BuildingStyle.forStyle(style != null ? style : StationStyle.MODERN);
 				builder.building(look);
 				note(buildingAt, "station building: " + look.label() + ", furnished");
-			} else if (lookOnlyWord != null) {
+			} else if (lookOnlyWord != null && undergroundAt < 0) {
+				// underground, the look gives the wall tiles (see undergroundDefaults)
 				warn("\"" + lookOnlyWord + "\" only sets a station building's look; add \"station building\" to get one");
 			}
 			if (wantsBuilding) {
@@ -2044,8 +2423,8 @@ public final class StationDescriptionParser {
 				warn("a car park is only built in front of a station building beside the platforms or past a terminus; it is left out here");
 				builder.parking(false);
 			}
-			if (tram && !hub) {
-				warn("a tram stop is built on a hub's forecourt; it is left out here");
+			if (tram && terminus && !hub) {
+				warn("a terminus's tram stop is built on a hub's forecourt (say \"hub\"); it is left out here");
 				builder.tram(false);
 			}
 			if (underpass && terminus) {
@@ -2091,7 +2470,13 @@ public final class StationDescriptionParser {
 					seeded.add(own == ShedShape.ARCH ? "a train shed of several arches" : "one arched train shed");
 				}
 			}
-			if (real != null) {
+			if (real != null && real.trainShed()) {
+				if (RealStation.islandsOnly(builder.build())) {
+					builder.real(real);
+				} else {
+					warn(real.label() + " has island platforms only, two tracks each; building plain platforms under a train shed");
+				}
+			} else if (real != null) {
 				final StationSpec sized = builder.build();
 				final int depth = real.hallDepth(StationGeometry.builtLength(sized.platformLength()));
 				if (depth == 0) {

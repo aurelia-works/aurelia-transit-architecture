@@ -127,7 +127,10 @@ class StationPlannerTest {
 			}
 			byRole.computeIfAbsent(block.role(), key -> new ArrayList<>()).add(block);
 			// fixtures name their own equipment (screens, help points), every other role takes the palette's block
-			if (block.role() != Role.FIXTURE && !block.blockId().equals(palette.blockId(block.role()))) {
+			// a hall's frame is the roof truss where the palette's beam is the plain girder; a ground-floor gate line is MTR's fence
+			final boolean substitute = (block.role() == Role.BEAM || block.role() == Role.RIB) && block.blockId().equals(StationPlanner.ROOF_TRUSS)
+					&& palette.blockId(block.role()).equals(StationPlanner.GIRDER) || block.role() == Role.BARRIER && block.blockId().equals(PlanState.MTR_FENCE);
+			if (block.role() != Role.FIXTURE && !substitute && !block.blockId().equals(palette.blockId(block.role()))) {
 				scan.fail("palette ids", spec, "wrong id on " + block);
 			}
 			// name signs carry the name, departure screens the display style they are set to, nothing else carries text
@@ -647,7 +650,7 @@ class StationPlannerTest {
 		assertEquals(4 * (StationGeometry.builtLength(spec.platformLength()) - positions.size()), along.size());
 		for (final PlannedBlock beam : blocks(plan, Role.BEAM)) {
 			assertEquals(StationGeometry.HALL_BEAM_Y, beam.y());
-			assertEquals(ATA + "station_girder", beam.blockId());
+			assertEquals(ATA + "roof_truss", beam.blockId(), "a hall frame is the roof truss");
 			assertEquals("kind=white", beam.state());
 		}
 		// every column cap carries a girder: nothing floats between the column and the roof
@@ -850,7 +853,9 @@ class StationPlannerTest {
 			if (style == BuildingStyle.NONE) {
 				continue;
 			}
-			final StationSpec spec = StationSpec.builder().building(style).platformLength(48).name("Alpha").build();
+			// ATA's gates, whose kinds are checked below (MTR's barriers: EnviroFixesTest)
+			final StationSpec spec = StationSpec.builder().building(style).platformLength(48).name("Alpha")
+					.options(StationOptions.DEFAULTS.withGates(StationOptions.GateStyle.ATA)).build();
 			final StationPlan plan = plan(spec);
 			assertEquals(List.of(), LayoutValidator.validate(plan), style.toString());
 			assertTrue(StationAudit.audit(plan).buildable(), style.toString());
@@ -872,8 +877,7 @@ class StationPlannerTest {
 			assertFalse(blocks(plan, Role.BARRIER).isEmpty(), style.toString());
 			// office window, ticket machines (2-tall with halves), kiosk, clock, boards
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("booth_window") && b.front() == LocalDir.PLUS_V), style.toString());
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals("mtr:ticket_machine") && b.state().equals("half=lower")), style.toString());
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals("mtr:ticket_machine") && b.state().equals("half=upper")), style.toString());
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals(PlanState.TICKET_MACHINE)), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("passenger_info_kiosk")), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("clock")), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("concourse_board")), style.toString());
@@ -1097,14 +1101,18 @@ class StationPlannerTest {
 		assertEquals(0, layout.buildingWidth(), "a terminus has no building beside the tracks");
 		assertEquals(layout.headEnd() + StationGeometry.HEAD_APRON, layout.vMax());
 		for (final TrackLayout.Track track : layout.tracks()) {
+			// the track runs on past its platform's end for an overrun, a rail node at each, to buffers across the track
+			final int end = layout.trackEnd(track);
+			assertEquals(layout.platformOf(track).vTo() + StationGeometry.overrun(StationGeometry.builtLength(48)), end);
 			for (int u = track.u() - 1; u <= track.u() + 1; u++) {
 				final int cu = u;
-				assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.BUFFER_STOP && b.u() == cu && b.v() == length), "no buffer at u=" + u);
+				assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.BUFFER_STOP && b.u() == cu && b.v() == end + 1), "no buffer at u=" + u);
 			}
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAIL_NODE && b.u() == track.u() && b.v() == length - 1));
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAIL_NODE && b.u() == track.u() && b.v() == end));
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAIL_NODE && b.u() == track.u() && b.v() == layout.platformOf(track).vTo()));
 		}
 		for (final Box envelope : plan.trackEnvelopes()) {
-			assertEquals(length - 1, envelope.vMax(), "clearance must stop at the buffers");
+			assertEquals(length - 2, envelope.vMax(), "clearance must stop at the buffers");
 		}
 		// ramps only at the open end; the platforms run level into the concourse
 		assertTrue(plan.blocks().stream().filter(b -> b.role() == Role.RAMP_LOWER || b.role() == Role.RAMP_UPPER)
@@ -1288,11 +1296,11 @@ class StationPlannerTest {
 	void streetDoorsCarryMtrNameAndTactileMap() {
 		final StationPlan head = plan(StationDescriptionParser.parse("four track utrecht terminus, two island platforms, 96 long, city building").spec());
 		final int front = head.layout().headEnd();
-		assertEquals(3, head.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME) && b.v() == front + 1
+		assertEquals(5, head.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME) && b.v() == front + 1
 				&& b.front() == LocalDir.PLUS_V).count());
 		assertEquals(2, count(head, StylePalette.MTR_TACTILE_MAP));
 		final StationPlan side = plan(StationDescriptionParser.parse("two track station with a station building, side platforms, 96 long").spec());
-		assertEquals(3, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME)
+		assertEquals(5, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME)
 				&& b.u() == StationLayout.streetWall() - 1 && b.front() == LocalDir.MINUS_U).count());
 		assertEquals(2, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_TACTILE_MAP)).count());
 		for (final StationPlan plan : List.of(head, side)) {

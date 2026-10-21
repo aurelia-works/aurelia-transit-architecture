@@ -25,6 +25,18 @@ public final class StationGeometry {
 	/** Platform blocks (and rail nodes) are at y = 0; passengers walk at y = 1. */
 	public static final int PLATFORM_Y = 0;
 	public static final int WALK_Y = 1;
+	/**
+	 * Rows a dead-end track runs on past its platform's end before its buffer stop (Jah, 10-21: "add like five blocks, add the
+	 * buffer, add another rail node"), as real termini leave room for a train that overshoots; the buffer stands in the row
+	 * after them, so a terminus's track zone is the asked length plus {@code overrun + 1}. Shorter on a short platform (see
+	 * {@link #overrun}), so a small station keeps room for its lift.
+	 */
+	public static final int OVERRUN = 5;
+
+	/** The overrun past a platform of a station {@code builtLength} long: a row per 12, from 1 up to {@link #OVERRUN}. */
+	public static int overrun(int builtLength) {
+		return Math.max(1, Math.min(OVERRUN, builtLength / 12));
+	}
 	/** Track clearance envelope: columns u-1..u+1 ... */
 	public static final int ENVELOPE_HALF_WIDTH = 1;
 	/** ... and y = 0..ENVELOPE_HEIGHT-1. */
@@ -185,7 +197,7 @@ public final class StationGeometry {
 	 * accessor is kept so a wider corridor can be introduced in one place.
 	 */
 	public static int bridgeWidth(StationSpec spec, TrackLayout layout) {
-		if (spec.real() != RealStation.NONE) {
+		if (spec.real().hallOverTracks()) {
 			// a real station's hall over the tracks is its footbridge, as deep along the tracks as the real one
 			return spec.real().hallDepth(layout.platformLength());
 		}
@@ -275,9 +287,16 @@ public final class StationGeometry {
 		final int railWidth = previousTrack ? previousU + ENVELOPE_HALF_WIDTH + 1 : previousU + 1;
 		final StationScale scale = spec.buildingScale();
 		final int parking = spec.parking() && spec.sideBuilding() ? PARKING_DEPTH : 0;
-		final int shift = parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? streetWidth(spec) : 0);
+		// an underground station's box: a wall column each side, and two rows past each platform end for its end walls (its
+		// platforms never ramp down onto the tracks)
+		final int box = spec.options().underground() ? 1 : 0;
+		final int ramps = spec.stepFree() || box > 0 ? RAMP_LENGTH : 0;
+		final int shift = box + parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? streetWidth(spec) : 0);
 		if (shift == 0) {
-			return new TrackLayout(railWidth, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, tracks, platforms, 0,
+			// a terminus's tracks run on past the platforms to their buffer stops, so its track zone is that much longer
+			final int built = builtLength(spec.platformLength());
+			final int zone = built + (spec.terminus() ? overrun(built) + 1 : 0);
+			return new TrackLayout(railWidth, zone, ramps, tracks, platforms, 0,
 					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, forecourtDepth(spec));
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
@@ -290,8 +309,8 @@ public final class StationGeometry {
 					band.vFrom(), band.vTo(), band.deadEnd()));
 		}
 		// a real station's hall is entered from the street beside the last track too
-		final int farStreet = spec.real() != RealStation.NONE && streetEntrance(spec) ? streetWidth(spec) : 0;
-		return new TrackLayout(railWidth + shift + farStreet, builtLength(spec.platformLength()), spec.stepFree() ? RAMP_LENGTH : 0, shiftedTracks, shiftedPlatforms,
+		final int farStreet = spec.real().hallOverTracks() && streetEntrance(spec) ? streetWidth(spec) : 0;
+		return new TrackLayout(railWidth + shift + farStreet + box, builtLength(spec.platformLength()), ramps, shiftedTracks, shiftedPlatforms,
 				spec.sideBuilding() ? shift : 0, 0, 0, parking);
 	}
 
@@ -313,7 +332,7 @@ public final class StationGeometry {
 
 	/** Columns of the street entrance of this spec. */
 	public static int streetWidth(StationSpec spec) {
-		return spec.real() != RealStation.NONE ? REAL_STREET_WIDTH : STREET_WIDTH;
+		return spec.real().hallOverTracks() ? REAL_STREET_WIDTH : STREET_WIDTH;
 	}
 
 	/**
@@ -321,7 +340,8 @@ public final class StationGeometry {
 	 * street entrance beside its first track: otherwise nobody could reach the footbridge without walking across a track.
 	 */
 	public static boolean streetEntrance(StationSpec spec) {
-		if (spec.sideBuilding() || spec.terminus() || !spec.footbridge()) {
+		// underground, the flights go up from the platforms to the street over the box
+		if (spec.sideBuilding() || spec.terminus() || !spec.footbridge() || spec.options().underground()) {
 			return false;
 		}
 		final String bands = bandPattern(spec);
@@ -359,9 +379,11 @@ public final class StationGeometry {
 	 */
 	public static int[] platformRun(StationSpec spec, int index) {
 		final int length = builtLength(spec.platformLength());
-		// a through station's bay platform stops a row short of the end, so its buffer stops stand inside the station
+		final int overrun = overrun(length);
+		// a through station's bay platform stops short of the end by its track's overrun and buffer row, so the buffer stop
+		// stands inside the station
 		final boolean bay = spec.listed() && !spec.terminus() && spec.platforms().get(index).bay();
-		final int own = spec.listed() ? Math.min(builtLength(spec.platforms().get(index).lengthIn(spec.platformLength())), bay ? length - 1 : length)
+		final int own = spec.listed() ? Math.min(builtLength(spec.platforms().get(index).lengthIn(spec.platformLength())), bay ? length - 1 - overrun : length)
 				: length;
 		if (own >= length) {
 			return new int[]{0, length - 1};
@@ -375,16 +397,16 @@ public final class StationGeometry {
 			from = StationLayout.entranceV(spec.sideBuilding(), length) - own / 2;
 			to = from + own - 1;
 		}
-		if (bay && from + own - 1 >= length - 1) {
-			from = length - 1 - own;
-			to = length - 2;
+		if (bay && from + own - 1 >= length - 1 - overrun) {
+			from = length - 1 - overrun - own;
+			to = length - 2 - overrun;
 		}
 		if (!spec.terminus() || spec.hub()) {
 			final int line = StationLayout.entranceV(spec.sideBuilding(), length);
 			from = Math.min(from, line - BRIDGE_REACH);
 			to = Math.max(to, line + BRIDGE_REACH);
 		}
-		return new int[]{Math.max(0, from), Math.min(bay ? length - 2 : length - 1, to)};
+		return new int[]{Math.max(0, from), Math.min(bay ? length - 2 - overrun : length - 1, to)};
 	}
 
 	/** Width of the platform at {@code index} (0-based, left to right): its own when the platforms are listed. */

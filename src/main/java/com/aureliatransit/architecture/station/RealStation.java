@@ -13,16 +13,40 @@ import java.util.Locale;
  * @param hallDepth    the concourse hall's depth along the tracks, in metres
  * @param hallHeight   the hall roof's highest point over the tracks, in metres
  * @param waves        the hall roof's waves across the tracks
+ * @param kind         what the real station is: a hall over the tracks (Utrecht) or a train shed over them (Hamburg)
  */
 public enum RealStation {
-	NONE("", Operator.NONE, 0, 0, 0, 0),
+	NONE("", Operator.NONE, 0, 0, 0, 0, Kind.NONE),
 	/**
 	 * Utrecht Centraal (Benthem Crouwel, 2016): one closed hall over all the tracks, between the raised Stationsplein (east)
 	 * and the Jaarbeursplein (west). Roof about 235 x 85 m and 18 m high, steel, with three waves (the highest over the
 	 * trains); glass walls hung from it; gate lines across the hall; stairs, escalators and lifts down to 8 island platforms
 	 * (16 tracks); separate canopies on the platforms outside the hall.
 	 */
-	UTRECHT_CENTRAAL("utrecht centraal", Operator.NS, 8, 85, 18, 3);
+	UTRECHT_CENTRAAL("utrecht centraal", Operator.NS, 8, 85, 18, 3, Kind.HALL_OVER_TRACKS),
+	/**
+	 * Hamburg Hauptbahnhof (Reinhardt and Süßenguth, 1906): a through station in a cutting under a steel and glass train shed
+	 * 150 m long, 114 m wide and up to 37 m high, its middle span 73 m with a lower aisle each side; 5 island platforms (S-Bahn
+	 * tracks 3-4, long-distance and regional 5-8 and 11-14; 9-10 run through without platforms); entered from bridges at
+	 * street level at both ends of the shed, the Wandelhalle in the north with its entrance halls and two 45 m clock towers.
+	 * Here {@code hallDepth} is the shed's length along the tracks, {@code hallHeight} its height and {@code waves} the nave and
+	 * its two aisles.
+	 */
+	HAMBURG_HBF("hamburg hauptbahnhof", Operator.DB, 5, 150, 37, 3, Kind.TRAIN_SHED);
+
+	/** What kind of real station: which of the planner's rules build it. */
+	public enum Kind {
+		NONE,
+		/** One closed hall over all the tracks, its floor the concourse, streets at both sides (Utrecht Centraal). */
+		HALL_OVER_TRACKS,
+		/** A great train shed over the platforms, a station building beside them and footbridges across (Hamburg Hbf). */
+		TRAIN_SHED
+	}
+
+	/** Hamburg's shed: the middle span's share of the whole width (73 of 114 m). */
+	static final double HAMBURG_NAVE = 73.0 / 114;
+	/** Hamburg's clock towers, metres over the street. */
+	static final int HAMBURG_TOWER_METRES = 45;
 
 	/** Rows a hall leaves free at each end of the platforms, so trains stop under the canopies as well as the hall. */
 	static final int HALL_MARGIN = 24;
@@ -35,14 +59,40 @@ public enum RealStation {
 	private final int hallDepth;
 	private final int hallHeight;
 	private final int waves;
+	private final Kind kind;
 
-	RealStation(String phrase, Operator operator, int islands, int hallDepth, int hallHeight, int waves) {
+	RealStation(String phrase, Operator operator, int islands, int hallDepth, int hallHeight, int waves, Kind kind) {
 		this.phrase = phrase;
 		this.operator = operator;
 		this.islands = islands;
 		this.hallDepth = hallDepth;
 		this.hallHeight = hallHeight;
 		this.waves = waves;
+		this.kind = kind;
+	}
+
+	public Kind kind() {
+		return kind;
+	}
+
+	/** True for a real station whose concourse is one hall over all the tracks (Utrecht's rules). */
+	public boolean hallOverTracks() {
+		return kind == Kind.HALL_OVER_TRACKS;
+	}
+
+	/** True for a real station under a train shed, beside a station building (Hamburg's rules). */
+	public boolean trainShed() {
+		return kind == Kind.TRAIN_SHED;
+	}
+
+	/** The share of a train shed's width under its middle span; 1 when it has one span. */
+	public double naveShare() {
+		return this == HAMBURG_HBF ? HAMBURG_NAVE : 1;
+	}
+
+	/** y of the top of the station's clock towers over the street, or 0 when the generator's own height stands. */
+	public int towerTopY() {
+		return this == HAMBURG_HBF ? StationGeometry.metres(HAMBURG_TOWER_METRES) : 0;
 	}
 
 	public String phrase() {
@@ -75,6 +125,11 @@ public enum RealStation {
 
 	public int waves() {
 		return waves;
+	}
+
+	/** The real hall depth in metres. */
+	public int hallDepth() {
+		return hallDepth;
 	}
 
 	/** The real hall depth in blocks. */
@@ -156,7 +211,7 @@ public enum RealStation {
 	public static RealStation of(String phrase) {
 		final String p = phrase == null ? "" : phrase.toLowerCase(Locale.ROOT).strip();
 		for (final RealStation station : values()) {
-			if (station != NONE && station.phrase.equals(p)) {
+			if (station != NONE && (station.phrase.equals(p) || station == HAMBURG_HBF && p.equals("hamburg hbf"))) {
 				return station;
 			}
 		}

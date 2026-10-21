@@ -19,7 +19,7 @@ abstract class PlanColumns extends PlanMovingWalks {
 
 	void columns() {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			if (roof(band) == RoofType.NONE) {
+			if (roof(band) == RoofType.NONE || roof(band) == RoofType.HALL && freeShed()) {
 				continue;
 			}
 			final int top = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
@@ -34,11 +34,14 @@ abstract class PlanColumns extends PlanMovingWalks {
 						continue;
 					}
 					if (!band.runs(v)) {
-						// past a shorter platform's end a hall column stands on a footing of platform floor, never on its ramp
-						if (taken(u, StationGeometry.PLATFORM_Y, v)) {
+						// past a shorter platform's end a hall column stands on a footing of platform floor, never on its ramp; on
+						// the floor beside a terminus overrun it stands as on the platform
+						if (!footing(band, u, v)) {
 							continue;
 						}
-						put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
+						if (!taken(u, StationGeometry.PLATFORM_Y, v)) {
+							put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V);
+						}
 					}
 					// a canopy column's cap carries the girder along its line, which carries the roof
 					final int capY = roof(band) == RoofType.CANOPY ? top - 2 : top - 1;
@@ -368,7 +371,7 @@ abstract class PlanColumns extends PlanMovingWalks {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			for (final int u : columnLines(band, RoofType.HALL)) {
 				// past a shorter platform's end a column needs its footing cell (columns() skips one on a ramp)
-				if (!band.runs(v) && taken(u, StationGeometry.PLATFORM_Y, v) && standsOn(u, v, top) < StationGeometry.WALK_Y) {
+				if (!band.runs(v) && !footing(band, u, v) && standsOn(u, v, top) < StationGeometry.WALK_Y) {
 					return false;
 				}
 				for (int y = top - 1; y >= StationGeometry.WALK_Y; y--) {
@@ -402,12 +405,33 @@ abstract class PlanColumns extends PlanMovingWalks {
 					}
 				}
 				// past a shorter platform's end the column needs its footing cell free (not the platform's ramp)
-				if (!band.runs(v) && taken(u, StationGeometry.PLATFORM_Y, v)) {
+				if (!band.runs(v) && !footing(band, u, v)) {
 					return false;
 				}
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * A column past a platform's end can stand at (u, v): its cell is free, or floor beside a terminus overrun where the
+	 * row of columns still leaves two cells to walk between the fences (else the platform is cut off from its concourse).
+	 */
+	boolean footing(TrackLayout.PlatformBand band, int u, int v) {
+		final PlannedBlock at = cells.get(new Cell(u, StationGeometry.PLATFORM_Y, v));
+		if (at == null) {
+			return true;
+		}
+		if (at.role() != Role.FLOOR && !at.role().platformFloor()) {
+			return false;
+		}
+		int free = 0;
+		for (int w = band.uMin(); w <= band.uMax(); w++) {
+			if (!taken(w, StationGeometry.WALK_Y, v) && !columnLines(band, roof(band)).contains(w)) {
+				free++;
+			}
+		}
+		return free >= 2;
 	}
 
 	/** The roof over this platform (see {@link StationGeometry#roof}). */

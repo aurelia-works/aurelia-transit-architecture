@@ -185,10 +185,12 @@ class StationDescriptionParserTest {
 	}
 
 	@Test
-	void undergroundAndElevatedAreBuiltAtGroundLevelWithAWarning() {
+	void undergroundIsBuiltAndElevatedIsBuiltAtGroundLevelWithAWarning() {
+		// underground stations are built since 10-20 (UndergroundStationTest)
 		final ParseResult underground = StationDescriptionParser.parse("underground station");
 		assertEquals(StationStyle.METRO, underground.spec().style());
-		assertTrue(warned(underground, "underground stations are not built yet"));
+		assertTrue(underground.spec().options().underground());
+		assertTrue(underground.warnings().isEmpty(), underground.warnings().toString());
 		final ParseResult elevated = StationDescriptionParser.parse("elevated station on a viaduct");
 		assertEquals(StationStyle.MODERN, elevated.spec().style());
 		assertTrue(warned(elevated, "elevated stations are not built yet"));

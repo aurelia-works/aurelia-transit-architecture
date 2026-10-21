@@ -33,15 +33,26 @@ abstract class PlanState {
 
 	abstract boolean nearStairs(TrackLayout.PlatformBand band, int v);
 
+	/** The block an underground station's walls are tiled with (see PlanUnderground). */
+	abstract String undergroundTile();
+
 	abstract int apronU();
 
 	abstract int streetWall();
+
+	/** Draws the real station's own head building or side building from its sheet (see PlanLandmark). */
+	abstract void landmarkHead();
+
+	abstract void landmarkSide();
 
 	final StationSpec spec;
 
 	final TrackLayout layout;
 
 	final StylePalette palette;
+
+	/** The real station's own buildings, when the station is named after one with a sheet ({@link Landmarks}); else null. */
+	final Landmark landmark;
 
 	final int length;
 
@@ -90,6 +101,7 @@ abstract class PlanState {
 		this.spec = spec;
 		this.layout = StationGeometry.layout(spec);
 		this.palette = StylePalette.of(spec);
+		this.landmark = Landmarks.of(spec);
 		this.length = layout.platformLength();
 		this.columnV = columnPositions(length);
 		this.site = StationLayout.of(spec, layout);
@@ -118,7 +130,46 @@ abstract class PlanState {
 		return site.vEnd() + wingBays * StationGeometry.BAY;
 	}
 
+	/**
+	 * True for a real station's train shed that springs from the platforms and spans them freely (St Pancras): no columns or
+	 * cross girders under it, only its ribs, the girders along its eaves and its side walls.
+	 */
+	boolean freeShed() {
+		final Landmark.Shed shed = landmark == null ? null : landmark.shed();
+		return shed != null && shed.eavesY() > 0 && spec.roof() == RoofType.HALL && spec.shed().arched() && hallBeamY() == shed.eavesY();
+	}
+
 	/** Places a block unless the cell is taken or must stay empty; true if placed. */
+	/**
+	 * How far the street doorway reaches either side of its middle cell: a 5-wide door has 2. Doors are 5 wide, 7 at a grand
+	 * station, or as wide as asked (Enviro, 10-20: the old 3-wide door was too narrow), and an even width is built one wider.
+	 * A side building's door stays clear of its end walls with room for the gate bank's end cells.
+	 */
+	int entranceHalf() {
+		final int asked = spec.options().entranceWidth();
+		int half = (asked > 0 ? asked : spec.buildingScale() == StationScale.GRAND ? 7 : 5) / 2;
+		if (site.building()) {
+			half = Math.min(half, Math.min(site.vEnd() - 2 - site.entranceV(), site.entranceV() - site.vStart() - 2));
+		}
+		return Math.max(1, half);
+	}
+
+	/**
+	 * One cell of a gate line. {@code green} is the side people come in from (the ticket hall or the street); {@code kind}
+	 * is the ATA gate's kind ({@code kind=end}, {@code kind=gate} or {@code kind=wide}); {@code exit} picks, for MTR's one-way
+	 * barriers, a lane that lets people out. MTR's barrier faces the way people walk through it, and the end of a bank is a
+	 * glass panel instead of a cabinet.
+	 */
+	void gate(int u, int y, int v, LocalDir green, String kind, boolean exit) {
+		if (spec.options().gates() == StationOptions.GateStyle.ATA) {
+			put(Role.GATE, u, y, v, green, palette.blockId(Role.GATE), kind);
+		} else if (kind.equals("kind=end")) {
+			put(Role.BARRIER, u, y, v, green);
+		} else {
+			put(Role.GATE, u, y, v, exit ? green : green.opposite(), exit ? StylePalette.MTR_BARRIER_EXIT : StylePalette.MTR_BARRIER_ENTRANCE);
+		}
+	}
+
 	boolean put(Role role, int u, int y, int v, LocalDir front) {
 		return put(role, u, y, v, front, palette.blockId(role), "");
 	}
@@ -150,6 +201,113 @@ abstract class PlanState {
 
 	static boolean screen(String blockId) {
 		return blockId.equals(PIDS) || blockId.equals(HANGING_PIDS) || blockId.equals("aurelia_transit_architecture:concourse_board");
+	}
+
+	/** Longest drop rod: a screen further below the roof frame than this is held by its columns alone. */
+	static final int MAX_DROP = 24;
+
+	static final String DROP_ROD = "aurelia_transit_architecture:drop_rod";
+
+	/** The hanging wayfinding sign: its hanger stubs line up with a drop rod's hangers like a hanging screen's. */
+	static final String HANGING_SIGN = "aurelia_transit_architecture:hanging_wayfinding_sign";
+
+	/**
+	 * A rod from the fixture at (u, y, v) up to the first roof, beam or rib above it, when one is within {@link #MAX_DROP} and
+	 * every cell between is free; nothing otherwise.
+	 */
+	void dropRod(int u, int y, int v) {
+		int top = -1;
+		for (int h = y + 1; h <= y + MAX_DROP && top < 0; h++) {
+			final PlannedBlock block = cells.get(new Cell(u, h, v));
+			if (block == null) {
+				continue;
+			}
+			if (!block.role().covers() && block.role() != Role.BEAM && block.role() != Role.RIB) {
+				return;
+			}
+			top = h;
+		}
+		if (top < 0) {
+			return;
+		}
+		// over a hanging screen or sign the rod splits into hangers onto the stubs on its top, turned with it
+		final PlannedBlock below = cells.get(new Cell(u, y, v));
+		final String hanger = rodHanger(below);
+		for (int h = y + 1; h < top; h++) {
+			put(Role.FIXTURE, u, h, v, hanger.equals(PLAIN_ROD) ? LocalDir.PLUS_V : below.front(), DROP_ROD, hanger);
+		}
+	}
+
+	/** A drop rod with no hangers: a plain rod. */
+	static final String PLAIN_ROD = "hanger=none";
+
+	/**
+	 * The hangers of a rod over {@code below}, as the rod works them out in the world ({@code DropRodBlock}): both over a
+	 * hanging sign or a one-block screen; over the end block of a wide screen only the stub on its outer side (low at model
+	 * x 3-4, where the screen does not go on to its right; high at 12-13, where it does not go on to its left), none over a
+	 * middle block or anything else. The screen's left, seen from its front, is a quarter turn clockwise from its facing.
+	 */
+	String rodHanger(PlannedBlock below) {
+		if (below == null || !below.blockId().equals(HANGING_PIDS) && !below.blockId().equals(HANGING_SIGN)) {
+			return PLAIN_ROD;
+		}
+		if (below.blockId().equals(HANGING_SIGN)) {
+			return "hanger=both";
+		}
+		final LocalDir left = clockwise(below.front());
+		final boolean low = !sameScreen(below, left.opposite());
+		final boolean high = !sameScreen(below, left);
+		return "hanger=" + (low && high ? "both" : low ? "low" : high ? "high" : "none");
+	}
+
+	/** True when the cell beside {@code screen} towards {@code side} is the same screen, facing the same way. */
+	private boolean sameScreen(PlannedBlock screen, LocalDir side) {
+		final int du = side == LocalDir.PLUS_U ? 1 : side == LocalDir.MINUS_U ? -1 : 0;
+		final int dv = side == LocalDir.PLUS_V ? 1 : side == LocalDir.MINUS_V ? -1 : 0;
+		final PlannedBlock next = cells.get(new Cell(screen.u() + du, screen.y(), screen.v() + dv));
+		return next != null && next.blockId().equals(screen.blockId()) && next.front() == screen.front();
+	}
+
+	/** A quarter turn clockwise seen from above: +V to +U, as a heading turns to its right. */
+	static LocalDir clockwise(LocalDir dir) {
+		return switch (dir) {
+			case PLUS_V -> LocalDir.PLUS_U;
+			case PLUS_U -> LocalDir.MINUS_V;
+			case MINUS_V -> LocalDir.MINUS_U;
+			case MINUS_U -> LocalDir.PLUS_V;
+		};
+	}
+
+	/** True when a departure screen is planned in this cell. */
+	boolean screenAt(int u, int y, int v) {
+		final PlannedBlock block = cells.get(new Cell(u, y, v));
+		return block != null && screen(block.blockId());
+	}
+
+	/** MTR's plain glass fence: a two-high panel along one side of its cell, with slim posts at its ends. */
+	static final String MTR_FENCE = "mtr:glass_fence_plain";
+
+	/**
+	 * A barrier in a ground-floor gate line: MTR's glass fence (Jah, 10-20: "like the MTR fences", set to one side of the cell
+	 * rather than down its middle) where the cell above is free too; ATA's own barrier where it is not.
+	 */
+	void fence(int u, int y, int v, LocalDir front) {
+		if (!taken(u, y, v) && !taken(u, y + 1, v)) {
+			put(Role.BARRIER, u, y, v, front, MTR_FENCE, "half=lower,number=1");
+			put(Role.BARRIER, u, y + 1, v, front, MTR_FENCE, "half=upper,number=1");
+		} else {
+			put(Role.BARRIER, u, y, v, front);
+		}
+	}
+
+	static final String TICKET_MACHINE = "aurelia_transit_architecture:ticket_vending_machine";
+
+	/**
+	 * ATA's ticket vending machine (Jah, 10-20: a better one than MTR's, two blocks tall; it opens MTR's own ticket screen).
+	 * False if either cell is taken.
+	 */
+	boolean ticketMachine(int u, int y, int v, LocalDir front) {
+		return tallFixture(u, y, v, front, TICKET_MACHINE);
 	}
 
 	/** A two-high fixture (MTR's ticket machine, the kiosk): both halves or neither, the lower one at {@code y}. */
@@ -226,7 +384,7 @@ abstract class PlanState {
 
 	/** True on a row under a real station's hall, between its long walls: its floor covers the platforms there. */
 	boolean underHall(int v) {
-		return spec.real() != RealStation.NONE && site.bridge() && Math.abs(v - site.bridgeV()) <= bridgeWall();
+		return spec.real().hallOverTracks() && site.bridge() && Math.abs(v - site.bridgeV()) <= bridgeWall();
 	}
 
 	/** A platform's colour at the gate line. */

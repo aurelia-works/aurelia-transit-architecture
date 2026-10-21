@@ -13,15 +13,21 @@ abstract class PlanHead extends PlanLifts {
 		super(spec);
 	}
 
-	/** The u of a terminus head building's street entrance (the middle of the 3-wide doorway). */
+	/** The u of a terminus head building's street entrance (the middle of its doorway, {@link #entranceHalf} either side). */
 	int headDoor() {
 		return (layout.headFrom() + layout.headTo() + 1) / 2;
+	}
+
+	/** How far the head building's doorway reaches either side of {@link #headDoor}: as asked, inside the side walls with room for the tactile map. */
+	int headEntranceHalf() {
+		final int door = headDoor();
+		return Math.max(1, Math.min(entranceHalf(), Math.min(layout.headTo() - door - 2, door - layout.headFrom() - 1)));
 	}
 
 	/**
 	 * A terminus head building across the track ends (v = L .. L+11, the full width, or only a hub's platforms): the floor
 	 * runs level from the platform ends; buffer stops close every bay track at v = L; the platform side is open under a
-	 * lintel with clerestory windows; side and street walls carry windows and a trim band; a 3-wide street entrance with
+	 * lintel with clerestory windows; side and street walls carry windows and a trim band; a street entrance (5 wide by default) with
 	 * ramps outside; a flat roof with light panels and a cornice. The gate line and fittings are in {@link #headInterior()}.
 	 */
 	void head() {
@@ -35,14 +41,18 @@ abstract class PlanHead extends PlanLifts {
 		final int vL = length;
 		final int vE = layout.headEnd();
 		final int door = headDoor();
-		for (int u = door - 1; u <= door + 1; u++) {
+		final int h = headEntranceHalf();
+		for (int u = door - h; u <= door + h; u++) {
 			for (int y = 1; y <= 3; y++) {
 				keepClear(u, y, vE);
 				keepClear(u, y, vE + 1);
 				keepClear(u, y, vE + 2);
 			}
 		}
-		if (scale != StationScale.COMPACT) {
+		// a real station's own head building first, so the plain walls below only fill what its sheet leaves open
+		landmarkHead();
+		final boolean sheet = landmark != null && landmark.anchor() == Landmark.Anchor.HEAD;
+		if (scale != StationScale.COMPACT && !sheet) {
 			headFront(u0, u1, vE, door);
 		}
 		for (int u = u0; u <= u1; u++) {
@@ -52,15 +62,6 @@ abstract class PlanHead extends PlanLifts {
 				// each platform's colour runs across the floor either side of its gates
 				final boolean stripe = !edge && band != null && (v == vL + 1 || v == vL + 3);
 				put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : stripe ? platformColour(band) : b.floor());
-			}
-		}
-		// buffer stops across each track's clearance, just past its last rail node
-		for (final TrackLayout.Track track : layout.tracks()) {
-			if (!layout.bay(track)) {
-				continue;
-			}
-			for (int u = track.u() - StationGeometry.ENVELOPE_HALF_WIDTH; u <= track.u() + StationGeometry.ENVELOPE_HALF_WIDTH; u++) {
-				put(Role.BUFFER_STOP, u, StationGeometry.WALK_Y, vL, LocalDir.PLUS_U);
 			}
 		}
 		final int top = StationGeometry.BUILDING_ROOF_Y - 1;
@@ -92,11 +93,11 @@ abstract class PlanHead extends PlanLifts {
 			}
 		}
 		// entrance ramps outside the street wall
-		for (int u = door - 1; u <= door + 1; u++) {
+		for (int u = door - h; u <= door + h; u++) {
 			put(Role.RAMP_UPPER, u, StationGeometry.PLATFORM_Y, vE + 1, LocalDir.PLUS_V);
 			put(Role.RAMP_LOWER, u, StationGeometry.PLATFORM_Y, vE + 2, LocalDir.PLUS_V);
 		}
-		if (scale != StationScale.COMPACT) {
+		if (scale != StationScale.COMPACT && !sheet) {
 			// a city or grand head building: storeys over the whole concourse (its ceiling is their first floor), the roof,
 			// and a grand one's clock tower over the entrance
 			for (int storey = 0; storey < scale.extraStoreys(); storey++) {
@@ -106,7 +107,7 @@ abstract class PlanHead extends PlanLifts {
 			return;
 		}
 		// a ceiling with light panels, covered by a flat roof flush with the cornice (the panels' tops would otherwise show
-		// from above as a checkerboard)
+		// from above as a checkerboard); under a real station's sheet, only where its own buildings leave the concourse open
 		for (int u = u0; u <= u1; u++) {
 			for (int v = vL; v <= vE; v++) {
 				final boolean inner = u > u0 && u < u1 && v > vL && v < vE;

@@ -81,7 +81,8 @@ class TwoWaysDownTest {
 				}
 			}
 		}
-		// under a hall roof the shed's frame rests on both bridges: piers on the far bridge's roof carry its cross girder
+		// under a hall roof the shed's frame rests on the far bridge's roof only where the column rows either side are too far
+		// apart for its girders; otherwise no pier pokes up through that roof (Jah, 10-20)
 		for (final String words : new String[]{"3 tracks island, 96 long, station building, city, hall roof", "grand class, 120 long",
 				"4 tracks island, 120 long, station building, city, arched train shed"}) {
 			final StationSpec hall = spec(words);
@@ -91,8 +92,10 @@ class TwoWaysDownTest {
 			assertTrue(StationAudit.audit(plan).buildable(), words + " " + StationAudit.audit(plan).problems());
 			final StationLayout far = StationLayout.of(hall, plan.layout()).farBridge(hall, plan.layout());
 			assertTrue(far != null, words + ": a far bridge under the hall");
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.v() == far.bridgeV() && b.role() == Role.BRIDGE_PIER && b.y() > StationGeometry.BUILDING_ROOF_Y),
-					words + ": the hall frame rests on the far bridge");
+			final java.util.List<Integer> rows = plan.blocks().stream().filter(b -> b.role() == Role.COLUMN_CAP).map(PlannedBlock::v).distinct().sorted().toList();
+			assertEquals(PlanRoofs.girdersNeedBridge(rows, far.bridgeV()),
+					plan.blocks().stream().anyMatch(b -> b.v() == far.bridgeV() && b.role() == Role.BRIDGE_PIER && b.y() > StationGeometry.BUILDING_ROOF_Y),
+					words + ": piers on the far bridge exactly where the girders need them");
 		}
 		final StationSpec shortCity = spec("3 tracks island, 48 long, station building, city");
 		final TrackLayout layout = StationGeometry.layout(shortCity);

@@ -85,8 +85,15 @@ abstract class PlanMovingWalks extends PlanBridges {
 		}
 	}
 
+	/** Width of the strip left between an island's two side lanes, for its name signs, benches and screens. */
+	static final int SIDE_LANE_MIDDLE = 3;
+
+	/** Each platform's travelator stretches, as {from, to} along v; the furniture keeps its signs and benches beside them. */
+	final java.util.Map<TrackLayout.PlatformBand, List<int[]>> travelatorStretches = new java.util.HashMap<>();
+
 	void platformTravelators(TrackLayout.PlatformBand band) {
-		final int c = travelatorLane(band);
+		final int[] side = sideLanes(band);
+		final int c = side != null ? side[0] : travelatorLane(band);
 		if (c < 0) {
 			return;
 		}
@@ -132,7 +139,12 @@ abstract class PlanMovingWalks extends PlanBridges {
 				end++;
 			}
 			if (end - v + 1 >= MIN_TRAVELATOR) {
+				travelatorStretches.computeIfAbsent(band, b -> new java.util.ArrayList<>()).add(new int[]{v, end});
 				for (int w = v; w <= end; w++) {
+					if (side != null) {
+						sideLaneRow(side, w);
+						continue;
+					}
 					// a row has both lanes or neither: a cell something else holds must not leave a lane running one way alone
 					if (!freeColumn(c, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)
 							|| !freeColumn(c + 1, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)) {
@@ -150,6 +162,62 @@ abstract class PlanMovingWalks extends PlanBridges {
 			// a gap of three to cross before the next stretch
 			v = end + 4;
 		}
+	}
+
+	/**
+	 * One row of an island's side lanes: each a full MTR walkway two wide (a left and a right half running the same way), the
+	 * lower lane towards +v and the upper one back. All four cells or none, so no lane is left one wide.
+	 */
+	void sideLaneRow(int[] side, int w) {
+		for (final int lane : side) {
+			if (!freeColumn(lane, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)
+					|| !freeColumn(lane + 1, StationGeometry.PLATFORM_Y, StationGeometry.PLATFORM_Y + 1, w)) {
+				return;
+			}
+		}
+		// MTR's left half is on the left looking along the way it runs; +U is to the right of +V
+		travelatorStep(side[0], StationGeometry.PLATFORM_Y, w, LocalDir.PLUS_V, "left");
+		travelatorStep(side[0] + 1, StationGeometry.PLATFORM_Y, w, LocalDir.PLUS_V, "right");
+		travelatorStep(side[1], StationGeometry.PLATFORM_Y, w, LocalDir.MINUS_V, "right");
+		travelatorStep(side[1] + 1, StationGeometry.PLATFORM_Y, w, LocalDir.MINUS_V, "left");
+	}
+
+	/**
+	 * An island's two side lanes (Jah, 10-20: one along each side, signs and benches between): the first column of the lane
+	 * nearest each edge, two wide, off the column and pier lines, with at least {@link #SIDE_LANE_MIDDLE} free between them;
+	 * null on a side platform or an island too narrow, which keep the two one-wide lanes in the middle.
+	 */
+	int[] sideLanes(TrackLayout.PlatformBand band) {
+		if (!band.island()) {
+			return null;
+		}
+		final java.util.Set<Integer> lines = new java.util.HashSet<>(columnLines(band, roof(band)));
+		// a footbridge's piers stand only in its own row, which the lanes stay clear of; a real station's hall has pier rows
+		// all along
+		if (spec.real().hallOverTracks()) {
+			lines.addAll(bridgePierLines(band));
+		}
+		int low = -1;
+		for (int c = band.uMin() + 2; c + 1 <= band.uMax() - 2 && low < 0; c++) {
+			if (!lines.contains(c) && !lines.contains(c + 1)) {
+				low = c;
+			}
+		}
+		int high = -1;
+		for (int c = band.uMax() - 3; c >= band.uMin() + 2 && high < 0; c--) {
+			if (!lines.contains(c) && !lines.contains(c + 1)) {
+				high = c;
+			}
+		}
+		if (low < 0 || high < 0 || high - (low + 2) < SIDE_LANE_MIDDLE) {
+			return null;
+		}
+		return new int[]{low, high};
+	}
+
+	/** True when this platform's travelators run in two side lanes, leaving the middle strip for furniture. */
+	boolean hasSideLanes(TrackLayout.PlatformBand band) {
+		return spec.travelators() && band.length() >= TRAVELATOR_PLATFORM && sideLanes(band) != null;
 	}
 
 	/**

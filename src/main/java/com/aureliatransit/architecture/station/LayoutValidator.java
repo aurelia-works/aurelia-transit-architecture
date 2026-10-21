@@ -314,9 +314,12 @@ public final class LayoutValidator {
 			return found;
 		}
 
-		/** Null if the column stands on a platform floor, runs unbroken from y = 1 to one cap and has a roof part above. */
+		/**
+		 * Null if the column stands on a platform floor (or the floor beside a terminus overrun, level with it), runs unbroken
+		 * from y = 1 to one cap and has a roof part above.
+		 */
 		private String columnProblem(Column column, List<PlannedBlock> stack) {
-			if (!isPlatformFloor(column.u(), StationGeometry.PLATFORM_Y, column.v())) {
+			if (!isPlatformFloor(column.u(), StationGeometry.PLATFORM_Y, column.v()) && !has(column.u(), StationGeometry.PLATFORM_Y, column.v(), Role.FLOOR)) {
 				return "column at u=" + column.u() + " v=" + column.v() + " does not stand on a platform floor";
 			}
 			int expectedY = StationGeometry.WALK_Y;
@@ -335,7 +338,7 @@ public final class LayoutValidator {
 			final List<PlannedBlock> above = cells.get(new Cell(column.u(), capY + 1, column.v()));
 			if (above != null) {
 				for (final PlannedBlock block : above) {
-					if (block.role().roofPart()) {
+					if (block.role().covers()) {
 						return null;
 					}
 				}
@@ -613,7 +616,7 @@ public final class LayoutValidator {
 				final TreeMap<Integer, PlannedBlock> line = entry.getValue();
 				// a real station's hall floor is one slab over the whole site: an opening in it (a flight, a lift) is framed by
 				// the rows either side, so each row is carried from wall to wall
-				if (plan.spec().real() != RealStation.NONE) {
+				if (plan.spec().real().hallOverTracks()) {
 					checkDeckRun(found, line.firstEntry().getValue(), line.firstKey(), line.lastKey());
 					continue;
 				}

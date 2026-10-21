@@ -24,7 +24,23 @@ public final class StationPlacement {
 			return new int[]{-1, 0, StationLayout.of(spec, layout).entranceV()};
 		}
 		final TrackLayout.PlatformBand band = layout.platforms().isEmpty() ? null : layout.platforms().get(0);
-		return new int[]{band == null ? 0 : (band.uMin() + band.uMax()) / 2, 0, layout.vMin() - 1};
+		// an underground station's is on the street over its end wall
+		return new int[]{band == null ? 0 : (band.uMin() + band.uMax()) / 2, depth(spec), layout.vMin() - 1};
+	}
+
+	/**
+	 * How far below the street an underground station's rail level is: the box's ceiling slab is the street's surface, so a
+	 * player standing on it (where the station is planned from) is at local {@link StationGeometry#UPPER_WALK_Y}. 0 for a
+	 * station at ground level.
+	 */
+	public static int depth(StationSpec spec) {
+		return spec.options().underground() ? StationGeometry.UPPER_WALK_Y : 0;
+	}
+
+	/** {@code frame} (rail level at the player's feet) lowered by the station's {@link #depth}. */
+	public static LocalFrame sunk(StationSpec spec, LocalFrame frame) {
+		final int depth = depth(spec);
+		return depth == 0 ? frame : new LocalFrame(frame.ox(), frame.oy() - depth, frame.oz(), frame.forward());
 	}
 
 	/**

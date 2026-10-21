@@ -81,7 +81,7 @@ class StationClassTest {
 		assertEquals(PlatformLayout.SIDE, spec("regional class, historic era").platformLayout());
 		assertEquals(CanopyShape.GABLE, spec("regional class, historic era").canopy());
 		assertEquals(BuildingStyle.SANDSTONE, spec("regional class, historic era").building());
-		assertEquals(BuildingStyle.CLINKER, spec("regional class, interwar era").building());
+		assertEquals(BuildingStyle.ART_DECO, spec("regional class, interwar era").building());
 		assertEquals(BuildingStyle.CONCRETE, spec("regional class, postwar era").building());
 		assertEquals(PlatformLayout.ISLAND, spec("regional class, modern era").platformLayout());
 		assertEquals(BuildingStyle.MODERN, spec("regional class, modern era").building());

@@ -3,9 +3,12 @@ package com.aureliatransit.architecture.station;
 import java.util.List;
 
 /**
- * Ready-made descriptions behind the wrench screen's preset buttons, one per building look: through stations with a building
- * and footbridge, and the termini (St Pancras, Antwerp, Frankfurt, Grand Central, Tokyo, Zurich, Paris, Milan, Berlin, Hong Kong,
- * Beijing) as they are. They are plain descriptions, so the parser, the design rules and the station checks treat them like
+ * Ready-made descriptions behind the wrench screen's preset buttons, one per building look, laid out like the station each look
+ * is after: the through stations (Amsterdam Centraal, Munchen Ost, Tokyo, Berlin Hbf, Beijing South, Kuala
+ * Lumpur, Teddington, Surbiton, Coventry) with their building beside the tracks, and the termini (St Pancras, Antwerp,
+ * Frankfurt, Grand Central, Zurich, Paris, Milan, West Kowloon, Hua Lamphong, CSMT) as they are, scaled to at most 10 tracks
+ * and 300 blocks (Jah, 10-20: the geography was wrong, with Tokyo, Berlin and Beijing built as termini and Amsterdam Centraal
+ * as a two-track halt). They are plain descriptions, so the parser, the design rules and the station checks treat them like
  * typed text; the tests keep every preset free of warnings, ignored words, rule breaks and failed checks.
  */
 public final class StationPresets {
@@ -19,24 +22,23 @@ public final class StationPresets {
 	}
 
 	public static final List<Preset> ALL = List.of(
-			// the real station: its hall, platforms and operator (see RealStation), not a look after it
+			// the real stations: their halls, platforms and operators (see RealStation), not looks after them
 			new Preset("utrecht", BuildingStyle.NONE, "utrecht centraal"),
+			new Preset("hamburg_hbf", BuildingStyle.SANDSTONE, "hamburg hauptbahnhof"),
 			new Preset("amsterdam", BuildingStyle.AMSTERDAM,
-					"two track amsterdam station, side platforms, 64 long, station building with footbridge, named Amsterdam Centraal"),
+					"eight track amsterdam station, four island platforms, 240 long, train shed, station building with footbridge, named Amsterdam Centraal"),
 			new Preset("st_pancras", BuildingStyle.GOTHIC_BRICK,
 					"eight track st pancras terminus, four island platforms, 200 long, train shed, named St Pancras"),
 			new Preset("antwerp", BuildingStyle.ANTWERP,
 					"eight track antwerp terminus, four island platforms, 180 long, train shed, named Antwerpen Centraal"),
 			new Preset("frankfurt", BuildingStyle.SANDSTONE,
 					"ten track frankfurt terminus, five island platforms, 240 long, train shed, named Frankfurt Hbf"),
-			new Preset("hamburg", BuildingStyle.CLINKER,
-					"two track hamburg station, side platforms, 64 long, station building with footbridge, named Hamburg Dammtor"),
 			new Preset("munich", BuildingStyle.CONCRETE,
-					"two track munich station, island platform, 64 long, station building with footbridge, named Munchen Ost"),
+					"six track munich station, three island platforms, 210 long, station building with footbridge, named Munchen Ost"),
 			new Preset("grand_central", BuildingStyle.BEAUX_ARTS,
 					"eight track grand central terminus, four island platforms, 200 long, named Grand Central"),
 			new Preset("tokyo", BuildingStyle.TOKYO,
-					"ten track tokyo terminus, five island platforms, 240 long, named Tokyo"),
+					"ten track tokyo station, five island platforms, 300 long, station building with footbridge, named Tokyo"),
 			new Preset("zurich", BuildingStyle.ZURICH,
 					"eight track zurich terminus, four island platforms, 200 long, train shed, named Zurich HB"),
 			new Preset("paris", BuildingStyle.PARIS,
@@ -44,17 +46,40 @@ public final class StationPresets {
 			new Preset("milan", BuildingStyle.MILAN,
 					"ten track milan terminus, five island platforms, 240 long, train shed, named Milano Centrale"),
 			new Preset("berlin", BuildingStyle.BERLIN,
-					"six track berlin terminus, three island platforms, 160 long, train shed, named Berlin Hbf"),
+					"six track berlin station, three island platforms, 300 long, train shed, station building with footbridge, named Berlin Hbf"),
 			new Preset("hong_kong", BuildingStyle.HONG_KONG,
 					"eight track hong kong terminus, four island platforms, 200 long, named West Kowloon"),
 			new Preset("beijing", BuildingStyle.BEIJING,
-					"eight track beijing terminus, four island platforms, 200 long, named Beijing South"),
+					"ten track beijing station, five island platforms, 300 long, train shed, station building with mezzanine, named Beijing South"),
 			new Preset("bangkok", BuildingStyle.BANGKOK,
 					"ten track bangkok terminus, five island platforms, 200 long, train shed, named Krung Thep"),
 			new Preset("kuala_lumpur", BuildingStyle.KUALA_LUMPUR,
 					"four track kuala lumpur station, two island platforms, 160 long, station building with footbridge, named Kuala Lumpur"),
+			// KL Sentral's lower level (research 10-20): KTM Komuter on three islands, KLIA Ekspres and KLIA Transit beside
+			// them, under a modern glass and steel hall; ten tracks on five islands is the honest fit (no tracks under the hall)
+			new Preset("kl_sentral", BuildingStyle.MODERN,
+					"ten track modern station, five island platforms, 190 long, glass canopy, grand station building with footbridge, escalators, named KL Sentral"),
+			// SEPTA's two Market-Frankford Line termini (research 10-20), at ground level (the generator builds no viaduct):
+			// Frankford's one island under a canopy with the transit centre at its end, and 69th Street's island and side
+			// platform in front of its brick hall; the bus loops beside them are not built
+			new Preset("frankford", BuildingStyle.MODERN,
+					"two track concrete terminus, island platform, 130 long, canopy, city station building, escalators, named Frankford"),
+			new Preset("sixty_ninth_street", BuildingStyle.AMSTERDAM,
+					"three track brick terminus, island and side platforms, 110 long, canopy, city station building, escalators, named 69th Street"),
 			new Preset("mumbai", BuildingStyle.MUMBAI,
 					"ten track mumbai terminus, five island platforms, 280 long, train shed, named Mumbai CSMT"),
+			// British suburban stations (Enviro, 10-20), laid out as the real ones: Teddington's two side platforms and
+			// footbridge, Surbiton's two islands, Coventry's island and side platform under a covered overbridge
+			new Preset("teddington", BuildingStyle.VICTORIAN,
+					"two track teddington station, side platforms, 200 long, small station building with footbridge, named Teddington"),
+			new Preset("surbiton", BuildingStyle.ART_DECO,
+					"four track surbiton station, two island platforms, 250 long, city station building with footbridge, named Surbiton"),
+			new Preset("coventry", BuildingStyle.MODERNIST,
+					"three track coventry station, island and side platforms, 250 long, city station building with footbridge, named Coventry"),
+			// an underground station (Enviro, 10-20): Berlin's U8 at Rosenthaler Platz, one island in an orange-tiled box with
+			// stairs at both ends straight up to the street
+			new Preset("rosenthaler_platz", BuildingStyle.NONE,
+					"two track berlin underground station, island platform, 130 long, named Rosenthaler Platz"),
 			new Preset("modern", BuildingStyle.MODERN,
 					"four track modern station, two island platforms, 96 long, glass canopy, station building with footbridge"));
 

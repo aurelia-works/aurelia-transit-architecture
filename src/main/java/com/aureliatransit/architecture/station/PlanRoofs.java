@@ -309,6 +309,24 @@ abstract class PlanRoofs extends PlanColumns {
 	}
 
 	/**
+	 * True when the hall's girders need a row on the footbridge roof at {@code vB}: the column rows either side are further
+	 * apart than a girder spans, or the bridge is past the last row. Otherwise piers on the bridge roof only poke up through
+	 * it beside columns that already carry the frame (Jah, 10-20).
+	 */
+	static boolean girdersNeedBridge(List<Integer> rows, int vB) {
+		Integer lo = null;
+		Integer hi = null;
+		for (final int v : rows) {
+			if (v < vB) {
+				lo = v;
+			} else if (v > vB && hi == null) {
+				hi = v;
+			}
+		}
+		return lo == null || hi == null || hi - lo > StationGeometry.MAX_BEAM_SPAN;
+	}
+
+	/**
 	 * The free cells from u0 to u1 at height y in row v that a cross beam framed into a footbridge or stair pier can reach:
 	 * out from each pier (one just outside the range counts) through free cells, at most a cantilever's reach; with
 	 * {@code walls}, out from walls too.
@@ -329,12 +347,66 @@ abstract class PlanRoofs extends PlanColumns {
 		return framed;
 	}
 
+	/** The pendant lamp hung from a glass hall's frame. */
+	static final String HALL_LAMP = "aurelia_transit_architecture:hall_pendant_lamp";
+
+	/** How far above the platform a hall lamp hangs: low enough to light it, high over every head and screen. */
+	static final int HALL_LAMP_HEIGHT = 10;
+
+	/** The hall's cross-girder rows and frame height, kept for {@link #hallLamps}; none without a hall. */
+	private List<Integer> lampRows = List.of();
+	private int lampBeamY;
+
+	/**
+	 * Pendant lamps on rods under every other cross girder, over the middle of each platform (Jah 10-20: the glass hall
+	 * was dark at night). Hung after the screens and signs: where one already hangs under the spot, from the next girder
+	 * along instead. Only where the whole drop from the lamp to the girder is free; never on a footbridge row.
+	 */
+	void hallLamps() {
+		final int beamY = lampBeamY;
+		final int y = Math.min(StationGeometry.WALK_Y + HALL_LAMP_HEIGHT, beamY - 2);
+		if (lampRows.isEmpty() || y <= StationGeometry.WALK_Y + 4) {
+			return;
+		}
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final int u = (band.uMin() + band.uMax() + 1) / 2;
+			for (int r = 0; r < lampRows.size(); r += 2) {
+				for (int pick = r; pick < Math.min(r + 2, lampRows.size()); pick++) {
+					final int v = lampRows.get(pick);
+					if (lampFits(band, u, y, v, beamY)) {
+						put(Role.FIXTURE, u, y, v, LocalDir.PLUS_V, HALL_LAMP);
+						dropRod(u, y, v);
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	/** A cross girder over (u, v) on the platform, and nothing from head height up to it. */
+	private boolean lampFits(TrackLayout.PlatformBand band, int u, int y, int v, int beamY) {
+		final PlannedBlock girder = cells.get(new Cell(u, beamY, v));
+		if (girder == null || girder.role() != Role.BEAM || v < band.vFrom() || band.vTo() >= 0 && v > band.vTo()) {
+			return false;
+		}
+		for (int h = StationGeometry.WALK_Y + 3; h < beamY; h++) {
+			if (taken(u, h, v)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
 	/**
 	 * y of the hall's girder frame: just above the track envelopes; higher under a wide vault; above the footbridge
 	 * and a building beside the tracks when the station has them; and higher again for a city or grand station, whose
 	 * shed is a real train-shed height rather than the compact frame (see {@link StationGeometry#hallBeamY}).
 	 */
 	int hallBeamY() {
+		final Landmark.Shed real = realShed();
+		if (real != null && real.eavesY() > 0 && !site.bridge() && !spec.sideBuilding()) {
+			return real.eavesY();
+		}
 		if (scale == StationScale.GRAND) {
 			return StationGeometry.tallHallBeamY(scale);
 		}
@@ -359,8 +431,10 @@ abstract class PlanRoofs extends PlanColumns {
 		if (spec.roof() != RoofType.HALL) {
 			return;
 		}
-		final String girder = palette.blockId(Role.BEAM);
-		final String kind = "kind=" + palette.girderKind();
+		// a shed's frame is a lattice truss rather than the plain girder (Jah, 10-20); a palette with its own beam keeps it
+		final String girder = palette.blockId(Role.BEAM).equals(GIRDER) ? ROOF_TRUSS : palette.blockId(Role.BEAM);
+		final Landmark.Shed real = realShed();
+		final String kind = "kind=" + (real != null ? real.truss() : palette.girderKind());
 		final int beamY = hallBeamY();
 		final int u0 = site.street() != null ? StationGeometry.STREET_WIDTH : layout.buildingWidth();
 		final int u1 = layout.width() - 1;
@@ -373,9 +447,15 @@ abstract class PlanRoofs extends PlanColumns {
 			}
 		}
 		final List<Integer> rows = new ArrayList<>(hallRows());
-		// over a footbridge the frame also rests on the bridge roof: short piers under every girder line, a cross girder on them
+		// over a footbridge the frame also rests on the bridge roof, where the column rows either side are too far apart:
+		// short piers under every girder line, a cross girder on them
 		final int bridgeRoof = StationGeometry.BUILDING_ROOF_Y;
-		final List<Integer> onBridges = beamY >= bridgeRoof + 2 ? bridgeLines() : List.of();
+		final List<Integer> onBridges = new ArrayList<>();
+		for (final int vB : beamY >= bridgeRoof + 2 ? bridgeLines() : List.<Integer>of()) {
+			if (girdersNeedBridge(rows, vB)) {
+				onBridges.add(vB);
+			}
+		}
 		for (final int vB : onBridges) {
 			if (!rows.contains(vB)) {
 				rows.add(vB);
@@ -386,9 +466,10 @@ abstract class PlanRoofs extends PlanColumns {
 		// bridge row still crosses on its piers); several vaults keep full ties, which carry their valley gutters
 		final boolean freeArch = spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED;
 		final boolean[] untied = freeArch ? betweenPlatforms() : new boolean[layout.width()];
+		final boolean free = freeShed();
 		for (final int v : rows) {
 			for (int u = u0; u <= u1; u++) {
-				if (untied[u] && !onBridges.contains(v)) {
+				if ((untied[u] || free) && !onBridges.contains(v)) {
 					continue;
 				}
 				put(Role.BEAM, u, beamY, v, LocalDir.PLUS_U, girder, kind);
@@ -397,8 +478,10 @@ abstract class PlanRoofs extends PlanColumns {
 		// girders along v: column lines, eaves, valleys, and (under a flat roof) purlins halving any gap wider than 8 so
 		// every roof cell is within reach of one; a vault carries its purlins in the curve instead (below)
 		final java.util.TreeSet<Integer> along = new java.util.TreeSet<>();
+		// a real station's shed that springs from the platforms (St Pancras) spans them freely: its ribs carry it, with no
+		// girders along it (its edges stand over the outer tracks, where nothing may stand under them)
 		for (int i = 0; i < n; i++) {
-			if (lit[u0 + i] || i == 0 || i == n - 1 || spec.shed().arched() && rise[i] == 0) {
+			if (free ? false : lit[u0 + i] || i == 0 || i == n - 1 || spec.shed().arched() && rise[i] == 0) {
 				along.add(i);
 			}
 		}
@@ -418,11 +501,14 @@ abstract class PlanRoofs extends PlanColumns {
 				put(Role.BEAM, u0 + i, beamY, v, LocalDir.PLUS_V, girder, kind);
 			}
 		}
+		// lamps hang from the cross girders once the screens and signs are placed (hallLamps); not from a footbridge row
+		lampRows = free ? List.of() : rows.stream().filter(v -> !onBridges.contains(v)).toList();
+		lampBeamY = beamY;
 		// an end frame across each end of the shed, joined to the girders along v so they finish on it instead of stopping
 		// short; it hangs from them (a rib, not a beam on columns)
-		for (final int end : new int[]{0, length - 1}) {
+		for (final int end : along.isEmpty() ? new int[0] : new int[]{0, length - 1}) {
 			for (int u = u0 + along.first(); u <= u0 + along.last(); u++) {
-				if (!untied[u]) {
+				if (!untied[u] && !free) {
 					put(Role.RIB, u, beamY, end, LocalDir.PLUS_U, girder, kind);
 				}
 			}
@@ -470,7 +556,8 @@ abstract class PlanRoofs extends PlanColumns {
 		}
 		final int[] low = steps(top, false);
 		final int peak = java.util.Arrays.stream(rise).max().orElse(0);
-		final String glass = ata("glass_wall");
+		final String glass = real != null ? real.glass() : ata("glass_wall");
+		final String cladding = real != null ? real.cladding() : ata("metro_steel_cladding");
 		// a vault is glazed above a solid lower band; pitched roofs are solid with a glass lantern along each ridge
 		final boolean ridgeLights = spec.shed() == ShedShape.GABLED;
 		for (int v = 0; v < length; v++) {
@@ -487,10 +574,12 @@ abstract class PlanRoofs extends PlanColumns {
 							put(Role.ROOF, u, y, v, LocalDir.PLUS_V);
 						}
 					} else {
-						final boolean glazed = palette.roofMaterialGlass() || (ridgeLights ? rise[i] >= peak - 1 : y - roofY >= Math.max(1, peak / 3));
+						final double height = (y - roofY) / (double) Math.max(1, peak);
+						final boolean glazed = real != null ? height >= real.glazedFrom() && height <= real.glazedTo()
+								: palette.roofMaterialGlass() || (ridgeLights ? rise[i] >= peak - 1 : y - roofY >= Math.max(1, peak / 3));
 						final boolean eaves = edge && y == top[i];
 						put(eaves ? Role.ROOF_EDGE : Role.ROOF, u, y, v, i == 0 ? LocalDir.MINUS_U : i == n - 1 ? LocalDir.PLUS_U : LocalDir.PLUS_V,
-								glazed && !eaves ? glass : ata("metro_steel_cladding"));
+								glazed && !eaves ? glass : cladding);
 					}
 				}
 			}
@@ -516,14 +605,17 @@ abstract class PlanRoofs extends PlanColumns {
 		}
 		// purlins in the curve: girder lines along v just under the vault, joining every rib, about every 4 across
 		for (int i = 2; i < n - 2; i++) {
-			if (rise[i] > 0 && (i % 4 == 2 || isCrown(rise, i))) {
+			if (rise[i] > 0 && (i % (free ? 8 : 4) == 2 || isCrown(rise, i))) {
 				for (int v = 0; v < length; v++) {
 					put(Role.RIB, u0 + i, ribTop[i], v, LocalDir.PLUS_V, girder, kind);
 				}
 			}
 		}
+		if (free) {
+			sideWalls(u0, u1, beamY, real);
+		}
 		// hangers from the frame over each column line up to the rib
-		for (final int v : rows) {
+		for (final int v : free ? List.<Integer>of() : rows) {
 			for (int i = 0; i < n; i++) {
 				if (lit[u0 + i]) {
 					for (int y = beamY + 1; y < ribLow[i]; y++) {
@@ -594,10 +686,32 @@ abstract class PlanRoofs extends PlanColumns {
 	 */
 	int[] shedRise(int u0, int n) {
 		final int[] rise = new int[n];
+		final Landmark.Shed real = realShed();
+		if (real != null && spec.shed().arched()) {
+			// a real station's shed: its own spans, cross-section and rise
+			final int spans = Math.max(1, real.spans());
+			final Profile profile = switch (real.profile()) {
+				case ROUND -> Profile.ROUND;
+				case POINTED -> Profile.POINTED;
+				case GABLE -> Profile.GABLE;
+			};
+			for (int k = 0; k < spans; k++) {
+				final int a = k * (n - 1) / spans;
+				final int b = (k + 1) * (n - 1) / spans;
+				scaledVault(rise, a, b, profile, real.rise());
+			}
+			return rise;
+		}
 		switch (spec.shed()) {
 			case FLAT -> {
 			}
-			case ARCH -> vault(rise, 0, n - 1, Profile.ROUND, vaultRise());
+			case ARCH -> {
+				if (spec.real().trainShed()) {
+					naveAndAisles(rise, n, spec.real().naveShare(), spec.real().roofTopY() - (hallBeamY() + 1));
+				} else {
+					vault(rise, 0, n - 1, Profile.ROUND, vaultRise());
+				}
+			}
 			case POINTED -> vault(rise, 0, n - 1, Profile.POINTED, ARCH_RISE);
 			case MULTI_ARCH, GABLED -> {
 				// a valley between two neighbouring tracks with no platform between them: one vault per platform and its tracks
@@ -622,9 +736,79 @@ abstract class PlanRoofs extends PlanColumns {
 		return rise;
 	}
 
+	/**
+	 * A real train shed's cross-section (Hamburg): a round vault over the middle {@code share} of the width rising
+	 * {@code crown} over the frame, and a lower round aisle each side. The nave springs from the aisles' crowns, so a glazed
+	 * clerestory step stands between them, as in a basilica. With no room for aisles it is one vault.
+	 */
+	static void naveAndAisles(int[] rise, int n, double share, int crown) {
+		final int aisle = (int) Math.round(n * (1 - share) / 2);
+		if (aisle < 4 || crown < 4) {
+			vault(rise, 0, n - 1, Profile.ROUND, ARCH_RISE);
+			return;
+		}
+		vault(rise, 0, aisle, Profile.ROUND, ARCH_RISE);
+		vault(rise, n - 1 - aisle, n - 1, Profile.ROUND, ARCH_RISE);
+		// the aisle vault's crown, as vault() sizes it from its span of aisle + 1 blocks
+		final int base = Math.min(crown - 2, (int) Math.round((aisle + 1) * ARCH_RISE));
+		final int a = aisle;
+		final int b = n - 1 - aisle;
+		final double half = (b - a) / 2.0;
+		final double centre = (a + b) / 2.0;
+		final int top = Math.min(MAX_VAULT_RISE, crown);
+		for (int u = a; u <= b; u++) {
+			final double x = Math.min(1, Math.abs(u - centre) / half);
+			rise[u] = Math.max(rise[u], base + (int) Math.round((top - base) * Math.sqrt(1 - x * x)));
+		}
+	}
+
 	/** The cross-section of one span of a shed roof. */
 	enum Profile {
 		ROUND, POINTED, GABLE
+	}
+
+	/**
+	 * The side walls of a real shed that springs from the platforms, under its eaves at both edges (wherever no track runs):
+	 * the sheet's wall block with a tall window every six cells.
+	 */
+	void sideWalls(int u0, int u1, int beamY, Landmark.Shed real) {
+		if (real.sideWall() == null) {
+			return;
+		}
+		for (final int u : new int[]{u0, u1}) {
+			if (layout.tracks().stream().anyMatch(t -> Math.abs(t.u() - u) <= StationGeometry.ENVELOPE_HALF_WIDTH)) {
+				continue;
+			}
+			for (int v = 0; v < length; v++) {
+				for (int y = StationGeometry.WALK_Y; y < beamY; y++) {
+					final boolean window = Math.floorMod(v, 6) >= 2 && Math.floorMod(v, 6) <= 3 && y >= 2 && y <= beamY - 2;
+					put(window ? Role.WINDOW : Role.WALL, u, y, v, u == u0 ? LocalDir.MINUS_U : LocalDir.PLUS_U,
+							window ? ata("wired_glass_pane") : real.sideWall());
+				}
+			}
+		}
+	}
+
+	/** A real station's train shed from its sheet, or null for the generator's own. */
+	Landmark.Shed realShed() {
+		return landmark == null ? null : landmark.shed();
+	}
+
+	/** One span of a vault rising {@code ratio} of its span, whatever its cross-section. */
+	static void scaledVault(int[] rise, int a, int b, Profile profile, double ratio) {
+		final int span = b - a + 1;
+		final double half = (b - a) / 2.0;
+		final double centre = (a + b) / 2.0;
+		final int height = Math.min(MAX_VAULT_RISE, Math.max(2, (int) Math.round(span * ratio)));
+		for (int u = a; u <= b; u++) {
+			final double x = Math.min(1, Math.abs(u - centre) / half);
+			final double f = switch (profile) {
+				case POINTED -> Math.sqrt(Math.max(0, 2.5 - (x + 0.5) * (x + 0.5))) - 0.5;
+				case ROUND -> Math.sqrt(1 - x * x);
+				case GABLE -> 1 - x;
+			};
+			rise[u] = Math.max(rise[u], (int) Math.round(height * f));
+		}
 	}
 
 	/** The middle of a vault's flat crown: as high as both neighbours and not left of an equal one. */

@@ -16,7 +16,7 @@ class PassengerWalkTest {
 	static final String[] WORDS = {"4 tracks island, 96 long, station building, footbridge", "2 tracks side platforms, 64 long, footbridge",
 			"6 tracks island, 120 long, grand class, multi-level", "4 tracks island, 160 long, station building, mezzanine, escalators",
 			"3 tracks, 80 long, underpass", "4 tracks, 100 long, terminus", "2 tracks, 60 long, step free",
-			"6 tracks island, 200 long, footbridge, stairs both ways, escalators", "utrecht centraal, 4 tracks, 90 long"};
+			"6 tracks island, 200 long, footbridge, stairs both ways, escalators", "utrecht centraal, 4 tracks, 90 long", "hamburg hauptbahnhof", "hamburg hbf, 4 tracks, 120 long", "4 track subway station, two island platforms, 120 long"};
 
 	@Test
 	void everyPresetAndShapeLeadsSomewhere() {

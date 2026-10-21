@@ -107,13 +107,14 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 				served.add(band.number());
 			}
 		}
-		// a big hub's outer islands have through tracks on both sides, so a footbridge links them to the bay platforms
+		// a big hub's outer islands have through tracks on both sides, so a footbridge links them to the bay platforms;
+		// underground, even a lone island's stairs come up to the street through the bridge's deck
 		final boolean street = StationGeometry.streetEntrance(spec);
 		boolean bridge = (spec.footbridge() || building || outerIslands(layout)) && !served.isEmpty()
-				&& (building || street || layout.platforms().size() >= 2);
+				&& (building || street || layout.platforms().size() >= 2 || spec.options().underground());
 		final int bridgeV = entranceV;
 		final int bridgeWidth = StationGeometry.bridgeWidth(spec, layout);
-		final boolean hall = spec.real() != RealStation.NONE;
+		final boolean hall = spec.real().hallOverTracks();
 		// a real station's flights leave its hall floor where a plain corridor's would leave its walls, around the middle
 		final int flightOffset = StationGeometry.bridgeWallOffset(hall ? StationGeometry.BRIDGE_WIDTH : bridgeWidth);
 		int stairSide = 0;
@@ -164,7 +165,9 @@ public record StationLayout(boolean building, int bays, int vStart, int vEnd, in
 		// end is a long walk from the only way off
 		// (a street entrance stays the main bridge's: the far one spans the platforms only)
 		// a real station's hall is its only way across
-		if (!bridge || layout.terminus() || spec.real() != RealStation.NONE || !(building && bothWays && street == null || length >= LONG_PLATFORMS)) {
+		// an underground station has stairs up to the street at both ends when they fit
+		if (!bridge || layout.terminus() || spec.real().hallOverTracks()
+				|| !(building && bothWays && street == null || length >= LONG_PLATFORMS || spec.options().underground())) {
 			return null;
 		}
 		final int offset = StationGeometry.bridgeWallOffset(bridgeWidth);

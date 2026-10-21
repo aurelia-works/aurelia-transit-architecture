@@ -20,6 +20,9 @@ public final class StationPlanner {
 	static final String HELP_POINT = "aurelia_transit_architecture:help_point";
 	static final String CEILING_SPEAKER = "aurelia_transit_architecture:ceiling_speaker";
 	static final String WALL_SPEAKER = "aurelia_transit_architecture:wall_speaker";
+	static final String GIRDER = "aurelia_transit_architecture:station_girder";
+	/** A shed's frame: the girder's states and joins with a lattice model. */
+	static final String ROOF_TRUSS = "aurelia_transit_architecture:roof_truss";
 	/**
 	 * A walk-in waiting shelter, from the bus kit: a back wall of glass two high, a seat in front of it and a roof over both at
 	 * two blocks above its seat. All three face the way the wall is from the seat (the kit is placed "away from the player").
@@ -78,6 +81,7 @@ public final class StationPlanner {
 		planning.forecourt();
 		planning.footbridge();
 		planning.farFootbridge();
+		planning.overrunFences();
 		planning.columns();
 		planning.canopyRoofs();
 		planning.hallRoof();
@@ -89,14 +93,21 @@ public final class StationPlanner {
 		planning.interior();
 		planning.headInterior();
 		planning.platformEquipment();
+		planning.tramSigns();
 		planning.nameSigns();
 		planning.wayfinding();
 		planning.mezzanine();
 		planning.speakers();
+		planning.hallLamps();
 		planning.liftButtons();
+		planning.entrances();
+		planning.concourseFit();
 		planning.endFences();
+		planning.pitEndFences();
 		planning.cornerPosts();
 		planning.parking();
+		planning.underground();
+		planning.edgeRailings();
 		return planning.finish();
 	}
 

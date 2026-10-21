@@ -1,5 +1,11 @@
 package com.aureliatransit.architecture.station;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+
 import static com.aureliatransit.architecture.station.StationPlanner.*;
 
 /**
@@ -40,23 +46,37 @@ abstract class PlanConcourse extends PlanHead {
 		final int depth = vE - vL;
 		final int gateV = headGateV();
 		final int inner = u1 - u0 - 1;
-		// the gate line: a bank centred on the walk from the entrance, glass barriers out to the side walls (run-off for the
-		// staff and the crowd), a wide gate in the middle
-		final int half = Math.max(2, Math.min((inner - 4) / 2, layout.tracks().size() + 1));
+		// the gate line: banks of gates with a wide gate in the middle of each, one on the walk from the entrance and in a big
+		// hall one more each side, glass fence between them and out to the side walls (Jah 10-20: one long bank across the
+		// hall felt cluttered)
+		final int half = Math.max(2, Math.min((inner - 4) / 2, GATE_BANK_HALF));
+		final int pitch = 2 * half + 1 + GATE_BANK_GAP;
+		final int banks = inner >= 3 * pitch && layout.tracks().size() >= 6 ? 3 : 1;
 		for (int u = u0 + 1; u < u1; u++) {
-			final int d = u - door;
+			// from the middle of the nearest bank
+			final int d = banks == 1 ? u - door : u - door - pitch * Math.max(-1, Math.min(1, Math.round((u - door) / (float) pitch)));
 			if (Math.abs(d) <= half) {
 				final String kind = Math.abs(d) == half ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
 				// the green "go" side faces the ticket hall, where people come in; the red X faces the concourse
-				put(Role.GATE, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, palette.blockId(Role.GATE), kind);
+				gate(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, kind, d > 0);
 			} else {
-				put(Role.BARRIER, u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V);
+				fence(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V);
 			}
 		}
+		gateSigns(banks == 1 ? List.of(door) : List.of(door - pitch, door, door + pitch), gateV);
+		gateBooth(door + half + 2, gateV, u1, b);
 		// a big number under the lintel over each platform end
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			if (gateNumbered(band)) {
-				numberSign(band, (band.uMin() + band.uMax() + 1) / 2, StationGeometry.UPPER_FLOOR_Y - 1, vL, LocalDir.PLUS_V);
+				// an island's two numbers side by side over its middle, the left face's on the left
+				final List<Integer> numbers = layout.platformNumbers(band);
+				final int mid = (band.uMin() + band.uMax() + 1) / 2;
+				if (numbers.size() == 2) {
+					numberSign(mid - 1, StationGeometry.UPPER_FLOOR_Y - 1, vL, LocalDir.PLUS_V, Integer.toString(numbers.get(0)));
+					numberSign(mid, StationGeometry.UPPER_FLOOR_Y - 1, vL, LocalDir.PLUS_V, Integer.toString(numbers.get(1)));
+				} else if (numbers.size() == 1) {
+					numberSign(mid, StationGeometry.UPPER_FLOOR_Y - 1, vL, LocalDir.PLUS_V, Integer.toString(numbers.get(0)));
+				}
 			}
 		}
 		// the main departure board hung from the lintel over the platform ends, facing the concourse, and the clock over it
@@ -83,7 +103,7 @@ abstract class PlanConcourse extends PlanHead {
 				shop(u1 - 5, gateV + 8, vE - 2, b);
 			}
 			for (int i = 0; i < 3 && gateV + 7 + i < vE - 1; i++) {
-				tallFixture(u0 + 1, 1, gateV + 7 + i, LocalDir.PLUS_U, "mtr:ticket_machine");
+				ticketMachine(u0 + 1, 1, gateV + 7 + i, LocalDir.PLUS_U);
 			}
 			put(Role.FIXTURE, door - 3, StationGeometry.WALK_Y, vE - 2, LocalDir.PLUS_V, "aurelia_transit_architecture:information_pillar");
 		} else {
@@ -91,7 +111,7 @@ abstract class PlanConcourse extends PlanHead {
 			put(Role.WALL, u0 + 1, 1, vE - 1, LocalDir.PLUS_U, b.interiorWall());
 			put(Role.FIXTURE, u0 + 1, 2, vE - 1, LocalDir.PLUS_U, "aurelia_transit_architecture:booth_window");
 			for (int i = 0; i < 2 && vE - 1 - i > gateV + 1; i++) {
-				tallFixture(u1 - 1, 1, vE - 1 - i, LocalDir.MINUS_U, "mtr:ticket_machine");
+				ticketMachine(u1 - 1, 1, vE - 1 - i, LocalDir.MINUS_U);
 			}
 		}
 		// on the paid side: the kiosk against a side wall where passengers wait, a help point by the gates
@@ -106,11 +126,91 @@ abstract class PlanConcourse extends PlanHead {
 			concourseSeats(u0 + clearOfGallery + 1, u1 - clearOfGallery - 1, door, vL, gateV, b);
 		}
 		// MTR's station name over the street door and its tactile map inside beside it
-		for (int u = door - 1; u <= door + 1; u++) {
+		for (int u = door - headEntranceHalf(); u <= door + headEntranceHalf(); u++) {
 			put(Role.FIXTURE, u, MTR_NAME_Y, vE + 1, LocalDir.PLUS_V, StylePalette.MTR_STATION_NAME);
 		}
-		tallFixture(door + 2, 1, vE - 1, LocalDir.MINUS_V, StylePalette.MTR_TACTILE_MAP);
+		tallFixture(door + headEntranceHalf() + 1, 1, vE - 1, LocalDir.MINUS_V, StylePalette.MTR_TACTILE_MAP);
 	}
+
+	/**
+	 * A hanging sign on a rod over each bank of gates, facing the ticket hall, naming the platforms nearest to it
+	 * ("Platforms 1–2"). A bank no platform is nearest to gets none.
+	 */
+	void gateSigns(List<Integer> centres, int gateV) {
+		final Map<Integer, List<Integer>> served = new TreeMap<>();
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			if (band.number() <= 0 || layout.platformNumbers(band).isEmpty()) {
+				continue;
+			}
+			final int mid = (band.uMin() + band.uMax() + 1) / 2;
+			final int nearest = centres.stream().min(Comparator.comparingInt(c -> Math.abs(c - mid))).orElseThrow();
+			served.computeIfAbsent(nearest, c -> new ArrayList<>()).addAll(layout.platformNumbers(band));
+		}
+		final int y = StationGeometry.WALK_Y + 4;
+		served.forEach((centre, numbers) -> {
+			if (putText(Role.FIXTURE, centre, y, gateV, LocalDir.PLUS_V, HANGING_SIGN, "UP:" + gateSignText(numbers))) {
+				dropRod(centre, y, gateV);
+			}
+		});
+	}
+
+	/**
+	 * The gate-line staff booth on the ticket-hall side, just past the end of the middle bank (Jah 10-20): 3 x 3, a counter
+	 * wall under glass between corner posts, a booth window looking along the gates to the wide gate and one looking at the gate line, a door at
+	 * the back. Only where the whole booth is free and clear of the rooms against the side wall.
+	 */
+	void gateBooth(int ua, int gateV, int u1, StylePalette.Building b) {
+		final int ub = ua + 2;
+		final int va = gateV + 1;
+		final int vb = gateV + 3;
+		final int roof = StationGeometry.DOOR_HEIGHT + 1;
+		if (ub >= u1 - 6 || vb >= layout.headEnd() - 2) {
+			return;
+		}
+		for (int u = ua; u <= ub; u++) {
+			for (int v = va; v <= vb; v++) {
+				for (int y = 1; y <= roof; y++) {
+					if (taken(u, y, v)) {
+						return;
+					}
+				}
+			}
+		}
+		final int mid = va + 1;
+		for (int y = 1; y <= StationGeometry.DOOR_HEIGHT; y++) {
+			keepClear(ub, y, mid);
+		}
+		put(Role.FIXTURE, ua, 2, mid, LocalDir.MINUS_U, "aurelia_transit_architecture:booth_window");
+		put(Role.FIXTURE, ua + 1, 2, va, LocalDir.MINUS_V, "aurelia_transit_architecture:booth_window");
+		for (int u = ua; u <= ub; u++) {
+			for (int v = va; v <= vb; v++) {
+				if (u == ua || u == ub || v == va || v == vb) {
+					put(Role.WALL, u, 1, v, LocalDir.PLUS_V, b.interiorWall());
+					// posts at the corners hold the roof; glass between them
+					final boolean corner = (u == ua || u == ub) && (v == va || v == vb);
+					for (int y = 2; y <= StationGeometry.DOOR_HEIGHT; y++) {
+						if (corner) {
+							put(Role.WALL, u, y, v, LocalDir.PLUS_V, b.trim());
+						} else {
+							put(Role.WINDOW, u, y, v, u == ua ? LocalDir.MINUS_U : u == ub ? LocalDir.PLUS_U : v == va ? LocalDir.MINUS_V : LocalDir.PLUS_V, b.window());
+						}
+					}
+				}
+				put(Role.WALL, u, roof, v, LocalDir.PLUS_V, b.trim());
+			}
+		}
+	}
+
+	/** "Platform 3", or "Platforms 1–2" for a run of them. */
+	static String gateSignText(List<Integer> numbers) {
+		return TrackLayout.platformsText(numbers);
+	}
+
+	/** Half a bank of gates: an end, two gates and the wide one in the middle, so four gates and a wide one to a bank. */
+	static final int GATE_BANK_HALF = 3;
+
+	/** Glass fence between two banks of gates. */
+	static final int GATE_BANK_GAP = 5;
 
 	/** v of a terminus head's gate line: about two fifths of the hall from the street wall, the ticket hall at least 7 deep. */
 	int headGateV() {
@@ -179,12 +279,13 @@ abstract class PlanConcourse extends PlanHead {
 				}
 			}
 		}
-		// benches against the wall, looking out over the concourse
-		if (spec.furniture()) {
-			for (int v = lift.doorV() + 3; v < top - 1; v += 3) {
-				put(Role.BENCH, wall - side, StationGeometry.UPPER_WALK_Y, v, side < 0 ? LocalDir.PLUS_U : LocalDir.MINUS_U, b.bench());
-			}
+		// the stair's top row past its balustrade, out to the open edge: floor and a rail across, so the edge rail turns the
+		// corner onto the stair's rail instead of the two only touching corner to corner (a gap, Jah 10-20)
+		for (int u = wall - 4 * side; side < 0 ? u <= edge : u >= edge; u -= side) {
+			put(Role.FLOOR, u, StationGeometry.UPPER_FLOOR_Y, top, LocalDir.PLUS_V, b.upperFloor());
+			put(Role.RAILING, u, StationGeometry.UPPER_WALK_Y, top, LocalDir.PLUS_V);
 		}
+		// no benches up here: a bench every few rows along the gallery wall looked random (Enviro, 10-20)
 	}
 
 	/**

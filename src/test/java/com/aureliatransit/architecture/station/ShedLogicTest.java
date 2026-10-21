@@ -19,7 +19,7 @@ class ShedLogicTest {
 	}
 
 	private static boolean girder(PlannedBlock block) {
-		return block != null && block.blockId().endsWith(":station_girder");
+		return block != null && (block.blockId().endsWith(":station_girder") || block.blockId().endsWith(":roof_truss"));
 	}
 
 	@Test

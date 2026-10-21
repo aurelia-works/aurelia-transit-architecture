@@ -33,7 +33,7 @@ class WayfindingSignsTest {
 			final Set<String> texts = signs.stream().map(b -> b.v() + " " + b.text()).collect(Collectors.toSet());
 			assertEquals(signs.size(), texts.size(), words + ": one sign per platform and bridge");
 			for (final PlannedBlock sign : signs) {
-				assertTrue(sign.text().matches("DOWN:Platform \\d+"), words + ": " + sign.text());
+				assertTrue(sign.text().matches("DOWN:Platforms? \\d+(–\\d+)?"), words + ": " + sign.text());
 				assertEquals(StationGeometry.BUILDING_ROOF_Y - 1, sign.y(), words + ": hung at the top of the corridor");
 				// the walkway under it keeps its headroom
 				for (int y = StationGeometry.UPPER_WALK_Y; y < sign.y(); y++) {

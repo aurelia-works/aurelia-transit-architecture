@@ -33,8 +33,9 @@ abstract class PlanBuilding extends PlanPlatforms {
 		final int vEntr = site.entranceV();
 		final int uA = uP - 2;
 		final int uB = uP - 1;
+		final int door = entranceHalf();
 		// reserve the openings before any wall goes up
-		for (int v = vEntr - 1; v <= vEntr + 1; v++) {
+		for (int v = vEntr - door; v <= vEntr + door; v++) {
 			for (int y = 1; y <= 3; y++) {
 				keepClear(uS, y, v);
 			}
@@ -83,6 +84,9 @@ abstract class PlanBuilding extends PlanPlatforms {
 				keepClear(u, y, vBot);
 			}
 		}
+		// a real station's own building first, so the plain walls below only fill what its sheet leaves open
+		landmarkSide();
+		final boolean sheet = landmark != null && landmark.anchor() == Landmark.Anchor.SIDE;
 		// ground floor and entrance ramps on the apron
 		for (int u = uS; u <= uP; u++) {
 			for (int v = vS; v <= vE; v++) {
@@ -91,7 +95,7 @@ abstract class PlanBuilding extends PlanPlatforms {
 				put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : b.floor());
 			}
 		}
-		for (int v = vEntr - 1; v <= vEntr + 1; v++) {
+		for (int v = vEntr - door; v <= vEntr + door; v++) {
 			put(Role.RAMP_LOWER, apronU(), StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
 			put(Role.RAMP_UPPER, apronU() + 1, StationGeometry.PLATFORM_Y, v, LocalDir.MINUS_U);
 			for (int y = 1; y <= 3; y++) {
@@ -199,10 +203,10 @@ abstract class PlanBuilding extends PlanPlatforms {
 			storey(StationGeometry.BUILDING_ROOF_Y + StationGeometry.STOREY * storey, uS, uP, vS, vE, true);
 		}
 		final int top = roofY();
-		if (scale == StationScale.GRAND) {
+		if (scale == StationScale.GRAND && !sheet) {
 			clockTower(top, uS, site.entranceV() - 2, LocalDir.PLUS_U);
 		}
-		roof(top, uS, uP, vS, vE);
+		roof(top, uS, uP, vS, vE, sheet ? null : pitchedRoof());
 		// inner stair flights (two columns wide)
 		for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 			final int v = site.innerStairV(y);
@@ -383,10 +387,10 @@ abstract class PlanBuilding extends PlanPlatforms {
 		}
 		return switch (spec.building()) {
 			case ANTWERP, BEAUX_ARTS -> new String[]{"minecraft:oxidized_cut_copper_stairs", "minecraft:oxidized_cut_copper"};
-			case AMSTERDAM, GOTHIC_BRICK, SANDSTONE, CLINKER, TOKYO, ZURICH -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
+			case AMSTERDAM, GOTHIC_BRICK, SANDSTONE, CLINKER, TOKYO, ZURICH, VICTORIAN -> new String[]{"minecraft:deepslate_tile_stairs", "minecraft:deepslate_tiles"};
 			// Mumbai's red clay tiles
 			case MUMBAI -> new String[]{"minecraft:brick_stairs", "minecraft:bricks"};
-			case NONE, MODERN, CONCRETE, PARIS, MILAN, BERLIN, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR -> null;
+			case NONE, MODERN, CONCRETE, PARIS, MILAN, BERLIN, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR, ART_DECO, MODERNIST -> null;
 		};
 	}
 
@@ -397,7 +401,8 @@ abstract class PlanBuilding extends PlanPlatforms {
 	 * roof leaves the tower open.
 	 */
 	void clockTower(int top, int u0, int v0, LocalDir inward) {
-		tower(top, u0, v0, TOWER_HEIGHT, inward, Cap.PYRAMID, true, false);
+		// a real station's tower stands as high as the real one (Hamburg's 45 m)
+		tower(top, u0, v0, Math.max(TOWER_HEIGHT, spec.real().towerTopY() - top), inward, Cap.PYRAMID, true, false);
 	}
 
 	/** Copper domes, except white ones in Kuala Lumpur, stone ones in Mumbai and dark slate ones in Tokyo. */
@@ -419,6 +424,9 @@ abstract class PlanBuilding extends PlanPlatforms {
 	 * A tower five cells across standing on the roof at {@code top}, {@code height} high, like {@link #clockTower}: clock faces
 	 * when {@code clock}, glass between the corners and bands when {@code glass} (a modern glass tower), and its {@code cap}.
 	 */
+	/** Storey height of a tall tower, between its string courses. */
+	static final int TALL_TOWER_STOREY = 8;
+
 	void tower(int top, int u0, int v0, int height, LocalDir inward, Cap cap, boolean clock, boolean glass) {
 		final StylePalette.Building b = palette.building();
 		final int u1 = u0 + 4;
@@ -436,9 +444,14 @@ abstract class PlanBuilding extends PlanPlatforms {
 				}
 			}
 		}
+		// a tall tower (a real station's) is stone storeys with string courses and narrow windows, its belfry under the clock,
+		// so it does not read as a chimney
+		final boolean tall = height > TOWER_HEIGHT;
 		for (int y = top + 1; y <= crown; y++) {
-			final boolean band = y == top + 1 || y == crown;
-			final boolean louvre = y >= top + 3 && y <= top + 5;
+			final int storey = (y - top - 1) % TALL_TOWER_STOREY;
+			final boolean band = y == top + 1 || y == crown || tall && storey == 0;
+			final boolean louvre = tall ? y >= crown - 7 && y <= crown - 5 || storey >= 3 && storey <= 5 && y < crown - 9
+					: y >= top + 3 && y <= top + 5;
 			for (int u = u0; u <= u1; u++) {
 				for (int v = v0; v <= v1; v++) {
 					final boolean ring = u == u0 || u == u1 || v == v0 || v == v1;

@@ -162,6 +162,32 @@ class WalkThroughFixesTest {
 	}
 
 	@Test
+	void aScreenOnAColumnIsCentredOnIt() {
+		// a viewer facing +v's front looks along -v with -u on their right, so a pair reaching +u moves right
+		assertEquals("offset=right", PlanFurniture.centredOn(LocalDir.PLUS_V, 1));
+		assertEquals("offset=left", PlanFurniture.centredOn(LocalDir.PLUS_V, -1));
+		assertEquals("offset=left", PlanFurniture.centredOn(LocalDir.MINUS_V, 1));
+		assertEquals("offset=right", PlanFurniture.centredOn(LocalDir.MINUS_V, -1));
+		int centred = 0;
+		final StationPlan plan = plan(StationPresets.ALL.stream().filter(p -> p.key().equals("utrecht")).findFirst().orElseThrow().description());
+		for (final PlannedBlock b : plan.blocks()) {
+			if (!b.blockId().equals("aurelia_transit_architecture:platform_pids")) {
+				continue;
+			}
+			final int back = b.v() + (b.front() == LocalDir.PLUS_V ? -1 : 1);
+			final boolean onColumn = plan.blocks().stream().anyMatch(o -> o.role() == Role.COLUMN && o.y() == b.y() && o.u() == b.u() && o.v() == back);
+			final PlannedBlock pair = plan.blocks().stream().filter(o -> o != b && o.blockId().equals(b.blockId()) && o.v() == b.v() && o.y() == b.y()
+					&& Math.abs(o.u() - b.u()) == 1).findFirst().orElse(null);
+			if (onColumn && pair != null) {
+				assertEquals(PlanFurniture.centredOn(b.front(), pair.u() - b.u()), b.state(), "the column's half moves towards its pair");
+				assertEquals(b.state(), pair.state(), "both halves move together");
+				centred++;
+			}
+		}
+		assertTrue(centred > 0, "some screen pair hangs on a column");
+	}
+
+	@Test
 	void aPlatformWallHasDoorwaysOnlyWhereAPlatformStandsBesideIt() {
 		int windows = 0;
 		for (final String text : List.of("4 tracks island, 96 long, station building", "2 tracks island 8 wide 64 long station building footbridge")) {

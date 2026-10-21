@@ -8,7 +8,8 @@ import java.util.List;
  * it is (v). Produced by {@link StationGeometry#layout}.
  *
  * @param width          number of columns, u = 0..width-1 (the outermost columns are track envelopes or platform cells)
- * @param platformLength platforms run v = 0..platformLength-1
+ * @param platformLength the track zone, v = 0..platformLength-1: the platforms' full length, or at a terminus that plus each
+ *                       track's overrun and buffer row ({@link StationGeometry#overrun})
  * @param rampLength     ramp cells beyond each platform end (0 without step-free access)
  * @param tracks         left to right
  * @param platforms      left to right
@@ -81,9 +82,17 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		return terminus() && track.number() > hubThrough && track.number() <= tracks.size() - hubThrough;
 	}
 
-	/** Last v this track (and its clearance) runs to: its buffer stop, or the footprint end for a track running through. */
+	/**
+	 * Last v this track (and its clearance) runs to: its last rail node, {@link StationGeometry#overrun} rows past its
+	 * platform's end, with the buffer stop in the row after; or the footprint end for a track running through.
+	 */
 	public int trackEnd(Track track) {
-		return bay(track) ? platformLength - 1 : deadEnd(track) ? platformOf(track).vTo() : vMax();
+		return bay(track) ? platformLength - 2 : deadEnd(track) ? platformOf(track).vTo() + StationGeometry.overrun(platformLength) : vMax();
+	}
+
+	/** True for a track ending at a buffer stop: a terminus's bay track or a through station's dead end. */
+	public boolean buffered(Track track) {
+		return bay(track) || deadEnd(track);
 	}
 
 	/** A through station's bay track: it ends at a buffer stop at row {@code trackEnd(track) + 1}, past its platform's end. */
@@ -199,6 +208,59 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	/** First v of a hub's forecourt: the row past the head building's entrance ramps. Meaningful only with a forecourt. */
 	public int forecourtFrom() {
 		return headEnd() + StationGeometry.HEAD_APRON + 1;
+	}
+
+	/**
+	 * The platform number passengers see for a track, and MTR's platform name: the tracks a platform runs beside, counted
+	 * from the left (the station building's side), so an island's two faces have two numbers ("1" and "2") as at a real
+	 * station. A track with no platform has none (0).
+	 */
+	public int platformNumber(Track track) {
+		if (track.through()) {
+			return 0;
+		}
+		int number = 0;
+		for (final Track other : tracks) {
+			if (!other.through()) {
+				number++;
+			}
+			if (other == track || other.equals(track)) {
+				return number;
+			}
+		}
+		return 0;
+	}
+
+	/** The tracks along a platform's edges, left first: one for a side platform, two for an island. */
+	public List<Track> faces(PlatformBand band) {
+		final List<Track> faces = new ArrayList<>(2);
+		for (final Track track : tracks) {
+			if (band.trackLeft() && track.platformRight() && track.u() + StationGeometry.EDGE_OFFSET == band.uMin()) {
+				faces.add(0, track);
+			} else if (band.trackRight() && track.platformLeft() && track.u() - StationGeometry.EDGE_OFFSET == band.uMax()) {
+				faces.add(track);
+			}
+		}
+		return faces;
+	}
+
+	/** The platform numbers of a platform's faces, left first (empty for a platform with no track). */
+	public List<Integer> platformNumbers(PlatformBand band) {
+		final List<Integer> numbers = new ArrayList<>(2);
+		for (final Track face : faces(band)) {
+			numbers.add(platformNumber(face));
+		}
+		return numbers;
+	}
+
+	/** "Platform 3", or "Platforms 3–4" for an island or a run of them; empty with no numbers. */
+	public static String platformsText(List<Integer> numbers) {
+		if (numbers.isEmpty()) {
+			return "";
+		}
+		final int lo = numbers.stream().mapToInt(Integer::intValue).min().orElseThrow();
+		final int hi = numbers.stream().mapToInt(Integer::intValue).max().orElseThrow();
+		return lo == hi ? "Platform " + lo : "Platforms " + lo + "–" + hi;
 	}
 
 	/**

@@ -41,6 +41,21 @@ public enum Operator {
 	}
 
 	/**
+	 * The operator whose signs a city or country word implies, when the description names no operator (Jah, 10-20): Dutch
+	 * cities NS, German DB, Swiss SBB, Japanese JR, London and the British stations National Rail; null for places without one of these marks.
+	 */
+	public static Operator ofCity(String word) {
+		return switch (word == null ? "" : word.toLowerCase(Locale.ROOT).strip()) {
+			case "dutch", "netherlands", "holland", "utrecht", "leidsche", "amsterdam", "rotterdam" -> NS;
+			case "german", "germany", "hamburg", "munich", "munchen", "berlin", "frankfurt" -> DB;
+			case "swiss", "switzerland", "zurich", "z\u00fcrich", "zuerich" -> SBB;
+			case "japan", "japanese", "tokyo", "marunouchi" -> JR;
+			case "london", "british", "britain", "english", "england", "uk", "teddington", "surbiton", "coventry", "lswr" -> NATIONAL_RAIL;
+			default -> null;
+		};
+	}
+
+	/**
 	 * The operator a word or phrase names (NS, Nederlandse Spoorwegen, DB, Deutsche Bahn, GVB, TfL or London Underground,
 	 * National Rail, S-Bahn, SBB, JR or JR East), or null.
 	 */

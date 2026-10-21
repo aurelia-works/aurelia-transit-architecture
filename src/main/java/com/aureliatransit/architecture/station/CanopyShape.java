@@ -2,7 +2,10 @@ package com.aureliatransit.architecture.station;
 
 /** The profile of a platform canopy's roof; a hall roof ignores it. */
 public enum CanopyShape {
-	/** A level roof (plain and modern looks, and the Dutch ones: Utrecht's wave is its hall roof, its platform canopies are flat). */
+	/**
+	 * A level roof (plain and modern looks, Surbiton's concrete slabs and Coventry's deep fascias, and the Dutch ones: Utrecht's
+	 * wave is its hall roof, its platform canopies are flat).
+	 */
 	FLAT,
 	/** A V across the platform: low over the column line, rising to both edges (the German S-Bahn, Berlin, Munich). */
 	BUTTERFLY,
@@ -13,8 +16,8 @@ public enum CanopyShape {
 	public static CanopyShape forLook(BuildingStyle building, StationStyle style) {
 		return switch (building) {
 			case BERLIN, CONCRETE, SANDSTONE, CLINKER -> BUTTERFLY;
-			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, PARIS, BEAUX_ARTS, TOKYO, ZURICH, MILAN, BANGKOK, KUALA_LUMPUR, MUMBAI -> GABLE;
-			case MODERN, HONG_KONG, BEIJING -> FLAT;
+			case GOTHIC_BRICK, AMSTERDAM, ANTWERP, PARIS, BEAUX_ARTS, TOKYO, ZURICH, MILAN, BANGKOK, KUALA_LUMPUR, MUMBAI, VICTORIAN -> GABLE;
+			case MODERN, HONG_KONG, BEIJING, ART_DECO, MODERNIST -> FLAT;
 			case NONE -> switch (style) {
 				case GERMAN_SBAHN -> BUTTERFLY;
 				case DUTCH, MODERN, METRO -> FLAT;

@@ -39,7 +39,10 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		BEIJING("Beijing", "beijing"),
 		BANGKOK("Bangkok", "bangkok"),
 		KUALA_LUMPUR("Kuala Lumpur", "kuala lumpur"),
-		MUMBAI("Mumbai", "mumbai");
+		MUMBAI("Mumbai", "mumbai"),
+		TEDDINGTON("Teddington", "teddington"),
+		SURBITON("Surbiton", "surbiton"),
+		COVENTRY("Coventry", "coventry");
 
 		private final String label;
 		private final String words;

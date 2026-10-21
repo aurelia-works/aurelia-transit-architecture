@@ -168,7 +168,7 @@ abstract class PlanFurniture extends PlanRoofs {
 				}
 				// never by or under a stair flight or a travelator; a two-seat bench (two benches side by side) with a bin beside it
 				if (u < 0 || isEdge(band, u) || nearStairs(band, v) || nearStairs(band, v + 1)
-						|| nearTravelator(band, u, v) || nearTravelator(band, u, v + 1)
+						|| nearTravelator(band, u, v) || nearTravelator(band, u, v + 1) || pastTheLanes(band, v, v + 2)
 						|| taken(u, StationGeometry.WALK_Y, v) || taken(u, StationGeometry.WALK_Y, v + 1)) {
 					continue;
 				}
@@ -198,11 +198,25 @@ abstract class PlanFurniture extends PlanRoofs {
 		return -1;
 	}
 
+	/**
+	 * True when rows {@code from..to} reach past either end of an island's side lanes: the middle strip is the furniture's
+	 * only between the lanes, and the open ends are the walk to the concourse (a lone bench there stood in the way, Jah 10-20).
+	 */
+	boolean pastTheLanes(TrackLayout.PlatformBand band, int from, int to) {
+		final List<int[]> stretches = travelatorStretches.get(band);
+		if (stretches == null || stretches.isEmpty() || !hasSideLanes(band)) {
+			return false;
+		}
+		return from < stretches.get(0)[0] || to > stretches.get(stretches.size() - 1)[1];
+	}
+
 	/** True within two cells (each way) of a travelator step on this platform, so furniture never crowds the walkway. */
 	boolean nearTravelator(TrackLayout.PlatformBand band, int u, int v) {
+		// between an island's side lanes the middle strip is meant for furniture: a walkway each side of it is enough
+		final int reach = hasSideLanes(band) ? 1 : 2;
 		for (final PlannedBlock block : cells.values()) {
 			if (block.role() == Role.ESCALATOR && block.y() == StationGeometry.PLATFORM_Y && band.contains(block.u(), block.v())
-					&& Math.abs(block.v() - v) <= 2 && Math.abs(block.u() - u) <= 2) {
+					&& Math.abs(block.v() - v) <= 2 && Math.abs(block.u() - u) <= reach) {
 				return true;
 			}
 		}
@@ -225,27 +239,27 @@ abstract class PlanFurniture extends PlanRoofs {
 		final int vE = site.vEnd();
 		final int vEntr = site.entranceV();
 		final int uGate = uS + 4;
-		// gate bank around the entrance: END, GATE, WIDE, GATE, END; glass barriers elsewhere
-		final String[] bank = {"kind=end", "kind=gate", "kind=wide", "kind=gate", "kind=end"};
-		for (int i = 0; i < bank.length; i++) {
-			final int v = vEntr - 2 + i;
+		final int h = entranceHalf();
+		// gate bank across the entrance, a lane per door cell: END, GATE.., WIDE, ..GATE, END; glass barriers elsewhere
+		for (int d = -h - 1; d <= h + 1; d++) {
+			final String kind = Math.abs(d) == h + 1 ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
 			// green towards the street door, red towards the platforms
-			put(Role.GATE, uGate, StationGeometry.WALK_Y, v, LocalDir.MINUS_U, palette.blockId(Role.GATE), bank[i]);
+			gate(uGate, StationGeometry.WALK_Y, vEntr + d, LocalDir.MINUS_U, kind, d > 0);
 		}
 		for (int v = vS + 1; v <= vE - 1; v++) {
-			if (v >= vEntr - 2 && v <= vEntr + 2) {
+			if (v >= vEntr - h - 1 && v <= vEntr + h + 1) {
 				continue;
 			}
-			put(Role.BARRIER, uGate, StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
+			fence(uGate, StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
 		}
 		// ticket office on the unpaid side with its window facing +v (north of the entrance when it fits, else south)
 		final int officeU0 = uS + 1;
 		final int officeU1 = uS + 2;
-		int officeV0 = vEntr + 3;
-		int officeV1 = vEntr + 4;
+		int officeV0 = vEntr + h + 2;
+		int officeV1 = vEntr + h + 3;
 		if (officeV1 > vE - 1) {
-			officeV0 = vEntr - 4;
-			officeV1 = vEntr - 3;
+			officeV0 = vEntr - h - 3;
+			officeV1 = vEntr - h - 2;
 		}
 		if (officeV0 >= vS + 1 && officeV1 <= vE - 1) {
 			for (int u = officeU0; u <= officeU1; u++) {
@@ -265,49 +279,36 @@ abstract class PlanFurniture extends PlanRoofs {
 		}
 		// MTR ticket machines, two tall, against the unpaid side south of the entrance
 		for (int i = 0; i < 2; i++) {
-			final int v = vEntr - 4 - i;
+			final int v = vEntr - h - 3 - i;
 			if (v <= vS) {
 				continue;
 			}
-			tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "mtr:ticket_machine");
+			ticketMachine(uS + 1, 1, v, LocalDir.PLUS_U);
 		}
 		// information kiosk on the unpaid side, against the street wall beside the machines (or by the entrance)
-		for (final int v : new int[]{vEntr - 6, vEntr - 3}) {
+		for (final int v : new int[]{vEntr - h - 5, vEntr - h - 2}) {
 			if (v >= vS + 1 && v <= vE - 1 && tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "aurelia_transit_architecture:passenger_info_kiosk")) {
 				break;
 			}
 		}
 		// benches in the paid hall and on the unpaid side (only with furniture, only inside the building)
 		if (spec.furniture()) {
-			if (vEntr + 6 >= vS + 1 && vEntr + 6 <= vE - 1) {
-				put(Role.BENCH, uS + 2, 1, vEntr + 6, LocalDir.PLUS_V, b.bench());
+			if (vEntr + h + 5 >= vS + 1 && vEntr + h + 5 <= vE - 1) {
+				put(Role.BENCH, uS + 2, 1, vEntr + h + 5, LocalDir.PLUS_V, b.bench());
 			}
-			if (vEntr - 6 >= vS + 1 && vEntr - 6 <= vE - 1) {
-				put(Role.BENCH, uP - 2, 1, vEntr - 6, LocalDir.MINUS_V, b.bench());
+			if (vEntr - h - 5 >= vS + 1 && vEntr - h - 5 <= vE - 1) {
+				put(Role.BENCH, uP - 2, 1, vEntr - h - 5, LocalDir.MINUS_V, b.bench());
 			}
-			final int[] room = waitingRoom(b);
-			// upstairs benches on the upper slab (walk level y=6) outside the waiting room
-			for (int bay = 0; bay < site.bays(); bay++) {
-				final int v = site.bayCentre(bay);
-				if (room != null && v >= room[0] && v <= room[1]) {
-					continue;
-				}
-				if (v >= site.innerStairMin() - 1 && v <= site.innerStairMax() + 1) {
-					continue;
-				}
-				if (v >= site.bridgeV() - bridgeWall() && v <= site.bridgeV() + bridgeWall()) {
-					continue;
-				}
-				put(Role.BENCH, uS + 3, StationGeometry.UPPER_WALK_Y, v, LocalDir.PLUS_V, b.bench());
-			}
+			// upstairs, seats only in the waiting room: single benches dotted along the upper floor looked random (Enviro, 10-20)
+			waitingRoom(b);
 		}
 		// clock above the entrance, facing into the hall
 		put(Role.FIXTURE, uS + 1, 4, vEntr, LocalDir.PLUS_U, "aurelia_transit_architecture:wall_digital_clock");
 		// MTR's station name over the street door and its tactile map inside beside it
-		for (int v = vEntr - 1; v <= vEntr + 1; v++) {
+		for (int v = vEntr - h; v <= vEntr + h; v++) {
 			put(Role.FIXTURE, uS - 1, MTR_NAME_Y, v, LocalDir.MINUS_U, StylePalette.MTR_STATION_NAME);
 		}
-		tallFixture(uS + 1, 1, vEntr - 2, LocalDir.PLUS_U, StylePalette.MTR_TACTILE_MAP);
+		tallFixture(uS + 1, 1, vEntr - h - 1, LocalDir.PLUS_U, StylePalette.MTR_TACTILE_MAP);
 		// departure boards on both end walls, facing into the hall
 		// (with wings the end walls are open there, so the ground-floor boards hang only where a wall is behind them)
 		if (cells.containsKey(new Cell((uS + uP) / 2, 2, vS))) {
@@ -505,12 +506,14 @@ abstract class PlanFurniture extends PlanRoofs {
 				for (final int u : columns) {
 					put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, HANGING_PIDS);
 				}
-				// where the roof is a cell higher than the girder the screen hangs from, a cross beam joins the two, so
-				// every block of the screen hangs from steel rather than from the air under the roof
+				// where the roof is a cell higher than the girder the screen hangs from, a short rod joins the two over each
+				// stub on the screen's top (its end blocks), so the screen hangs from steel rather than from the air under the roof
 				for (final int u : columns) {
-					if (ceiling(u, v) == y + 2 && !taken(u, y + 1, v)) {
+					final PlannedBlock screen = cells.get(new Cell(u, y, v));
+					final String hanger = rodHanger(screen);
+					if (ceiling(u, v) == y + 2 && !taken(u, y + 1, v) && !hanger.equals(PLAIN_ROD)) {
 						// a hanger, not part of the roof's frame: it carries only the screen
-						put(Role.FIXTURE, u, y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.BEAM), "kind=" + palette.girderKind());
+						put(Role.FIXTURE, u, y + 1, v, LocalDir.MINUS_V, DROP_ROD, hanger);
 					}
 				}
 				return true;
@@ -562,7 +565,11 @@ abstract class PlanFurniture extends PlanRoofs {
 				}
 				for (int u = a + 1; u < b; u++) {
 					put(Role.FIXTURE, u, y, v, LocalDir.MINUS_V, HANGING_PIDS);
-					put(Role.FIXTURE, u, y + 1, v, LocalDir.PLUS_U, palette.blockId(Role.BEAM), "kind=" + palette.girderKind());
+				}
+				// held at its ends by the columns, and hung on two thin rods from the roof frame above where there is one
+				// (Jah, 10-20: no girder over the screen), over its end blocks, whose stubs they land on
+				for (final int u : new int[]{a + 1, b - 1}) {
+					dropRod(u, y, v);
 				}
 				return true;
 			}
@@ -576,9 +583,22 @@ abstract class PlanFurniture extends PlanRoofs {
 	}
 
 	/**
-	 * The first choice for a departure screen: a screen two blocks wide fixed to the column nearest
-	 * {@code target} above head height, its middle against the column so the two blocks join into one display; on both
-	 * faces of the column along the platform where there is room, so it reads from either way. True if one was fixed.
+	 * The nudge that centres a screen two blocks wide on the post it hangs on (Jah, 10-21: "like a wall mounted TV ... make
+	 * it centre"): the pair spans the post's cell and the one {@code step} along u, so both blocks move half a block back
+	 * towards the post. Left and right are a viewer's, facing the screen's front.
+	 */
+	static String centredOn(LocalDir front, int step) {
+		// facing +v, a viewer looks along -v and has -u on their right; facing -v, +u
+		final boolean towardMinusU = step > 0;
+		final boolean right = front == LocalDir.PLUS_V ? towardMinusU : !towardMinusU;
+		return "offset=" + (right ? "right" : "left");
+	}
+
+	/**
+	 * The first choice for a departure screen: a screen two blocks wide fixed to the column nearest {@code target} above
+	 * head height, flat against it like a wall-mounted television and centred on it, the two blocks joined into one display;
+	 * on both faces of the column along the platform where there is room, so it reads from either way. True if one was
+	 * fixed.
 	 */
 	boolean screenOnColumn(TrackLayout.PlatformBand band, int target) {
 		final int y = StationGeometry.WALK_Y + 2;
@@ -606,8 +626,8 @@ abstract class PlanFurniture extends PlanRoofs {
 				for (final int step : new int[]{toward, -toward}) {
 					final int u = post.u() + step;
 					if (band.contains(u, v) && !isEdge(band, u) && !taken(u, y, v)) {
-						put(Role.FIXTURE, post.u(), y, v, side, PIDS);
-						put(Role.FIXTURE, u, y, v, side, PIDS);
+						put(Role.FIXTURE, post.u(), y, v, side, PIDS, centredOn(side, step));
+						put(Role.FIXTURE, u, y, v, side, PIDS, centredOn(side, step));
 						fixed = true;
 						break;
 					}
@@ -621,7 +641,7 @@ abstract class PlanFurniture extends PlanRoofs {
 	}
 
 	/**
-	 * A standing departure screen two blocks wide against the back of a column or lamp post, at the free cell nearest
+	 * A standing departure screen two blocks wide against the back of a column or lamp post, centred on it, at the free cell nearest
 	 * {@code target} (an open platform with no roof or columns to hang from). The two blocks join into one display, as a
 	 * wall unit does. True if placed.
 	 */
@@ -651,8 +671,8 @@ abstract class PlanFurniture extends PlanRoofs {
 							|| taken(other, StationGeometry.WALK_Y, v)) {
 						continue;
 					}
-					put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS);
-					put(Role.FIXTURE, other, StationGeometry.WALK_Y, v, side, PIDS);
+					put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS, centredOn(side, step));
+					put(Role.FIXTURE, other, StationGeometry.WALK_Y, v, side, PIDS, centredOn(side, step));
 					return true;
 				}
 			}
@@ -702,8 +722,12 @@ abstract class PlanFurniture extends PlanRoofs {
 				final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
 				// above the floor the unit needs the post itself at that height to be fixed to
 				final boolean held = y == StationGeometry.WALK_Y || cells.containsKey(new Cell(post.u(), y, post.v()));
-				if (held && band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), y, v)
-						&& put(Role.FIXTURE, post.u(), y, v, side, blockId)) {
+				// a wall speaker on a post stands on its bracket arm, back to the post's face
+				final String state = blockId.equals(WALL_SPEAKER) ? "post=true" : "";
+				// not tucked under the end of a screen hung from the same column (it looked stuck on, 10-20)
+				final boolean underScreen = blockId.equals(WALL_SPEAKER) && (screenAt(post.u(), y + 1, v) || screenAt(post.u(), y + 2, v));
+				if (held && !underScreen && band.runs(v) && !isEdge(band, post.u()) && !nearStairs(band, v) && !taken(post.u(), y, v)
+						&& put(Role.FIXTURE, post.u(), y, v, side, blockId, state)) {
 					return true;
 				}
 			}

@@ -34,7 +34,8 @@ class StationPresetsTest {
 			assertTrue(audit.buildable() && audit.problems().isEmpty(), preset.key() + " checks: " + audit.problems());
 		}
 		for (final BuildingStyle look : BuildingStyle.values()) {
-			assertTrue(look == BuildingStyle.NONE || looks.contains(look), "no preset for " + look);
+			// clinker lost its preset with Hamburg Dammtor (Jah, 10-21: Hamburg is the Hbf); it is still asked for by name
+			assertTrue(look == BuildingStyle.NONE || look == BuildingStyle.CLINKER || looks.contains(look), "no preset for " + look);
 		}
 	}
 

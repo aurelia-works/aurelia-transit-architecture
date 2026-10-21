@@ -51,7 +51,9 @@ abstract class PlanBridges extends PlanConcourse {
 		final int to = site.deckTo();
 		final int wallLo = vB - bridgeWall();
 		final int wallHi = vB + bridgeWall();
-		final boolean hall = spec.real() != RealStation.NONE;
+		final boolean hall = spec.real().hallOverTracks();
+		// underground the deck is part of the street over the box (see PlanUnderground): no corridor walls or roof
+		final boolean openDeck = hall || spec.options().underground();
 		// keep the stair corridors and landings clear before the deck and walls go up
 		for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 			for (final StationLayout.Flight flight : site.flights(band)) {
@@ -82,7 +84,7 @@ abstract class PlanBridges extends PlanConcourse {
 			}
 		}
 		// a real station's hall builds its own walls and roof, and its flights open in its floor (see realHall)
-		if (!hall) {
+		if (!openDeck) {
 			// corridor walls (glass, facing outwards); each wall opens where a flight leaves through it
 			for (int u = from; u <= to; u++) {
 				boolean exitLo = false;
@@ -137,8 +139,8 @@ abstract class PlanBridges extends PlanConcourse {
 				}
 			}
 		}
-		if (hall) {
-			// under a hall the flights go down through openings in its floor: glass on both flanks from the platform up to
+		if (openDeck) {
+			// under a hall (or the street) the flights go down through openings in its floor: glass on both flanks from the platform up to
 			// the floor (never on a boarding edge); round the openings above it, see hallOpenings
 			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
@@ -238,13 +240,14 @@ abstract class PlanBridges extends PlanConcourse {
 						if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
 							continue;
 						}
-						// on a boarding edge the rail starts above head height (the edge stays clear to board from) and runs up
-						// to the cell a passenger stands in, so nobody steps off the high steps onto the platform below
+						// on a boarding edge the rail starts above head height (the edge stays clear to board from); every rail
+						// runs up to the cell a passenger on the step stands in, so its fence-high hitbox stands 1.5 above their
+						// feet (stopping at the step's own level left half a block, which a player walks over)
 						final boolean edgeRail = rail >= EDGE_RAIL_Y;
-						if (isEdge(band, left) ? edgeRail : rail <= y) {
+						if (isEdge(band, left) ? edgeRail : rail <= y + 1) {
 							put(Role.RAILING, left, rail, v, LocalDir.MINUS_U);
 						}
-						if (isEdge(band, right) ? edgeRail : rail <= y) {
+						if (isEdge(band, right) ? edgeRail : rail <= y + 1) {
 							put(Role.RAILING, right, rail, v, LocalDir.PLUS_U);
 						}
 					}
@@ -406,7 +409,7 @@ abstract class PlanBridges extends PlanConcourse {
 	List<Integer> pierRows() {
 		final List<Integer> rows = new ArrayList<>();
 		rows.add(site.bridgeV());
-		if (spec.real() != RealStation.NONE) {
+		if (spec.real().hallOverTracks()) {
 			final int vB = site.bridgeV();
 			for (int k = HALL_CLEAR; k < bridgeWall() - 1; k += HALL_BAY) {
 				rows.add(vB - k);
@@ -484,7 +487,7 @@ abstract class PlanBridges extends PlanConcourse {
 				final int d = v - vB;
 				if (Math.abs(d) <= HALL_GATES) {
 					final String kind = Math.abs(d) == HALL_GATES ? "kind=end" : d % 4 == 0 ? "kind=wide" : "kind=gate";
-					put(Role.GATE, u, floor, v, green, palette.blockId(Role.GATE), kind);
+					gate(u, floor, v, green, kind, d > 0);
 				} else {
 					put(Role.BARRIER, u, floor, v, LocalDir.PLUS_U);
 				}
@@ -499,8 +502,8 @@ abstract class PlanBridges extends PlanConcourse {
 			for (int i = 0; i < 3; i++) {
 				final int v = vB + side * (HALL_FITTINGS + i);
 				if (v > wallLo && v < wallHi) {
-					tallFixture(from + 1, floor, v, LocalDir.PLUS_U, "mtr:ticket_machine");
-					tallFixture(to - 1, floor, v, LocalDir.MINUS_U, "mtr:ticket_machine");
+					ticketMachine(from + 1, floor, v, LocalDir.PLUS_U);
+					ticketMachine(to - 1, floor, v, LocalDir.MINUS_U);
 				}
 			}
 		}
@@ -524,7 +527,12 @@ abstract class PlanBridges extends PlanConcourse {
 			final LocalDir out = u < open.get(0) ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 			for (int v = top; v != foot + flight.side(); v += flight.side()) {
 				for (int y = StationGeometry.WALK_Y; y < StationGeometry.UPPER_FLOOR_Y; y++) {
-					put(Role.WINDOW, u, y, v, out, b.bridgeWall());
+					// underground, a tiled wall beside the stairs up to the street
+					if (spec.options().underground()) {
+						put(Role.WALL, u, y, v, out, undergroundTile());
+					} else {
+						put(Role.WINDOW, u, y, v, out, b.bridgeWall());
+					}
 				}
 			}
 		}

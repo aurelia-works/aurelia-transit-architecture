@@ -9,6 +9,9 @@ public final class StylePalette {
 
 	/** MTR 4's rail node block. */
 	public static final String MTR_RAIL_NODE = "mtr:rail";
+	/** MTR's own one-way ticket barriers, the default gate line (Enviro, 10-20). */
+	public static final String MTR_BARRIER_ENTRANCE = "mtr:ticket_barrier_entrance_1";
+	public static final String MTR_BARRIER_EXIT = "mtr:ticket_barrier_exit_1";
 	/** MTR lift parts: the track a car runs on, the track cell of a stop, a landing door half and a call button. */
 	public static final String MTR_LIFT_TRACK = "mtr:lift_track_1";
 	public static final String MTR_LIFT_FLOOR = "mtr:lift_track_floor_1";
@@ -144,6 +147,25 @@ public final class StylePalette {
 						ata("antwerp_marble_floor_tile"), ata("frankfurt_sandstone_ashlar"), ata("metro_recessed_light"), ata("station_stair"),
 						ata("antwerp_marble_floor_tile"), ata("clear_float_glass_pane"), ata("canopy_flat"), ata("canopy_light"),
 						ata("steel_column_round"), ata("wooden_bench"), ata("antwerp_polished_marble_wall"));
+				// Teddington: yellow stock brick with red dressings on a blue brick plinth, sash windows, quarry tiles, a slate
+				// roof, and a covered timber footbridge
+				case VICTORIAN -> new Building(ata("uk_yellow_stock_brick"), ata("uk_red_brick_dressing"), ata("uk_blue_engineering_brick"),
+						ata("amsterdam_stone_cornice"), ata("amsterdam_arched_window"), ata("metro_quarry_floor"), ata("metro_quarry_floor"),
+						"minecraft:deepslate_tiles", ata("metro_recessed_light"), ata("station_stair"), ata("metro_quarry_floor"),
+						ata("wired_glass_pane"), ata("uk_timber_canopy"), ata("canopy_light"), ata("steel_column_round"), ata("wooden_bench"),
+						ata("uk_white_render"));
+				// Surbiton: white render with quartz bands, steel windows, terrazzo, concrete slab roofs
+				case ART_DECO -> new Building(ata("uk_white_render"), "minecraft:smooth_quartz", "minecraft:polished_andesite",
+						"minecraft:smooth_quartz", ata("uk_steel_window"), ata("metro_terrazzo_floor"), ata("metro_terrazzo_floor"),
+						ata("uk_white_render"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_terrazzo_floor"),
+						ata("uk_steel_window"), ata("uk_concrete_canopy"), ata("canopy_light"), ata("steel_column_square"), ata("wooden_bench"),
+						ata("uk_white_render"));
+				// Coventry: blue engineering brick panels and pale concrete round a glazed booking hall, a covered overbridge
+				case MODERNIST -> new Building(ata("uk_blue_engineering_brick"), ata("metro_pale_concrete"), ata("uk_blue_engineering_brick"),
+						ata("metro_steel_cladding"), ata("curtain_wall_glass"), ata("metro_terrazzo_floor"), ata("metro_terrazzo_floor"),
+						ata("metro_pale_concrete"), ata("metro_recessed_light"), ata("station_stair"), ata("metro_granite_floor"),
+						ata("curtain_wall_glass"), ata("uk_hardwood_canopy"), ata("canopy_light"), ata("steel_column_square"), ata("steel_bench"),
+						ata("metro_pale_concrete"));
 			};
 		}
 	}
@@ -168,7 +190,7 @@ public final class StylePalette {
 		// a real station's platforms: what its sources show, not a look (Utrecht Centraal's canopies were renewed from 2010, some
 		// with solar cells; their shape and material are not in the sources, so plain steel canopies on round columns stand in,
 		// see docs/REAL_STATIONS.md)
-		final StylePalette base = spec.real() != RealStation.NONE ? new StylePalette(ata("platform_paving_light"),
+		final StylePalette base = spec.real().hallOverTracks() ? new StylePalette(ata("platform_paving_light"),
 				ata(tactile ? "platform_edge_warning" : "platform_edge"), ata("steel_column_round"), ata("steel_column_round"),
 				ata("canopy_flat"), ata("canopy_edge"), ata("canopy_light"), ata("platform_lamp"), ata("steel_bench"), ata("dutch_station_sign"))
 				: switch (spec.style()) {
@@ -188,14 +210,35 @@ public final class StylePalette {
 					ata("metro_column_tiled"), ata("metro_column_tiled"), ata("metro_acoustic_ceiling"), ata("metro_acoustic_ceiling"),
 					ata("metro_recessed_light"), ata("platform_lamp"), ata("steel_bench"), ata("station_name_sign"));
 		};
-		final StylePalette palette = new StylePalette(surfaceOverride(spec.surface(), base.surface), base.edge, base.column, base.cap,
-				roofOverride(spec.roofMaterial(), hall, base.roof), base.roofEdge, base.roofLight, base.lamp, base.bench,
+		final StylePalette british = british(spec.building(), tactile, hall, base);
+		final StylePalette palette = new StylePalette(surfaceOverride(spec.surface(), british.surface), british.edge, british.column, british.cap,
+				roofOverride(spec.roofMaterial(), hall, british.roof), british.roofEdge, base.roofLight, base.lamp, british.bench,
 				spec.operator() == Operator.NONE ? base.sign : spec.operator().signId());
 		palette.building = Building.of(spec.building());
 		palette.buildingStyle = spec.building();
 		palette.style = spec.style();
 		palette.roofMaterial = spec.roofMaterial();
 		return palette;
+	}
+
+	/**
+	 * The platforms of a British look (they have no platform style of their own): tarmac with the white-and-yellow coping, and
+	 * the canopy of its station: Teddington's timber with a valance, Surbiton's concrete slabs, Coventry's hardwood behind deep
+	 * fascias. A train shed keeps the style's roof. Any other look keeps {@code base}.
+	 */
+	private static StylePalette british(BuildingStyle look, boolean tactile, boolean hall, StylePalette base) {
+		final String[] canopy = switch (look) {
+			case VICTORIAN -> new String[]{"uk_timber_canopy", "uk_canopy_valance", "steel_column_round", "wooden_bench"};
+			case ART_DECO -> new String[]{"uk_concrete_canopy", "uk_concrete_canopy_edge", "steel_column_square", "wooden_bench"};
+			case MODERNIST -> new String[]{"uk_hardwood_canopy", "uk_hardwood_canopy_fascia", "steel_column_square", "steel_bench"};
+			default -> null;
+		};
+		if (canopy == null) {
+			return base;
+		}
+		return new StylePalette(ata("uk_platform_tarmac"), ata(tactile ? "uk_platform_coping_tactile" : "uk_platform_coping"), ata(canopy[2]),
+				ata(canopy[2]), hall ? base.roof : ata(canopy[0]), hall ? base.roofEdge : ata(canopy[1]), base.roofLight, base.lamp, ata(canopy[3]),
+				base.sign);
 	}
 
 	/** The {@code kind} state of the station girders: the colour of the roof steel, from the building look or the platform style. */
@@ -205,7 +248,9 @@ public final class StylePalette {
 			case ANTWERP, BEAUX_ARTS, AMSTERDAM, PARIS -> "green";
 			case SANDSTONE, CLINKER, CONCRETE, TOKYO, ZURICH, MILAN, BANGKOK -> "steel";
 			case MODERN, BERLIN, HONG_KONG, BEIJING, KUALA_LUMPUR -> "white";
-			case MUMBAI -> "green";
+			case MUMBAI, VICTORIAN -> "green";
+			case ART_DECO -> "white";
+			case MODERNIST -> "steel";
 			case NONE -> switch (style) {
 				case MODERN, DUTCH -> "white";
 				case GERMAN_SBAHN, METRO -> "steel";
@@ -220,7 +265,7 @@ public final class StylePalette {
 	public com.aureliatransit.architecture.live.DisplayStyle screenStyle() {
 		return switch (buildingStyle) {
 			case MODERN, AMSTERDAM, ANTWERP -> com.aureliatransit.architecture.live.DisplayStyle.DUTCH_NS;
-			case GOTHIC_BRICK, MUMBAI -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
+			case GOTHIC_BRICK, MUMBAI, VICTORIAN, ART_DECO, MODERNIST -> com.aureliatransit.architecture.live.DisplayStyle.UK_DOT_MATRIX;
 			case SANDSTONE, CONCRETE, BERLIN, CLINKER, ZURICH, PARIS, MILAN -> com.aureliatransit.architecture.live.DisplayStyle.GERMAN_DB;
 			case TOKYO -> com.aureliatransit.architecture.live.DisplayStyle.JAPAN_COMMUTER;
 			case BEAUX_ARTS, HONG_KONG, BEIJING, BANGKOK, KUALA_LUMPUR -> com.aureliatransit.architecture.live.DisplayStyle.METRO_COUNTDOWN;
@@ -240,6 +285,14 @@ public final class StylePalette {
 	/** The station building's materials (the modern set when the spec has no building). */
 	public Building building() {
 		return building;
+	}
+
+	/** The old rail-built buffers with a timber baulk at the Victorian stations; a modern friction buffer everywhere else. */
+	boolean heritageBuffers() {
+		return switch (buildingStyle) {
+			case GOTHIC_BRICK, CLINKER, MUMBAI, BANGKOK, VICTORIAN -> true;
+			default -> false;
+		};
 	}
 
 	/** The block id for a role; never null. */
@@ -273,7 +326,7 @@ public final class StylePalette {
 			case GATE -> ata("fare_gate");
 			case BARRIER -> ata("glass_barrier");
 			case RAILING -> ata("handrail");
-			case BUFFER_STOP -> ata("structural_beam");
+			case BUFFER_STOP -> ata(heritageBuffers() ? "heritage_buffer_stop" : "buffer_stop");
 			case FIXTURE -> ata("help_point");
 			case LIFT -> MTR_LIFT_TRACK;
 			case ESCALATOR -> MTR_ESCALATOR_STEP;

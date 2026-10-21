@@ -1,6 +1,7 @@
 package com.aureliatransit.architecture.station;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +14,7 @@ import static com.aureliatransit.architecture.station.StationPlanner.*;
  * One layer of {@link Planning}: the layers extend one another in order, from {@code PlanState} down to {@code Planning}, and
  * share one set of planned cells.
  */
-final class Planning extends PlanStairs {
+final class Planning extends PlanFitOut {
 
 	Planning(StationSpec spec) {
 		super(spec);
@@ -26,19 +27,20 @@ final class Planning extends PlanStairs {
 	 * headroom. A sign's text is "ARROW:destination"; the build writes it into the sign.
 	 */
 	void wayfinding() {
-		if (!site.bridge()) {
+		// underground, the bridge is only its deck in the ceiling: nothing to hang a sign from
+		if (!site.bridge() || spec.options().underground()) {
 			return;
 		}
 		final int y = StationGeometry.BUILDING_ROOF_Y - 1;
 		for (final StationLayout bridge : far == null ? List.of(site) : List.of(site, far)) {
 			for (final TrackLayout.PlatformBand band : bridge.bridgeBands(layout)) {
 				final List<StationLayout.Flight> flights = bridge.flights(band);
-				if (band.number() <= 0 || flights.isEmpty()) {
+				if (band.number() <= 0 || flights.isEmpty() || layout.platformNumbers(band).isEmpty()) {
 					continue;
 				}
 				final List<Integer> columns = flights.get(0).columns();
-				if (putText(Role.FIXTURE, columns.get(columns.size() / 2), y, bridge.bridgeV(), LocalDir.MINUS_U, WAYFINDING_SIGN,
-						"DOWN:Platform " + band.number()) && spec.real() != RealStation.NONE) {
+				if (putText(Role.FIXTURE, columns.get(columns.size() / 2), y, bridge.bridgeV(), LocalDir.MINUS_U, HANGING_SIGN,
+						"DOWN:" + TrackLayout.platformsText(layout.platformNumbers(band))) && spec.real().hallOverTracks()) {
 					hangFromRoof(columns.get(columns.size() / 2), y, bridge.bridgeV());
 				}
 			}
@@ -54,6 +56,9 @@ final class Planning extends PlanStairs {
 			return;
 		}
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			if (hasSideLanes(band) && stretchSigns(band)) {
+				continue;
+			}
 			// a row of three where one fits in any column; on a short platform full of stairs and a lift, two, else one
 			rows:
 			for (int n = 3; n >= 1; n--) {
@@ -79,6 +84,29 @@ final class Planning extends PlanStairs {
 				}
 			}
 		}
+	}
+
+	/**
+	 * An island with side lanes: a row of three down the middle strip of every other travelator stretch, beside the walkways
+	 * rather than at the foot of the stairs where people come down (Jah, 10-20). Moved along up to four where a bench is
+	 * there already; true if any row was placed.
+	 */
+	boolean stretchSigns(TrackLayout.PlatformBand band) {
+		final int middle = (band.uMin() + band.uMax()) / 2;
+		final List<int[]> stretches = travelatorStretches.getOrDefault(band, List.of());
+		boolean placed = false;
+		for (int i = 0; i < stretches.size(); i += 2) {
+			final int[] s = stretches.get(i);
+			final int start = (s[0] + s[1]) / 2 - 1;
+			for (final int d : new int[]{0, 1, -1, 2, -2, 3, -3, 4, -4}) {
+				final int v = start + d;
+				if (v >= s[0] && v + 2 <= s[1] && placeRow(band, middle, v, LocalDir.MINUS_U, 3)) {
+					placed = true;
+					break;
+				}
+			}
+		}
+		return placed;
 	}
 
 	/**
@@ -155,13 +183,16 @@ final class Planning extends PlanStairs {
 	/** The way from a hub's door across its forecourt is this far either side of the door, in cells. */
 	static final int FORECOURT_WAY = 2;
 
+	/** Half the width of the paved way from the head building's door across the forecourt: never narrower than the door. */
+	private int forecourtWay() {
+		return Math.max(FORECOURT_WAY, headEntranceHalf());
+	}
+
 	/** The width of a hub's bus island. */
 	static final int FORECOURT_ISLAND = 3;
 
 	/** Taxi bays: how many, how wide and how long. */
 	static final int FORECOURT_BAYS = 3;
-
-	static final String WAYFINDING_SIGN = "aurelia_transit_architecture:hanging_wayfinding_sign";
 
 	static final String EXIT_SIGN = "aurelia_transit_architecture:exit_sign";
 
@@ -302,13 +333,13 @@ final class Planning extends PlanStairs {
 		final int door = headDoor();
 		final int f0 = layout.forecourtFrom();
 		final int f1 = layout.vMax();
-		final int busKerb = door + FORECOURT_WAY + FORECOURT_ISLAND + 1;
-		final int taxiTo = door - FORECOURT_WAY - 1;
+		final int busKerb = door + forecourtWay() + FORECOURT_ISLAND + 1;
+		final int taxiTo = door - forecourtWay() - 1;
 		for (int u = u0; u <= u1; u++) {
 			for (int v = f0; v <= f1; v++) {
 				final int c = u - door;
 				final int d = v - f0;
-				final boolean way = Math.abs(c) <= FORECOURT_WAY || d < 3;
+				final boolean way = Math.abs(c) <= forecourtWay() || d < 3;
 				final boolean street = v == f1;
 				String block = LOT_PAVING;
 				LocalDir front = LocalDir.PLUS_V;
@@ -352,7 +383,7 @@ final class Planning extends PlanStairs {
 		}
 		// bus interchange: the island between the way and the kerb, a shelter on its way side facing the buses, signs at both ends
 		if (busKerb < u1) {
-			final int wall = door + FORECOURT_WAY + 1;
+			final int wall = door + forecourtWay() + 1;
 			shelter(StationGeometry.PLATFORM_Y, wall, wall + 1, LocalDir.MINUS_U, f0 + 5, null, 0);
 			put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f0 + 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
 			put(Role.FIXTURE, wall + 2, StationGeometry.PLATFORM_Y, f1 - 3, LocalDir.MINUS_V, FORECOURT_STOP_SIGN);
@@ -397,7 +428,7 @@ final class Planning extends PlanStairs {
 		for (int u = u0; u <= u1; u++) {
 			for (int v = f0; v <= f1; v++) {
 				final int c = u - door;
-				final boolean way = Math.abs(c) <= FORECOURT_WAY || v - f0 < 2;
+				final boolean way = Math.abs(c) <= forecourtWay() || v - f0 < 2;
 				String block = LOT_PAVING;
 				LocalDir front = LocalDir.PLUS_V;
 				if (!way && c < 0 && v == layBy) {
@@ -413,17 +444,17 @@ final class Planning extends PlanStairs {
 			}
 		}
 		// bollards along the lay-by kerb keep cars off the footway
-		for (int u = door - FORECOURT_WAY - 2; u > u0; u -= 3) {
+		for (int u = door - forecourtWay() - 2; u > u0; u -= 3) {
 			put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, layBy - 1, LocalDir.PLUS_V, LOT_BOLLARD);
 		}
 		// cycle stands: a post and a rail each, in two rows beside the way
-		for (int u = door + FORECOURT_WAY + 2; u < u1 - 1; u += 2) {
+		for (int u = door + forecourtWay() + 2; u < u1 - 1; u += 2) {
 			put(Role.FIXTURE, u, StationGeometry.PLATFORM_Y, f0 + 3, LocalDir.PLUS_V, LOT_STAND_POST);
 			put(Role.RAILING, u, StationGeometry.PLATFORM_Y, f0 + 4, LocalDir.PLUS_V, LOT_STAND_RAIL);
 		}
 		// a tree each side, clear of the lay-by and the stands
 		for (final int[] at : new int[][]{{u0 + 2, f0 + 3}, {u1 - 2, f0 + 8}}) {
-			if (at[0] > u0 && at[0] < u1 && Math.abs(at[0] - door) > FORECOURT_WAY + 1 && at[1] < (at[0] < door ? layBy - 2 : f1 - 1)) {
+			if (at[0] > u0 && at[0] < u1 && Math.abs(at[0] - door) > forecourtWay() + 1 && at[1] < (at[0] < door ? layBy - 2 : f1 - 1)) {
 				put(Role.FLOOR, at[0], StationGeometry.PLATFORM_Y - 1, at[1], LocalDir.PLUS_V, LOT_TRUNK, "axis=y");
 				tree(at[0], at[1]);
 			}
@@ -445,7 +476,7 @@ final class Planning extends PlanStairs {
 			final boolean lane = a == LOT_BAY + 2 || a == LOT_BAY + 4;
 			final boolean planter = a == LOT_BAY + 3;
 			for (int v = vFrom; v <= vTo; v++) {
-				final boolean entrance = Math.abs(v - front) <= 1;
+				final boolean entrance = Math.abs(v - front) <= entranceHalf();
 				final boolean end = v == vFrom || v == vTo;
 				// the drop-off: the bays by the building's door are one plain forecourt, with no bay markings to park in
 				final boolean dropOff = a >= LOT_BAY + 6 && Math.abs(v - front) <= LOT_DROP_OFF;
@@ -531,6 +562,126 @@ final class Planning extends PlanStairs {
 		}
 	}
 
+	/** The railings that stand on the side of their block over a drop (see {@link #edgeRailings}). */
+	static final Set<String> EDGE_RAILINGS = Set.of("aurelia_transit_architecture:handrail", "aurelia_transit_architecture:station_fence");
+	static final String GLASS_BARRIER = "aurelia_transit_architecture:glass_barrier";
+
+	/**
+	 * Moves every handrail, station fence and glass barrier to the side of its block over the drop it guards (Jah, 10-21:
+	 * "it should be on the end of the block ... there should be a corner piece"), so the block itself stays walkable and
+	 * the rail lines up with the edge. A side is a drop when nothing stands beside it at that height and there is nothing
+	 * to stand on below. A railing over two drops that meet at a corner stands on both: the corner piece. One with no
+	 * drop beside it, or drops on opposite sides, stays in the middle. A glass barrier, one panel, takes the drop its run
+	 * goes along. Planned last, on the railings as planned.
+	 */
+	void edgeRailings() {
+		final List<PlannedBlock> moved = new ArrayList<>();
+		for (final PlannedBlock block : cells.values()) {
+			final boolean railing = EDGE_RAILINGS.contains(block.blockId());
+			if (!railing && !block.blockId().equals(GLASS_BARRIER)) {
+				continue;
+			}
+			final List<LocalDir> drops = new ArrayList<>();
+			for (final LocalDir side : LocalDir.values()) {
+				if (drop(block, side)) {
+					drops.add(side);
+				}
+			}
+			if (drops.isEmpty() || drops.size() > 2 || drops.size() == 2 && drops.get(0).alongTrack() == drops.get(1).alongTrack()) {
+				continue;
+			}
+			final String state = block.state().isEmpty() ? "" : block.state() + ",";
+			if (railing) {
+				moved.add(new PlannedBlock(block.u(), block.y(), block.v(), block.role(), block.blockId(), drops.get(0), block.text(),
+						state + RailEdges.planState(drops.get(0), drops)));
+				continue;
+			}
+			// the panel faces the drop its neighbours carry on along
+			LocalDir front = drops.get(0);
+			for (final LocalDir side : drops) {
+				final LocalDir along = side.alongTrack() ? LocalDir.PLUS_U : LocalDir.PLUS_V;
+				if (barrierAt(block, along) || barrierAt(block, along.opposite())) {
+					front = side;
+				}
+			}
+			moved.add(new PlannedBlock(block.u(), block.y(), block.v(), block.role(), block.blockId(), front, block.text(), state + "edge=true"));
+		}
+		for (final PlannedBlock block : moved) {
+			cells.put(new Cell(block.u(), block.y(), block.v()), block);
+		}
+		cornerPosts(moved);
+	}
+
+	/**
+	 * A post on each outside corner where two edge runs meet (see {@link RailEdges}): railing A on its drop side d, and B one
+	 * step past A's end and one over the drop, on the side facing back along A, with nothing in the cell beyond A's end; the
+	 * first of the two in (u, v) order carries it, so it stands once.
+	 */
+	private void cornerPosts(List<PlannedBlock> edged) {
+		final Map<Cell, List<LocalDir>> sides = new HashMap<>();
+		for (final PlannedBlock block : edged) {
+			if (EDGE_RAILINGS.contains(block.blockId())) {
+				final List<LocalDir> on = new ArrayList<>();
+				for (final LocalDir side : LocalDir.values()) {
+					if (drop(block, side) || block.front() == side) {
+						on.add(side);
+					}
+				}
+				sides.put(new Cell(block.u(), block.y(), block.v()), on);
+			}
+		}
+		final List<PlannedBlock> posted = new ArrayList<>();
+		for (final PlannedBlock a : edged) {
+			final List<LocalDir> on = sides.get(new Cell(a.u(), a.y(), a.v()));
+			if (on == null || a.state().contains("corner=")) {
+				continue;
+			}
+			search:
+			for (final LocalDir d : on) {
+				for (final boolean cw : new boolean[]{true, false}) {
+					final LocalDir end = cw ? RailEdges.clockwise(d) : RailEdges.clockwise(d).opposite();
+					final Cell beyond = new Cell(a.u() + du(end), a.y(), a.v() + dv(end));
+					final Cell b = new Cell(beyond.u() + du(d), a.y(), beyond.v() + dv(d));
+					final List<LocalDir> bSides = sides.get(b);
+					if (bSides != null && bSides.contains(end.opposite()) && !cells.containsKey(beyond)
+							&& (a.u() < b.u() || a.u() == b.u() && a.v() < b.v())) {
+						posted.add(new PlannedBlock(a.u(), a.y(), a.v(), a.role(), a.blockId(), a.front(), a.text(),
+								a.state() + "," + RailEdges.planCorner(a.front(), d, cw)));
+						break search;
+					}
+				}
+			}
+		}
+		for (final PlannedBlock block : posted) {
+			cells.put(new Cell(block.u(), block.y(), block.v()), block);
+		}
+	}
+
+	/** Nothing stands beside {@code block} on {@code side} at its height, and there is nothing to stand on below. */
+	private boolean drop(PlannedBlock block, LocalDir side) {
+		final int u = block.u() + du(side);
+		final int v = block.v() + dv(side);
+		if (cells.containsKey(new Cell(u, block.y(), v))) {
+			return false;
+		}
+		final PlannedBlock below = cells.get(new Cell(u, block.y() - 1, v));
+		return below == null || !(below.role().flatFloor() || below.role() == Role.STAIR || below.role() == Role.ESCALATOR
+				|| below.role() == Role.RAMP_LOWER || below.role() == Role.RAMP_UPPER || below.role() == Role.WALL || below.role() == Role.BUILDING_ROOF);
+	}
+
+	private boolean barrierAt(PlannedBlock block, LocalDir side) {
+		final PlannedBlock next = cells.get(new Cell(block.u() + du(side), block.y(), block.v() + dv(side)));
+		return next != null && next.blockId().equals(block.blockId());
+	}
+
+	private static int du(LocalDir side) {
+		return side == LocalDir.PLUS_U ? 1 : side == LocalDir.MINUS_U ? -1 : 0;
+	}
+
+	private static int dv(LocalDir side) {
+		return side == LocalDir.PLUS_V ? 1 : side == LocalDir.MINUS_V ? -1 : 0;
+	}
+
 	boolean wallAt(int u, int y, int v) {
 		final PlannedBlock block = cells.get(new Cell(u, y, v));
 		return block != null && (block.role() == Role.WALL || block.role() == Role.WINDOW);
@@ -571,7 +722,7 @@ final class Planning extends PlanStairs {
 		}
 		if (layout.terminus()) {
 			supports.add(new Box(layout.headFrom(), -1, length, layout.headTo(), -1, layout.headEnd()));
-			supports.add(new Box(headDoor() - 1, -1, layout.headEnd() + 1, headDoor() + 1, -1, layout.vMax()));
+			supports.add(new Box(headDoor() - headEntranceHalf(), -1, layout.headEnd() + 1, headDoor() + headEntranceHalf(), -1, layout.vMax()));
 			if (layout.forecourtDepth() > 0) {
 				supports.add(new Box(layout.headFrom(), -1, layout.forecourtFrom(), layout.headTo(), -1, layout.vMax()));
 			}
@@ -581,8 +732,21 @@ final class Planning extends PlanStairs {
 		}
 		supports.addAll(extraSupport);
 		headroom.addAll(extraHeadroom);
-		return new StationPlan(spec, layout, blocks, envelopes, headroom, holes.isEmpty() ? supports : without(supports, holes),
-				palette.blockId(Role.FOUNDATION));
+		return new StationPlan(spec, layout, swapped(blocks), envelopes, headroom, holes.isEmpty() ? supports : without(supports, holes),
+				spec.options().swapped(palette.blockId(Role.FOUNDATION)));
+	}
+
+	/** The plan's blocks with the player's block swaps made (Enviro, 10-20: "a way to replace blocks he doesn't like"). */
+	private List<PlannedBlock> swapped(List<PlannedBlock> planned) {
+		if (spec.options().swaps().isEmpty()) {
+			return planned;
+		}
+		final List<PlannedBlock> out = new ArrayList<>(planned.size());
+		for (final PlannedBlock b : planned) {
+			final String id = spec.options().swapped(b.blockId());
+			out.add(id.equals(b.blockId()) ? b : new PlannedBlock(b.u(), b.y(), b.v(), b.role(), id, b.front(), b.text(), b.state()));
+		}
+		return out;
 	}
 
 	/** {@code boxes} with the {@code holes} taken out: a box holding a hole is cut into runs along u that miss it. */

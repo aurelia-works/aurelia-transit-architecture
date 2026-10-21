@@ -23,7 +23,8 @@ class StationRecipeTest {
 			Map.entry(StationRecipe.Look.MILAN, BuildingStyle.MILAN), Map.entry(StationRecipe.Look.BERLIN, BuildingStyle.BERLIN),
 			Map.entry(StationRecipe.Look.HONG_KONG, BuildingStyle.HONG_KONG), Map.entry(StationRecipe.Look.BEIJING, BuildingStyle.BEIJING),
 			Map.entry(StationRecipe.Look.BANGKOK, BuildingStyle.BANGKOK), Map.entry(StationRecipe.Look.KUALA_LUMPUR, BuildingStyle.KUALA_LUMPUR),
-			Map.entry(StationRecipe.Look.MUMBAI, BuildingStyle.MUMBAI));
+			Map.entry(StationRecipe.Look.MUMBAI, BuildingStyle.MUMBAI), Map.entry(StationRecipe.Look.TEDDINGTON, BuildingStyle.VICTORIAN),
+			Map.entry(StationRecipe.Look.SURBITON, BuildingStyle.ART_DECO), Map.entry(StationRecipe.Look.COVENTRY, BuildingStyle.MODERNIST));
 
 	/**
 	 * Every look with every mix, both station types and every roof (tracks, platforms, length and building cycle along): the

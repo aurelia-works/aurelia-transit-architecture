@@ -122,9 +122,12 @@ class HubStationTest {
 			final java.util.Set<String> colours = new java.util.HashSet<>();
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				final String number = Integer.toString(band.number());
-				final boolean signed = plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":platform_number_sign") && b.text().equals(number)
-						&& b.u() >= band.uMin() && b.u() <= band.uMax());
-				assertTrue(signed, tracks + " tracks: number sign for platform " + number);
+				// each of the platform's faces has its own number over it (Enviro, 10-20)
+				for (final int face : layout.platformNumbers(band)) {
+					final boolean signed = plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":platform_number_sign") && b.text().equals(Integer.toString(face))
+							&& b.u() >= band.uMin() - 1 && b.u() <= band.uMax() + 1);
+					assertTrue(signed, tracks + " tracks: number sign for platform " + face);
+				}
 				if (layout.bay(band)) {
 					final int mid = (band.uMin() + band.uMax()) / 2;
 					final String stripe = plan.blocks().stream().filter(b -> b.u() == mid && b.y() == 0 && b.v() == layout.platformLength() + 1)

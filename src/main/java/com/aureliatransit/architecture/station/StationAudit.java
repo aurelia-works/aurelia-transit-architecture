@@ -351,7 +351,11 @@ public final class StationAudit {
 					final TrackLayout.PlatformBand band = bandAt(block.u());
 					// the street entrance's paving is not a platform: no roof was asked for over it
 					if (band == null && StationGeometry.streetEntrance(spec) && (block.u() < StationGeometry.streetWidth(spec)
-							|| spec.real() != RealStation.NONE && block.u() >= plan.layout().width() - StationGeometry.streetWidth(spec))) {
+							|| spec.real().hallOverTracks() && block.u() >= plan.layout().width() - StationGeometry.streetWidth(spec))) {
+						continue;
+					}
+					// paving past a platform's end (the floor beside a terminus overrun, a column's footing) is not where people wait
+					if (band != null && !band.runs(block.v())) {
 						continue;
 					}
 					final RoofType roof = band == null ? spec.roof() : StationGeometry.roof(spec, band.number());
@@ -613,7 +617,9 @@ public final class StationAudit {
 				return Ground.BLOCKED;
 			}
 			final PlannedBlock floor = at(u, StationGeometry.UPPER_FLOOR_Y, v);
-			if (floor == null || !(floor.role() == Role.FLOOR || floor.role() == Role.LIGHT_PANEL || floor.role() == Role.BRIDGE_DECK)) {
+			// an underground station's ceiling slab is the street
+			final boolean street = spec.options().underground() && floor != null && floor.role() == Role.BUILDING_ROOF;
+			if (floor == null || !(street || floor.role() == Role.FLOOR || floor.role() == Role.LIGHT_PANEL || floor.role() == Role.BRIDGE_DECK)) {
 				return Ground.BLOCKED;
 			}
 			if (!standableAt(u, StationGeometry.UPPER_WALK_Y, v)) {
@@ -808,6 +814,11 @@ public final class StationAudit {
 						seen[index(u, v)] = true;
 						queue.add(new int[]{u, 1, v});
 					}
+					// an underground station is come to from the street on its ceiling slab
+					if (upper != null && spec.options().underground() && upper[index(u, v)] != Ground.BLOCKED) {
+						seenUp[index(u, v)] = true;
+						queue.add(new int[]{u, 6, v});
+					}
 				}
 			}
 			while (!queue.isEmpty()) {
@@ -953,7 +964,14 @@ public final class StationAudit {
 							pass(Topic.ACCESS, which + " reached by a one-block step (no ramps, as requested)");
 						}
 					}
-					case AT_GRADE -> warn(Topic.ACCESS, which + " only reached by walking across a track; it needs a footbridge or underpass", "Add a footbridge or a station building so nobody has to cross a track.");
+					case AT_GRADE -> {
+						if (spec.tram() && !spec.hub()) {
+							// a tram stop's platforms are reached across the street track, at a crossing, like a street's
+							pass(Topic.ACCESS, which + " reached across the street track, as at a tram stop");
+						} else {
+							warn(Topic.ACCESS, which + " only reached by walking across a track; it needs a footbridge or underpass", "Add a footbridge or a station building so nobody has to cross a track.");
+						}
+					}
 					case UNREACHABLE -> fail(Topic.ACCESS, which + " cut off and cannot be reached on foot", "Add a footbridge or ramps so this platform can be reached on foot.");
 				}
 			}
