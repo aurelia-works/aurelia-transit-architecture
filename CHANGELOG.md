@@ -6,6 +6,14 @@
 
 - **Real stations, starting with Utrecht Centraal:** `utrecht centraal` builds the real station from published facts. It has one closed hall over its 8 island platforms (16 tracks), 127 blocks deep (85 m) and up to y 27 (18 m). The roof has three waves, the middle one the highest, and the hall has glass walls, white tree columns, ticket machines, signs hung from the roof, and a gate line at each end. Each end of the hall is entered from its square by a broad stair and a lift; nothing is walkable at track level beside the tracks. Under the hall the platforms have its floor overhead, with no canopy girders. Outside it there are plain steel canopies; the station is NS-operated and has escalators. Shorter platforms get a shallower hall, with a warning. Words that contradict the real station (terminus, station building, mezzanine, side platforms) are dropped, each with a warning. Sources and simplifications: `docs/REAL_STATIONS.md`.
 - **Presets:** "Utrecht" is now "Utrecht Centraal", the real station; the earlier modern look is the new "Modern" preset.
+- **Underground stations:** `underground`, `subway`, `tube` or `tunnel` builds a tiled box under the street, after Berlin's Rosenthaler Platz: stairs up through the street with a rail round each opening and a name pylon, tunnel mouths at both ends, columns and ceiling lights. Tile colour from the words or the look. New preset "Rosenthaler Platz".
+- **British stations:** Victorian (Teddington), art deco (Surbiton) and modernist (Coventry) looks, with tarmac platforms, white-nosed coping and 14 new blocks; presets for all three.
+- **Swap blocks you don't like:** "use stone bricks instead of sandstone" (or "replace ... with ...", "swap ... for ...", "a -> b"); slabs, stairs and walls follow. Studio has a Blocks section.
+- **From a photo (Studio):** pick a photo of a station and Claude writes the description for you; needs an Anthropic API key, otherwise the Studio gives you the prompt to use in Claude yourself.
+- **MTR platforms are made for you:** each platform track's rail is joined and numbered in MTR; no more numbering platforms by hand.
+- **MTR's own ticket gates** by default (`ata gates` for the two-way ones); **wider entrances** (5 wide, 7 at a grand station, or as asked); no lone chairs upstairs; facing platforms get a footbridge; no ramps onto the tracks.
+- **Help points** say the whole station name.
+- **Presets:** "KL Sentral" (ten tracks, modern glass hall), SEPTA's "Frankford" and "69th Street" termini, Berlin's "Rosenthaler Platz" underground; the wrench shows presets in five columns.
 - **No lift or stair to nowhere:** a test walks every preset and common station from outside the way a passenger would; every lift must open at two levels someone reaches, every stair and escalator must be walked from foot to top, and every platform must be reached.
 
 ## 1.6.0

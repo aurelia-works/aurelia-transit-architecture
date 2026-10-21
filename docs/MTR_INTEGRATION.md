@@ -73,6 +73,9 @@ From this build, ATA's walkable platform surfaces implement MTR's `PlatformHelpe
 - Ramps are not platforms and do not carry the marker. Neither do bus curbs, nor the 1.3 tactile junctions (decorative paving for mezzanines and streets).
 - MTR still decides where trains stop from its own platform rails and schedules. The marker only satisfies the "is there a platform beside this door" check.
 
+## Platform rails (2026-10-20)
+`MtrRails` (only reached through `MtrRailContract`, which first checks the classes exist) joins each platform track's two generated nodes as the Platform Rail Connector does: same angles, shape and transport mode, both nodes marked connected, sent as MTR's `update_data`. MTR answers with the platform it formed on that rail; it is named with its number as the dashboard names it, and the players' maps are told. Nothing is patched in MTR. Not yet seen live in this version.
+
 ## Known limitations (deliberately not faked)
 
 - **Calling-point times** exist only where MTR reports the same trip at that stop's platform (see above); otherwise the stop has no time.

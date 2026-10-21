@@ -7,7 +7,7 @@ Where a fact is unknown or does not fit the game, the plan builds the nearest ho
 Real operators, looks and logos are allowed (Jah, 2026-10-19).
 A release page or store listing that shows them should say so.
 
-Code: `RealStation` (the facts), `StationDescriptionParser.applyReal` (what the words may change), `PlanBridges.realHall` (the hall) and `PlanBridges.plateaus` (its ends), `RealStationTest`.
+Code: `RealStation` (the facts and the kind: a hall over the tracks or a train shed), `StationDescriptionParser.applyReal` and `applyShed` (what the words may change), `PlanBridges.realHall` (Utrecht's hall) and `PlanBridges.plateaus` (its ends), `PlanRoofs.naveAndAisles` (Hamburg's shed), `RealStationTest`, `HamburgHbfTest`.
 `PassengerWalkTest` walks every preset from outside, so no lift or stair may lead nowhere and every platform is reached.
 
 ## Asking for one
@@ -16,7 +16,9 @@ Type the station's full name, for example `utrecht centraal`.
 A station merely *named* that (`named Utrecht Centraal`) is an ordinary station with that name.
 
 Words the real station leaves open still apply: length, platform width, track count, seed, facing and furniture.
-Words that contradict it are dropped, and each drop gives a warning: terminus, hub, station building, mezzanine, train shed, side platforms and "no footbridge".
+Words that contradict it are dropped, and each drop gives a warning.
+At Utrecht: terminus, hub, station building, mezzanine, train shed, side platforms and "no footbridge".
+At Hamburg: terminus, hub, "no building", look words, a smaller building, mezzanine, any roof but the arched shed, side platforms and "no footbridge".
 
 ## Utrecht Centraal (pilot)
 
@@ -51,8 +53,30 @@ Not built yet: the shops in the hall, the bus station and tram stops, Hoog Catha
 
 The first pilot had a 12-wide street at track level beside each outer track, under the hall's floor, with a lift and a stair up from it. They led nowhere useful, which is not how the real station works. The platforms under the hall also had a grid of canopy girders just overhead, and Leidsche Rijn's materials. All three are gone.
 
+## Hamburg Hauptbahnhof
+
+Ask with `hamburg hauptbahnhof` or `hamburg hbf`.
+
+| Fact | Real | Built |
+|---|---|---|
+| Train shed | Steel and glass, a 73 m middle span with a lower aisle each side; 150 m long, 114 m wide, up to 37 m high (German Wikipedia; English Wikipedia gives 206 × 135 m) | An arched shed over all tracks: the nave over the middle 73/114 of the width rises to y 56 (37 m), springing from the aisle vaults' crowns with a step between them; the aisles are low round vaults |
+| Platforms | Five islands: S-Bahn tracks 3–4, long-distance and regional 5–8 and 11–14 | 5 through islands, 10 tracks. A track or island count builds those instead (islands only; side platforms are warned and left out) |
+| Platform length | Longer than the shed | 225 (the shed's 150 m) by default; a length word applies |
+| Bridges | The tracks lie in a cutting. The north Wandelhalle (shops on two floors, stairs and lifts) and the narrower Südsteg (escalators) cross at street level | The generator's footbridge with stairs, escalators and lifts to every island. The tracks stay at street level |
+| Building | Neo-Renaissance, "fortification-like", stone reliefs; Reinhardt & Süßenguth, opened 1906. The stone is not named in the sources | The grand station building beside the tracks, in the generator's sandstone (a stand-in) |
+| Clock towers | Two, 45 m, at the west and east entrance halls | One, 5 wide, to y 68 (45 m): stone storeys with string courses and windows, louvred belfry, clocks, pyramid cap |
+| Operator | DB | DB signs, German S-Bahn platform finish, escalators on |
+
+Not built yet: the cutting (the streets are at track level), the second tower and the east entrance hall, the Wandelhalle's shops, the building and main bridge at the north end (they stand at the side), through tracks 9–10, the S-Bahn tunnel (tracks 1–2), the Steintorbrücke and platforms longer than the shed by default.
+
+### Sources
+
+- Wikipedia: <https://de.wikipedia.org/wiki/Hamburg_Hauptbahnhof>, <https://en.wikipedia.org/wiki/Hamburg_Hauptbahnhof>
+- Structurae: <https://structurae.net/en/structures/hamburg-central-station>
+- Entwicklungsstadt: <https://www.entwicklungsstadt.de/hauptbahnhof-hamburg-vom-flickenteppich-zum-knotenpunkt/>
+
 ## Adding a station
 
-1. Add an entry to `RealStation` with its operator, islands, hall depth, height and number of waves. Cite every number here.
+1. Add an entry to `RealStation` with its operator, islands, hall depth, height, number of waves and kind. Cite every number here.
 2. If the station is not "one hall over island platforms, streets at both sides", it needs its own rule in the planner. Do not stretch Utrecht's.
 3. Add its facts and its subset table to this page. Add a test for its parse result and for a plan with 0 violations that the audit can build.
