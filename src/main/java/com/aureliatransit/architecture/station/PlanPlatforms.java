@@ -295,8 +295,8 @@ abstract class PlanPlatforms extends PlanState {
 	}
 
 	/**
-	 * The strips between two neighbouring tracks' clearances where no platform stands (y = -1), as far as both tracks run:
-	 * ballast fills them so the bed is one surface from wall to wall.
+	 * The strips between two neighbouring tracks' clearances where no platform stands (y = -1), as far as both tracks run (to
+	 * their buffer stops): ballast fills them so the bed is one surface from wall to wall.
 	 */
 	List<Box> bedGaps() {
 		final List<TrackLayout.Track> tracks = new ArrayList<>(layout.tracks());
@@ -310,9 +310,14 @@ abstract class PlanPlatforms extends PlanState {
 			if (u0 > u1 || layout.platforms().stream().anyMatch(band -> band.uMin() <= u1 && band.uMax() >= u0)) {
 				continue;
 			}
-			gaps.add(new Box(u0, -1, layout.vMin(), u1, -1, Math.min(layout.trackEnd(a), layout.trackEnd(b))));
+			gaps.add(new Box(u0, -1, layout.vMin(), u1, -1, Math.min(bedEnd(a), bedEnd(b))));
 		}
 		return gaps;
+	}
+
+	/** The last row of ballast along a track: its end, or the buffer stop's row past it ({@link #bayEnds}). */
+	private int bedEnd(TrackLayout.Track track) {
+		return layout.trackEnd(track) + (layout.buffered(track) ? 1 : 0);
 	}
 
 	/**
@@ -376,9 +381,9 @@ abstract class PlanPlatforms extends PlanState {
 	}
 
 	/**
-	 * The floor carrying a platform on past its end (see {@link #overrunTo}): the concourse floor, and along each side that
-	 * faces a track the platform's paving, without the edge line that marks where to board. {@link #overrunFences} fences
-	 * those sides once the footbridges are planned.
+	 * The floor carrying a platform on past its end (see {@link #overrunTo}): the platform's own paving from side to side
+	 * (Jah, 10-21: one platform floor, not concourse tile between paved edges), without the edge line that marks where to
+	 * board. {@link #overrunFences} fences the sides that face a track once the footbridges are planned.
 	 */
 	private void overrunFloor(TrackLayout.PlatformBand band) {
 		final int to = overrunTo(band);
@@ -386,11 +391,7 @@ abstract class PlanPlatforms extends PlanState {
 			for (int u = band.uMin(); u <= band.uMax(); u++) {
 				final boolean left = u == band.uMin() && band.trackLeft();
 				final boolean right = u == band.uMax() && band.trackRight();
-				if (left || right) {
-					put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, left ? LocalDir.MINUS_U : LocalDir.PLUS_U);
-				} else {
-					put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, palette.building().floor());
-				}
+				put(Role.PLATFORM_SURFACE, u, StationGeometry.PLATFORM_Y, v, left ? LocalDir.MINUS_U : right ? LocalDir.PLUS_U : LocalDir.PLUS_V);
 			}
 		}
 	}

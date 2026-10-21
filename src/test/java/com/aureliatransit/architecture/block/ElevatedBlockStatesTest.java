@@ -140,9 +140,10 @@ class ElevatedBlockStatesTest {
 		assertEquals(4 * 3, new StairEnclosureBlock(settings()).getStateManager().getStates().size());
 		assertEquals(4 * 2, new PlatformWindscreenBlock(settings()).getStateManager().getStates().size());
 		assertEquals(4 * 3, new PlatformFasciaBlock(settings()).getStateManager().getStates().size());
-		assertEquals(2 * 16, new StationFenceBlock(settings()).getStateManager().getStates().size());
+		// railings: kind x 4 joins x 4 drop-side edges x corner post (none or one of 8)
+		assertEquals(2 * 16 * 16 * 9, new StationFenceBlock(settings()).getStateManager().getStates().size());
 		assertEquals(3 * 2, new UtilityRunBlock(settings()).getStateManager().getStates().size());
-		assertEquals(3 * 16, new HandrailBlock(settings()).getStateManager().getStates().size());
+		assertEquals(3 * 16 * 16 * 9, new HandrailBlock(settings()).getStateManager().getStates().size());
 		assertEquals(4 * 3, new TactileJunctionBlock(settings()).getStateManager().getStates().size());
 	}
 

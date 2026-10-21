@@ -58,7 +58,7 @@ abstract class PlanConcourse extends PlanHead {
 			if (Math.abs(d) <= half) {
 				final String kind = Math.abs(d) == half ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
 				// the green "go" side faces the ticket hall, where people come in; the red X faces the concourse
-				gate(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, kind, d > 0);
+				gate(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V, kind, d > 0, LocalDir.PLUS_V);
 			} else {
 				fence(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V);
 			}

@@ -14,6 +14,7 @@
 - **MTR's own ticket gates** by default (`ata gates` for the two-way ones); **wider entrances** (5 wide, 7 at a grand station, or as asked); no lone chairs upstairs; facing platforms get a footbridge; no ramps onto the tracks.
 - **Help points** say the whole station name.
 - **Presets:** "KL Sentral" (ten tracks, modern glass hall), SEPTA's "Frankford" and "69th Street" termini, Berlin's "Rosenthaler Platz" underground; the wrench shows presets in five columns.
+- **Utrecht terminus fixes (Jah, 10-21):** ballast now runs between buffer stops that stand side by side; the strip beside an overrun is all platform floor (no concourse tile between paved edges); each MTR gate bank ends in the line's own glass fence, not a glass panel half a block out in front of it. Studio no longer draws a corner post on every edged railing (it guessed the first `corner` value; the game's default is none).
 - **No lift or stair to nowhere:** a test walks every preset and common station from outside the way a passenger would; every lift must open at two levels someone reaches, every stair and escalator must be walked from foot to top, and every platform must be reached.
 
 ## 1.6.0

@@ -58,6 +58,36 @@ class TrackEndFencesTest {
 		assertEquals(List.of(), open);
 	}
 
+	/** Jah, 10-21: between two buffer stops side by side the ballast runs on, so no hole shows between them. */
+	@Test
+	void ballastRunsBetweenNeighbouringBufferStops() {
+		final List<String> holes = new ArrayList<>();
+		for (final String words : List.of("gravel track bed Utrecht terminus, 10 tracks, 200 long, seed tmptnb", "gravel track bed, 4 track terminus, 2 island platforms, 96 long")) {
+			final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse(words).spec());
+			final Map<String, PlannedBlock> at = new HashMap<>();
+			for (final PlannedBlock b : plan.blocks()) {
+				at.put(b.u() + "," + b.y() + "," + b.v(), b);
+			}
+			final TrackLayout layout = plan.layout();
+			final List<TrackLayout.Track> tracks = new ArrayList<>(layout.tracks());
+			tracks.sort(java.util.Comparator.comparingInt(TrackLayout.Track::u));
+			for (int i = 0; i + 1 < tracks.size(); i++) {
+				final TrackLayout.Track a = tracks.get(i);
+				final TrackLayout.Track b = tracks.get(i + 1);
+				final int buffer = layout.trackEnd(a) + 1;
+				if (!layout.buffered(a) || !layout.buffered(b) || layout.trackEnd(b) + 1 != buffer) {
+					continue;
+				}
+				for (int u = a.u() + 1; u < b.u(); u++) {
+					if (at.get(u + ",0," + buffer) == null && at.get(u + ",-1," + buffer) == null) {
+						holes.add(words + ": " + u + "," + buffer);
+					}
+				}
+			}
+		}
+		assertEquals(List.of(), holes);
+	}
+
 	private static boolean flat(PlannedBlock block) {
 		return block != null && block.role().flatFloor();
 	}

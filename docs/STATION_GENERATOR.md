@@ -66,7 +66,7 @@ Examples:
 | Roof material | `glass`, `timber`/`wooden roof`, `steel` | style's own |
 | Floor | `light/dark paving`, `concrete`, `terrazzo`, `granite` | style's own |
 | Access | `step-free` (ramps at both platform ends), `no ramps`; `no tactile` | ramps and tactile edges on |
-| Track bed | `gravel` (or `ballast`), `andesite`: ballast from wall to wall, between neighbouring tracks too, the row against each platform wall a Bed Light (the same ballast with a lit channel under the platform's lip), and black concrete under every platform and ramp. It replaces ground, so the build asks for terrain approval where it does. Studio: *Track bed* under Roof and building | the ground as it is |
+| Track bed | `gravel` (or `ballast`), `andesite`: ballast from wall to wall, between neighbouring tracks too (on to the buffer stops of a terminus), the row against each platform wall a Bed Light (the same ballast with a lit channel under the platform's lip), and black concrete under every platform and ramp. It replaces ground, so the build asks for terrain approval where it does. Studio: *Track bed* under Roof and building | the ground as it is |
 | Escalators | `escalator`/`escalators`: an MTR up escalator beside each footbridge stair, with a rail between, on islands at least 11 wide and side platforms at least 9 wide (narrower platforms keep the stair only). Studio: *Footbridge stairs* | stairs only |
 | Stairs both ways | `stairs both ways`, `reverse stairs`: a second stair down to each platform wide enough (islands 11, side platforms 9), from the corridor's other side beside the lift, facing the other way. Studio: *Footbridge stairs* | one stair per platform |
 | Enclosed stairs | `enclosed stairs`, `walled stairwells`: solid walls round every footbridge stairwell instead of glass. Studio: *Stairwells* | glass |
@@ -213,7 +213,7 @@ The platform rail is the only connection the generator makes, sent to MTR as its
 ## Enviro's list (2026-10-20)
 - **Help point:** says the whole station name (it was cut off after a word); with no voice installed it falls back to the system voice (`SystemVoice`).
 - **MTR platforms by themselves:** each platform track's two rail nodes are joined as MTR's Platform Rail Connector would (`MtrRails`, through `MtrRailContract`), and MTR's platform is numbered like the dashboard does. No manual platform numbers. Without MTR the nodes are skipped as before.
-- **Gates:** MTR's own ticket barriers by default (one-way, entry and exit lanes, glass at each bank's end). `ata gates` / `two-way gates` keeps ATA's fare gates (`StationOptions.GateStyle`).
+- **Gates:** MTR's own ticket barriers by default (one-way, entry and exit lanes; the line's MTR glass fence closes each bank's end, in line with the rest of it). `ata gates` / `two-way gates` keeps ATA's fare gates (`StationOptions.GateStyle`).
 - **No stray chairs upstairs:** benches only where people wait (platforms, ticket hall), none alone on an upper floor.
 - **Wider entrance:** the street door is 5 wide by default, 7 at a grand station, 3 to 9 when asked ("7 wide entrance").
 - **Block swaps:** "use stone bricks instead of sandstone", "replace sandstone with stone bricks", "swap sandstone for stone bricks" or "sandstone -> stone bricks". A swap takes the block's slab, stairs and wall with it where both have them (`BlockFamilies.expand`). Studio has a Blocks section for the same.

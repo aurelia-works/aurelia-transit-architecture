@@ -67,6 +67,30 @@ class EnviroFixesTest {
 		assertTrue(StationAudit.audit(plan).buildable());
 	}
 
+	/** Jah, 10-21: the end of an MTR bank is the line's own glass fence, not a mid-cell panel standing out in front of it. */
+	@Test
+	void mtrGateBanksEndInTheFenceLine() {
+		final List<String> stray = new ArrayList<>();
+		for (final String text : List.of("2 track station, station building, 48 long", "Utrecht terminus, 10 tracks, 200 long, seed tmptnb")) {
+			final StationPlan plan = plan(text);
+			final java.util.Map<String, PlannedBlock> at = new java.util.HashMap<>();
+			plan.blocks().forEach(b -> at.put(b.u() + "," + b.y() + "," + b.v(), b));
+			for (final PlannedBlock gate : plan.blocks()) {
+				if (gate.role() != Role.GATE || gate.y() != StationGeometry.WALK_Y || !gate.blockId().startsWith("mtr:")) {
+					continue;
+				}
+				for (final int[] d : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+					final PlannedBlock end = at.get((gate.u() + d[0]) + "," + gate.y() + "," + (gate.v() + d[1]));
+					if (end != null && end.role() == Role.BARRIER && !end.blockId().equals(PlanState.MTR_FENCE)
+							&& !at.containsKey(end.u() + "," + (end.y() + 1) + "," + end.v())) {
+						stray.add(text + ": " + end);
+					}
+				}
+			}
+		}
+		assertEquals(List.of(), stray);
+	}
+
 	/** The lanes of the one gate bank of a small side-building station: a lane per door cell. */
 	private static long lanes(String text) {
 		return plan(text).blocks().stream().filter(b -> b.role() == Role.GATE).count();

@@ -158,13 +158,23 @@ abstract class PlanState {
 	 * One cell of a gate line. {@code green} is the side people come in from (the ticket hall or the street); {@code kind}
 	 * is the ATA gate's kind ({@code kind=end}, {@code kind=gate} or {@code kind=wide}); {@code exit} picks, for MTR's one-way
 	 * barriers, a lane that lets people out. MTR's barrier faces the way people walk through it, and the end of a bank is a
-	 * glass panel instead of a cabinet.
+	 * glass panel instead of a cabinet: the line's own {@link #fence} facing {@code fenceFront} where the line is MTR glass
+	 * fence (Jah, 10-21: a mid-cell panel stood half a block out of that line, a stray glass block in front of the gates),
+	 * else ATA's barrier.
 	 */
 	void gate(int u, int y, int v, LocalDir green, String kind, boolean exit) {
+		gate(u, y, v, green, kind, exit, null);
+	}
+
+	void gate(int u, int y, int v, LocalDir green, String kind, boolean exit, LocalDir fenceFront) {
 		if (spec.options().gates() == StationOptions.GateStyle.ATA) {
 			put(Role.GATE, u, y, v, green, palette.blockId(Role.GATE), kind);
 		} else if (kind.equals("kind=end")) {
-			put(Role.BARRIER, u, y, v, green);
+			if (fenceFront != null) {
+				fence(u, y, v, fenceFront);
+			} else {
+				put(Role.BARRIER, u, y, v, green);
+			}
 		} else {
 			put(Role.GATE, u, y, v, exit ? green : green.opposite(), exit ? StylePalette.MTR_BARRIER_EXIT : StylePalette.MTR_BARRIER_ENTRANCE);
 		}

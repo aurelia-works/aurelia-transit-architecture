@@ -156,7 +156,7 @@ public final class BlockModels {
 			final Map<String, String> props = new LinkedHashMap<>(set);
 			for (final Map.Entry<String, List<String>> property : propertyValues(blockstate).entrySet()) {
 				if (!props.containsKey(property.getKey()) && !property.getValue().isEmpty()) {
-					props.put(property.getKey(), guessDefault(property.getValue()));
+					props.put(property.getKey(), guessDefault(property.getKey(), property.getValue()));
 				}
 			}
 			final Map<String, Object> variants = Json.object(blockstate.get("variants"));
@@ -254,9 +254,15 @@ public final class BlockModels {
 	 * A guess at the game's default for a property the plan does not set: false or none when the property has them (sides
 	 * that are not connected), else the first value the file names.
 	 */
-	private static String guessDefault(List<String> values) {
-		return values.contains("false") ? "false" : values.contains("none") ? "none" : values.get(0);
+	private static String guessDefault(String name, List<String> values) {
+		return values.contains("false") ? "false" : values.contains("none") ? "none" : UNNAMED_DEFAULTS.getOrDefault(name, values.get(0));
 	}
+
+	/**
+	 * Defaults the blockstate files never name because they draw nothing: a railing's {@code corner} is {@code none}
+	 * ({@code RailingBlock.Corner.NONE}); guessing its first value would stand a corner post on every railing.
+	 */
+	private static final Map<String, String> UNNAMED_DEFAULTS = Map.of("corner", "none");
 
 	/** The variant agreeing with the most properties: the plan's own count for more than the guessed defaults. */
 	private static Map<String, Object> bestVariant(Map<String, Object> variants, Map<String, String> set, Map<String, String> props) {
