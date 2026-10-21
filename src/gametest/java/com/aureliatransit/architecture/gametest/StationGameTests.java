@@ -13,6 +13,7 @@ import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalDir;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.RailEdges;
 import com.aureliatransit.architecture.station.RoofMaterial;
 import com.aureliatransit.architecture.station.RoofType;
 import com.aureliatransit.architecture.station.Role;
@@ -196,11 +197,26 @@ public class StationGameTests implements FabricGameTest {
 			check(job.state() == StationBuildJob.State.DONE, "job state " + job.state() + " " + job.done() + "/" + job.total() + " " + said);
 			check(job.terrainChanged() == 0, "terrain changed without approval");
 			checkBuilt(context, pending);
+			// the build joined every platform track's two nodes as an MTR platform (Enviro, 10-20)
+			final List<BlockPos> nodes = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.role() == Role.RAIL_NODE) {
+					nodes.add(cellPos(pending, block));
+				}
+			}
+			check(!nodes.isEmpty(), "no rail nodes planned");
+			for (final BlockPos node : nodes) {
+				check(flag(world.getBlockState(node), "is_connected"), "the build left the rail node at " + node.toShortString() + " unconnected");
+			}
+			check(said.stream().anyMatch(text -> text.getString().contains("MTR platform")), "no word of the MTR platforms: " + said);
 			StationSessions.cancelJob(owner);
 			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
 			});
 			while (!undo.finished()) {
 				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			for (final BlockPos node : nodes) {
+				check(world.getBlockState(node).isAir(), "undo kept the build's own platform rail node at " + node.toShortString());
 			}
 			context.complete();
 		});
@@ -1114,8 +1130,10 @@ public class StationGameTests implements FabricGameTest {
 				if (block.state().isEmpty() || BlockStateResolver.block(block.blockId()).isEmpty()) {
 					continue; // missing blocks (MTR absent) are reported by the palette tests
 				}
-				final BlockState state = BlockStateResolver.withState(BlockStateResolver.block(block.blockId()).get().getDefaultState(), block.state());
-				for (final String pair : block.state().split(",")) {
+				// edge sides as the world names them; any heading shows the properties exist
+				final String planned = RailEdges.worldState(block.state(), Heading.NORTH);
+				final BlockState state = BlockStateResolver.withState(BlockStateResolver.block(block.blockId()).get().getDefaultState(), planned);
+				for (final String pair : planned.split(",")) {
 					final String[] nameValue = pair.split("=", 2);
 					final Property<?> property = state.getBlock().getStateManager().getProperty(nameValue[0].trim());
 					checked++;
@@ -1273,6 +1291,10 @@ public class StationGameTests implements FabricGameTest {
 				continue;
 			}
 			for (final Property<?> property : world1.getBlock().getStateManager().getProperties()) {
+				// the build joins its platform rail nodes in MTR after placing them; the file has them as placed
+				if (block.role() == Role.RAIL_NODE && property.getName().equals("is_connected")) {
+					continue;
+				}
 				if (!pasted.get(property).equals(world1.get(property))) {
 					if (kinds.merge(block.blockId() + " " + property.getName(), 1, Integer::sum) <= 3) {
 						problems.add(cellPos(pending, block).toShortString() + " " + property.getName() + ": file " + pasted.get(property) + ", world " + world1.get(property) + " ("

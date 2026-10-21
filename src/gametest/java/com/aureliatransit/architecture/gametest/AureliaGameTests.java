@@ -106,7 +106,7 @@ public class AureliaGameTests implements FabricGameTest {
 			// PidsBlock: live departure boards; SpeakerBlock: announcement speakers; ClockBlock; InfoDisplayBlock: hand-typed notice cases
 			Map.entry("platform_cis", "PidsBlock"), Map.entry("hanging_platform_cis", "PidsBlock"),
 			Map.entry("platform_pids", "PidsBlock"), Map.entry("hanging_platform_pids", "PidsBlock"), Map.entry("concourse_board", "PidsBlock"),
-			Map.entry("wall_speaker", "SpeakerBlock"), Map.entry("ceiling_speaker", "SpeakerBlock"),
+			Map.entry("wall_speaker", "WallSpeakerBlock"), Map.entry("ceiling_speaker", "SpeakerBlock"),
 			Map.entry("hanging_digital_clock", "ClockBlock"), Map.entry("wall_digital_clock", "ClockBlock"), Map.entry("station_analog_clock", "ClockBlock"),
 			Map.entry("information_case", "InfoDisplayBlock"), Map.entry("information_pillar", "InfoDisplayBlock"), Map.entry("bus_timetable_case", "InfoDisplayBlock"),
 			// TrainEdgeBlock: platform edges that react to a stopped train
