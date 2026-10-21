@@ -145,7 +145,9 @@ final class StationText {
 						+ corner(frame, track.u(), layout.platformTo(track));
 			} else {
 				what = "rail nodes at " + corner(frame, track.u(), layout.platformFrom(track)) + " and " + corner(frame, track.u(), layout.platformTo(track))
-						+ ": connect them with an MTR Platform Rail Connector";
+						+ (layout.platformNumber(track) > 0 && MtrRailContract.available()
+						? ", joined as MTR platform " + layout.platformNumber(track) + " when built"
+						: ": connect them with an MTR Platform Rail Connector");
 			}
 			out.accept(Text.literal("Track " + track.number() + ": " + what).formatted(Formatting.AQUA));
 		}

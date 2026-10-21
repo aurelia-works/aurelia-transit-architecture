@@ -8,6 +8,7 @@ import com.aureliatransit.architecture.station.SiteSurvey;
 import com.aureliatransit.architecture.station.StationAudit;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationPlan;
+import com.aureliatransit.architecture.station.StationPlacement;
 import com.aureliatransit.architecture.station.StationPlanner;
 import com.aureliatransit.architecture.station.SurveyReport;
 import com.aureliatransit.architecture.station.TrackLayout;
@@ -86,7 +87,7 @@ public final class StationCommand {
 	/** Places a design with {@code place} and surveys its site (without approval). On the server thread. */
 	public static StationSessions.Pending place(ServerWorld world, Design design, Function<TrackLayout, LocalFrame> place) {
 		final StationPlan plan = design.plan();
-		final LocalFrame frame = place.apply(plan.layout());
+		final LocalFrame frame = StationPlacement.sunk(design.parse().spec(), place.apply(plan.layout()));
 		final SurveyReport report = SiteSurvey.survey(plan, frame, WorldSiteProbe.loading(world), false);
 		return new StationSessions.Pending(design.parse(), design.parse().spec(), plan, frame, world.getRegistryKey(), design.violations(), design.audit(),
 				report, design.check().railSkipped());
@@ -106,7 +107,7 @@ public final class StationCommand {
 			return null;
 		}
 		final StationBuildJob job = StationBuildJob.build(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
-				StationZone.of(pending.spec().name(), report.ops()));
+				zone(pending, pending.frame(), report));
 		if (!StationSessions.start(job)) {
 			out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
 			return null;
@@ -137,9 +138,15 @@ public final class StationCommand {
 			return null;
 		}
 		final StationBuildJob job = StationBuildJob.rebuild(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
-				StationZone.of(pending.spec().name(), report.ops()), last);
+				zone(pending, frame, report), last);
 		StationSessions.start(job);
 		return job;
+	}
+
+	/** The MTR station area of a build and the platform rails it lays, or null when nothing is placed. */
+	private static StationZone zone(StationSessions.Pending pending, LocalFrame frame, SurveyReport report) {
+		final StationZone zone = StationZone.of(pending.spec().name(), report.ops());
+		return zone == null ? null : zone.withRails(com.aureliatransit.architecture.station.PlatformRail.of(pending.plan(), frame));
 	}
 
 	/** The checks before any build: no broken design rules, no failed station checks, every block known. */

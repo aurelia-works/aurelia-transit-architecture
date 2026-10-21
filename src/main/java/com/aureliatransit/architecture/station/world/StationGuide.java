@@ -63,8 +63,8 @@ public final class StationGuide {
 					+ "half a block."),
 			new Page("Examples", "two track dutch station, island platform, 64 long, named Leidsche Rijn\n\n"
 					+ "small single track s-bahn halt, no roof"),
-			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track, not joined.\n\n"
-					+ "Join them with MTR's Platform Rail Connector, then extend the line."),
+			new Page("Rails and MTR", "Rail nodes go at both ends of every platform track. The build joins them as MTR "
+					+ "platforms, numbered like the signs.\n\nExtend the line and add routes on the dashboard."),
 			new Page("Commands", "/ata_station plan <text>\n/ata_station confirm\n/ata_station cancel\n/ata_station undo\n"
 					+ "/ata_station status\n/ata_station details\n\nUndo reverts your last build until a restart. /ata_guide gives this book again."));
 

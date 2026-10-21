@@ -32,6 +32,8 @@ public final class UndoLog {
 	private final Map<BlockPos, BlockState> coveredSoil = new HashMap<>();
 	/** One stop of each MTR lift the build formed; undo deletes those lifts before the blocks. */
 	private final List<BlockPos> lifts = new ArrayList<>();
+	/** Both nodes of every MTR platform rail the build laid. */
+	private final List<BlockPos> railNodes = new ArrayList<>();
 	/** Ids of the MTR stations the build added; undo deletes them. */
 	private final List<Long> stations = new ArrayList<>();
 	/** Set once undo has taken the stations: one MTR answers after that is deleted at once instead of kept. */
@@ -107,6 +109,28 @@ public final class UndoLog {
 		final List<BlockPos> taken = List.copyOf(lifts);
 		lifts.clear();
 		return taken;
+	}
+
+	void addRail(BlockPos a, BlockPos b) {
+		railNodes.add(a);
+		railNodes.add(b);
+	}
+
+	/** The nodes of the platform rails the build laid, once: undo removes the rails and forgets them. */
+	List<BlockPos> takeRailNodes() {
+		final List<BlockPos> taken = List.copyOf(railNodes);
+		railNodes.clear();
+		return taken;
+	}
+
+	/** Whether {@code pos} is a node of a platform rail the build laid. */
+	boolean railNode(BlockPos pos) {
+		return railNodes.contains(pos);
+	}
+
+	/** A rebuild keeps the last build's platform rails (MTR routes use them) and its undo still removes them. */
+	void copyRails(UndoLog last) {
+		railNodes.addAll(last.railNodes);
 	}
 
 	/** @return false when undo already ran, so the caller deletes the station instead */

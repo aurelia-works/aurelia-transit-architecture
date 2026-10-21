@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.station.world;
 
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.RailEdges;
 import com.aureliatransit.architecture.station.StationPlan;
 import com.aureliatransit.architecture.station.StylePalette;
 import com.aureliatransit.architecture.station.WorldOp;
@@ -108,7 +109,7 @@ public final class BlockStateResolver {
 			if (block.isEmpty()) {
 				missing.add(op.blockId());
 			} else {
-				prepared.add(new Prepared(op, withState(state(block.get(), op.facing()), op.state())));
+				prepared.add(new Prepared(op, withState(state(block.get(), op.facing()), RailEdges.worldState(op.state(), op.facing()))));
 			}
 		}
 		return new Resolution(prepared, List.copyOf(missing), railSkipped);

@@ -3,6 +3,7 @@ package com.aureliatransit.architecture.station.world;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.PlannedBlock;
+import com.aureliatransit.architecture.station.RailEdges;
 import com.aureliatransit.architecture.station.StationPlan;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -89,8 +90,9 @@ public final class StationVerify {
 				continue;
 			}
 			final Heading heading = frame.heading(block.front());
-			final BlockState expected = BlockStateResolver.withState(BlockStateResolver.state(wanted.get(), heading), block.state());
-			final String why = differs(expected, found, block.state());
+			final String state = RailEdges.worldState(block.state(), heading);
+			final BlockState expected = BlockStateResolver.withState(BlockStateResolver.state(wanted.get(), heading), state);
+			final String why = differs(expected, found, state);
 			if (why == null) {
 				matched++;
 			} else {
@@ -126,9 +128,13 @@ public final class StationVerify {
 		return null;
 	}
 
+	/**
+	 * A rail node's direction flags are planned; whether it is connected is not, since the build joins its platform nodes
+	 * in MTR itself (and a player may join others).
+	 */
 	private static boolean isRailFlag(BlockState state, Property<?> property) {
 		return Registries.BLOCK.getId(state.getBlock()).toString().equals(com.aureliatransit.architecture.station.StylePalette.MTR_RAIL_NODE)
-				&& (property.getName().equals("facing") || property.getName().startsWith("is_"));
+				&& (property.getName().equals("facing") || property.getName().startsWith("is_")) && !property.getName().equals("is_connected");
 	}
 
 	private static void note(List<Mismatch> mismatches, BlockPos pos, String expected, BlockState found) {

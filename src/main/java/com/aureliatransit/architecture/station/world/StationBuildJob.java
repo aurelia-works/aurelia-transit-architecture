@@ -197,6 +197,7 @@ public final class StationBuildJob {
 		MtrStationContract.remove(world, last.takeStations());
 		final UndoLog log = new UndoLog(world.getRegistryKey());
 		log.copySoil(last);
+		log.copyRails(last);
 		// kept cells carry over first; then the left-out ones, oldest first, so the undo phase takes them newest first
 		final Set<BlockPos> leaving = new HashSet<>(diff.remove());
 		final Set<BlockPos> rewritten = new HashSet<>();
@@ -231,7 +232,10 @@ public final class StationBuildJob {
 		final Map<BlockPos, UndoLog.Entry> ours = new java.util.LinkedHashMap<>();
 		for (final Map.Entry<BlockPos, UndoLog.Entry> cell : log.cells().entrySet()) {
 			final BlockPos pos = cell.getKey();
-			if (probe.loaded(pos.getX(), pos.getZ()) && stillPlaced(world.getBlockState(pos), cell.getValue().placed())) {
+			final BlockState current = world.getBlockState(pos);
+			// a node connected by the platform rail the build laid itself is still ours
+			if (probe.loaded(pos.getX(), pos.getZ()) && (stillPlaced(current, cell.getValue().placed())
+					|| log.railNode(pos) && current.getBlock() == cell.getValue().placed().getBlock())) {
 				ours.put(pos, cell.getValue());
 			}
 		}
@@ -254,6 +258,8 @@ public final class StationBuildJob {
 		final List<Long> stations = log.takeStations();
 		MtrLiftContract.remove(world, lifts);
 		MtrStationContract.remove(world, stations);
+		// the platform rails the build laid go with their nodes; a node the player connected on their own stays
+		MtrRailContract.remove(world, log.takeRailNodes());
 		// the build said what it added to MTR; undo says what it took away
 		if (!lifts.isEmpty() || !stations.isEmpty()) {
 			out.accept(Text.literal("Removed from MTR: " + (lifts.isEmpty() ? "" : lifts.size() + (lifts.size() == 1 ? " lift" : " lifts"))
@@ -432,7 +438,7 @@ public final class StationBuildJob {
 			signCells.add(pos);
 			signTexts.add(op.text());
 		}
-		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.block.wayfinding.WayfindingSignBlock) {
+		if (op.kind() == WorldOp.Kind.PLACE && !op.text().isEmpty() && after.getBlock() instanceof com.aureliatransit.architecture.block.wayfinding.WayfindingPlateBlock) {
 			wayfindingTexts.put(pos, op.text());
 		}
 		return Step.DONE;
@@ -488,6 +494,9 @@ public final class StationBuildJob {
 			wayfindingSigns();
 			lifts();
 			MtrStationContract.register(world, zone, log, out);
+			if (zone != null) {
+				MtrRailContract.lay(world, zone.rails(), log, out);
+			}
 			out.accept(Text.literal((mode == Mode.REBUILD ? "Station rebuilt: " + kept + " cells kept as they stood, " + restored + " taken back, " : "Station built: ")
 					+ placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
 					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
