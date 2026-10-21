@@ -208,4 +208,60 @@ class RealStationTest {
 		assertEquals(List.of(), walk.flightsToNowhere(), words);
 		assertEquals(java.util.Map.of(), walk.unreachedPlatform(plan), words);
 	}
+
+	/**
+	 * Jah, 10-21: Grand Central's hall is narrower than its head building, and its side walls shut the outer lift lobbies off
+	 * from it but for a one-cell slot. On the ground floor they are an arcade now: from each outer lift a passenger walks
+	 * straight into the middle of the hall.
+	 */
+	@Test
+	void grandCentralsLiftLobbiesOpenOntoTheHall() {
+		final String words = StationPresets.ALL.stream().filter(p -> p.key().equals("grand_central")).findFirst().orElseThrow().description();
+		final StationPlan plan = plan(words);
+		final TrackLayout layout = plan.layout();
+		final java.util.Map<String, PlannedBlock> at = new java.util.HashMap<>();
+		for (final PlannedBlock b : plan.blocks()) {
+			at.put(b.u() + "," + b.y() + "," + b.v(), b);
+		}
+		final int middle = (layout.headFrom() + layout.headTo()) / 2;
+		int lifts = 0;
+		for (final PlannedBlock lift : plan.blocks()) {
+			if (lift.role() != Role.LIFT || lift.y() != StationGeometry.WALK_Y || lift.v() < layout.platformLength()
+					|| Math.abs(lift.u() - middle) < 20 || at.containsKey(lift.u() + ",1," + (lift.v() + 1))
+					|| at.containsKey(lift.u() + ",2," + (lift.v() + 1)) || liftBehind(at, lift)) {
+				// only the car's door row (no more of the lift further out), with the landing clear in front of it
+				continue;
+			}
+			lifts++;
+			// flood the ground floor of the head from the cell in front of the lift car, through cells clear at foot and head height
+			final java.util.Set<String> seen = new java.util.HashSet<>();
+			final java.util.ArrayDeque<int[]> todo = new java.util.ArrayDeque<>();
+			todo.add(new int[]{lift.u(), lift.v() + 1});
+			boolean hall = false;
+			while (!todo.isEmpty() && !hall) {
+				final int[] c = todo.poll();
+				if (c[1] < layout.platformLength() || c[1] > layout.headEnd() || c[0] < layout.headFrom() || c[0] > layout.headTo()
+						|| !seen.add(c[0] + "," + c[1]) || at.containsKey(c[0] + ",1," + c[1]) || at.containsKey(c[0] + ",2," + c[1])) {
+					continue;
+				}
+				hall = c[0] == middle;
+				todo.add(new int[]{c[0] + 1, c[1]});
+				todo.add(new int[]{c[0] - 1, c[1]});
+				todo.add(new int[]{c[0], c[1] + 1});
+				todo.add(new int[]{c[0], c[1] - 1});
+			}
+			assertTrue(hall, "the lift at " + lift.u() + "," + lift.v() + " walks into the hall");
+		}
+		assertTrue(lifts > 0, "Grand Central has outer lifts");
+	}
+
+	private static boolean liftBehind(java.util.Map<String, PlannedBlock> at, PlannedBlock lift) {
+		for (int dv = 2; dv <= 3; dv++) {
+			final PlannedBlock next = at.get(lift.u() + "," + lift.y() + "," + (lift.v() + dv));
+			if (next != null && next.role() == Role.LIFT) {
+				return true;
+			}
+		}
+		return false;
+	}
 }

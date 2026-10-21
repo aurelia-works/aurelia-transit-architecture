@@ -212,6 +212,12 @@ abstract class PlanBuilding extends PlanPlatforms {
 			final int v = site.innerStairV(y);
 			for (int u = uA; u <= uB; u++) {
 				put(Role.STAIR, u, y, v, site.innerStairFront(), b.stair());
+				// a stringer under each step too low to stand under, so nobody walks in under the flight's low end
+				if (y <= StationGeometry.HEADROOM) {
+					for (int below = StationGeometry.WALK_Y; below < y; below++) {
+						put(Role.WALL, u, below, v, site.innerStairFront(), b.interiorWall());
+					}
+				}
 			}
 		}
 		// the flight's open side: a wall under the steps with a glass barrier along them, carried on round the well upstairs

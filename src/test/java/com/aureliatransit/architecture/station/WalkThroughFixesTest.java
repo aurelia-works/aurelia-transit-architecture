@@ -272,4 +272,32 @@ class WalkThroughFixesTest {
 			}
 		}
 	}
+
+	/** Under the low end of a stair flight (footbridge or station building) nobody walks in where they cannot stand up. */
+	@Test
+	void nobodyWalksInUnderAFlightsLowEnd() {
+		for (final String key : List.of("utrecht", "amsterdam", "hamburg_hbf")) {
+			checkUnderFlights(StationPresets.ALL.stream().filter(p -> p.key().equals(key)).findFirst().orElseThrow().description());
+		}
+		checkUnderFlights("3 tracks, 80 long, station building, footbridge");
+	}
+
+	private static void checkUnderFlights(String text) {
+		final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse(text).spec());
+		final java.util.Map<String, PlannedBlock> at = new java.util.HashMap<>();
+		for (final PlannedBlock b : plan.blocks()) {
+			at.put(b.u() + "," + b.y() + "," + b.v(), b);
+		}
+		final List<String> low = new java.util.ArrayList<>();
+		for (final PlannedBlock b : plan.blocks()) {
+			if (b.role() != Role.STAIR || b.y() <= StationGeometry.WALK_Y || b.y() > StationGeometry.HEADROOM) {
+				continue;
+			}
+			final PlannedBlock floor = at.get(b.u() + ",0," + b.v());
+			if (floor != null && floor.role().flatFloor() && at.get(b.u() + ",1," + b.v()) == null) {
+				low.add(b.u() + "," + b.y() + "," + b.v());
+			}
+		}
+		assertEquals(List.of(), low, text);
+	}
 }

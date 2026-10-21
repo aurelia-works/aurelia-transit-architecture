@@ -227,6 +227,12 @@ abstract class PlanBridges extends PlanConcourse {
 				for (final int u : columns) {
 					for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 						put(Role.STAIR, u, y, flight.stepV(y), flight.front(), b.stair());
+						// a stringer under each step too low to stand under, so nobody walks in under the flight's low end
+						if (y <= StationGeometry.HEADROOM) {
+							for (int below = StationGeometry.WALK_Y; below < y; below++) {
+								put(Role.WALL, u, below, flight.stepV(y), flight.front(), b.trim());
+							}
+						}
 					}
 				}
 				// balustrades on the outer flanks of the whole flight, from the floor up to each step, so no rail hangs at

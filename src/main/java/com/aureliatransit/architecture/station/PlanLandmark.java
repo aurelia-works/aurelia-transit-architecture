@@ -242,8 +242,11 @@ abstract class PlanLandmark extends PlanUnderground {
 			final boolean corner = !side && (i == 0 || i == n - 1);
 			final boolean pilaster = !corner && pilasterColumn(i, n, fa);
 			final boolean column = !corner && !pilaster && windowColumn(i, n, fa);
+			// a side wall standing inside the head building (a hall narrower than the head) is an arcade on the ground floor, so
+			// the side lobbies, their lifts and stairs open onto the hall (Grand Central's lift lobbies were walled off, Jah 10-21)
+			final boolean arcade = side && f.head() && insideHead(f.u(face.x(i), face.z(i))) && Math.floorMod(i, ARCADE_BAY) != 0;
 			for (int y = Math.max(1, m.bottom()); y <= m.height(); y++) {
-				if (openGround && y < StationGeometry.UPPER_FLOOR_Y) {
+				if (openGround && y < StationGeometry.UPPER_FLOOR_Y || arcade && arcadeOpening(y)) {
 					continue;
 				}
 				final int r = Math.floorMod(y - 1, fa.storey());
@@ -297,6 +300,20 @@ abstract class PlanLandmark extends PlanUnderground {
 				}
 			}
 		}
+	}
+
+	/** Cells between the piers of an inner side arcade: a pier every fourth cell. */
+	static final int ARCADE_BAY = 4;
+
+	/** True when column {@code u} lies strictly between the head building's own side walls. */
+	boolean insideHead(int u) {
+		return u > layout.headFrom() && u < layout.headTo();
+	}
+
+	/** The openings of an inner side arcade: the ground storey under its lintel (the gallery storey stays shut, as an
+	 * opening there would leave a ledge over the hall past the gallery's rail). */
+	static boolean arcadeOpening(int y) {
+		return y >= StationGeometry.WALK_Y && y <= StationGeometry.HEADROOM + 1;
 	}
 
 	/** The stairs made of a full block, for a window head in the wall's own material; {@code fallback} when it has none. */
