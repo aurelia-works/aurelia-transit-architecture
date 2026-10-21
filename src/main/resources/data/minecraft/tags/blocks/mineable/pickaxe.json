@@ -224,6 +224,26 @@
     "aurelia_transit_architecture:metro_terrazzo_floor_slab",
     "aurelia_transit_architecture:metro_quarry_floor_slab",
     "aurelia_transit_architecture:tram_stop_sign",
-    "aurelia_transit_architecture:tram_track"
+    "aurelia_transit_architecture:tram_track",
+    "aurelia_transit_architecture:roof_truss",
+    "aurelia_transit_architecture:drop_rod",
+    "aurelia_transit_architecture:ticket_vending_machine",
+    "aurelia_transit_architecture:hall_pendant_lamp",
+    "aurelia_transit_architecture:uk_yellow_stock_brick",
+    "aurelia_transit_architecture:uk_red_brick_dressing",
+    "aurelia_transit_architecture:uk_blue_engineering_brick",
+    "aurelia_transit_architecture:uk_white_render",
+    "aurelia_transit_architecture:uk_steel_window",
+    "aurelia_transit_architecture:uk_platform_tarmac",
+    "aurelia_transit_architecture:uk_platform_coping",
+    "aurelia_transit_architecture:uk_platform_coping_tactile",
+    "aurelia_transit_architecture:uk_timber_canopy",
+    "aurelia_transit_architecture:uk_canopy_valance",
+    "aurelia_transit_architecture:uk_concrete_canopy",
+    "aurelia_transit_architecture:uk_concrete_canopy_edge",
+    "aurelia_transit_architecture:uk_hardwood_canopy",
+    "aurelia_transit_architecture:uk_hardwood_canopy_fascia",
+    "aurelia_transit_architecture:buffer_stop",
+    "aurelia_transit_architecture:heritage_buffer_stop"
   ]
 }

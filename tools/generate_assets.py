@@ -958,6 +958,10 @@ def blockstate(block_id, kind, variant_names):
                     model_ref = ref(f"_{'wall' if wall else 'post'}_{n}")
                     variants[f"cars={n},facing={f},wall={str(wall).lower()}"] = {"model": model_ref} | ({"y": y} if y else {})
         return {"variants": variants}
+    if kind == "buffer_stop":
+        # part=single is the block's own model; left, middle and right join a buffer across a track (front north)
+        return {"variants": {f"facing={f},part={p}": {"model": ref("" if p == "single" else f"_{p}")} | ({"y": y} if y else {})
+                             for f, y in FACING_Y.items() for p in ("single", "left", "middle", "right")}}
     if kind == "axis":
         return {"variants": {"axis=x": {"model": ref("")}, "axis=z": {"model": ref(""), "y": 90}}}
     if kind == "sign":
@@ -980,7 +984,7 @@ def icon():
     return make_logo.wave_canopy().resize((128, 128), Image.NEAREST)
 
 
-EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_operators", "assets_metro", "assets_car_stops", "assets_station_wrench", "assets_station_structure", "assets_platform_slabs", "assets_blockbench")
+EXTENSION_MODULES = ("assets_live", "assets_interactive", "assets_wayfinding", "assets_elevated", "assets_equipment", "assets_screens", "assets_signs14", "assets_glass", "assets_stations_nl_be", "assets_stations_de_it", "assets_stations_uk", "assets_operators", "assets_metro", "assets_car_stops", "assets_station_wrench", "assets_station_structure", "assets_platform_slabs", "assets_blockbench", "assets_buffer_stops")
 
 
 def load_extensions():

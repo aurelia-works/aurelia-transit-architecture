@@ -15,7 +15,7 @@ MOD = g.MOD
 TIP = f"tooltip.{MOD}.station_wrench"
 SCREEN = f"screen.{MOD}.station_wrench."
 PRESETS = {"utrecht": "Utrecht", "amsterdam": "Amsterdam", "st_pancras": "St Pancras", "antwerp": "Antwerp", "frankfurt": "Frankfurt",
-           "hamburg": "Hamburg", "munich": "Munich", "grand_central": "Grand Central", "tokyo": "Tokyo", "zurich": "Zurich",
+           "munich": "Munich", "grand_central": "Grand Central", "tokyo": "Tokyo", "zurich": "Zurich",
            "paris": "Paris", "milan": "Milan", "berlin": "Berlin", "hong_kong": "Hong Kong", "beijing": "Beijing"}
 SOURCE = Path(__file__).resolve().parent / "models" / "station_wrench"
 

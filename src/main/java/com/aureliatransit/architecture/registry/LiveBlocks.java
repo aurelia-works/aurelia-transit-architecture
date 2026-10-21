@@ -6,6 +6,7 @@ import com.aureliatransit.architecture.live.PidsBlock;
 import com.aureliatransit.architecture.live.PidsBlockEntity;
 import com.aureliatransit.architecture.live.SpeakerBlock;
 import com.aureliatransit.architecture.live.SpeakerBlockEntity;
+import com.aureliatransit.architecture.live.WallSpeakerBlock;
 import net.minecraft.block.Block;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.registry.Registries;
@@ -42,7 +43,7 @@ public final class LiveBlocks {
 			new PidsBlock(ModBlocks.metal().luminance(state -> 8), DisplayKind.CONCOURSE, false, 11.5F, 0, box(0, 0, 11, 16, 16, 16)),
 			TIP_LIVE_CONFIG, TIP_LIVE_JOINS, TIP_LIVE_FREE);
 	public static final Block WALL_SPEAKER = ModBlocks.register("wall_speaker", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
-			new SpeakerBlock(ModBlocks.metal(), box(4, 4, 13, 12, 12, 16)),
+			new WallSpeakerBlock(ModBlocks.metal(), box(4, 4, 13, 12, 12, 16)),
 			TIP_SPEAKER);
 	public static final Block CEILING_SPEAKER = ModBlocks.register("ceiling_speaker", BlockFamily.PASSENGER_INFO, RenderKind.CUTOUT,
 			new SpeakerBlock(ModBlocks.metal(), box(3, 14, 3, 13, 16, 13)),

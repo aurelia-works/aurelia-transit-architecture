@@ -24,6 +24,8 @@ public enum BlockFamily {
 	STATIONS_NL_BE(Tab.STATIONS),
 	/** 1.5 German and Italian station architecture (Frankfurt, Munich, Hamburg, S-Bahn, Roma Termini). */
 	STATIONS_DE_IT(Tab.STATIONS),
+	/** British suburban stations (Teddington, Surbiton, Coventry), 2026-10-20. */
+	STATIONS_UK(Tab.STATIONS),
 	/** 1.5 metro (underground) station finishes. */
 	METRO(Tab.METRO);
 

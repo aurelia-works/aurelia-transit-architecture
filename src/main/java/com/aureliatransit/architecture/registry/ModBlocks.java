@@ -2,8 +2,10 @@ package com.aureliatransit.architecture.registry;
 
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.AxisShapedBlock;
+import com.aureliatransit.architecture.block.BufferStopBlock;
 import com.aureliatransit.architecture.block.FacingShapedBlock;
 import com.aureliatransit.architecture.block.FramedGlassBlock;
+import com.aureliatransit.architecture.block.GlassBarrierBlock;
 import com.aureliatransit.architecture.block.GlassFacingBlock;
 import com.aureliatransit.architecture.block.InfoDisplayBlock;
 import com.aureliatransit.architecture.block.InfoLayout;
@@ -163,6 +165,12 @@ public final class ModBlocks {
 			new SeatBlock(metal(), Placement.TOWARD_PLAYER, BENCH, BENCH_COLLISION, 2, 7.5, 7.5, true), TIP_FACES_YOU, TIP_SIT);
 	public static final Block WASTE_BIN = register("waste_bin", BlockFamily.FURNITURE, RenderKind.CUTOUT,
 			new FacingShapedBlock(metal(), Placement.TOWARD_PLAYER, box(3.5, 0, 3.5, 12.5, 14.5, 12.5)));
+	public static final Block BUFFER_STOP = register("buffer_stop", BlockFamily.FURNITURE, RenderKind.CUTOUT,
+			new BufferStopBlock(metal().luminance(state -> state.get(BufferStopBlock.PART) == BufferStopBlock.Part.LEFT
+					|| state.get(BufferStopBlock.PART) == BufferStopBlock.Part.RIGHT ? 0 : 4), box(0, 0, 1, 16, 15, 15)), TIP + "buffer_joins");
+	public static final Block HERITAGE_BUFFER_STOP = register("heritage_buffer_stop", BlockFamily.FURNITURE, RenderKind.CUTOUT,
+			new BufferStopBlock(metal().luminance(state -> state.get(BufferStopBlock.PART) == BufferStopBlock.Part.LEFT
+					|| state.get(BufferStopBlock.PART) == BufferStopBlock.Part.RIGHT ? 0 : 4), box(0, 0, 2, 16, 14, 16)), TIP + "buffer_joins");
 	public static final Block BOLLARD = register("bollard", BlockFamily.FURNITURE, RenderKind.CUTOUT,
 			new ShapedBlock(metal(), box(5.5, 0, 5.5, 10.5, 14, 10.5)));
 	public static final Block PLATFORM_LAMP = register("platform_lamp", BlockFamily.FURNITURE, RenderKind.CUTOUT,
@@ -187,7 +195,7 @@ public final class ModBlocks {
 	public static final Block GLASS_PANEL = register("glass_panel", BlockFamily.ARCHITECTURE, RenderKind.TRANSLUCENT,
 			new GlassFacingBlock(glass(), Placement.TOWARD_PLAYER, box(0, 0, 7, 16, 16, 9)));
 	public static final Block GLASS_BARRIER = register("glass_barrier", BlockFamily.ARCHITECTURE, RenderKind.TRANSLUCENT,
-			new GlassFacingBlock(glass(), Placement.TOWARD_PLAYER,
+			new GlassBarrierBlock(glass(), Placement.TOWARD_PLAYER,
 					union(box(0, 0, 7.25, 16, 13, 8.75), box(0, 13, 6.5, 16, 15, 9.5)), box(0, 0, 7, 16, 24, 9)));
 	public static final Block CANOPY_FLAT = register("canopy_flat", BlockFamily.ARCHITECTURE, RenderKind.SOLID,
 			new ShapedBlock(metal(), PLATE));
