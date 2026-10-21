@@ -1,0 +1,152 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/uk_concrete_canopy",
+    "c": "aurelia_transit_architecture:block/uk_concrete_canopy"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        2
+      ],
+      "to": [
+        16,
+        4,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            14
+          ],
+          "texture": "#c",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            2,
+            16.0,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            12,
+            16.0,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            12,
+            16.0,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            2,
+            12,
+            16.0,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            12,
+            14,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        -2,
+        0
+      ],
+      "to": [
+        16,
+        5,
+        2
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            14,
+            16.0,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            2
+          ],
+          "texture": "#c"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            11,
+            16.0,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            11,
+            16.0,
+            16.0
+          ],
+          "texture": "#c"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            11,
+            2,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            14,
+            11,
+            16.0,
+            16.0
+          ],
+          "texture": "#c",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}

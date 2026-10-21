@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/uk_hardwood_canopy_fascia"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/uk_hardwood_canopy_fascia",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/uk_hardwood_canopy_fascia",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/uk_hardwood_canopy_fascia",
+      "y": 270
+    }
+  }
+}

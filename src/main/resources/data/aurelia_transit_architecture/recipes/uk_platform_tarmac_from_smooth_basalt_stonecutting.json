@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:smooth_basalt"
+  },
+  "result": "aurelia_transit_architecture:uk_platform_tarmac",
+  "count": 1
+}

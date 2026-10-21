@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/uk_canopy_valance"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/uk_canopy_valance",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/uk_canopy_valance",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/uk_canopy_valance",
+      "y": 270
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:smooth_stone"
+  },
+  "result": "aurelia_transit_architecture:uk_platform_coping",
+  "count": 1
+}
