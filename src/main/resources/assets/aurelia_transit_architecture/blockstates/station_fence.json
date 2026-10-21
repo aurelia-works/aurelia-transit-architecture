@@ -2,7 +2,23 @@
   "multipart": [
     {
       "when": {
-        "kind": "platform"
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
+          }
+        ]
       },
       "apply": {
         "model": "aurelia_transit_architecture:block/station_fence_post_platform"
@@ -16,6 +32,18 @@
           },
           {
             "north": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -31,6 +59,18 @@
           },
           {
             "east": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -47,6 +87,18 @@
           },
           {
             "south": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -63,6 +115,18 @@
           },
           {
             "west": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -73,7 +137,23 @@
     },
     {
       "when": {
-        "kind": "trackside"
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
+          }
+        ]
       },
       "apply": {
         "model": "aurelia_transit_architecture:block/station_fence_post_trackside"
@@ -87,6 +167,18 @@
           },
           {
             "north": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -102,6 +194,18 @@
           },
           {
             "east": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -118,6 +222,18 @@
           },
           {
             "south": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
@@ -134,11 +250,401 @@
           },
           {
             "west": "true"
+          },
+          {
+            "edge_north": "false"
+          },
+          {
+            "edge_east": "false"
+          },
+          {
+            "edge_south": "false"
+          },
+          {
+            "edge_west": "false"
           }
         ]
       },
       "apply": {
         "model": "aurelia_transit_architecture:block/station_fence_side_trackside",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "edge_north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_platform"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "edge_east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_platform",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "edge_south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_platform",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "edge_west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_platform",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "north_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_platform"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "east_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_platform",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "south_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_platform",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "west_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_platform",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "north_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_platform"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "east_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_platform",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "south_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_platform",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "platform"
+          },
+          {
+            "corner": "west_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_platform",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "edge_north": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_trackside"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "edge_east": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_trackside",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "edge_south": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_trackside",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "edge_west": "true"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_edge_trackside",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "north_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_trackside"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "east_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_trackside",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "south_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_trackside",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "west_cw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_cw_trackside",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "north_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_trackside"
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "east_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_trackside",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "south_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_trackside",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "AND": [
+          {
+            "kind": "trackside"
+          },
+          {
+            "corner": "west_ccw"
+          }
+        ]
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/station_fence_corner_ccw_trackside",
         "y": 270
       }
     }

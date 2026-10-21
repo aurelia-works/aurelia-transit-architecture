@@ -1,0 +1,482 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel",
+    "glass": "aurelia_transit_architecture:block/glass_clear",
+    "rail": "aurelia_transit_architecture:block/steel",
+    "shoe": "aurelia_transit_architecture:block/steel_dark"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        0,
+        0.0
+      ],
+      "to": [
+        16,
+        1.5,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            6.75,
+            16.0,
+            9.25
+          ],
+          "texture": "#shoe",
+          "cullface": "down"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            6.75,
+            16.0,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            14.5,
+            16.0,
+            16.0
+          ],
+          "texture": "#shoe",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            14.5,
+            16.0,
+            16.0
+          ],
+          "texture": "#shoe"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            14.5,
+            9.25,
+            16.0
+          ],
+          "texture": "#shoe",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            14.5,
+            9.25,
+            16.0
+          ],
+          "texture": "#shoe",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        1.5,
+        0.5
+      ],
+      "to": [
+        16,
+        13,
+        2.0
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0.0,
+            3,
+            16.0,
+            14.5
+          ],
+          "texture": "#glass"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            3,
+            16.0,
+            14.5
+          ],
+          "texture": "#glass"
+        },
+        "west": {
+          "uv": [
+            7.25,
+            3,
+            8.75,
+            14.5
+          ],
+          "texture": "#glass",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            7.25,
+            3,
+            8.75,
+            14.5
+          ],
+          "texture": "#glass",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        0,
+        13,
+        0.0
+      ],
+      "to": [
+        16,
+        15,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            6.75,
+            16.0,
+            9.25
+          ],
+          "texture": "#rail"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            6.75,
+            16.0,
+            9.25
+          ],
+          "texture": "#rail"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            1,
+            16.0,
+            3
+          ],
+          "texture": "#rail",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            1,
+            16.0,
+            3
+          ],
+          "texture": "#rail"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            1,
+            9.25,
+            3
+          ],
+          "texture": "#rail",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            1,
+            9.25,
+            3
+          ],
+          "texture": "#rail",
+          "cullface": "east"
+        }
+      }
+    },
+    {
+      "from": [
+        1.5,
+        3.5,
+        0.0
+      ],
+      "to": [
+        3,
+        5.5,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            1.5,
+            6.75,
+            3,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "up": {
+          "uv": [
+            1.5,
+            6.75,
+            3,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "north": {
+          "uv": [
+            13,
+            10.5,
+            14.5,
+            12.5
+          ],
+          "texture": "#shoe",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            1.5,
+            10.5,
+            3,
+            12.5
+          ],
+          "texture": "#shoe"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            10.5,
+            9.25,
+            12.5
+          ],
+          "texture": "#shoe"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            10.5,
+            9.25,
+            12.5
+          ],
+          "texture": "#shoe"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        3.5,
+        0.0
+      ],
+      "to": [
+        14.5,
+        5.5,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            13,
+            6.75,
+            14.5,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "up": {
+          "uv": [
+            13,
+            6.75,
+            14.5,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "north": {
+          "uv": [
+            1.5,
+            10.5,
+            3,
+            12.5
+          ],
+          "texture": "#shoe",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            13,
+            10.5,
+            14.5,
+            12.5
+          ],
+          "texture": "#shoe"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            10.5,
+            9.25,
+            12.5
+          ],
+          "texture": "#shoe"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            10.5,
+            9.25,
+            12.5
+          ],
+          "texture": "#shoe"
+        }
+      }
+    },
+    {
+      "from": [
+        1.5,
+        9,
+        0.0
+      ],
+      "to": [
+        3,
+        11,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            1.5,
+            6.75,
+            3,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "up": {
+          "uv": [
+            1.5,
+            6.75,
+            3,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "north": {
+          "uv": [
+            13,
+            5,
+            14.5,
+            7
+          ],
+          "texture": "#shoe",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            1.5,
+            5,
+            3,
+            7
+          ],
+          "texture": "#shoe"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            5,
+            9.25,
+            7
+          ],
+          "texture": "#shoe"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            5,
+            9.25,
+            7
+          ],
+          "texture": "#shoe"
+        }
+      }
+    },
+    {
+      "from": [
+        13,
+        9,
+        0.0
+      ],
+      "to": [
+        14.5,
+        11,
+        2.5
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            13,
+            6.75,
+            14.5,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "up": {
+          "uv": [
+            13,
+            6.75,
+            14.5,
+            9.25
+          ],
+          "texture": "#shoe"
+        },
+        "north": {
+          "uv": [
+            1.5,
+            5,
+            3,
+            7
+          ],
+          "texture": "#shoe",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            13,
+            5,
+            14.5,
+            7
+          ],
+          "texture": "#shoe"
+        },
+        "west": {
+          "uv": [
+            6.75,
+            5,
+            9.25,
+            7
+          ],
+          "texture": "#shoe"
+        },
+        "east": {
+          "uv": [
+            6.75,
+            5,
+            9.25,
+            7
+          ],
+          "texture": "#shoe"
+        }
+      }
+    }
+  ]
+}

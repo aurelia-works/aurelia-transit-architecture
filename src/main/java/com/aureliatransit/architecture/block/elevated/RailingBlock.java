@@ -21,6 +21,7 @@ import net.minecraft.world.World;
 import net.minecraft.world.WorldAccess;
 
 import java.util.EnumMap;
+import java.util.Locale;
 import java.util.Map;
 
 import static com.aureliatransit.architecture.util.Shapes.union;
@@ -30,6 +31,12 @@ import static com.aureliatransit.architecture.util.Shapes.union;
  * edge rails. All railings connect to each other and to any full side face, whatever their style. Connections are
  * block states set at placement and on neighbour updates (no scanning); the visible style is a state cycled by
  * right-clicking with an empty hand.
+ *
+ * <p>A railing can instead stand on one or more sides of its block ({@code edge_north} and so on), flush with the drop it
+ * guards, so the block itself stays walkable; two sides make a corner piece. The station generator sets these; a railing
+ * with any edge set shows only its edge rails. Where two edge runs meet round an outside corner their rails touch only at
+ * a point, and one of them carries a post there ({@link #CORNER}: the side its rail is on and which end of it, clockwise
+ * or anticlockwise seen from above); the post is drawn only, it stands just past the block's corner.
  */
 public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> extends StateShapedBlock {
 
@@ -37,8 +44,26 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 	public static final BooleanProperty EAST = Properties.EAST;
 	public static final BooleanProperty SOUTH = Properties.SOUTH;
 	public static final BooleanProperty WEST = Properties.WEST;
+	public static final BooleanProperty EDGE_NORTH = BooleanProperty.of("edge_north");
+	public static final BooleanProperty EDGE_EAST = BooleanProperty.of("edge_east");
+	public static final BooleanProperty EDGE_SOUTH = BooleanProperty.of("edge_south");
+	public static final BooleanProperty EDGE_WEST = BooleanProperty.of("edge_west");
+	public static final EnumProperty<Corner> CORNER = EnumProperty.of("corner", Corner.class);
+
+	/** Where an edge railing's corner post stands: none, or a side's clockwise or anticlockwise end. */
+	public enum Corner implements StringIdentifiable {
+		NONE, NORTH_CW, NORTH_CCW, EAST_CW, EAST_CCW, SOUTH_CW, SOUTH_CCW, WEST_CW, WEST_CCW;
+
+		@Override
+		public String asString() {
+			return name().toLowerCase(Locale.ROOT);
+		}
+	}
 	/** Pixels: railings stop players like a fence, whatever their drawn height. */
 	private static final double COLLISION_HEIGHT = 24;
+	/** A rail along the north side, as drawn (post and rails within 3 px of the face), and as it stops players. */
+	private static final Map<Direction, VoxelShape> EDGE_OUTLINES = Shapes.horizontalMap(Shapes.box(0, 0, 0, 16, 15, 3));
+	private static final Map<Direction, VoxelShape> EDGE_COLLISIONS = Shapes.horizontalMap(Shapes.box(0, 0, 0, 16, COLLISION_HEIGHT, 2));
 
 	private final String id;
 	private final Class<K> kinds;
@@ -62,7 +87,8 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 			collisionArms.put(kind, Shapes.horizontalMap(Shapes.box(7, 0, 0, 9, COLLISION_HEIGHT, 6.5)));
 		}
 		setDefaultState(getStateManager().getDefaultState().with(kindProperty(), kinds.getEnumConstants()[0])
-				.with(NORTH, false).with(EAST, false).with(SOUTH, false).with(WEST, false));
+				.with(NORTH, false).with(EAST, false).with(SOUTH, false).with(WEST, false)
+				.with(EDGE_NORTH, false).with(EDGE_EAST, false).with(EDGE_SOUTH, false).with(EDGE_WEST, false).with(CORNER, Corner.NONE));
 	}
 
 	/** The block's (static) kind property; used while the state definition is built, so it must not use instance fields. */
@@ -76,7 +102,7 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 
 	@Override
 	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-		builder.add(kindProperty(), NORTH, EAST, SOUTH, WEST);
+		builder.add(kindProperty(), NORTH, EAST, SOUTH, WEST, EDGE_NORTH, EDGE_EAST, EDGE_SOUTH, EDGE_WEST, CORNER);
 	}
 
 	public static BooleanProperty property(Direction direction) {
@@ -85,6 +111,17 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 			case EAST -> EAST;
 			case SOUTH -> SOUTH;
 			case WEST -> WEST;
+			default -> throw new IllegalArgumentException("Not horizontal: " + direction);
+		};
+	}
+
+	/** The property for a rail on the {@code direction} side of the block. */
+	public static BooleanProperty edge(Direction direction) {
+		return switch (direction) {
+			case NORTH -> EDGE_NORTH;
+			case EAST -> EDGE_EAST;
+			case SOUTH -> EDGE_SOUTH;
+			case WEST -> EDGE_WEST;
 			default -> throw new IllegalArgumentException("Not horizontal: " + direction);
 		};
 	}
@@ -122,6 +159,16 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 	}
 
 	private VoxelShape build(BlockState state, Map<K, VoxelShape> postShapes, Map<K, Map<Direction, VoxelShape>> armShapes) {
+		final Map<Direction, VoxelShape> edges = postShapes == posts ? EDGE_OUTLINES : EDGE_COLLISIONS;
+		VoxelShape edged = null;
+		for (final Direction direction : Direction.Type.HORIZONTAL) {
+			if (state.get(edge(direction))) {
+				edged = edged == null ? edges.get(direction) : union(edged, edges.get(direction));
+			}
+		}
+		if (edged != null) {
+			return edged;
+		}
 		final K kind = state.get(kindProperty());
 		VoxelShape shape = postShapes.get(kind);
 		for (final Direction direction : Direction.Type.HORIZONTAL) {

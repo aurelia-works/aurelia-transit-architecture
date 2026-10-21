@@ -22,7 +22,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksOperators.java", "StationBlocksDeIt.java", "MetroBlocks.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksOperators.java", "StationBlocksDeIt.java", "MetroBlocks.java", "StationFittingBlocks.java", "StationBlocksUk.java")
 
 # Properties the blockstate variants key on. FreePlacement's angle and offset are left out on purpose: no model keys on
 # them, a client model wrapper turns and moves the quads.
@@ -39,6 +39,9 @@ EXPECTED_PROPERTIES = {
     "ClockBlock": {"facing"},
     "PidsBlock": {"facing", "left", "right", "up", "down"},
     "SpeakerBlock": {"facing"},
+    "WallSpeakerBlock": {"facing", "post"},
+    "TicketVendingMachineBlock": {"facing", "half"},
+    "DropRodBlock": {"facing", "hanger"},
     "WayfindingPlateBlock": {"facing"},
     "SignPoleBlock": {"up", "down", "align"},
     "WayfindingSignBlock": {"facing", "left", "right"},
@@ -59,9 +62,11 @@ EXPECTED_PROPERTIES = {
     "CctvCameraBlock": {"facing", "kind"},
     "LiftStatusPanelBlock": {"facing", "left", "right", "status"},
     "PlatformFasciaBlock": {"facing", "kind"},
-    "StationFenceBlock": {"kind", "north", "east", "south", "west"},
+    "StationFenceBlock": {"kind", "north", "east", "south", "west", "edge_north", "edge_east", "edge_south", "edge_west", "corner"},
     "UtilityRunBlock": {"axis", "kind"},
-    "HandrailBlock": {"kind", "north", "east", "south", "west"},
+    "HandrailBlock": {"kind", "north", "east", "south", "west", "edge_north", "edge_east", "edge_south", "edge_west", "corner"},
+    "GlassBarrierBlock": {"facing", "edge"},
+    "BufferStopBlock": {"facing", "part"},
     "TactileJunctionBlock": {"facing", "kind"},
     "PlatformEdgeCurveBlock": {"facing", "kind", "mirrored"},
     # 1.4
@@ -211,7 +216,7 @@ def main():
                        "WayfindingSignBlock", "EntrancePylonBlock", "HelpPointBlock", "BoardingMarkerBlock", "ViaductBraceBlock", "StationStairBlock",
                        "StairEnclosureBlock", "PlatformWindscreenBlock", "PlatformFasciaBlock", "TactileJunctionBlock", "PlatformEdgeCurveBlock",
                        "NoiseBarrierBlock", "FareGateBlock", "CardReaderBlock", "CctvCameraBlock", "LiftStatusPanelBlock", "CurvedScreenDoorBlock", "TrainEdgeBlock",
-                       "CarStopMarkerBlock", "StopBoardBlock"):
+                       "CarStopMarkerBlock", "StopBoardBlock", "GlassBarrierBlock", "BufferStopBlock"):
                 facings = {kv.split("=")[1] for key in state["variants"] for kv in key.split(",") if kv.startswith("facing=")}
                 if facings != {"north", "east", "south", "west"}:
                     problem(f"{block_id}: facings covered {facings}")

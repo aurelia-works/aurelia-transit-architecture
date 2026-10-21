@@ -1,18 +1,33 @@
 {
   "variants": {
-    "facing=north": {
+    "edge=false,facing=north": {
       "model": "aurelia_transit_architecture:block/glass_barrier"
     },
-    "facing=east": {
+    "edge=true,facing=north": {
+      "model": "aurelia_transit_architecture:block/glass_barrier_edge"
+    },
+    "edge=false,facing=east": {
       "model": "aurelia_transit_architecture:block/glass_barrier",
       "y": 90
     },
-    "facing=south": {
+    "edge=true,facing=east": {
+      "model": "aurelia_transit_architecture:block/glass_barrier_edge",
+      "y": 90
+    },
+    "edge=false,facing=south": {
       "model": "aurelia_transit_architecture:block/glass_barrier",
       "y": 180
     },
-    "facing=west": {
+    "edge=true,facing=south": {
+      "model": "aurelia_transit_architecture:block/glass_barrier_edge",
+      "y": 180
+    },
+    "edge=false,facing=west": {
       "model": "aurelia_transit_architecture:block/glass_barrier",
+      "y": 270
+    },
+    "edge=true,facing=west": {
+      "model": "aurelia_transit_architecture:block/glass_barrier_edge",
       "y": 270
     }
   }
