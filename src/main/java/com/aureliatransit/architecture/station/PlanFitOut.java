@@ -184,6 +184,8 @@ abstract class PlanFitOut extends PlanLandmark {
 	static final String CANOPY = "aurelia_transit_architecture:canopy_flat";
 	static final String CANOPY_EDGE = "aurelia_transit_architecture:canopy_edge";
 	static final String CANOPY_LIGHT = "aurelia_transit_architecture:canopy_light";
+	/** The station's name on its facade. */
+	static final String LETTERING = "aurelia_transit_architecture:station_lettering";
 
 	/**
 	 * Every street entrance, the side building's and the terminus head's: a portal of trim round the doorway (posts either
@@ -207,7 +209,6 @@ abstract class PlanFitOut extends PlanLandmark {
 	void entrance(Front f, int x0, int half) {
 		final StylePalette.Building b = palette.building();
 		final LocalDir out = f.dir(PlanLandmark.Dir.OUT);
-		final LocalDir right = f.dir(PlanLandmark.Dir.RIGHT);
 		final int door = StationGeometry.DOOR_HEIGHT;
 		// the portal: posts either side of the doorway, a lintel over it, on the wall
 		for (int x = x0 - half - 1; x <= x0 + half + 1; x++) {
@@ -227,12 +228,14 @@ abstract class PlanFitOut extends PlanLandmark {
 		if (!spec.name().isEmpty()) {
 			for (int x = x0 - half; x <= x0 + half; x++) {
 				if (taken(f.u(x, 0), CANOPY_Y + 1, f.v(x, 0))) {
-					// a fixture, not a platform name sign: the platform sign rules (one row, on a floor) are not about this one
-					putText(Role.FIXTURE, f.u(x, -1), CANOPY_Y + 1, f.v(x, -1), out, palette.blockId(Role.NAME_SIGN), spec.name());
+					// lettering fixed flat to the wall, not the operator's platform name board on its legs (Jah, 10-22: that
+					// belongs inside); a fixture, so the platform sign rules (one row, on a floor) are not about it
+					putText(Role.FIXTURE, f.u(x, -1), CANOPY_Y + 1, f.v(x, -1), out, LETTERING, spec.name());
 				}
 			}
-			// the pylon beside the ramps, facing along the street wall towards the doors, on a paved footing
-			final int x = x0 + half + 3;
+			// the pylon right beside the canopy's end, its faces to the street, on a paved footing (Jah, 10-22: it stood a
+			// cell further off and turned along the wall)
+			final int x = x0 + half + 2;
 			final int u = f.u(x, -CANOPY_DEPTH);
 			final int v = f.v(x, -CANOPY_DEPTH);
 			if (onSite(f, x) && !taken(u, StationGeometry.PLATFORM_Y, v) && !taken(u, 1, v) && !taken(u, 2, v)) {
@@ -240,8 +243,8 @@ abstract class PlanFitOut extends PlanLandmark {
 				for (int z = -1; z >= -CANOPY_DEPTH; z--) {
 					put(Role.FLOOR, f.u(x, z), StationGeometry.PLATFORM_Y, f.v(x, z), out, b.plinth());
 				}
-				putText(Role.FIXTURE, u, 1, v, right, PlanUnderground.PYLON, "NONE:" + spec.name());
-				put(Role.FIXTURE, u, 2, v, right, PlanUnderground.PYLON, "half=upper");
+				putText(Role.FIXTURE, u, 1, v, out, PlanUnderground.PYLON, "NONE:" + spec.name());
+				put(Role.FIXTURE, u, 2, v, out, PlanUnderground.PYLON, "half=upper");
 			}
 		}
 	}

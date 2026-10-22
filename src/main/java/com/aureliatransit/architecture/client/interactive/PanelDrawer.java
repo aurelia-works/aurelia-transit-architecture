@@ -8,6 +8,8 @@ import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.text.OrderedText;
+import net.minecraft.text.Style;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Matrix3f;
@@ -53,6 +55,12 @@ public final class PanelDrawer {
 	 * Draws a whole panel (rectangles, then text) at the current face position.
 	 */
 	public static void panel(MatrixStack matrices, VertexConsumerProvider consumers, TextRenderer textRenderer, PanelLayout.Panel panel, int light) {
+		panel(matrices, consumers, textRenderer, panel, light, null);
+	}
+
+	/** As {@link #panel(MatrixStack, VertexConsumerProvider, TextRenderer, PanelLayout.Panel, int)}, its text in {@code font} (null: Minecraft's). */
+	public static void panel(MatrixStack matrices, VertexConsumerProvider consumers, TextRenderer textRenderer, PanelLayout.Panel panel, int light,
+			Identifier font) {
 		if (!panel.rects().isEmpty()) {
 			final VertexConsumer buffer = consumers.getBuffer(RenderLayer.getEntityCutoutNoCull(FILL_TEXTURE));
 			for (final PanelLayout.Rect rect : panel.rects()) {
@@ -60,16 +68,32 @@ public final class PanelDrawer {
 			}
 		}
 		for (final PanelLayout.Label label : panel.labels()) {
-			text(matrices, consumers, textRenderer, label, light);
+			text(matrices, consumers, textRenderer, label, light, font);
 		}
 	}
 
 	public static void text(MatrixStack matrices, VertexConsumerProvider consumers, TextRenderer textRenderer, PanelLayout.Label label, int light) {
+		text(matrices, consumers, textRenderer, label, light, null);
+	}
+
+	/** {@code text} in {@code font}, measured as {@link #width} measures it. */
+	public static OrderedText styled(String text, Identifier font) {
+		return font == null ? OrderedText.styledForwardsVisitedString(text, Style.EMPTY)
+				: OrderedText.styledForwardsVisitedString(text, Style.EMPTY.withFont(font));
+	}
+
+	/** Width of {@code text} in {@code font} (null: Minecraft's), in font units. */
+	public static int width(TextRenderer textRenderer, String text, Identifier font) {
+		return font == null ? textRenderer.getWidth(text) : textRenderer.getWidth(styled(text, font));
+	}
+
+	public static void text(MatrixStack matrices, VertexConsumerProvider consumers, TextRenderer textRenderer, PanelLayout.Label label, int light,
+			Identifier font) {
 		matrices.push();
 		matrices.translate(label.cx() / 16, label.cy() / 16, TEXT_LIFT);
 		final float scale = label.scale() / 16;
 		matrices.scale(scale, -scale, scale);
-		textRenderer.draw(label.text(), -label.widthUnits() / 2F, -GLYPH_CENTER, label.argb(), false, matrices.peek().getPositionMatrix(), consumers,
+		textRenderer.draw(styled(label.text(), font), -label.widthUnits() / 2F, -GLYPH_CENTER, label.argb(), false, matrices.peek().getPositionMatrix(), consumers,
 				TextRenderer.TextLayerType.POLYGON_OFFSET, 0, light);
 		matrices.pop();
 	}

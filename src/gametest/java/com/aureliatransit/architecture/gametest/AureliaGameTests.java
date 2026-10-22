@@ -3,10 +3,13 @@ package com.aureliatransit.architecture.gametest;
 import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.block.SignPoleBlock;
 import com.aureliatransit.architecture.block.TextSignBlock;
+import com.aureliatransit.architecture.block.mtr.MtrFareContract;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.block.wayfinding.CarStopBlock;
 import com.aureliatransit.architecture.gametest.Fixtures.Entry;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
+import com.aureliatransit.architecture.station.Heading;
+import com.aureliatransit.architecture.station.world.BlockStateResolver;
 import com.aureliatransit.architecture.text.SignData;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -92,7 +95,7 @@ public class AureliaGameTests implements FabricGameTest {
 			Map.entry("composition_board", "TextSignBlock"), Map.entry("bus_stop_sign", "TextSignBlock"), Map.entry("tram_stop_sign", "TextSignBlock"),
 			Map.entry("psd_text_panel", "TextSignBlock"), Map.entry("stand_back_sign", "TextSignBlock"),
 			Map.entry("dutch_station_sign", "TextSignBlock"), Map.entry("dutch_platform_sign", "TextSignBlock"),
-			Map.entry("german_station_sign", "TextSignBlock"),
+			Map.entry("german_station_sign", "TextSignBlock"), Map.entry("station_lettering", "TextSignBlock"),
 			Map.entry("ns_station_sign", "TextSignBlock"), Map.entry("db_station_sign", "TextSignBlock"), Map.entry("gvb_station_sign", "TextSignBlock"), Map.entry("underground_station_sign", "TextSignBlock"), Map.entry("national_rail_station_sign", "TextSignBlock"),
 			Map.entry("sbahn_station_sign", "TextSignBlock"), Map.entry("sbb_station_sign", "TextSignBlock"), Map.entry("jr_station_sign", "TextSignBlock"),
 			// LiftStatusPanelBlock extends TextSignBlock: lift name and levels
@@ -397,6 +400,37 @@ public class AureliaGameTests implements FabricGameTest {
 			problems.add("expected at least the 3 car stop boards, found " + boards);
 		}
 		failIfAny(problems, "car stop boards");
+		context.complete();
+	}
+
+	/**
+	 * A ticket machine built the way the station builder places it (lower half, then upper, from the plan's states) answers a
+	 * right-click on its screen (upper half) exactly as on its ledge (Jah, 10-22: "top half did nothing").
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void ticketMachineAnswersOnBothHalves(TestContext context) {
+		final ServerPlayerEntity player = Fixtures.player(context, Direction.NORTH);
+		final List<String> problems = new ArrayList<>();
+		final Block machine = Fixtures.block("ticket_vending_machine").block();
+		final BlockPos lower = new BlockPos(3, 2, 3);
+		context.setBlockState(lower.down(), Blocks.STONE);
+		final BlockState base = BlockStateResolver.state(machine, Heading.SOUTH);
+		context.getWorld().setBlockState(context.getAbsolutePos(lower), BlockStateResolver.withState(base, "half=lower"), Block.NOTIFY_ALL);
+		context.getWorld().setBlockState(context.getAbsolutePos(lower.up()), BlockStateResolver.withState(base, "half=upper"), Block.NOTIFY_ALL);
+		if (!context.getBlockState(lower).isOf(machine) || !context.getBlockState(lower.up()).isOf(machine)
+				|| context.getBlockState(lower.up()).get(Properties.DOUBLE_BLOCK_HALF) != DoubleBlockHalf.UPPER) {
+			problems.add("built machine is " + describe(context.getBlockState(lower)) + " / " + describe(context.getBlockState(lower.up())));
+		}
+		for (final ItemStack hand : new ItemStack[]{ItemStack.EMPTY, player.getStackInHand(Hand.MAIN_HAND).copy()}) {
+			player.setStackInHand(Hand.MAIN_HAND, hand);
+			final ActionResult low = use(context, player, lower);
+			final ActionResult high = use(context, player, lower.up());
+			if (low != high || low == ActionResult.PASS && MtrFareContract.available()) {
+				problems.add("hand " + hand + ": ledge " + low + ", screen " + high + " (fares " + MtrFareContract.available() + ")");
+			}
+		}
+		Fixtures.removePlayer(context, player);
+		failIfAny(problems, "ticket machine");
 		context.complete();
 	}
 

@@ -44,6 +44,14 @@ public final class StationBlocksOperators {
 	public static final Block JR_STATION_SIGN = ModBlocks.register("jr_station_sign", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
 			new TextSignBlock(ModBlocks.metal().luminance(state -> 6), layout(SignStyle.OPERATOR_JR), SHAPE), TIP_EDITABLE, TIP_JOINS);
 
+	/**
+	 * A station's name in letters on its facade (Jah, 10-22: the platform name board on the front looked out of place): a
+	 * dark band fixed flat to the wall with white letters, joining along a row like the name signs. No legs, one face.
+	 */
+	public static final Block STATION_LETTERING = ModBlocks.register("station_lettering", BlockFamily.SIGNAGE, RenderKind.CUTOUT,
+			new TextSignBlock(ModBlocks.metal().luminance(state -> 8), new TextLayout(8F, 8, 16, 14.5F, -1F, true, SignStyle.STATION_LETTERING),
+					box(0, 3, 14.5, 16, 13, 16)), TIP_EDITABLE, TIP_JOINS);
+
 	private static TextLayout layout(SignStyle style) {
 		return new TextLayout(11.5F, 8, 16, 6.5F, 9.5F, true, style, MARK);
 	}

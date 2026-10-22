@@ -244,6 +244,7 @@
     "aurelia_transit_architecture:uk_hardwood_canopy",
     "aurelia_transit_architecture:uk_hardwood_canopy_fascia",
     "aurelia_transit_architecture:buffer_stop",
-    "aurelia_transit_architecture:heritage_buffer_stop"
+    "aurelia_transit_architecture:heritage_buffer_stop",
+    "aurelia_transit_architecture:station_lettering"
   ]
 }

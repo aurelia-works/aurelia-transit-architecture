@@ -320,13 +320,38 @@ abstract class PlanState {
 		return tallFixture(u, y, v, front, TICKET_MACHINE);
 	}
 
+	static final String KIOSK = "aurelia_transit_architecture:passenger_info_kiosk";
+
+	/**
+	 * The passenger information kiosk, two high. Against a wall it is pushed back flush to it: centred in its cell it stood a
+	 * quarter block off the wall and looked unattached (Jah, 10-22). False if either cell is taken.
+	 */
+	boolean kiosk(int u, int y, int v, LocalDir front) {
+		final PlannedBlock wall = cells.get(new Cell(u - dU(front), y, v - dV(front)));
+		final boolean flush = wall != null && (wall.role() == Role.WALL || wall.role() == Role.WINDOW || wall.role() == Role.COLUMN);
+		return tallFixture(u, y, v, front, KIOSK, flush ? ",offset=flush_back" : "");
+	}
+
+	private static int dU(LocalDir dir) {
+		return dir == LocalDir.PLUS_U ? 1 : dir == LocalDir.MINUS_U ? -1 : 0;
+	}
+
+	private static int dV(LocalDir dir) {
+		return dir == LocalDir.PLUS_V ? 1 : dir == LocalDir.MINUS_V ? -1 : 0;
+	}
+
 	/** A two-high fixture (MTR's ticket machine, the kiosk): both halves or neither, the lower one at {@code y}. */
 	boolean tallFixture(int u, int y, int v, LocalDir front, String blockId) {
+		return tallFixture(u, y, v, front, blockId, "");
+	}
+
+	/** As {@link #tallFixture(int, int, int, LocalDir, String)}, with {@code extra} (",name=value...") on both halves. */
+	boolean tallFixture(int u, int y, int v, LocalDir front, String blockId, String extra) {
 		if (taken(u, y, v) || taken(u, y + 1, v)) {
 			return false;
 		}
-		put(Role.FIXTURE, u, y, v, front, blockId, "half=lower");
-		put(Role.FIXTURE, u, y + 1, v, front, blockId, "half=upper");
+		put(Role.FIXTURE, u, y, v, front, blockId, "half=lower" + extra);
+		put(Role.FIXTURE, u, y + 1, v, front, blockId, "half=upper" + extra);
 		return true;
 	}
 

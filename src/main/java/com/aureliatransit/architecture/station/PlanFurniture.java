@@ -287,28 +287,20 @@ abstract class PlanFurniture extends PlanRoofs {
 		}
 		// information kiosk on the unpaid side, against the street wall beside the machines (or by the entrance)
 		for (final int v : new int[]{vEntr - h - 5, vEntr - h - 2}) {
-			if (v >= vS + 1 && v <= vE - 1 && tallFixture(uS + 1, 1, v, LocalDir.PLUS_U, "aurelia_transit_architecture:passenger_info_kiosk")) {
+			if (v >= vS + 1 && v <= vE - 1 && kiosk(uS + 1, 1, v, LocalDir.PLUS_U)) {
 				break;
 			}
 		}
-		// benches in the paid hall and on the unpaid side (only with furniture, only inside the building)
-		if (spec.furniture()) {
-			if (vEntr + h + 5 >= vS + 1 && vEntr + h + 5 <= vE - 1) {
-				put(Role.BENCH, uS + 2, 1, vEntr + h + 5, LocalDir.PLUS_V, b.bench());
-			}
-			if (vEntr - h - 5 >= vS + 1 && vEntr - h - 5 <= vE - 1) {
-				put(Role.BENCH, uP - 2, 1, vEntr - h - 5, LocalDir.MINUS_V, b.bench());
-			}
-			// upstairs, seats only in the waiting room: single benches dotted along the upper floor looked random (Enviro, 10-20)
-			waitingRoom(b);
+		// no single benches on the ground floor: one seat by the lift or the gates looked dropped there (Jah, 10-22);
+		// upstairs, seats only in the waiting area (Enviro, 10-20)
+		// a building with no upstairs waiting area gets a row of seats against a wall of the paid hall instead
+		if (spec.furniture() && waitingRoom(b) == null) {
+			seatRow(uS, uP, vS, vE, vEntr, b);
 		}
 		// clock above the entrance, facing into the hall
 		put(Role.FIXTURE, uS + 1, 4, vEntr, LocalDir.PLUS_U, "aurelia_transit_architecture:wall_digital_clock");
-		// MTR's station name over the street door and its tactile map inside beside it
-		for (int v = vEntr - h; v <= vEntr + h; v++) {
-			put(Role.FIXTURE, uS - 1, MTR_NAME_Y, v, LocalDir.MINUS_U, StylePalette.MTR_STATION_NAME);
-		}
-		tallFixture(uS + 1, 1, vEntr - h - 1, LocalDir.PLUS_U, StylePalette.MTR_TACTILE_MAP);
+		// no MTR name board over the door (the entrance's own lettering names it) and no MTR tactile map, which plays music
+		// to anyone near it (Jah, 10-22)
 		// departure boards on both end walls, facing into the hall
 		// (with wings the end walls are open there, so the ground-floor boards hang only where a wall is behind them)
 		if (cells.containsKey(new Cell((uS + uP) / 2, 2, vS))) {
@@ -321,12 +313,53 @@ abstract class PlanFurniture extends PlanRoofs {
 				"aurelia_transit_architecture:concourse_board");
 	}
 
+	/** Seats in a {@link #seatRow} row, a bin at its far end. */
+	static final int SEAT_ROW = 3;
+
 	/**
-	 * The upstairs waiting room: the end bay away from the inner stair, closed off by a glass partition with one doorway,
-	 * with benches along both long walls, bins in the far corners, a departure board on the end wall and a hanging clock.
-	 * Only when the bay is clear of the stair and the footbridge doorway (buildings of three bays or more).
+	 * A row of {@link #SEAT_ROW} seats and a bin against the paid hall's platform wall, else its street-side gate line, as far
+	 * from the entrance as there is a clear run with walking room in front of it, the cells beside the lift kept free.
+	 * True if placed.
+	 */
+	boolean seatRow(int uS, int uP, int vS, int vE, int vEntr, StylePalette.Building b) {
+		final StationLayout.Lift lift = site.buildingLift(layout);
+		final int y = StationGeometry.WALK_Y;
+		final List<Integer> order = new ArrayList<>();
+		for (int v = vS + 1; v <= vE - 1; v++) {
+			order.add(v);
+		}
+		order.sort(Comparator.comparingInt((Integer v) -> -Math.abs(v - vEntr)).thenComparingInt(v -> v));
+		for (final int[] side : new int[][]{{uP - 1, -1}, {uS + 5, 1}}) {
+			final int u = side[0];
+			final LocalDir front = side[1] < 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+			for (final int start : order) {
+				final int dir = start < vEntr ? 1 : -1;
+				boolean clear = true;
+				for (int i = 0; i <= SEAT_ROW && clear; i++) {
+					final int v = start + dir * i;
+					clear = v > vS && v < vE && !taken(u, y, v) && !taken(u, y + 1, v) && !taken(u + side[1], y, v)
+							&& (lift == null || v < lift.vMin() - 1 || v > lift.vMax() + 1);
+				}
+				if (!clear) {
+					continue;
+				}
+				for (int i = 0; i < SEAT_ROW; i++) {
+					put(Role.BENCH, u, y, start + dir * i, front, b.bench());
+				}
+				put(Role.BIN, u, y, start + dir * SEAT_ROW, front, palette.blockId(Role.BIN));
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * The upstairs waiting area: the end bay away from the inner stair, open to the rest of the floor (no partition: Jah,
+	 * 10-22, "the wall is supposed to be removed"), with benches along both long walls, bins in the far corners, a departure
+	 * board on the end wall and a hanging clock. Only when the bay is clear of the stair and the footbridge doorway (buildings
+	 * of three bays or more).
 	 *
-	 * @return the room's lowest and highest v including the partition, or null when there is no room
+	 * @return the area's lowest and highest v, the open side's row included, or null when there is no room
 	 */
 	int[] waitingRoom(StylePalette.Building b) {
 		final int uS = streetWall();
@@ -346,15 +379,8 @@ abstract class PlanFurniture extends PlanRoofs {
 		}
 		final int door = (uS + uP) / 2;
 		final int y = StationGeometry.UPPER_WALK_Y;
-		// the board and clock face from the end wall towards the doorway
+		// the board and clock face from the end wall towards the open side
 		final LocalDir towardDoor = atStart ? LocalDir.PLUS_V : LocalDir.MINUS_V;
-		keepClear(door, y, partition);
-		keepClear(door, y + 1, partition);
-		for (int u = uS + 1; u <= uP - 1; u++) {
-			for (int h = y; h < StationGeometry.BUILDING_ROOF_Y; h++) {
-				put(Role.WINDOW, u, h, partition, towardDoor, WAITING_ROOM_GLASS);
-			}
-		}
 		for (int v = lo; v <= hi; v++) {
 			final boolean corner = v == endWall;
 			put(corner ? Role.BIN : Role.BENCH, uS + 1, y, v, LocalDir.PLUS_U, corner ? palette.blockId(Role.BIN) : b.bench());

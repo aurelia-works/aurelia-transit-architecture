@@ -1,0 +1,7 @@
+{
+  "providers": [
+    {"type": "space", "advances": {" ": 2.5}},
+    {"type": "ttf", "file": "aurelia_transit_architecture:hind_semibold.ttf", "size": 10.0, "oversample": 8.0, "shift": [0.0, 1.0], "skip": " "},
+    {"type": "reference", "id": "minecraft:default"}
+  ]
+}

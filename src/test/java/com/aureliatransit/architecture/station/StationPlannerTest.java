@@ -935,7 +935,7 @@ class StationPlannerTest {
 	}
 
 	@Test
-	void largeBuildingsHaveAnUpstairsWaitingRoom() {
+	void largeBuildingsHaveAnUpstairsWaitingArea() {
 		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(96)
 				.building(BuildingStyle.AMSTERDAM).build();
 		final StationPlan plan = plan(spec);
@@ -944,11 +944,8 @@ class StationPlannerTest {
 		final int uP = site.platformWall(plan.layout());
 		final int partition = site.vStart() + StationGeometry.BAY; // the stair runs towards vEnd, so the room is at vStart
 		assertTrue(site.innerStairSide() > 0);
-		final List<PlannedBlock> glass = plan.blocks().stream().filter(b -> b.blockId().endsWith(":glass_wall")).toList();
-		final int door = (uS + uP) / 2;
-		assertEquals((uP - uS - 1) * StationGeometry.UPPER_HEADROOM - 2, glass.size(), "partition minus a two-high doorway");
-		assertTrue(glass.stream().allMatch(b -> b.v() == partition && b.y() >= StationGeometry.UPPER_WALK_Y));
-		assertTrue(glass.stream().noneMatch(b -> b.u() == door && b.y() < StationGeometry.UPPER_WALK_Y + 2), "the doorway is blocked");
+		// open to the rest of the floor: no glass wall across the bay (Jah, 10-22)
+		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":glass_wall")));
 		final long seats = blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.UPPER_WALK_Y && b.v() > site.vStart() && b.v() < partition).count();
 		assertEquals(2 * (StationGeometry.BAY - 2), seats);
 		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":hanging_digital_clock") && b.v() < partition));
@@ -1286,26 +1283,6 @@ class StationPlannerTest {
 		assertTrue(top(mumbai, "minecraft:cut_sandstone") > top(plans.get("mumbai city"), "minecraft:cut_sandstone"), "taller at grand size");
 		assertTrue(count(mumbai, "minecraft:brick_stairs") > 20, "a red tile roof");
 		assertTrue(count(mumbai, "minecraft:smooth_red_sandstone") > 5, "banded pointed arches");
-	}
-
-	/**
-	 * Every street door gets MTR's station name panel, three cells over the doorway on the street side, and MTR's tactile map
-	 * just inside: on a terminus head building and on a building beside the tracks.
-	 */
-	@Test
-	void streetDoorsCarryMtrNameAndTactileMap() {
-		final StationPlan head = plan(StationDescriptionParser.parse("four track utrecht terminus, two island platforms, 96 long, city building").spec());
-		final int front = head.layout().headEnd();
-		assertEquals(5, head.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME) && b.v() == front + 1
-				&& b.front() == LocalDir.PLUS_V).count());
-		assertEquals(2, count(head, StylePalette.MTR_TACTILE_MAP));
-		final StationPlan side = plan(StationDescriptionParser.parse("two track station with a station building, side platforms, 96 long").spec());
-		assertEquals(5, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_STATION_NAME)
-				&& b.u() == StationLayout.streetWall() - 1 && b.front() == LocalDir.MINUS_U).count());
-		assertEquals(2, side.blocks().stream().filter(b -> b.blockId().equals(StylePalette.MTR_TACTILE_MAP)).count());
-		for (final StationPlan plan : List.of(head, side)) {
-			assertEquals(List.of(), LayoutValidator.validate(plan));
-		}
 	}
 
 	/**

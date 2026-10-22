@@ -116,7 +116,7 @@ abstract class PlanConcourse extends PlanHead {
 		}
 		// on the paid side: the kiosk against a side wall where passengers wait, a help point by the gates
 		final int clearOfGallery = gallery > 0 ? gallery + 1 : 1;
-		tallFixture(u1 - clearOfGallery, 1, gateV - 2, LocalDir.MINUS_U, "aurelia_transit_architecture:passenger_info_kiosk");
+		kiosk(u1 - clearOfGallery, 1, gateV - 2, LocalDir.MINUS_U);
 		if (door + half + 2 < u1) {
 			put(Role.WALL, door + half + 2, StationGeometry.WALK_Y, gateV - 1, LocalDir.MINUS_V, b.trim());
 			put(Role.FIXTURE, door + half + 2, StationGeometry.WALK_Y + 1, gateV - 1, LocalDir.MINUS_V, HELP_POINT);
@@ -125,11 +125,8 @@ abstract class PlanConcourse extends PlanHead {
 		if (spec.furniture()) {
 			concourseSeats(u0 + clearOfGallery + 1, u1 - clearOfGallery - 1, door, vL, gateV, b);
 		}
-		// MTR's station name over the street door and its tactile map inside beside it
-		for (int u = door - headEntranceHalf(); u <= door + headEntranceHalf(); u++) {
-			put(Role.FIXTURE, u, MTR_NAME_Y, vE + 1, LocalDir.PLUS_V, StylePalette.MTR_STATION_NAME);
-		}
-		tallFixture(door + headEntranceHalf() + 1, 1, vE - 1, LocalDir.MINUS_V, StylePalette.MTR_TACTILE_MAP);
+		// no MTR name board over the door (the entrance's own lettering names it) and no MTR tactile map, which plays music
+		// to anyone near it (Jah, 10-22)
 	}
 
 	/**

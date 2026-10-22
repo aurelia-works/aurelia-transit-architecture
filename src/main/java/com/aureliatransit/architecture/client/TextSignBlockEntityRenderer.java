@@ -21,12 +21,15 @@ import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.world.World;
 
+import java.util.EnumMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 
 /**
@@ -87,7 +90,8 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 				cached.primary = primary;
 				cached.status = status;
 				final float width = (layout.joins() ? rowLength * 16 - JOIN_MARGIN : layout.width()) - layout.textInset();
-				cached.panel = SignPanels.layout(data, primary, layout.style(), status, width, layout.height(), s -> textRenderer.getWidth(s));
+				final Identifier font = font(layout.style());
+				cached.panel = SignPanels.layout(data, primary, layout.style(), status, width, layout.height(), s -> PanelDrawer.width(textRenderer, s, font));
 			}
 		}
 		if (cached.panel.isEmpty()) {
@@ -108,14 +112,22 @@ public class TextSignBlockEntityRenderer implements BlockEntityRenderer<TextSign
 		matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-90F * Shapes.quarterTurns(state.get(TextSignBlock.FACING))));
 		matrices.translate(-0.5, 0, -0.5);
 		PanelDrawer.beginFace(matrices, centerX, layout.centerY(), layout.frontZ(), true);
-		PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight);
+		final Identifier font = font(layout.style());
+		PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight, font);
 		PanelDrawer.endFace(matrices);
 		if (layout.doubleSided()) {
 			PanelDrawer.beginFace(matrices, backCenterX, layout.centerY(), layout.backZ(), false);
-			PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight);
+			PanelDrawer.panel(matrices, vertexConsumers, textRenderer, cached.panel, textLight, font);
 			PanelDrawer.endFace(matrices);
 		}
 		matrices.pop();
+	}
+
+	private static final Map<SignStyle, Optional<Identifier>> FONTS = new EnumMap<>(SignStyle.class);
+
+	/** The style's font as an id, null for Minecraft's own. */
+	private static Identifier font(SignStyle style) {
+		return FONTS.computeIfAbsent(style, s -> Optional.ofNullable(s.font()).map(Identifier::new)).orElse(null);
 	}
 
 	/**

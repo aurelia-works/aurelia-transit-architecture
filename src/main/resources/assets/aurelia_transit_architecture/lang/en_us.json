@@ -57,6 +57,7 @@
   "block.aurelia_transit_architecture.dutch_platform_sign": "Dutch Platform Sign",
   "block.aurelia_transit_architecture.dutch_station_sign": "Dutch Station Sign",
   "block.aurelia_transit_architecture.ns_station_sign": "NS Station Sign",
+  "block.aurelia_transit_architecture.station_lettering": "Station Lettering",
   "block.aurelia_transit_architecture.db_station_sign": "DB Station Sign",
   "block.aurelia_transit_architecture.gvb_station_sign": "GVB Station Sign",
   "block.aurelia_transit_architecture.underground_station_sign": "Underground Station Sign",

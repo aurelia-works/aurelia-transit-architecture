@@ -1224,7 +1224,7 @@
 	// The preview at a time of day, as the game draws it: plain (Minecraft's flat light, dark at night but for the blocks
 	// that give light) or with shaders (sun and shadows, a sky, a glow round every light). Off ("Studio") is the plain
 	// backdrop. Shaders cost a shadow map, so they are only on when asked for.
-	const GLOW = /light|lamp|lantern|glowstone|shroomlight|froglight|pids|screen|board|clock|led_|_led|kiosk|help_point|torch|end_rod|beacon|station_sign|name_sign|wayfinding|exit_sign|roundel/;
+	const GLOW = /light|lamp|lantern|glowstone|shroomlight|froglight|pids|screen|board|clock|led_|_led|kiosk|help_point|torch|end_rod|beacon|station_sign|name_sign|lettering|wayfinding|exit_sign|roundel/;
 	const TIMES = {
 		day: { top: 0x6f9fd8, horizon: 0xc9dcec, tint: 0xffffff, level: 1, sun: [0.45, 1, 0.3], sunColour: 0xfff1dc, sunPower: 1.5,
 			sky: 0xbcd4ff, earth: 0x6b6250, ambient: 0.65, glow: 0 },

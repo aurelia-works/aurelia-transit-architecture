@@ -1,0 +1,78 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/station_lettering",
+    "band": "aurelia_transit_architecture:block/station_lettering"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        3,
+        14.5
+      ],
+      "to": [
+        16,
+        13,
+        16
+      ],
+      "faces": {
+        "north": {
+          "texture": "#band",
+          "uv": [
+            0,
+            3,
+            16,
+            13
+          ]
+        },
+        "south": {
+          "texture": "#band",
+          "uv": [
+            0,
+            3,
+            16,
+            13
+          ],
+          "cullface": "south"
+        },
+        "up": {
+          "texture": "#band",
+          "uv": [
+            0,
+            14.5,
+            16,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#band",
+          "uv": [
+            0,
+            14.5,
+            16,
+            16
+          ]
+        },
+        "west": {
+          "texture": "#band",
+          "uv": [
+            14.5,
+            3,
+            16,
+            13
+          ]
+        },
+        "east": {
+          "texture": "#band",
+          "uv": [
+            0,
+            3,
+            1.5,
+            13
+          ]
+        }
+      }
+    }
+  ]
+}

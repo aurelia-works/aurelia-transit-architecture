@@ -44,7 +44,14 @@ public enum SignStyle {
 	/** Operator station sign, SBB: white on Swiss station blue. */
 	OPERATOR_SBB(true, true, true, true, false, false, 0xFFFFFFFF, 0xFFCAD6E8),
 	/** Operator station sign, JR East: black on white. */
-	OPERATOR_JR(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52);
+	OPERATOR_JR(true, true, true, true, false, false, 0xFF141414, 0xFF4A4D52),
+	/** A station's name in letters on its facade (Jah, 10-22): white letters on a dark band fixed to the wall, no legs. */
+	STATION_LETTERING(false, false, false, true, false, false, 0xFFFFFFFF, 0xFFDDE6F0);
+
+	/** Font of the Dutch operators' signs and the facade lettering: Hind, an open humanist sans close to NS Sans. */
+	public static final String FONT_DUTCH = "aurelia_transit_architecture:operator_ns";
+	/** Font of the German signs: Barlow, an open face close to the DIN lettering on DB station signs. */
+	public static final String FONT_GERMAN = "aurelia_transit_architecture:operator_db";
 
 	public static final int MAX_ROUTES = 4;
 
@@ -99,5 +106,17 @@ public enum SignStyle {
 
 	public int secondaryColor() {
 		return secondaryColor;
+	}
+
+	/**
+	 * The font this style's text is drawn in (a font id under assets/.../font), or null for Minecraft's own. The operators'
+	 * real faces (NS Sans, DB Type) are licensed, so the signs use open look-alikes shipped with their licences.
+	 */
+	public String font() {
+		return switch (this) {
+			case OPERATOR_NS, OPERATOR_GVB, DUTCH_STATION, DUTCH_PLATFORM, STATION_LETTERING -> FONT_DUTCH;
+			case OPERATOR_DB, OPERATOR_SBAHN, GERMAN_STATION -> FONT_GERMAN;
+			default -> null;
+		};
 	}
 }
