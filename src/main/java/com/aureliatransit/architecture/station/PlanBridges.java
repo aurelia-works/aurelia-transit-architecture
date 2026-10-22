@@ -407,6 +407,7 @@ abstract class PlanBridges extends PlanConcourse {
 	static final String HALL_ROOF = ata("utrecht_hall_roof");
 	static final String HALL_RISER = "minecraft:gray_concrete";
 	static final String HALL_EDGE = ata("metro_steel_cladding");
+	static final String HALL_BEAM_RISER = "minecraft:white_concrete";
 	static final String HALL_LIGHT = ata("utrecht_hall_beam");
 	static final String HALL_SKYLIGHT = ata("canopy_skylight");
 	static final String HALL_GLASS = ata("utrecht_hall_glass_facade");
@@ -448,14 +449,16 @@ abstract class PlanBridges extends PlanConcourse {
 			final int i = u - from;
 			for (int v = wallLo; v <= wallHi; v++) {
 				final boolean edge = v == wallLo || v == wallHi || u == from || u == to;
-				for (int y = low[i]; y < surface[i]; y++) {
-					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, edge ? HALL_EDGE : HALL_RISER);
-				}
 				// dark steel with a silver rim; inside, lit beams across every bay and a grid of skylights between them
 				final int bay = Math.floorMod(v - vB, HALL_LIGHTS);
+				for (int y = low[i]; y < surface[i]; y++) {
+					// white where a beam climbs a step, so it follows the wave unbroken
+					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, edge ? HALL_EDGE : bay == 0 ? HALL_BEAM_RISER : HALL_RISER);
+				}
 				final String panel = edge ? HALL_EDGE : bay == 0 ? HALL_LIGHT
 						: bay >= 3 && bay <= 5 && Math.floorMod(i, 5) >= 1 && Math.floorMod(i, 5) <= 2 ? HALL_SKYLIGHT : HALL_ROOF;
-				put(Role.BUILDING_ROOF, u, surface[i], v, panel.equals(HALL_LIGHT) ? LocalDir.PLUS_U : LocalDir.PLUS_V, panel);
+				// facing along the tracks, as every roof cell: the beam's lit strip then runs across them, with the waves
+				put(Role.BUILDING_ROOF, u, surface[i], v, LocalDir.PLUS_V, panel);
 			}
 			// the long walls, glass up to the roof
 			for (int y = floor; y < low[i]; y++) {

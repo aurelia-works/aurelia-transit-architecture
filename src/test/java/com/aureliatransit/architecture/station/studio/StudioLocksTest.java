@@ -69,4 +69,21 @@ class StudioLocksTest {
 		assertEquals(com.aureliatransit.architecture.station.CanopyShape.FLAT, parse.spec().canopy());
 		assertEquals(java.util.List.of(), parse.ignored());
 	}
+
+	@Test
+	void wordsThatNameARealStationBeatWhateverThePageHadPinned() {
+		// two fresh pages of Jah's 10-22 test: the dice had pinned Milan + Paris, gable canopies and a compact building, or a hub
+		final StudioApi api = new StudioApi(new BlockModels(OWN_ASSETS));
+		final String jah = "10 track utrecht station, 200 long, named hi, stairs both ways andesite track bed, seed tmptnb";
+		final Map<String, String> mixed = new HashMap<>(Map.ofEntries(Map.entry("text", jah), Map.entry("mode", "through"), Map.entry("layout", "SIDE"),
+				Map.entry("tracks", "4"), Map.entry("length", "48"), Map.entry("look", "MILAN"), Map.entry("mix", "PARIS"), Map.entry("roof", "GABLE"),
+				Map.entry("building", "1"), Map.entry("size", "COMPACT"), Map.entry("bed", "andesite"), Map.entry("class", "auto"), Map.entry("era", "auto"),
+				Map.entry("pinned", "look,mix,era,mode,tracks,length,layout,building,size,roof,esc,walls,trav,bed,class"), Map.entry("seed", "u34zpj")));
+		final Map<String, String> hub = new HashMap<>(mixed);
+		hub.putAll(Map.of("mode", "hub", "look", "UTRECHT", "mix", "", "roof", "AUTO"));
+		for (final Map<String, String> q : java.util.List.of(mixed, hub)) {
+			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
+			assertEquals("Utrecht Centraal, 10 tracks, 200 long", plan.get("title"), q.toString());
+		}
+	}
 }

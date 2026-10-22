@@ -162,6 +162,9 @@ public final class StudioApi {
 		return pinned;
 	}
 
+	/** The controls a real station fixes itself: its look, through tracks, hall or shed, and island platforms. */
+	static final List<String> REAL_FIXES = List.of("look", "mode", "building", "size", "roof", "layout");
+
 	/** The pinned controls the typed words set themselves, and so overrule (sorted, for the page's note). */
 	public static List<String> wordsWon(Map<String, String> q) {
 		final String words = q.getOrDefault("text", "").strip();
@@ -174,7 +177,19 @@ public final class StudioApi {
 			asked.add(part.strip().equals("mix") ? "look" : part.strip());
 		}
 		final List<String> won = new ArrayList<>();
+		// words that name a real station ("utrecht station") set what it really is, so a pinned second city, hub, building, roof
+		// or side platforms cannot turn it back into a station of the player's own (Jah 10-22; the dice pin some on a fresh page)
+		if (StationDescriptionParser.parse(words).spec().real() != RealStation.NONE) {
+			for (final String key : REAL_FIXES) {
+				if (asked.contains(key)) {
+					won.add(key);
+				}
+			}
+		}
 		for (final String key : StationDescriptionParser.controlsSaid(words)) {
+			if (won.contains(key)) {
+				continue;
+			}
 			if (asked.contains(key)) {
 				won.add(key);
 			}
