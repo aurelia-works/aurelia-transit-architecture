@@ -402,11 +402,13 @@ abstract class PlanBridges extends PlanConcourse {
 	static final int HALL_FITTINGS = 12;
 	/** Height of a hall's eaves over its floor. */
 	static final int HALL_EAVES = 9;
-	/** Columns between a hall roof's light strips. */
-	static final int HALL_LIGHTS = 6;
-	static final String HALL_ROOF = ata("utrecht_wave_roof_panel");
-	static final String HALL_RISER = ata("metro_steel_cladding");
-	static final String HALL_LIGHT = ata("canopy_light");
+	/** Rows between a hall roof's lit beams, which run across the tracks with the waves (Utrecht Centraal's ceiling). */
+	static final int HALL_LIGHTS = 8;
+	static final String HALL_ROOF = ata("utrecht_hall_roof");
+	static final String HALL_RISER = "minecraft:gray_concrete";
+	static final String HALL_EDGE = ata("metro_steel_cladding");
+	static final String HALL_LIGHT = ata("utrecht_hall_beam");
+	static final String HALL_SKYLIGHT = ata("canopy_skylight");
 	static final String HALL_GLASS = ata("utrecht_hall_glass_facade");
 	static final String HALL_SHAFT = ata("steel_column_round");
 	static final String HALL_CROWN = ata("utrecht_tree_column_white");
@@ -445,11 +447,15 @@ abstract class PlanBridges extends PlanConcourse {
 		for (int u = from; u <= to; u++) {
 			final int i = u - from;
 			for (int v = wallLo; v <= wallHi; v++) {
+				final boolean edge = v == wallLo || v == wallHi || u == from || u == to;
 				for (int y = low[i]; y < surface[i]; y++) {
-					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, HALL_RISER);
+					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, edge ? HALL_EDGE : HALL_RISER);
 				}
-				final boolean light = i % HALL_LIGHTS == HALL_LIGHTS / 2 && v > wallLo && v < wallHi && Math.floorMod(v - vB, 4) == 0;
-				put(Role.BUILDING_ROOF, u, surface[i], v, LocalDir.PLUS_V, light ? HALL_LIGHT : HALL_ROOF);
+				// dark steel with a silver rim; inside, lit beams across every bay and a grid of skylights between them
+				final int bay = Math.floorMod(v - vB, HALL_LIGHTS);
+				final String panel = edge ? HALL_EDGE : bay == 0 ? HALL_LIGHT
+						: bay >= 3 && bay <= 5 && Math.floorMod(i, 5) >= 1 && Math.floorMod(i, 5) <= 2 ? HALL_SKYLIGHT : HALL_ROOF;
+				put(Role.BUILDING_ROOF, u, surface[i], v, panel.equals(HALL_LIGHT) ? LocalDir.PLUS_U : LocalDir.PLUS_V, panel);
 			}
 			// the long walls, glass up to the roof
 			for (int y = floor; y < low[i]; y++) {

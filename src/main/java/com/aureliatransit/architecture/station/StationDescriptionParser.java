@@ -267,6 +267,9 @@ public final class StationDescriptionParser {
 		/** The real station named ("utrecht centraal"), or null. */
 		private RealStation real;
 		private int realAt = -1;
+		/** A city said with "station", "central" or "cs" ("utrecht station"): the real station if nothing else in the words is against it. */
+		private RealStation looseReal;
+		private int looseAt = -1;
 		private boolean escalators;
 		private boolean bothWays;
 		private boolean enclosedStairs;
@@ -1435,6 +1438,11 @@ public final class StationDescriptionParser {
 
 		/** Landmarks, city looks, building and footbridge words; true if the token was used here. */
 		private boolean buildingWord(int i, String token) {
+			if (looseReal == null && RealStation.loosely(token, at(i + 1)) != null) {
+				// "utrecht station" may mean the real one: the city look stands until resolve() sees nothing against the hall
+				looseReal = RealStation.loosely(token, at(i + 1));
+				looseAt = i;
+			}
 			final RealStation named = RealStation.of(token + " " + at(i + 1));
 			if (named != null) {
 				if (real == null) {
@@ -1808,7 +1816,40 @@ public final class StationDescriptionParser {
 		 * the words count the tracks or list the platforms), escalators, its operator and name, Dutch platforms. Words that
 		 * contradict it are dropped with a warning; words it leaves open (length, width, seed) still apply.
 		 */
+		/**
+		 * True when nothing else in the words is against the real station "utrecht station" may mean: no building, roof, shed,
+		 * canopy, style or second look of their own, no terminus, side platforms or tunnel, an even track count and platforms long
+		 * enough for its hall. Otherwise the words keep the city's look on a station of their own, as before.
+		 */
+		private boolean looseFits() {
+			final boolean ownBuilding = Boolean.TRUE.equals(building) && buildingAt != looseAt + 1;
+			final boolean ownBuildingStyle = buildingStyle != null && buildingStyle != CITY_BUILDINGS.get(looseReal.phrase().split(" ")[0]);
+			if (ownBuilding || ownBuildingStyle || looks.size() > 1 || roof != null || shed != null || canopy != null || terminus || hub || mezzanine
+					|| sidePlatforms || tram || undergroundAt >= 0 || Boolean.FALSE.equals(footbridge) || style != null && style != StationStyle.DUTCH
+					|| lengthAdjective != null) {
+				return false;
+			}
+			if (tracks != null && (tracks < 2 || tracks % 2 != 0) || listed.values().stream().anyMatch(p -> p.kind() != PlatformSpec.Kind.ISLAND)) {
+				return false;
+			}
+			return length == null || looseReal.trainShed() || looseReal.hallDepth(StationGeometry.builtLength(length)) > 0;
+		}
+
 		private void applyReal() {
+			if (real == null && looseReal != null && looseFits()) {
+				real = looseReal;
+				realAt = looseAt;
+				// the city word's look and building were the station itself; they go without a warning
+				buildingStyle = null;
+				looks.clear();
+				lookOnlyWord = null;
+				if (tracks != null && listed.isEmpty() && islandPlatforms == null) {
+					for (int number = 1; number <= tracks / 2; number++) {
+						listed.put(number, PlatformSpec.of(PlatformSpec.Kind.ISLAND));
+					}
+				}
+				note(looseAt, "the real " + real.label() + " (say \"" + real.phrase().split(" ")[0] + " style\" for its look on a station of your own)");
+			}
 			if (real == null) {
 				return;
 			}

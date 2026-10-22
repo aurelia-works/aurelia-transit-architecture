@@ -14,6 +14,8 @@ class PlayTestFixesTest {
 
 	/** Jah's plan, word for word. */
 	static final String JAH = "10 track utrecht station, 200 long, named hi, stairs both ways andesite track bed, seed tmptnb";
+	/** The station Jah played on: his words as they read before "utrecht station" meant the real hall, the city's look beside the tracks. */
+	static final String PLAYED = JAH.replace("utrecht station", "utrecht");
 
 	private static StationPlan plan(String text) {
 		return StationPlanner.plan(StationDescriptionParser.parse(text).spec());
@@ -22,6 +24,7 @@ class PlayTestFixesTest {
 	private static List<StationPlan> everyPlan() {
 		final List<StationPlan> plans = new ArrayList<>();
 		plans.add(plan(JAH));
+		plans.add(plan(PLAYED));
 		plans.add(plan("four track utrecht terminus, two island platforms, 96 long, city building"));
 		plans.add(plan("two track station with a station building, side platforms, 96 long"));
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
@@ -63,26 +66,37 @@ class PlayTestFixesTest {
 	}
 
 	@Test
-	void theWaitingAreaHasNoPartition() {
-		final StationPlan plan = plan(JAH);
+	void theWaitingAreaHasNoPartitionAndOneSeatingLayout() {
+		final StationPlan plan = plan(PLAYED);
 		assertEquals(0, plan.blocks().stream().filter(b -> b.blockId().equals(StationPlanner.WAITING_ROOM_GLASS)
 				&& b.y() >= StationGeometry.UPPER_WALK_Y).count(), "the glass wall across the waiting bay");
-		assertTrue(plan.blocks().stream().filter(b -> b.role() == Role.BENCH && b.y() == StationGeometry.UPPER_WALK_Y).count() >= 8,
-				"the waiting area keeps its benches");
+		final List<PlannedBlock> seats = plan.blocks().stream().filter(b -> b.role() == Role.BENCH && b.y() == StationGeometry.UPPER_WALK_Y
+				&& b.u() > StationLayout.streetWall() && b.u() < 23 && b.v() > 85 && b.v() < 115).toList();
+		assertFalse(seats.isEmpty(), "the upper floor has seats");
+		// every seat is in an island of back-to-back benches, none along the side walls as well
+		for (final PlannedBlock seat : seats) {
+			final boolean backToBack = plan.blocks().stream().anyMatch(b -> b.role() == Role.BENCH && b.y() == seat.y() && b.u() == seat.u()
+					&& Math.abs(b.v() - seat.v()) == 1 && b.front() != seat.front());
+			assertTrue(backToBack, "a seat outside the islands: " + seat);
+		}
 	}
 
 	@Test
 	void noLoneBenchOnTheBuildingsGroundFloor() {
-		final StationPlan plan = plan(JAH);
-		// Jah's stray seat stood at u 20, v 92, beside the building's lift and the gates
-		assertFalse(plan.blocks().stream().anyMatch(b -> b.role() == Role.BENCH && b.y() == StationGeometry.WALK_Y
-				&& b.u() > StationLayout.streetWall() && b.u() < 23 && b.v() > 80 && b.v() < 120 && b.u() != 3),
-				"a single bench inside the building");
+		final StationPlan plan = plan(PLAYED);
+		// Jah's stray seat stood at u 20, v 92, beside the building's lift and the gates: seats now come only in rows
+		final List<PlannedBlock> seats = plan.blocks().stream().filter(b -> b.role() == Role.BENCH && b.y() == StationGeometry.WALK_Y
+				&& b.u() > StationLayout.streetWall() && b.u() < 23 && b.v() > 85 && b.v() < 115).toList();
+		for (final PlannedBlock seat : seats) {
+			final long row = seats.stream().filter(b -> b.u() == seat.u() && Math.abs(b.v() - seat.v()) < PlanFurniture.SEAT_ROW).count();
+			assertTrue(row >= PlanFurniture.SEAT_ROW - 1, "a seat on its own: " + seat);
+		}
+		assertFalse(seats.stream().anyMatch(b -> b.u() == 20 && b.v() == 92), "the stray seat by the lift");
 	}
 
 	@Test
 	void theFacadeNameIsLetteringNotAPlatformBoard() {
-		final StationPlan plan = plan(JAH);
+		final StationPlan plan = plan(PLAYED);
 		final List<PlannedBlock> over = plan.blocks().stream().filter(b -> b.y() == PlanFitOut.CANOPY_Y + 1
 				&& b.u() < StationLayout.streetWall() && b.role() == Role.FIXTURE).toList();
 		assertFalse(over.isEmpty(), "a name over the entrance canopy");
@@ -110,7 +124,7 @@ class PlayTestFixesTest {
 
 	@Test
 	void theEntrancePylonStandsBesideTheCanopyFacingTheStreet() {
-		final StationPlan plan = plan(JAH);
+		final StationPlan plan = plan(PLAYED);
 		final List<PlannedBlock> pylons = plan.blocks().stream().filter(b -> b.blockId().equals(PlanUnderground.PYLON) && b.y() == 1).toList();
 		assertEquals(1, pylons.size(), "one pylon at the side entrance");
 		final PlannedBlock pylon = pylons.get(0);
@@ -118,5 +132,36 @@ class PlayTestFixesTest {
 		// the canopy's end is the next cell along the wall
 		assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.BUILDING_ROOF && b.u() == pylon.u()
 				&& Math.abs(b.v() - pylon.v()) == 1 && b.y() == PlanFitOut.CANOPY_Y), "the canopy ends beside it: " + pylon);
+	}
+
+	@Test
+	void utrechtStationIsTheRealHallUnlessTheWordsSayOtherwise() {
+		// "It does not look like Utrecht Central at all": his words gave the city's look on a station of its own
+		final StationSpec jah = StationDescriptionParser.parse(JAH).spec();
+		assertEquals(RealStation.UTRECHT_CENTRAAL, jah.real());
+		assertEquals("hi", jah.name());
+		assertEquals(10, jah.trackCount());
+		assertTrue(StationDescriptionParser.parse(JAH).warnings().isEmpty(), StationDescriptionParser.parse(JAH).warnings().toString());
+		assertEquals(RealStation.UTRECHT_CENTRAAL, StationDescriptionParser.parse("utrecht central").spec().real());
+		assertEquals(RealStation.UTRECHT_CENTRAAL, StationDescriptionParser.parse("utrecht cs, 6 tracks").spec().real());
+		// words of their own keep the look on a station of their own, with no warning about the hall
+		for (final String own : List.of("utrecht", "utrecht style station", "4 tracks utrecht station building 64 long", "2 track utrecht station, 64 long",
+				"utrecht station with canopies", "metro style utrecht station", "four track utrecht terminus", "3 track utrecht station",
+				"utrecht station, side platforms", "hamburg station")) {
+			final ParseResult parsed = StationDescriptionParser.parse(own);
+			assertEquals(RealStation.NONE, parsed.spec().real(), own);
+			assertFalse(parsed.warnings().stream().anyMatch(w -> w.contains("Centraal")), own + ": " + parsed.warnings());
+		}
+	}
+
+	@Test
+	void theStudiosUtrechtCardStaysTheLook() {
+		// the card is the city's look on a station of the player's own; the real hall has its own preset
+		for (final int tracks : new int[]{2, 4, 6}) {
+			final StationRecipe card = new StationRecipe(StationRecipe.Look.UTRECHT, null, false, tracks, StationRecipe.Platforms.AUTO, 96,
+					StationRecipe.Roof.AUTO, true, "", StationRecipe.Size.AUTO, false);
+			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.description()).spec().real(), card.description());
+			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.text("named hi", java.util.Set.of("look"))).spec().real());
+		}
 	}
 }

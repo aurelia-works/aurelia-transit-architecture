@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "aurelia_transit_architecture:block/utrecht_hall_beam"
+    },
+    "facing=east": {
+      "model": "aurelia_transit_architecture:block/utrecht_hall_beam",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "aurelia_transit_architecture:block/utrecht_hall_beam",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "aurelia_transit_architecture:block/utrecht_hall_beam",
+      "y": 270
+    }
+  }
+}

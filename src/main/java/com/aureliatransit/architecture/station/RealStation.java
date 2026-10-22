@@ -207,6 +207,14 @@ public enum RealStation {
 		return hallDepthBlocks() + 2 * HALL_MARGIN;
 	}
 
+	/**
+	 * The real station a city said with "station", "central" or "cs" may mean ("utrecht station", Jah 10-22), or null. Only
+	 * Utrecht: "hamburg station" stays the city's look, as Hamburg Hbf brings a shed and a building of its own.
+	 */
+	public static RealStation loosely(String city, String next) {
+		return city.equals("utrecht") && (next.equals("station") || next.equals("central") || next.equals("cs")) ? UTRECHT_CENTRAAL : null;
+	}
+
 	/** The real station a phrase names, or null. */
 	public static RealStation of(String phrase) {
 		final String p = phrase == null ? "" : phrase.toLowerCase(Locale.ROOT).strip();

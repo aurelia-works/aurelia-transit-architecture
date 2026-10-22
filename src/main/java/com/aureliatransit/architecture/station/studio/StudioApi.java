@@ -349,6 +349,17 @@ public final class StudioApi {
 		return null;
 	}
 
+	/** The city button of a real station: its own city, not the first button that shares its building (Utrecht Centraal lit Tokyo). */
+	static StationRecipe.Look lookOf(RealStation real) {
+		final String city = real.phrase().split(" ")[0];
+		for (final StationRecipe.Look look : StationRecipe.Look.values()) {
+			if (look.words().equals(city)) {
+				return look;
+			}
+		}
+		return null;
+	}
+
 	/** The headline of a station the typed words describe: what they came to, not what the settings above them say. */
 	static String wordsTitle(StationSpec spec) {
 		if (spec.real() != RealStation.NONE) {
@@ -435,7 +446,7 @@ public final class StudioApi {
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
 		// the city button the words came to, so the page's buttons follow what was typed
-		final StationRecipe.Look wordsLook = typed.isEmpty() ? null : lookOf(spec.building());
+		final StationRecipe.Look wordsLook = typed.isEmpty() ? null : spec.real() != RealStation.NONE ? lookOf(spec.real()) : lookOf(spec.building());
 		out.append(",\"wordsLook\":").append(Json.quote(wordsLook == null ? "" : wordsLook.name()));
 		out.append(",\"seed\":").append(Json.quote(StationSeed.format(spec.seed())));
 		out.append(",\"fingerprint\":").append(Json.quote(PlanFingerprint.of(plan)));

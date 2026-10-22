@@ -1,6 +1,8 @@
 package com.aureliatransit.architecture.station.studio;
 
 import com.aureliatransit.architecture.station.BuildingStyle;
+import com.aureliatransit.architecture.station.RealStation;
+import com.aureliatransit.architecture.station.StationRecipe;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.Role;
 import com.aureliatransit.architecture.station.StationPlan;
@@ -27,6 +29,13 @@ class StudioWordsTest {
 		final StationSpec spec = spec("six-track Amsterdam Damn Station");
 		assertEquals(6, spec.trackCount());
 		assertEquals(BuildingStyle.AMSTERDAM, spec.building());
+	}
+
+	@Test
+	void aRealStationLightsItsOwnCity() {
+		// Utrecht Centraal lit the Tokyo button (Jah 10-22)
+		assertEquals(StationRecipe.Look.UTRECHT, StudioApi.lookOf(RealStation.UTRECHT_CENTRAAL));
+		assertEquals(StationRecipe.Look.HAMBURG, StudioApi.lookOf(RealStation.HAMBURG_HBF));
 	}
 
 	@Test

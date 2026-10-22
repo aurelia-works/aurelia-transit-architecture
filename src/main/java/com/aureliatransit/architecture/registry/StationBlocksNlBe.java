@@ -47,7 +47,12 @@ public final class StationBlocksNlBe {
 			new FacingShapedBlock(ModBlocks.metal(), Placement.AWAY_FROM_PLAYER, profile(ModBlocks.WAVE_RISE, 2, false, 4)), TIP_SLOPE);
 	public static final Block UTRECHT_WAVE_ROOF_EDGE = ModBlocks.register("utrecht_wave_roof_edge", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
 			new FacingShapedBlock(ModBlocks.metal(), Placement.AWAY_FROM_PLAYER, WAVE_EDGE));
-	public static final Block UTRECHT_TREE_COLUMN_WHITE = ModBlocks.register("utrecht_tree_column_white", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
+	// the real hall's roof: dark grey steel outside and in, with lit white beams following the waves (Jah 10-22: it was white)
+	public static final Block UTRECHT_HALL_ROOF = ModBlocks.register("utrecht_hall_roof", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
+			new ShapedBlock(ModBlocks.metal(), WAVE_PLATE));
+	public static final Block UTRECHT_HALL_BEAM = ModBlocks.register("utrecht_hall_beam", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
+			new FacingShapedBlock(ModBlocks.metal().luminance(state -> 13), Placement.AWAY_FROM_PLAYER, WAVE_PLATE));
+	public static final Block UTRECHT_TREE_COLUMN_WHITE =ModBlocks.register("utrecht_tree_column_white", BlockFamily.STATIONS_NL_BE, RenderKind.SOLID,
 			new ShapedBlock(ModBlocks.metal(), TREE_COLUMN));
 	public static final Block UTRECHT_HALL_GLASS_FACADE = ModBlocks.register("utrecht_hall_glass_facade", BlockFamily.STATIONS_NL_BE, RenderKind.TRANSLUCENT,
 			new GlassFacingBlock(ModBlocks.glass(), Placement.TOWARD_PLAYER, box(0, 0, 6.5, 16, 16, 9.5)));

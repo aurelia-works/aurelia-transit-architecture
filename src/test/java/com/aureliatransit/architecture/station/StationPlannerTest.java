@@ -935,21 +935,22 @@ class StationPlannerTest {
 	}
 
 	@Test
-	void largeBuildingsHaveAnUpstairsWaitingArea() {
+	void largeBuildingsSeatTheirUpperFloorOnce() {
 		final StationSpec spec = StationSpec.builder().trackCount(2).platformLayout(PlatformLayout.ISLAND).platformLength(96)
 				.building(BuildingStyle.AMSTERDAM).build();
 		final StationPlan plan = plan(spec);
-		final StationLayout site = StationLayout.of(spec, plan.layout());
-		final int uS = StationLayout.streetWall();
-		final int uP = site.platformWall(plan.layout());
-		final int partition = site.vStart() + StationGeometry.BAY; // the stair runs towards vEnd, so the room is at vStart
-		assertTrue(site.innerStairSide() > 0);
-		// open to the rest of the floor: no glass wall across the bay (Jah, 10-22)
+		// open: no glass wall across a bay (Jah, 10-22)
 		assertTrue(plan.blocks().stream().noneMatch(b -> b.blockId().endsWith(":glass_wall")));
-		final long seats = blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.UPPER_WALK_Y && b.v() > site.vStart() && b.v() < partition).count();
-		assertEquals(2 * (StationGeometry.BAY - 2), seats);
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":hanging_digital_clock") && b.v() < partition));
-		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":concourse_board") && b.y() > StationGeometry.UPPER_FLOOR_Y && b.v() < partition));
+		// the concourse fit-out seats the floor in islands of back-to-back benches, not along the walls as well
+		final List<PlannedBlock> upstairs = blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.UPPER_WALK_Y).toList();
+		for (final PlannedBlock seat : upstairs) {
+			assertTrue(upstairs.stream().anyMatch(b -> b.u() == seat.u() && Math.abs(b.v() - seat.v()) == 1 && b.front() != seat.front()),
+					"a seat outside the islands: " + seat);
+		}
+		assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().endsWith(":concourse_board") && b.y() > StationGeometry.UPPER_FLOOR_Y));
+		// and the ground floor has its row of seats
+		assertTrue(blocks(plan, Role.BENCH).stream().filter(b -> b.y() == StationGeometry.WALK_Y
+				&& plan.layout().indoor(b.u(), b.v())).count() >= PlanFurniture.SEAT_ROW);
 		assertEquals(List.of(), LayoutValidator.validate(plan));
 		assertTrue(StationAudit.audit(plan).buildable());
 	}

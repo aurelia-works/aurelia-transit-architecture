@@ -245,6 +245,8 @@
     "aurelia_transit_architecture:uk_hardwood_canopy_fascia",
     "aurelia_transit_architecture:buffer_stop",
     "aurelia_transit_architecture:heritage_buffer_stop",
-    "aurelia_transit_architecture:station_lettering"
+    "aurelia_transit_architecture:station_lettering",
+    "aurelia_transit_architecture:utrecht_hall_roof",
+    "aurelia_transit_architecture:utrecht_hall_beam"
   ]
 }

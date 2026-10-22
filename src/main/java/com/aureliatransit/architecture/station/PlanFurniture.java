@@ -293,8 +293,11 @@ abstract class PlanFurniture extends PlanRoofs {
 		}
 		// no single benches on the ground floor: one seat by the lift or the gates looked dropped there (Jah, 10-22);
 		// upstairs, seats only in the waiting area (Enviro, 10-20)
-		// a building with no upstairs waiting area gets a row of seats against a wall of the paid hall instead
-		if (spec.furniture() && waitingRoom(b) == null) {
+		// upstairs, the concourse fit-out seats a big floor on its own (islands, shops, boards); the wall benches of the old
+		// waiting area beside its islands made two seating layouts in one bay (Jah, 10-22). Without the old waiting area the
+		// ground floor gets a row of seats against a wall of the paid hall, as a small upper floor may fit no islands.
+		final boolean fitOut = site.bridge() && !spec.options().underground();
+		if (spec.furniture() && (fitOut || waitingRoom(b) == null)) {
 			seatRow(uS, uP, vS, vE, vEntr, b);
 		}
 		// clock above the entrance, facing into the hall

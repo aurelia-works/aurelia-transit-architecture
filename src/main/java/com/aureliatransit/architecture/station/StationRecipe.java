@@ -203,7 +203,9 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 			head.add(tracks + " track");
 		}
 		if ((all || pinned.contains("look")) && look != Look.AUTO) {
-			head.add(mix != null ? look.words + " and " + mix.words + " combined" : look.words);
+			// the city's look, not its real station: "utrecht station" alone builds Utrecht Centraal's hall
+			final String city = RealStation.loosely(look.words, "station") != null ? look.words + " style" : look.words;
+			head.add(mix != null ? city + " and " + mix.words + " combined" : city);
 		}
 		if (all || pinned.contains("mode")) {
 			head.add(hub ? "hub" : terminus ? "terminus" : "station");
