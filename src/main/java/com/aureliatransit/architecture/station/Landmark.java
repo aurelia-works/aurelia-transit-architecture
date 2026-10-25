@@ -158,6 +158,13 @@ public final class Landmark {
 			double glazedTo, String truss, String sideWall) {
 	}
 
+	/**
+	 * A sheet may follow its building's size: a side building's length or a head building's width. An x of {@code END - k} stands k cells in from the building's right
+	 * end (as seen from the street) and {@code -END + k} k cells in from its left end, so a sheet's wings and end pavilions
+	 * follow the station's length (Tokyo, West Kowloon's width).
+	 */
+	public static final int END = 10_000;
+
 	/** One piece of a sheet. */
 	public sealed interface Mass permits Volume, Tower, Dome, Arch, Colonnade, Gable, Clock, Pinnacles, Ceiling {
 	}
@@ -222,8 +229,10 @@ public final class Landmark {
 	private final List<String> names;
 	private final List<Mass> masses;
 	private final Shed shed;
+	private final boolean compactOnly;
 
-	private Landmark(String key, Anchor anchor, List<String> names, List<Mass> masses, Shed shed) {
+	private Landmark(String key, Anchor anchor, List<String> names, List<Mass> masses, Shed shed, boolean compactOnly) {
+		this.compactOnly = compactOnly;
 		this.key = key;
 		this.anchor = anchor;
 		this.names = names;
@@ -241,6 +250,17 @@ public final class Landmark {
 
 	public List<Mass> masses() {
 		return masses;
+	}
+
+	/** True when the sheet's wings and end pavilions follow the building's length (see {@link #END}). */
+	public boolean usesEnd() {
+		return masses.stream().anyMatch(m -> m instanceof Volume v && (Math.abs(v.x0()) >= END / 2 || Math.abs(v.x1()) >= END / 2)
+				|| m instanceof Tower t && Math.abs(t.x()) >= END / 2 || m instanceof Dome d && Math.abs(d.x()) >= END / 2);
+	}
+
+	/** True for a small station's sheet, drawn on a compact building only (a bigger one's rooms outgrow its roofs' lights). */
+	public boolean compactOnly() {
+		return compactOnly;
 	}
 
 	/** The train shed's shape and materials, or null to keep the generator's. */
@@ -275,6 +295,7 @@ public final class Landmark {
 		private Skin skin;
 		private Facade facade = new Facade(Window.RECT, 4, 2, 5, 1, 3, 1, 0, false);
 		private Shed shed;
+		private boolean compactOnly;
 
 		private Builder(String key, Anchor anchor, String... names) {
 			this.key = key;
@@ -289,6 +310,11 @@ public final class Landmark {
 
 		public Builder facade(Facade f) {
 			facade = f;
+			return this;
+		}
+
+		public Builder compactOnly() {
+			compactOnly = true;
 			return this;
 		}
 
@@ -386,7 +412,7 @@ public final class Landmark {
 		}
 
 		public Landmark build() {
-			return new Landmark(key, anchor, names, List.copyOf(masses), shed);
+			return new Landmark(key, anchor, names, List.copyOf(masses), shed, compactOnly);
 		}
 	}
 }

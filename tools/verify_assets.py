@@ -82,6 +82,8 @@ EXPECTED_PROPERTIES = {
     # 1.6 platform slabs: vanilla slab models keyed on type only (waterlogged needs no model)
     "SlabBlock": {"type"},
 }
+# Properties only multipart conditions use: a standing display's monitor arm and the nudge that places it on the pole.
+CONDITION_ONLY = {"PidsBlock": {"arm", "offset"}}
 
 ELEMENT_BUDGET = 6  # cuboids per block model; keeps chunk meshing cheap
 BASE_BRANCH = "release/1.3.1"  # models that already existed at its merge base are grandfathered (warning, not failure)
@@ -197,6 +199,8 @@ def main():
                 conditions = part.get("when", {})
                 for clause in conditions.get("AND", conditions.get("OR", [conditions])):
                     used |= set(clause)
+            # properties a multipart part may test on top of the ones every variant covers (a display's monitor arm)
+            expected = expected | CONDITION_ONLY.get(cls, set()) if expected is not None else None
             if expected is not None and not used <= expected:
                 problem(f"{block_id}: multipart conditions use {used - expected} not on {cls}")
             state = None

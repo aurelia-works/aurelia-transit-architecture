@@ -308,6 +308,11 @@ public final class StationDescriptionParser {
 		/** The size came from a landmark (Grand Central is grand), so a size word said after it still wins. */
 		private boolean scaleFromLandmark;
 		private int scaleAt = -1;
+		/**
+		 * The real station the first city word names, said "real frankfurt" (St Pancras, Frankfurt Hbf, Paris Nord, Milano Centrale, Grand Central), or null: with nothing else in the words naming
+		 * the station, its sheet and shed in {@link Landmarks} are built.
+		 */
+		private String cityStationName;
 		private long seed;
 		private String seedText = "";
 		/** "single stairs": one way down to each platform even at a station that would get two. */
@@ -1194,6 +1199,9 @@ public final class StationDescriptionParser {
 					return false;
 				case "new":
 					if (next.equals("york")) {
+						if (looks.isEmpty() && at(i - 1).equals("real") && !at(i + 2).startsWith("style")) {
+							cityStationName = "Grand Central";
+						}
 						setBuildingStyle(BuildingStyle.BEAUX_ARTS);
 						if (looks.stream().noneMatch(look -> look.building() == BuildingStyle.BEAUX_ARTS)) {
 							looks.add(new Look(i, "new york", BuildingStyle.BEAUX_ARTS, null));
@@ -1453,6 +1461,11 @@ public final class StationDescriptionParser {
 
 		/** Landmarks, city looks, building and footbridge words; true if the token was used here. */
 		private boolean buildingWord(int i, String token) {
+			if (token.equals("real") && (CITY_BUILDINGS.containsKey(at(i + 1)) || at(i + 1).equals("st") || at(i + 1).equals("new") || at(i + 1).equals("kuala"))) {
+				// "real frankfurt": the city's own station, not only its look (see cityStationName)
+				use(i, i);
+				return true;
+			}
 			if (looseReal == null && RealStation.loosely(token, at(i + 1)) != null) {
 				// "utrecht station" may mean the real one: the city look stands until resolve() sees nothing against the hall
 				looseReal = RealStation.loosely(token, at(i + 1));
@@ -1572,6 +1585,35 @@ public final class StationDescriptionParser {
 
 		/** A city or look word at {@code i}: the building look, a landmark's building, and the look list for mixing. */
 		private void cityLook(int i, String word, BuildingStyle city) {
+			// only "real frankfurt" is the station (the wrench's city buttons say it); a bare "frankfurt terminus" is the city's look
+			final int before = word.equals("pancras") && at(i - 1).equals("st") ? i - 2 : i - 1;
+			if (looks.isEmpty() && at(before).equals("real") && !at(i + 1).startsWith("style")) {
+				// a real station's city word ("frankfurt terminus"; "frankfurt style" is only its look) is that station
+				cityStationName = switch (word) {
+					case "pancras" -> "St Pancras";
+					case "frankfurt" -> "Frankfurt Hbf";
+					case "paris" -> "Paris Nord";
+					case "milan", "milano" -> "Milano Centrale";
+					case "munich", "munchen" -> "Munich Hbf";
+					case "berlin" -> "Berlin Hbf";
+					case "coventry" -> "Coventry";
+					case "tokyo" -> "Tokyo";
+					case "beijing" -> "Beijing";
+					case "kuala lumpur" -> "Kuala Lumpur";
+					case "surbiton" -> "Surbiton";
+					case "antwerp", "antwerpen" -> "Antwerpen Centraal";
+					case "zurich" -> "Zurich HB";
+					case "mumbai" -> "Mumbai CSMT";
+					case "bangkok" -> "Hua Lamphong";
+					default -> null;
+				};
+			}
+			if (looks.isEmpty() && word.equals("amsterdam") && scale == null) {
+				// Amsterdam Centraal's long brick front, with a tower each side of its entrance, is a grand building
+				scale = StationScale.GRAND;
+				scaleAt = i;
+				scaleFromLandmark = true;
+			}
 			setBuildingStyle(city);
 			if (LANDMARKS.contains(word)) {
 				askBuilding(i);
@@ -2553,6 +2595,11 @@ public final class StationDescriptionParser {
 				}
 			}
 			builder.name(name);
+			if (cityStationName != null && (real == null || real == RealStation.NONE) && looks.size() == 1 && !mixing) {
+				// the station is itself only through its sheet: its name stays as typed (or empty), as the controls gave it
+				builder.options(options.withSheet(cityStationName));
+				note(looks.get(0).at(), "the real " + cityStationName + "'s front and train shed (say \"" + looks.get(0).word() + " style\" for its look on a station of your own)");
+			}
 			builder.stationClass(stationClass).era(era).facing(facing);
 			if (seed == 0 && !seedText.isEmpty()) {
 				note(Integer.MAX_VALUE, "seed " + seedText + ": no variation, the plain plan");

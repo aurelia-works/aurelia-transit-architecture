@@ -52,6 +52,15 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 			this.words = words;
 		}
 
+		/** True for a city whose real station has a sheet in {@link Landmarks}: its card says "real", so the sheet is built where it fits. */
+		public boolean hasSheet() {
+			return switch (this) {
+				case FRANKFURT, ST_PANCRAS, PARIS, MILAN, NEW_YORK, MUNICH, BERLIN, COVENTRY, TOKYO, BEIJING, KUALA_LUMPUR, SURBITON, ANTWERP, ZURICH,
+						MUMBAI, BANGKOK -> true;
+				default -> false;
+			};
+		}
+
 		public String label() {
 			return label;
 		}
@@ -192,6 +201,25 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 	}
 
 	/**
+	 * The words for the card's real station, or null: Utrecht as "utrecht station" (the parser builds Utrecht Centraal unless
+	 * other words are against its hall), Hamburg as Hamburg Hbf when nothing on the card is against its shed.
+	 */
+	String realWords() {
+		// a roof or building size of the player's own is against the real station's (a locked roof or size carried to the card)
+		if (mix != null || terminus || hub || roof != Roof.AUTO || size != Size.AUTO) {
+			return null;
+		}
+		// "no station building" on the card asks for bare platforms, the city's look
+		if (look == Look.UTRECHT && building) {
+			return "utrecht station";
+		}
+		if (look == Look.HAMBURG && platforms != Platforms.SIDE && building && tracks >= 2 && tracks % 2 == 0) {
+			return "hamburg hbf station";
+		}
+		return null;
+	}
+
+	/**
 	 * The description the parser reads from the given controls only: a part is left out when {@code pinned} does not contain it,
 	 * so a control the player never touched does not override their typed words. {@code null} pins every control (the buttons'
 	 * own description, as before).
@@ -202,12 +230,15 @@ public record StationRecipe(Look look, Look mix, boolean terminus, int tracks, P
 		if (all || pinned.contains("tracks")) {
 			head.add(tracks + " track");
 		}
-		if ((all || pinned.contains("look")) && look != Look.AUTO) {
-			// the city's look, not its real station: "utrecht station" alone builds Utrecht Centraal's hall
-			final String city = RealStation.loosely(look.words, "station") != null ? look.words + " style" : look.words;
+		final String real = all || pinned.contains("look") ? realWords() : null;
+		if (real != null) {
+			// a city card with a real station builds that station (Jah 10-25: "where's the wave?"); a mix or a terminus keeps the look
+			head.add(real);
+		} else if ((all || pinned.contains("look")) && look != Look.AUTO) {
+			final String city = RealStation.loosely(look.words, "station") != null ? look.words + " style" : look.hasSheet() && mix == null ? "real " + look.words : look.words;
 			head.add(mix != null ? city + " and " + mix.words + " combined" : city);
 		}
-		if (all || pinned.contains("mode")) {
+		if (real == null && (all || pinned.contains("mode"))) {
 			head.add(hub ? "hub" : terminus ? "terminus" : "station");
 		}
 		if ((all || pinned.contains("building")) && look == Look.AUTO && building && !terminus) {

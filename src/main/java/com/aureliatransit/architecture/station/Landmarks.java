@@ -1,5 +1,7 @@
 package com.aureliatransit.architecture.station;
 
+import static com.aureliatransit.architecture.station.Landmark.END;
+
 import com.aureliatransit.architecture.station.Landmark.Cap;
 import com.aureliatransit.architecture.station.Landmark.Facade;
 import com.aureliatransit.architecture.station.Landmark.Roof;
@@ -45,6 +47,26 @@ public final class Landmarks {
 	static final Skin ZURICH_SANDSTONE = new Skin("aurelia_transit_architecture:roma_travertine", "minecraft:smooth_stone",
 			"minecraft:stone_bricks", "minecraft:gray_stained_glass_pane", "minecraft:deepslate_tiles", "minecraft:deepslate_tile_stairs",
 			"minecraft:stone_brick_stairs", null);
+
+	/** Tokyo's red brick with white stone bands over a grey granite base, under dark slate. */
+	static final Skin TOKYO_BRICK = new Skin("minecraft:bricks", "minecraft:smooth_quartz", "minecraft:polished_andesite",
+			"minecraft:gray_stained_glass_pane", "minecraft:deepslate_tiles", "minecraft:deepslate_tile_stairs",
+			"minecraft:smooth_quartz_stairs", null);
+
+	/** Beijing's pale grey stone under blue-green glazed tiles. */
+	static final Skin BEIJING_STONE = new Skin("minecraft:smooth_stone", "minecraft:polished_diorite", "minecraft:polished_andesite",
+			"minecraft:gray_stained_glass_pane", "minecraft:prismarine_bricks", "minecraft:prismarine_brick_stairs",
+			"minecraft:polished_diorite_stairs", null);
+
+	/** The Moorish white of Kuala Lumpur's station over a sandstone plinth. */
+	static final Skin KL_WHITE = new Skin("minecraft:calcite", "minecraft:smooth_quartz", "minecraft:smooth_sandstone",
+			"minecraft:gray_stained_glass_pane", "minecraft:quartz_block", "minecraft:quartz_stairs",
+			"minecraft:smooth_quartz_stairs", null);
+
+	/** Surbiton's white-rendered brick, flat roofs and blue-tinted glass. */
+	static final Skin SURBITON_WHITE = new Skin("minecraft:calcite", "minecraft:smooth_stone", "minecraft:polished_andesite",
+			"minecraft:light_blue_stained_glass_pane", "minecraft:smooth_stone", "minecraft:smooth_quartz_stairs",
+			"minecraft:smooth_quartz_stairs", null);
 
 	/** Cream Paris limestone under blue-grey slate mansards. */
 	static final Skin PARIS_LIMESTONE = new Skin("aurelia_transit_architecture:roma_travertine", "minecraft:smooth_quartz",
@@ -316,7 +338,136 @@ public final class Landmarks {
 			.hall(-44, 44, 13, 60, 12)
 			.build();
 
-	static final List<Landmark> ALL = List.of(ST_PANCRAS, ANTWERP, GRAND_CENTRAL, FRANKFURT, ZURICH, PARIS, MILAN, MUMBAI, BANGKOK);
+	/** The shortest wings (in bays) a side sheet needs: its end pavilions stand where the wings end. */
+	static final int MIN_SIDE_WINGS = 5;
+
+	/**
+	 * Tokyo Station, Marunouchi side (Tatsuno Kingo, 1914): a red brick building 335 m long, three storeys with white stone
+	 * bands over a granite base, under dark slate; its middle block has a pediment over the entrance, long wings run to both
+	 * sides and each ends in a four-storey pavilion under a domed octagonal roof. The island platforms stand behind it, raised
+	 * on a viaduct; here they stay at street level. The wings and pavilions follow the station's length.
+	 */
+	static final Landmark TOKYO = Landmark.side("tokyo", "Tokyo", "Tokyo Station", "Tokyo Marunouchi", "Tokyo Eki")
+			.skin(TOKYO_BRICK)
+			.facade(new Facade(Window.RECT, 6, 2, 6, 2, 3, 2, 0, true))
+			// the octagonal drums and dark domes over the end pavilions
+			.octTower(END - 9, 10, 7, 1, 32, Cap.DOME, 0, false)
+			.octTower(-END + 9, 10, 7, 1, 32, Cap.DOME, 0, false)
+			.volume(END - 18, END, 0, 40, 24, Roof.FLAT, 1)
+			.volume(-END, -END + 18, 0, 40, 24, Roof.FLAT, 1)
+			// (the middle block over the entrance stays the generic building: a sheet volume there broke the footbridge's lifts)
+			// the wings under steep slate roofs with dormers, to the end pavilions
+			.volume(15, END - 18, 0, 40, 18, Roof.MANSARD, 3, false, true)
+			.volume(-END + 18, -15, 0, 40, 18, Roof.MANSARD, 3, false, true)
+			.build();
+
+	/**
+	 * Beijing Railway Station (Chen Deng'ao and others, 1959): a pale grey stone building 200 m wide, its tall middle hall under
+	 * a clock tower, a tower at each end under a Chinese pavilion roof of blue-green glazed tiles, long flat-roofed wings between.
+	 */
+	static final Landmark BEIJING = Landmark.side("beijing", "Beijing", "Beijing Station", "Beijing Railway Station", "Beijing South")
+			.skin(BEIJING_STONE)
+			.facade(new Facade(Window.RECT, 6, 2, 6, 2, 3, 2, 0, true))
+			.tower(0, 10, 4, 1, 40, Cap.PYRAMID, 0, true)
+			.tower(END - 6, 10, 4, 1, 30, Cap.PYRAMID, 0, false)
+			.tower(-END + 6, 10, 4, 1, 30, Cap.PYRAMID, 0, false)
+			// grey flat roofs on the halls and wings, the green tiles only on the towers
+			.skin(BEIJING_STONE.withRoof("minecraft:smooth_stone", "minecraft:stone_stairs"))
+			.volume(15, END - 12, 0, 40, 18, Roof.FLAT, 1)
+			.volume(-END + 12, -15, 0, 40, 18, Roof.FLAT, 1)
+			.volume(END - 12, END, 0, 40, 24, Roof.FLAT, 1)
+			.volume(-END, -END + 12, 0, 40, 24, Roof.FLAT, 1)
+			.build();
+
+	/**
+	 * Kuala Lumpur Railway Station (A. B. Hubback, 1910-17): Moorish white stucco, long arcades of horseshoe arches, a skyline of
+	 * onion domes, cupolas and slender minarets over a central block and both ends.
+	 */
+	static final Landmark KUALA_LUMPUR = Landmark.side("kuala_lumpur", "Kuala Lumpur", "Kuala Lumpur Railway Station", "KL Railway Station")
+			.skin(KL_WHITE)
+			.facade(new Facade(Window.POINTED, 4, 2, 7, 2, 4, 1, 0, true))
+			.octTower(0, 10, 5, 1, 24, Cap.ONION, 0, false)
+			.octTower(END - 6, 10, 5, 1, 22, Cap.ONION, 0, false)
+			.octTower(-END + 6, 10, 5, 1, 22, Cap.ONION, 0, false)
+			.tower(-12, 3, 1, 1, 30, Cap.CUPOLA, 0, false)
+			.tower(12, 3, 1, 1, 30, Cap.CUPOLA, 0, false)
+			.tower(END - 14, 3, 1, 1, 26, Cap.CUPOLA, 0, false)
+			.tower(-END + 14, 3, 1, 1, 26, Cap.CUPOLA, 0, false)
+			.arcade(-END + 14, END - 14, 0, 4, 1, 1, 5)
+			.volume(15, END - 12, 0, 40, 14, Roof.FLAT, 1)
+			.volume(-END + 12, -15, 0, 40, 14, Roof.FLAT, 1)
+			.volume(END - 12, END, 0, 40, 18, Roof.FLAT, 1)
+			.volume(-END, -END + 12, 0, 40, 18, Roof.FLAT, 1)
+			.build();
+
+	/** Surbiton (J. R. Scott, 1937): white streamlined art deco, long bands of windows, a slender glazed tower over the entrance. */
+	static final Landmark SURBITON = Landmark.side("surbiton", "Surbiton")
+			.skin(SURBITON_WHITE)
+			.facade(new Facade(Window.CURTAIN, 6, 2, 6, 2, 3, 1, 0, false))
+			.upper(-5, 5, 0, 10, 12, 28, Roof.FLAT, 1)
+			.facade(new Facade(Window.RIBBON, 6, 2, 6, 2, 3, 1, 0, false))
+			.build();
+
+	/** Munich's board-formed concrete and curtain glass under a flat stone roof (the Hauptbahnhof's 1950s concourse). */
+	static final Skin MUNICH_CONCRETE = new Skin("aurelia_transit_architecture:munich_exposed_concrete", "aurelia_transit_architecture:munich_board_formed_concrete",
+			"minecraft:polished_andesite", "minecraft:light_blue_stained_glass_pane", "minecraft:smooth_stone", "minecraft:smooth_stone_slab",
+			"minecraft:polished_andesite_stairs", "minecraft:gray_concrete");
+
+	/** Berlin's steel and blue glass. */
+	static final Skin BERLIN_GLASS = new Skin("aurelia_transit_architecture:metro_steel_cladding", "minecraft:light_gray_concrete",
+			"minecraft:polished_andesite", "minecraft:light_blue_stained_glass_pane", "minecraft:smooth_stone", "minecraft:smooth_stone_slab",
+			"minecraft:polished_andesite_stairs", "minecraft:white_concrete");
+
+	/** Coventry's blue engineering brick, pale concrete and curtain glass (1962). */
+	static final Skin COVENTRY_MODERNIST = new Skin("aurelia_transit_architecture:uk_blue_engineering_brick", "aurelia_transit_architecture:metro_pale_concrete",
+			"aurelia_transit_architecture:uk_blue_engineering_brick", "minecraft:light_blue_stained_glass_pane", "minecraft:smooth_stone",
+			"minecraft:smooth_stone_slab", "minecraft:smooth_quartz_stairs", "minecraft:white_concrete");
+
+	/**
+	 * Munich Hauptbahnhof (terminus, 32 tracks): the 1950s concourse across the head of the tracks, a long low block of board-formed
+	 * concrete and glass with a tall glazed middle over the entrance and a ribbon-windowed storey in the wings; behind it the
+	 * platform hall, a row of low glazed barrel vaults on concrete.
+	 */
+	static final Landmark MUNICH = Landmark.head("munich", "Munich Hbf", "Munchen Hbf", "Muenchen Hbf", "Munich Hauptbahnhof")
+			.shed(new Shed(ShedProfile.ROUND, 3, 0.25, 0, "aurelia_transit_architecture:glass_wall",
+					"aurelia_transit_architecture:metro_steel_cladding", 0.2, 1.0, "steel", "aurelia_transit_architecture:munich_exposed_concrete"))
+			.skin(MUNICH_CONCRETE)
+			.facade(new Facade(Window.CURTAIN, 4, 3, 6, 1, 4, 1, 0, true))
+			.volume(-18, 18, 0, 16, 20, Roof.FLAT, 1, true, false)
+			.facade(new Facade(Window.RIBBON, 4, 3, 5, 1, 3, 1, 0, true))
+			.volume(-46, -19, 0, 14, 13, Roof.FLAT, 1, true, false)
+			.volume(19, 46, 0, 14, 13, Roof.FLAT, 1, true, false)
+			.hall(-46, 46, 15, 60, 12)
+			.build();
+
+	/**
+	 * Berlin Hauptbahnhof (through, 2006): the east-west hall's glass front, a steel and blue glass concourse building with its
+	 * full-height glazed middle and the two glass office bridges across the hall's end; a glass barrel behind.
+	 */
+	static final Landmark BERLIN = Landmark.side("berlin", "Berlin Hbf", "Berlin Hauptbahnhof")
+			.shed(new Shed(ShedProfile.ROUND, 1, 0.3, StationGeometry.CANOPY_Y, "aurelia_transit_architecture:glass_wall",
+					"aurelia_transit_architecture:metro_steel_cladding", 0.1, 1.0, "steel", null))
+			.skin(BERLIN_GLASS)
+			.facade(new Facade(Window.CURTAIN, 4, 3, 6, 1, 4, 1, 6, true))
+			.volume(-34, 34, 0, 14, 22, Roof.FLAT, 1, true, false)
+			.upper(-26, -18, 0, 14, 23, 30, Roof.FLAT, 1)
+			.upper(18, 26, 0, 14, 23, 30, Roof.FLAT, 1)
+			.build();
+
+	/**
+	 * Coventry (1962, Lloyd and Headley): a long low block of blue engineering brick with a double-height glazed booking hall
+	 * in the middle and a flat white canopy slab.
+	 */
+	static final Landmark COVENTRY = Landmark.side("coventry", "Coventry", "Coventry Station")
+			.skin(COVENTRY_MODERNIST)
+			.facade(new Facade(Window.RIBBON, 4, 3, 5, 1, 3, 1, 0, true))
+			.volume(-26, 26, 0, 12, 13, Roof.FLAT, 1, true, false)
+			.facade(new Facade(Window.CURTAIN, 4, 3, 7, 1, 5, 1, 0, true))
+			.volume(-9, 9, 0, 12, 18, Roof.FLAT, 1, true, false)
+			.build();
+
+	static final List<Landmark> ALL = List.of(ST_PANCRAS, ANTWERP, GRAND_CENTRAL, FRANKFURT, ZURICH, PARIS, MILAN, MUMBAI, BANGKOK, MUNICH, BERLIN,
+			COVENTRY, TOKYO, BEIJING, KUALA_LUMPUR, SURBITON);
 
 	/** The sheet of the real station {@code spec} is named after, or null. */
 	public static Landmark of(StationSpec spec) {
@@ -326,6 +477,37 @@ public final class Landmarks {
 				return landmark;
 			}
 		}
+		// a station without a name of its own that a city word names ("frankfurt terminus") is that city's station
+		// a head sheet only on a plain main-station terminus, a side sheet on a through station with its building: the sheets are as
+		// wide as the real buildings and are checked at preset size
+		if (name.isEmpty() && !spec.options().sheet().isEmpty() && spec.buildingScale() != StationScale.COMPACT) {
+			for (final Landmark landmark : ALL) {
+				if (landmark.named(spec.options().sheet()) && carries(landmark, spec)) {
+					return landmark;
+				}
+			}
+		}
 		return null;
+	}
+
+	/** True when the station can take the landmark's sheet by a city word. */
+	private static boolean carries(Landmark landmark, StationSpec spec) {
+		if (landmark.anchor() != Landmark.Anchor.HEAD) {
+			return !spec.terminus() && spec.sideBuilding() && spec.trackCount() >= 2;
+		}
+		if (!spec.terminus() || spec.hub() || spec.trackCount() < 6 || spec.trackCount() % 2 != 0 || spec.platformLength() < 96) {
+			return false;
+		}
+		// where a sweep of every card setting found the sheet unbuildable (10-25), the city's own look is built instead: a single
+		// arch shed under a sheet whose own shed has several spans (Milan) leaves girders on nothing; St Pancras's towers float on six
+		// tracks; Paris and St Pancras on ten leave indoor spots unlit; a front on a city-size building floats a fixture (Bangkok,
+		// Zurich)
+		if (landmark.shed() != null && landmark.shed().spans() > 1 && spec.roof() == RoofType.HALL && spec.shed() == ShedShape.ARCH) {
+			return false;
+		}
+		if (landmark == ST_PANCRAS && spec.trackCount() != 8 || landmark == PARIS && spec.trackCount() > 8) {
+			return false;
+		}
+		return spec.buildingScale() != StationScale.CITY;
 	}
 }

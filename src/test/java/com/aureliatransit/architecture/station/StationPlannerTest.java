@@ -875,8 +875,9 @@ class StationPlannerTest {
 			}
 			assertTrue(kinds.contains("kind=end") && kinds.contains("kind=gate") && kinds.contains("kind=wide"), style + " " + kinds);
 			assertFalse(blocks(plan, Role.BARRIER).isEmpty(), style.toString());
-			// office window, ticket machines (2-tall with halves), kiosk, clock, boards
-			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("booth_window") && b.front() == LocalDir.PLUS_V), style.toString());
+			// office window (facing into the hall since the regional halls, 10-25), ticket machines (2-tall with halves), kiosk,
+			// clock, boards
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("booth_window")), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().equals(PlanState.TICKET_MACHINE)), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("passenger_info_kiosk")), style.toString());
 			assertTrue(plan.blocks().stream().anyMatch(b -> b.blockId().contains("clock")), style.toString());

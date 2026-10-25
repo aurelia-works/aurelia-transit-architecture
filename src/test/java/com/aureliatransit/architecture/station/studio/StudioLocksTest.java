@@ -39,6 +39,10 @@ class StudioLocksTest {
 				for (final String seed : new String[]{"", "k7f2ra", "zz9"}) {
 					final Map<String, String> q = new HashMap<>(Map.of("look", look.name(), "roof", roof, "seed", seed, "tracks", "4",
 							"length", "96", "building", "1", "size", "AUTO"));
+					// a card that builds its real station has no roof and size of the player's own to carry (Jah 10-25)
+					if (StationDescriptionParser.parse(StudioApi.description(q)).spec().real() != RealStation.NONE) {
+						continue;
+					}
 					final Map<String, Object> first = Json.object(Json.parse(api.plan(q)));
 					final Map<String, Object> resolved = Json.object(first.get("resolved"));
 					final String where = look + " " + roof + " seed '" + seed + "'";

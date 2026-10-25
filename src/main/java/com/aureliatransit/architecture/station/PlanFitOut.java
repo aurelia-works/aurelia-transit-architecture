@@ -29,6 +29,9 @@ abstract class PlanFitOut extends PlanLandmark {
 	/** A kiosk's fascia. */
 	static final String KIOSK_FASCIA = "minecraft:yellow_concrete";
 
+	/** A kiosk: its name, what its back shelves hold and its fascia. */
+	static final String[] KIOSK_SHOP = {"Kiosk", "minecraft:barrel", "minecraft:barrel", KIOSK_FASCIA};
+
 	static final String SHOP_SIGN = "aurelia_transit_architecture:wall_wayfinding_sign";
 
 	static final String CONCOURSE_BOARD = "aurelia_transit_architecture:concourse_board";
@@ -83,7 +86,10 @@ abstract class PlanFitOut extends PlanLandmark {
 			switch (unit.kind()) {
 				case BOARD -> board(unit, y, b);
 				case SEATS -> seats(unit, y, b);
-				default -> shopUnit(unit, y, unit.kind() == ConcourseFit.Kind.KIOSK ? null : SHOPS.get(shop++ % SHOPS.size()), b);
+				default -> {
+					final boolean kiosk = unit.kind() == ConcourseFit.Kind.KIOSK;
+					shopUnit(unit, y, kiosk ? KIOSK_SHOP : SHOPS.get(shop++ % SHOPS.size()), kiosk, b);
+				}
 			}
 		}
 	}
@@ -122,16 +128,18 @@ abstract class PlanFitOut extends PlanLandmark {
 	}
 
 	/**
-	 * A shop (glazed front, a doorway two wide in the middle, shelves along the back, a counter) or, with no {@code shop}, a
-	 * kiosk (a counter under a booth window all along the front); clad end walls, a ceiling with a light, a fascia in the
-	 * shop's colour over the front and the name on it.
+	 * A shop (glazed front, a doorway two wide in the middle, shelves along the back, a counter) or, with {@code counter}, a
+	 * kiosk or ticket office (a counter under a booth window all along the front); clad end walls, a ceiling with a light, a
+	 * fascia in the shop's colour over the front and its name on it. {@code shop} is the name, the back shelves low and high,
+	 * and the fascia.
 	 */
-	private void shopUnit(ConcourseFit.Unit unit, int y, String[] shop, StylePalette.Building b) {
+	@Override
+	void shopUnit(ConcourseFit.Unit unit, int y, String[] shop, boolean counter, StylePalette.Building b) {
 		final LocalDir front = unit.front();
 		final int du = ConcourseFit.du(front);
 		final int dv = ConcourseFit.dv(front);
 		final int length = unit.length();
-		final String fascia = shop == null ? KIOSK_FASCIA : shop[3];
+		final String fascia = shop[3];
 		for (int u = unit.uMin(); u <= unit.uMax(); u++) {
 			for (int v = unit.vMin(); v <= unit.vMax(); v++) {
 				final int i = along(unit, u, v);
@@ -147,7 +155,7 @@ abstract class PlanFitOut extends PlanLandmark {
 				}
 				put(Role.WALL, u, top, v, front, inFront ? fascia : i == length / 2 && !atBack ? b.light() : b.interiorWall());
 				if (inFront) {
-					if (shop == null) {
+					if (counter) {
 						put(Role.WALL, u, y, v, front, b.trim());
 						put(Role.FIXTURE, u, y + 1, v, front, "aurelia_transit_architecture:booth_window");
 						put(Role.WINDOW, u, y + 2, v, front, b.window());
@@ -157,9 +165,9 @@ abstract class PlanFitOut extends PlanLandmark {
 						}
 					}
 				} else if (atBack) {
-					put(Role.FIXTURE, u, y, v, front, shop == null ? "minecraft:barrel" : shop[1]);
-					put(Role.FIXTURE, u, y + 1, v, front, shop == null ? "minecraft:barrel" : shop[2]);
-				} else if (shop != null && i == length - 2 && !unit.contains(u + 2 * du, v + 2 * dv)) {
+					put(Role.FIXTURE, u, y, v, front, shop[1]);
+					put(Role.FIXTURE, u, y + 1, v, front, shop[2]);
+				} else if (!counter && i == length - 2 && !unit.contains(u + 2 * du, v + 2 * dv)) {
 					// the counter, beside the doorway just inside the glass
 					put(Role.WALL, u, y, v, front, b.trim());
 				}
@@ -169,7 +177,7 @@ abstract class PlanFitOut extends PlanLandmark {
 		for (int u = unit.uMin(); u <= unit.uMax(); u++) {
 			for (int v = unit.vMin(); v <= unit.vMax(); v++) {
 				if (along(unit, u, v) == length / 2 && !unit.contains(u + du, v + dv)) {
-					putText(Role.FIXTURE, u + du, y + 3, v + dv, front, SHOP_SIGN, "NONE:" + (shop == null ? "Kiosk" : shop[0]));
+					putText(Role.FIXTURE, u + du, y + 3, v + dv, front, SHOP_SIGN, "NONE:" + shop[0]);
 				}
 			}
 		}

@@ -101,7 +101,7 @@ abstract class PlanState {
 		this.spec = spec;
 		this.layout = StationGeometry.layout(spec);
 		this.palette = StylePalette.of(spec);
-		this.landmark = Landmarks.of(spec);
+		final Landmark named = Landmarks.of(spec);
 		this.length = layout.platformLength();
 		this.columnV = columnPositions(length);
 		this.site = StationLayout.of(spec, layout);
@@ -110,6 +110,9 @@ abstract class PlanState {
 		// a real train shed is the station's whole mass, entered at its ends (Hamburg's Wandelhalle and bridges): beside it the
 		// building is the entrance block under its tower, not a wing along the full shed (10-24)
 		this.wingBays = site.building() && !spec.real().trainShed() ? wingBays(scale, length, site.vStart(), site.vEnd()) : 0;
+		// a side sheet that runs the length of the building needs a grand one with room for its end pavilions; else the generic one stays
+		this.landmark = named != null && named.anchor() == Landmark.Anchor.SIDE
+				&& (named.compactOnly() && scale != StationScale.COMPACT || named.usesEnd() && (scale != StationScale.GRAND || wingBays < Landmarks.MIN_SIDE_WINGS)) ? null : named;
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			canopySpans.put(band, canopySpan(spec, layout, site, band));
 		}

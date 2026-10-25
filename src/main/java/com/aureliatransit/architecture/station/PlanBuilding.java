@@ -106,9 +106,18 @@ abstract class PlanBuilding extends PlanPlatforms {
 				keepClear(u, y, vBot);
 			}
 		}
+		final boolean sheet = landmark != null && landmark.anchor() == Landmark.Anchor.SIDE;
+		if (sheet && landmark.usesEnd()) {
+			// the sheet's wings stand over the platform doorways of their waiting rooms: reserved before its walls go up
+			for (final int side : new int[]{-1, 1}) {
+				final int inner = side < 0 ? site.vStart() : site.vEnd();
+				for (int j = 0; j < wingBays; j++) {
+					platformDoorway(uP, inner + side * (StationGeometry.BAY * j + 3), b.window());
+				}
+			}
+		}
 		// a real station's own building first, so the plain walls below only fill what its sheet leaves open
 		landmarkSide();
-		final boolean sheet = landmark != null && landmark.anchor() == Landmark.Anchor.SIDE;
 		// ground floor and entrance ramps on the apron
 		for (int u = uS; u <= uP; u++) {
 			for (int v = vS; v <= vE; v++) {
@@ -634,11 +643,13 @@ abstract class PlanBuilding extends PlanPlatforms {
 		final StylePalette.Building b = palette.building();
 		final int uS = streetWall();
 		final int uP = site.platformWall(layout);
-		final boolean pavilions = scale == StationScale.GRAND && wingBays >= 2;
+		// a real station's own wings and pavilions (its sheet) have their own roofs and domes: only floors and walls are left here
+		final boolean sheet = landmark != null && landmark.anchor() == Landmark.Anchor.SIDE && landmark.usesEnd();
+		final boolean pavilions = scale == StationScale.GRAND && wingBays >= 2 && !sheet;
 		// a domed pavilion is two bays long where the wing has room, so its dome is the size of the real ones, not a cupola
-		final PlanHead.OctCap cap = domedPavilions() ? pavilionCap(spec.building()) : null;
+		final PlanHead.OctCap cap = domedPavilions() && !sheet ? pavilionCap(spec.building()) : null;
 		final int pavilionBays = cap != null && wingBays >= 4 ? 2 : 1;
-		final String[] tiles = pitchedRoof();
+		final String[] tiles = sheet ? null : pitchedRoof();
 		for (final int side : new int[]{-1, 1}) {
 			final int inner = side < 0 ? site.vStart() : site.vEnd();
 			final int end = inner + side * wingBays * StationGeometry.BAY;
@@ -691,7 +702,7 @@ abstract class PlanBuilding extends PlanPlatforms {
 						slabCell(u, StationGeometry.BUILDING_ROOF_Y, v);
 					}
 				}
-				if (!inPavilion && tiles == null) {
+				if (!inPavilion && tiles == null && !sheet) {
 					for (int u = uS; u <= uP; u++) {
 						put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, flatRoof());
 					}
@@ -724,7 +735,7 @@ abstract class PlanBuilding extends PlanPlatforms {
 				roof(domeRoof, uS, uP, p0, p1, null);
 			} else if (pavilions) {
 				roof(pavilionRoof, uS, uP, Math.min(pavilionFrom, end), Math.max(pavilionFrom, end));
-			} else if (tiles == null) {
+			} else if (tiles == null && !sheet) {
 				for (int u = uS; u <= uP; u++) {
 					put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, end, side < 0 ? LocalDir.MINUS_V : LocalDir.PLUS_V, b.cornice());
 				}

@@ -87,6 +87,29 @@ def display_model(z0, z1, double, top_inset, combo):
     return g.model(textures, els)
 
 
+# The platform screens that stand (not the hanging ones, not the concourse board on its wall): in front of a pole they hang
+# on a monitor arm.
+ARMED = ["platform_cis", "platform_pids"]
+# The arm's pole centre in model X for each nudge (FreePlacement's offset; viewer's left is model +X): the pole stays at the
+# block's own centre, so a block nudged half a block left has it at its right edge.
+ARM_X = {"none": ("_arm_c", 8), "left": ("_arm_l", 0), "right": ("_arm_r", 16)}
+
+
+def arm_model(px):
+    """The wall speaker's post bracket (assets_fittings.wall_speaker): a clamp plate on the screen's back and a straight arm
+    6 px into the pole's cell, past a square column's face (4 in) or a round one's (4.5), at the screen's middle height."""
+    faces = ("down", "up", "west", "east", "south")
+
+    def part(f, t):
+        return g.el(f, t, "#body", faces={face: ("#body", [6, 6, 10, 10]) if face in faces else None
+                                          for face in ("north", "south", "east", "west", "up", "down")}, cull=False)
+
+    return g.model({"particle": "live_body", "body": "live_body"}, [
+        part([px - 1, 7, 16], [px + 1, 9, 22]),  # arm
+        part([px - 2, 6, 16], [px + 2, 10, 17]),  # clamp plate
+    ])
+
+
 def speaker_wall():
     return g.model({"particle": "speaker_body", "body": "speaker_body", "grille": "speaker_grille"}, [
         g.el([4, 4, 14], [12, 12, 16], "#body"),
@@ -107,6 +130,9 @@ def blocks():
         variants = {}
         for combo in itertools.product((False, True), repeat=4):
             variants[suffix(combo)] = display_model(z0, z1, double, inset, combo)
+        if block_id in ARMED:
+            for name, px in ARM_X.values():
+                variants[name] = arm_model(px)
         b[block_id] = ("facing", variants)
     b["wall_speaker"] = ("facing", {"": speaker_wall()})
     b["ceiling_speaker"] = ("facing", {"": speaker_ceiling()})
@@ -194,9 +220,10 @@ def recipes():
 
 
 def write_extra(assets, data, write_json):
-    # Connection-aware blockstates for the joinable displays.
+    # Connection-aware blockstates for the joinable displays; the standing ones are multipart, the monitor arm a part of its own.
     for block_id in DISPLAYS:
         variants = {}
+        parts = []
         for facing, y in g.FACING_Y.items():
             for combo in itertools.product((False, True), repeat=4):
                 left, right, up, down = combo
@@ -205,7 +232,15 @@ def write_extra(assets, data, write_json):
                 if y:
                     entry["y"] = y
                 variants[key] = entry
-        write_json(assets / "blockstates" / f"{block_id}.json", {"variants": variants})
+                when = dict(item.split("=") for item in key.split(","))
+                parts.append({"when": when, "apply": entry})
+            for offset, (name, _px) in ARM_X.items():
+                entry = {"model": f"{MOD}:block/{block_id}{name}"}
+                if y:
+                    entry["y"] = y
+                parts.append({"when": {"facing": facing, "arm": "true", "offset": offset}, "apply": entry})
+        state = {"multipart": parts} if block_id in ARMED else {"variants": variants}
+        write_json(assets / "blockstates" / f"{block_id}.json", state)
 
     # Announcement chimes (original synthesised audio, see tools/make_live_sounds.py), and the built-in voice's fragments
     # (Piper, voice cori, public domain; rendered by tools/make_voice.py into sounds/voice and aurelia_voice/builtin.json).

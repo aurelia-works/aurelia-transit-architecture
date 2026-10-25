@@ -155,13 +155,17 @@ class PlayTestFixesTest {
 	}
 
 	@Test
-	void theStudiosUtrechtCardStaysTheLook() {
-		// the card is the city's look on a station of the player's own; the real hall has its own preset
+	void theStudiosUtrechtAndHamburgCardsBuildTheRealStations() {
+		// Jah 10-25 ("where's the wave?"): the city card builds the real station; a terminus or a mix keeps the city's look
 		for (final int tracks : new int[]{2, 4, 6}) {
 			final StationRecipe card = new StationRecipe(StationRecipe.Look.UTRECHT, null, false, tracks, StationRecipe.Platforms.AUTO, 96,
 					StationRecipe.Roof.AUTO, true, "", StationRecipe.Size.AUTO, false);
-			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.description()).spec().real(), card.description());
-			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.text("named hi", java.util.Set.of("look"))).spec().real());
+			assertEquals(RealStation.UTRECHT_CENTRAAL, StationDescriptionParser.parse(card.description()).spec().real(), card.description());
+			assertEquals(RealStation.UTRECHT_CENTRAAL, StationDescriptionParser.parse(card.text("named hi", java.util.Set.of("look"))).spec().real());
+			final StationRecipe hamburg = card.withLook(StationRecipe.Look.HAMBURG);
+			assertEquals(RealStation.HAMBURG_HBF, StationDescriptionParser.parse(hamburg.description()).spec().real(), hamburg.description());
+			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.withTerminus(true).description()).spec().real());
+			assertEquals(RealStation.NONE, StationDescriptionParser.parse(card.withMix(StationRecipe.Look.AMSTERDAM).description()).spec().real());
 		}
 	}
 }

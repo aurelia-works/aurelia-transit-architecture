@@ -7,6 +7,7 @@ import com.aureliatransit.architecture.block.mtr.MtrFareContract;
 import com.aureliatransit.architecture.block.entity.TextSignBlockEntity;
 import com.aureliatransit.architecture.block.wayfinding.CarStopBlock;
 import com.aureliatransit.architecture.gametest.Fixtures.Entry;
+import com.aureliatransit.architecture.live.PidsBlock;
 import com.aureliatransit.architecture.registry.ModBlockEntities;
 import com.aureliatransit.architecture.station.Heading;
 import com.aureliatransit.architecture.station.world.BlockStateResolver;
@@ -431,6 +432,42 @@ public class AureliaGameTests implements FabricGameTest {
 		}
 		Fixtures.removePlayer(context, player);
 		failIfAny(problems, "ticket machine");
+		context.complete();
+	}
+
+	/**
+	 * A standing departure screen in front of a round column hangs on a monitor arm clamped round it (Jah, 10-25: a screen
+	 * beside a pole floated off it); against a full block, or a turned one, it has none. The arm follows the block behind
+	 * whichever is placed first.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void platformScreenHangsOnAnArmInFrontOfAPole(TestContext context) {
+		final List<String> problems = new ArrayList<>();
+		final Block screen = Fixtures.block("platform_pids").block();
+		final Block pole = Fixtures.block("steel_column_round").block();
+		final BlockState facingSouth = BlockStateResolver.withState(screen.getDefaultState(), "facing=south");
+		// screen first, then the pole behind it (north); pole first, then the screen; a full block behind; a turned screen
+		final BlockPos a = new BlockPos(1, 2, 2);
+		context.setBlockState(a, facingSouth);
+		context.setBlockState(a.north(), pole);
+		final BlockPos b = new BlockPos(3, 2, 2);
+		context.setBlockState(b.north(), pole);
+		context.setBlockState(b, facingSouth);
+		context.setBlockState(b.east(), Blocks.STONE);
+		final BlockPos c = new BlockPos(5, 2, 2);
+		context.setBlockState(c, facingSouth);
+		context.setBlockState(c.north(), Blocks.STONE);
+		final BlockPos d = new BlockPos(7, 2, 2);
+		context.setBlockState(d, BlockStateResolver.withState(facingSouth, "angle=1"));
+		context.setBlockState(d.north(), pole);
+		for (final Object[] check : new Object[][]{{a, true, "pole placed after"}, {b, true, "pole placed before"}, {c, false, "stone behind"},
+				{d, false, "turned"}}) {
+			final BlockState state = context.getBlockState((BlockPos) check[0]);
+			if (!state.isOf(screen) || state.get(PidsBlock.ARM) != (Boolean) check[1]) {
+				problems.add(check[2] + ": " + describe(state));
+			}
+		}
+		failIfAny(problems, "screen arm");
 		context.complete();
 	}
 

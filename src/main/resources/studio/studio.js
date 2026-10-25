@@ -158,6 +158,69 @@
 		$(id).dispatchEvent(new Event("input"));
 	}
 
+	// a city card shows its real station: the kind of station its front needs (a terminus of 6+ tracks for a head front, a grand
+	// building for Tokyo's, Beijing's and Kuala Lumpur's long fronts), but only where the player has not chosen by hand (Jah 10-25)
+	const REAL_HEAD = new Set(["FRANKFURT", "ST_PANCRAS", "PARIS", "MILAN", "NEW_YORK", "MUNICH", "ANTWERP", "ZURICH", "MUMBAI", "BANGKOK"]);
+	const REAL_LONG_SIDE = new Set(["TOKYO", "BEIJING", "KUALA_LUMPUR"]);
+	const REAL_SIDE = new Set(["BERLIN", "COVENTRY", "SURBITON"]);
+	function realDefaults(look) {
+		const mine = (f) => touched.has(f) && !rolled.has(f);
+		// a rolled class or era decides the shape and would turn the real station back into one of its own
+		const want = REAL_HEAD.has(look) || REAL_LONG_SIDE.has(look) || REAL_SIDE.has(look) || look === "UTRECHT" || look === "HAMBURG" ? { class: "auto", era: "auto", mix: "", roof: "AUTO" } : {};
+		if (look === "UTRECHT" || look === "HAMBURG") {
+			// what Utrecht Centraal's hall and Hamburg Hbf's shed need: a through station with even tracks, long enough, the
+			// city's own roof and building
+			want.mode = "through";
+			const t = +$("tracks").value;
+			if (t < 2 || t % 2) {
+				want.tracks = String(Math.max(2, t + (t % 2)));
+			}
+			if (+$("length").value < 128) {
+				want.length = "128";
+			}
+			want.building = "1";
+			want.size = "AUTO";
+			want.roof = "AUTO";
+			want.layout = "AUTO";
+		} else if (REAL_HEAD.has(look)) {
+			want.mode = "terminus";
+			want.building = "1";
+			want.size = "GRAND";
+			const t = +$("tracks").value;
+			// St Pancras's front is drawn for eight tracks, Paris's for six or eight
+			if (t < 6 || t % 2 || look === "ST_PANCRAS" && t !== 8 || look === "PARIS" && t > 8) {
+				want.tracks = "8";
+			}
+			if (+$("length").value < 128) {
+				want.length = "128";
+			}
+		} else if (REAL_LONG_SIDE.has(look)) {
+			want.mode = "through";
+			if (+$("tracks").value < 4) {
+				want.tracks = "4";
+			}
+			if (+$("length").value < 192) {
+				want.length = "192";
+			}
+			want.building = "1";
+			want.size = "GRAND";
+		} else if (REAL_SIDE.has(look)) {
+			// a front beside the tracks: a through station with its building
+			want.mode = "through";
+			want.building = "1";
+		}
+		const was = rolling;
+		rolling = true;
+		for (const [f, v] of Object.entries(want)) {
+			if (!mine(f) && $(f).value !== v) {
+				set(f, v);
+				// like the dice: the card's choice, which typed words or a hand-set control still overrule
+				rolled.add(f);
+			}
+		}
+		rolling = was;
+	}
+
 	function press(button, on) {
 		button.setAttribute("aria-pressed", String(on));
 	}
@@ -198,7 +261,10 @@
 			name.textContent = label;
 			b.append(sw, name);
 			b.title = value === "AUTO" ? "No city: the plain look, or whatever your words describe" : label + " look";
-			b.addEventListener("click", () => set("look", value));
+			b.addEventListener("click", () => {
+				set("look", value);
+				realDefaults(value);
+			});
 			looks.append(b);
 			synced.push(() => press(b, $("look").value === value));
 		}

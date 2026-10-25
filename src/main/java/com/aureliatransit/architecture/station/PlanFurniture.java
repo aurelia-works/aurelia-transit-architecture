@@ -2,8 +2,10 @@ package com.aureliatransit.architecture.station;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import static com.aureliatransit.architecture.station.StationPlanner.*;
@@ -230,9 +232,10 @@ abstract class PlanFurniture extends PlanRoofs {
 	}
 
 	/**
-	 * The furnished ground and upper floors: the gate line with a wide gate, glass barriers elsewhere, the ticket
-	 * office with its window, MTR ticket machines, the information kiosk, benches, the clock above the entrance and
-	 * departure boards on the end walls, plus benches and boards upstairs.
+	 * The furnished ground and upper floors, laid out by region (see {@link HallZones}): the unpaid hall with its ticket
+	 * machines, ticket office or service desk, shops and info point, the gate line with a lane per door cell and glass
+	 * barriers elsewhere, boards over the gates, seats on the paid side, the clock above the entrance, plus benches and boards
+	 * upstairs.
 	 */
 	void interior() {
 		if (!site.building()) {
@@ -244,9 +247,12 @@ abstract class PlanFurniture extends PlanRoofs {
 		final int vS = site.vStart();
 		final int vE = site.vEnd();
 		final int vEntr = site.entranceV();
-		final int uGate = uS + 4;
 		final int h = entranceHalf();
-		// gate bank across the entrance, a lane per door cell: END, GATE.., WIDE, ..GATE, END; glass barriers elsewhere
+		final HallZones.Hall hall = hall(uS, uP, vS, vE, vEntr, h);
+		final HallZones.Region region = HallZones.region(spec.operator(), spec.building());
+		final HallZones.Layout zones = HallZones.plan(hall, HallZones.profile(region));
+		final int uGate = zones.gateU();
+		// gate bank across the walk in, a lane per door cell: END, GATE.., WIDE, ..GATE, END; glass barriers elsewhere
 		for (int d = -h - 1; d <= h + 1; d++) {
 			final String kind = Math.abs(d) == h + 1 ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
 			// green towards the street door, red towards the platforms
@@ -258,43 +264,29 @@ abstract class PlanFurniture extends PlanRoofs {
 			}
 			fence(uGate, StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
 		}
-		// ticket office on the unpaid side with its window facing +v (north of the entrance when it fits, else south)
-		final int officeU0 = uS + 1;
-		final int officeU1 = uS + 2;
-		int officeV0 = vEntr + h + 2;
-		int officeV1 = vEntr + h + 3;
-		if (officeV1 > vE - 1) {
-			officeV0 = vEntr - h - 3;
-			officeV1 = vEntr - h - 2;
-		}
-		if (officeV0 >= vS + 1 && officeV1 <= vE - 1) {
-			for (int u = officeU0; u <= officeU1; u++) {
-				put(Role.WALL, u, 1, officeV0 - 1, LocalDir.MINUS_V, b.interiorWall());
-				put(Role.WALL, u, 2, officeV0 - 1, LocalDir.MINUS_V, b.interiorWall());
-			}
-			put(Role.WALL, officeU0 - 1, 1, officeV0, LocalDir.MINUS_U, b.interiorWall());
-			put(Role.WALL, officeU0 - 1, 2, officeV0, LocalDir.MINUS_U, b.interiorWall());
-			put(Role.WALL, officeU0, 1, officeV0, LocalDir.PLUS_V, b.interiorWall());
-			put(Role.FIXTURE, officeU0, 2, officeV0, LocalDir.PLUS_V, "aurelia_transit_architecture:booth_window");
-			put(Role.WALL, officeU0 - 1, 1, officeV1, LocalDir.MINUS_U, b.interiorWall());
-			put(Role.WALL, officeU0 - 1, 2, officeV1, LocalDir.MINUS_U, b.interiorWall());
-			for (int u = officeU0; u <= officeU1; u++) {
-				put(Role.WALL, u, 1, officeV1 + 1, LocalDir.PLUS_V, b.interiorWall());
-				put(Role.WALL, u, 2, officeV1 + 1, LocalDir.PLUS_V, b.interiorWall());
+		// departure boards hung from the ceiling over the gates, facing the way in
+		for (int v = vEntr - 1; v <= vEntr + 1; v++) {
+			if (taken(uGate, StationGeometry.UPPER_FLOOR_Y, v)) {
+				for (int y = StationGeometry.UPPER_FLOOR_Y - 2; y < StationGeometry.UPPER_FLOOR_Y; y++) {
+					put(Role.FIXTURE, uGate, y, v, LocalDir.MINUS_U, "aurelia_transit_architecture:concourse_board");
+				}
 			}
 		}
-		// MTR ticket machines, two tall, against the unpaid side south of the entrance
-		for (int i = 0; i < 2; i++) {
-			final int v = vEntr - h - 3 - i;
-			if (v <= vS) {
-				continue;
-			}
-			ticketMachine(uS + 1, 1, v, LocalDir.PLUS_U);
-		}
-		// information kiosk on the unpaid side, against the street wall beside the machines (or by the entrance)
-		for (final int v : new int[]{vEntr - h - 5, vEntr - h - 2}) {
-			if (v >= vS + 1 && v <= vE - 1 && kiosk(uS + 1, 1, v, LocalDir.PLUS_U)) {
-				break;
+		int shop = 0;
+		for (final HallZones.Unit unit : zones.units()) {
+			final int y = StationGeometry.WALK_Y;
+			switch (unit.kind()) {
+				case MACHINE -> ticketMachine(unit.uMin(), y, unit.vMin(), unit.front());
+				case INFO_KIOSK -> kiosk(unit.uMin(), y, unit.vMin(), unit.front());
+				case PILLAR -> put(Role.FIXTURE, unit.uMin(), y, unit.vMin(), unit.front(), "aurelia_transit_architecture:information_pillar");
+				case OFFICE -> shopUnit(fitUnit(unit, ConcourseFit.Kind.KIOSK), y, office(region, unit.name()), true, b);
+				case COUNTER -> shopUnit(fitUnit(unit, ConcourseFit.Kind.KIOSK), y,
+						new String[]{unit.name(), "minecraft:barrel", "minecraft:barrel", PlanFitOut.KIOSK_FASCIA}, true, b);
+				case SHOP -> {
+					final String[] kind = PlanFitOut.SHOPS.get(shop++ % PlanFitOut.SHOPS.size());
+					shopUnit(fitUnit(unit, ConcourseFit.Kind.SHOP), y,
+							unit.name().isEmpty() ? kind : new String[]{unit.name(), kind[1], kind[2], kind[3]}, false, b);
+				}
 			}
 		}
 		// no single benches on the ground floor: one seat by the lift or the gates looked dropped there (Jah, 10-22);
@@ -304,33 +296,62 @@ abstract class PlanFurniture extends PlanRoofs {
 		// ground floor gets a row of seats against a wall of the paid hall, as a small upper floor may fit no islands.
 		final boolean fitOut = site.bridge() && !spec.options().underground();
 		if (spec.furniture() && (fitOut || waitingRoom(b) == null)) {
-			seatRow(uS, uP, vS, vE, vEntr, b);
+			seatRow(uGate, uP, vS, vE, vEntr, b);
 		}
 		// clock above the entrance, facing into the hall
 		put(Role.FIXTURE, uS + 1, 4, vEntr, LocalDir.PLUS_U, "aurelia_transit_architecture:wall_digital_clock");
 		// no MTR name board over the door (the entrance's own lettering names it) and no MTR tactile map, which plays music
 		// to anyone near it (Jah, 10-22)
-		// departure boards on both end walls, facing into the hall
-		// (with wings the end walls are open there, so the ground-floor boards hang only where a wall is behind them)
-		if (cells.containsKey(new Cell((uS + uP) / 2, 2, vS))) {
-			put(Role.FIXTURE, (uS + uP) / 2, 2, vS + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
-		}
-		if (cells.containsKey(new Cell((uS + uP) / 2, 2, vE))) {
-			put(Role.FIXTURE, (uS + uP) / 2, 2, vE - 1, LocalDir.MINUS_V, "aurelia_transit_architecture:concourse_board");
-		}
 		put(Role.FIXTURE, (uS + uP) / 2, StationGeometry.UPPER_WALK_Y + 1, vS + 1, LocalDir.PLUS_V,
 				"aurelia_transit_architecture:concourse_board");
 	}
+
+	/** The hall {@link #interior} lays out: what is already built inside it, and where its walls are open. */
+	HallZones.Hall hall(int uS, int uP, int vS, int vE, int vEntr, int h) {
+		final Set<ConcourseFit.Spot> blocked = new HashSet<>();
+		final Set<ConcourseFit.Spot> openings = new HashSet<>();
+		for (int u = uS; u <= uP; u++) {
+			for (int v = vS; v <= vE; v++) {
+				final boolean edge = u == uS || u == uP || v == vS || v == vE;
+				final boolean built = taken(u, StationGeometry.WALK_Y, v) || taken(u, StationGeometry.WALK_Y + 1, v);
+				if (!edge && built) {
+					blocked.add(new ConcourseFit.Spot(u, v));
+				} else if (edge && at(u, StationGeometry.WALK_Y, v) == null && at(u, StationGeometry.WALK_Y + 1, v) == null
+						&& !(u == uS && Math.abs(v - vEntr) <= h)) {
+					// the street door has its own walk to the gates
+					openings.add(new ConcourseFit.Spot(u, v));
+				}
+			}
+		}
+		return new HallZones.Hall(uS, uP, vS, vE, vEntr, h, blocked, openings);
+	}
+
+	private static ConcourseFit.Unit fitUnit(HallZones.Unit unit, ConcourseFit.Kind kind) {
+		return new ConcourseFit.Unit(kind, unit.uMin(), unit.vMin(), unit.uMax(), unit.vMax(), unit.front());
+	}
+
+	/** A ticket office's name, back shelves and fascia: NS yellow, DB red, JR green, a British office's red. */
+	private static String[] office(HallZones.Region region, String name) {
+		final String fascia = switch (region) {
+			case DUTCH -> "minecraft:yellow_concrete";
+			case GERMAN, BRITISH -> "minecraft:red_concrete";
+			case JAPANESE -> "minecraft:lime_concrete";
+		};
+		return new String[]{name, "minecraft:barrel", "minecraft:bookshelf", fascia};
+	}
+
+	/** See {@link PlanFitOut#shopUnit}. */
+	abstract void shopUnit(ConcourseFit.Unit unit, int y, String[] shop, boolean counter, StylePalette.Building b);
 
 	/** Seats in a {@link #seatRow} row, a bin at its far end. */
 	static final int SEAT_ROW = 3;
 
 	/**
-	 * A row of {@link #SEAT_ROW} seats and a bin against the paid hall's platform wall, else its street-side gate line, as far
+	 * A row of {@link #SEAT_ROW} seats and a bin against the paid hall's platform wall, else behind its gate line, as far
 	 * from the entrance as there is a clear run with walking room in front of it, the cells beside the lift kept free.
 	 * True if placed.
 	 */
-	boolean seatRow(int uS, int uP, int vS, int vE, int vEntr, StylePalette.Building b) {
+	boolean seatRow(int uGate, int uP, int vS, int vE, int vEntr, StylePalette.Building b) {
 		final StationLayout.Lift lift = site.buildingLift(layout);
 		final int y = StationGeometry.WALK_Y;
 		final List<Integer> order = new ArrayList<>();
@@ -338,7 +359,7 @@ abstract class PlanFurniture extends PlanRoofs {
 			order.add(v);
 		}
 		order.sort(Comparator.comparingInt((Integer v) -> -Math.abs(v - vEntr)).thenComparingInt(v -> v));
-		for (final int[] side : new int[][]{{uP - 1, -1}, {uS + 5, 1}}) {
+		for (final int[] side : new int[][]{{uP - 1, -1}, {uGate + 1, 1}}) {
 			final int u = side[0];
 			final LocalDir front = side[1] < 0 ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 			for (final int start : order) {
@@ -622,6 +643,12 @@ abstract class PlanFurniture extends PlanRoofs {
 	 * it centre"): the pair spans the post's cell and the one {@code step} along u, so both blocks move half a block back
 	 * towards the post. Left and right are a viewer's, facing the screen's front.
 	 */
+	/**
+	 * The screen block in front of the pole hangs on a monitor arm clamped round it (Jah, 10-25), as the game sets it there
+	 * ({@code PidsBlock.ARM}); its pair's other half has nothing behind it.
+	 */
+	static final String ON_ARM = ",arm=true";
+
 	static String centredOn(LocalDir front, int step) {
 		// facing +v, a viewer looks along -v and has -u on their right; facing -v, +u
 		final boolean towardMinusU = step > 0;
@@ -661,7 +688,7 @@ abstract class PlanFurniture extends PlanRoofs {
 				for (final int step : new int[]{toward, -toward}) {
 					final int u = post.u() + step;
 					if (band.contains(u, v) && !isEdge(band, u) && !taken(u, y, v)) {
-						put(Role.FIXTURE, post.u(), y, v, side, PIDS, centredOn(side, step));
+						put(Role.FIXTURE, post.u(), y, v, side, PIDS, centredOn(side, step) + ON_ARM);
 						put(Role.FIXTURE, u, y, v, side, PIDS, centredOn(side, step));
 						fixed = true;
 						break;
@@ -706,7 +733,7 @@ abstract class PlanFurniture extends PlanRoofs {
 							|| taken(other, StationGeometry.WALK_Y, v)) {
 						continue;
 					}
-					put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS, centredOn(side, step));
+					put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS, centredOn(side, step) + ON_ARM);
 					put(Role.FIXTURE, other, StationGeometry.WALK_Y, v, side, PIDS, centredOn(side, step));
 					return true;
 				}
@@ -720,7 +747,7 @@ abstract class PlanFurniture extends PlanRoofs {
 			for (final LocalDir side : new LocalDir[]{LocalDir.PLUS_V, LocalDir.MINUS_V}) {
 				final int v = post.v() + (side == LocalDir.PLUS_V ? 1 : -1);
 				if (band.runs(v) && !nearStairs(band, v) && !taken(post.u(), StationGeometry.WALK_Y, v)
-						&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS)) {
+						&& put(Role.FIXTURE, post.u(), StationGeometry.WALK_Y, v, side, PIDS, "offset=none" + ON_ARM)) {
 					return true;
 				}
 			}

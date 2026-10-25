@@ -699,6 +699,12 @@ public final class StudioApi {
 			v = StationLayout.of(spec, layout).entranceV();
 			du = -1;
 			dv = 0;
+		} else if (spec.real().hallOverTracks()) {
+			// Utrecht Centraal: the broad stairs up from the square to its hall, at the street end of the hall's walk
+			u = 0;
+			v = StationLayout.of(spec, layout).bridgeV();
+			du = -1;
+			dv = 0;
 		} else {
 			return "null";
 		}

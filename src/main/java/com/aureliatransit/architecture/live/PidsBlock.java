@@ -38,6 +38,11 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 	public static final BooleanProperty RIGHT = BooleanProperty.of("right");
 	public static final BooleanProperty UP = BooleanProperty.of("up");
 	public static final BooleanProperty DOWN = BooleanProperty.of("down");
+	/**
+	 * Held on a monitor arm clamped round the pole behind it (Jah, 10-25: a screen beside a round column floated off it). Set
+	 * whenever the block behind does not fill the face the screen's back is on (a pole, a post, a fence); see {@link #onArm}.
+	 */
+	public static final BooleanProperty ARM = BooleanProperty.of("arm");
 	public static final int MAX_WIDTH = 16;
 	public static final int MAX_HEIGHT = 8;
 
@@ -62,7 +67,7 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 		this.doubleSided = doubleSided;
 		this.frontZ = frontZ;
 		this.topInset = topInset;
-		setDefaultState(getDefaultState().with(LEFT, false).with(RIGHT, false).with(UP, false).with(DOWN, false));
+		setDefaultState(getDefaultState().with(LEFT, false).with(RIGHT, false).with(UP, false).with(DOWN, false).with(ARM, false));
 	}
 
 	public DisplayKind kind() {
@@ -84,7 +89,7 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 	@Override
 	protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
 		super.appendProperties(builder);
-		builder.add(LEFT, RIGHT, UP, DOWN);
+		builder.add(LEFT, RIGHT, UP, DOWN, ARM);
 		FreePlacement.addTurn(builder);
 		FreePlacement.addNudge(builder);
 	}
@@ -110,7 +115,29 @@ public class PidsBlock extends FacingShapedBlock implements BlockEntityProvider 
 				.with(LEFT, joinsWith(state, world.getBlockState(pos.offset(viewerLeft(facing)))))
 				.with(RIGHT, joinsWith(state, world.getBlockState(pos.offset(viewerRight(facing)))))
 				.with(UP, joinsWith(state, world.getBlockState(pos.up())))
-				.with(DOWN, joinsWith(state, world.getBlockState(pos.down())));
+				.with(DOWN, joinsWith(state, world.getBlockState(pos.down())))
+				.with(ARM, onArm(state, world, pos));
+	}
+
+	/**
+	 * True when a platform screen stands square against something that leaves a gap behind it: the block behind its back has
+	 * a shape but does not fill the face towards it (a round column, a lamp post, a fence). Not for hanging displays or the
+	 * concourse board (it stands on its wall), turned
+	 * ones, or ones nudged forwards or back, where an arm would not reach; a sideways half nudge keeps the arm on the pole.
+	 */
+	private boolean onArm(BlockState state, WorldAccess world, BlockPos pos) {
+		final FreePlacement.Nudge nudge = FreePlacement.nudge(state);
+		if (doubleSided || kind == DisplayKind.CONCOURSE || FreePlacement.angle(state) != 0 || nudge.depth() != 0 || nudge.flush()) {
+			return false;
+		}
+		final Direction facing = state.get(FACING);
+		final BlockPos behindPos = pos.offset(facing.getOpposite());
+		final BlockState behind = world.getBlockState(behindPos);
+		if (behind.isAir() || behind.getBlock() instanceof PidsBlock) {
+			return false;
+		}
+		final VoxelShape shape = behind.getCollisionShape(world, behindPos);
+		return !shape.isEmpty() && !Block.isFaceFullSquare(shape, facing);
 	}
 
 	@Override

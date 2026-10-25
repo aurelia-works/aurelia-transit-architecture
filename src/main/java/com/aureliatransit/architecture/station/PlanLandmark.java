@@ -127,7 +127,7 @@ abstract class PlanLandmark extends PlanUnderground {
 
 	/** Draws every mass, the ones that cut into walls (clocks, arches, colonnades, gables, towers) before the walls. */
 	void draw(Front f) {
-		final List<Mass> masses = landmark.masses();
+		final List<Mass> masses = landmark.usesEnd() ? landmark.masses().stream().map(m -> sideLength(f, m)).toList() : landmark.masses();
 		for (final Class<?> kind : List.of(Clock.class, Arch.class, Ceiling.class, Colonnade.class, Gable.class, Tower.class, Volume.class, Dome.class,
 				Pinnacles.class)) {
 			for (final Mass m : masses) {
@@ -155,6 +155,27 @@ abstract class PlanLandmark extends PlanUnderground {
 				}
 			}
 		}
+	}
+
+	/** A sheet's mass with its {@link Landmark#END} positions turned into cells of this building (its length, or a head building's width). */
+	Mass sideLength(Front f, Mass m) {
+		// a side building runs along v, a head building across u
+		final int right = f.head() ? f.cu() - layout.headFrom() : f.cv() - buildingFrom();
+		final int left = f.head() ? f.cu() - layout.headTo() : f.cv() - buildingTo();
+		final java.util.function.IntUnaryOperator at = x -> x >= Landmark.END / 2 ? right + x - Landmark.END : x <= -Landmark.END / 2 ? left + x + Landmark.END : x;
+		if (m instanceof Volume v) {
+			return new Volume(at.applyAsInt(v.x0()), at.applyAsInt(v.x1()), v.z0(), v.z1(), v.height(), v.skin(), v.facade(), v.roof(), v.rise(),
+					v.openBack(), v.dormers(), v.openFront(), v.bottom());
+		} else if (m instanceof Tower t) {
+			return new Tower(at.applyAsInt(t.x()), t.z(), t.r(), t.octagonal(), t.y0(), t.height(), t.skin(), t.cap(), t.capHeight(), t.clock());
+		} else if (m instanceof Dome d) {
+			return new Dome(at.applyAsInt(d.x()), d.z(), d.r(), d.y0(), d.drum(), d.skin(), d.onion(), d.lantern());
+		} else if (m instanceof Gable g) {
+			return new Gable(at.applyAsInt(g.x()), g.z(), g.half(), g.y(), g.rise(), g.stepped(), g.skin());
+		} else if (m instanceof Colonnade c) {
+			return new Colonnade(at.applyAsInt(c.x0()), at.applyAsInt(c.x1()), c.z(), c.height(), c.every(), c.column(), c.skin());
+		}
+		return m;
 	}
 
 	// ---- walls ----

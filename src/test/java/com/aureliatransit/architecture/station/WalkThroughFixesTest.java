@@ -179,8 +179,10 @@ class WalkThroughFixesTest {
 			final PlannedBlock pair = plan.blocks().stream().filter(o -> o != b && o.blockId().equals(b.blockId()) && o.v() == b.v() && o.y() == b.y()
 					&& Math.abs(o.u() - b.u()) == 1).findFirst().orElse(null);
 			if (onColumn && pair != null) {
-				assertEquals(PlanFurniture.centredOn(b.front(), pair.u() - b.u()), b.state(), "the column's half moves towards its pair");
-				assertEquals(b.state(), pair.state(), "both halves move together");
+				// both halves move together; the column's half hangs on the monitor arm clamped round the column (Jah, 10-25)
+				final String nudge = PlanFurniture.centredOn(b.front(), pair.u() - b.u());
+				assertEquals(nudge + PlanFurniture.ON_ARM, b.state(), "the column's half moves towards its pair, on the arm");
+				assertEquals(nudge, pair.state(), "the other half moves alike, nothing behind it to clamp");
 				centred++;
 			}
 		}
