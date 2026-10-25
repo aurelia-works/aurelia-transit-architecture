@@ -282,6 +282,15 @@ public final class StationAudit {
 			}
 		}
 
+		/** Each canopied platform's planned first and last canopy row. */
+		private final java.util.Map<TrackLayout.PlatformBand, int[]> canopySpans = new java.util.HashMap<>();
+
+		/** True past the stretch of this platform its canopy was planned to cover. */
+		private boolean outsideCanopy(TrackLayout.PlatformBand band, int v) {
+			final int[] span = canopySpans.computeIfAbsent(band, b -> PlanState.canopySpan(spec, layout, StationLayout.of(spec, layout), b));
+			return v < span[0] || v > span[1];
+		}
+
 		private TrackLayout.PlatformBand bandAt(int u) {
 			for (final TrackLayout.PlatformBand band : layout.platforms()) {
 				if (u >= band.uMin() && u <= band.uMax()) {
@@ -359,6 +368,10 @@ public final class StationAudit {
 						continue;
 					}
 					final RoofType roof = band == null ? spec.roof() : StationGeometry.roof(spec, band.number());
+					// past a town station's partial canopy the platform is open, as planned (PlanState#canopySpan)
+					if (band != null && roof == RoofType.CANOPY && outsideCanopy(band, block.v())) {
+						continue;
+					}
 					final long key = key(block.u(), 0, block.v());
 					if (roof == RoofType.NONE) {
 						openFloor++;

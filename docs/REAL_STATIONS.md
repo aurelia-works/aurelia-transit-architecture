@@ -27,7 +27,7 @@ At Hamburg: terminus, hub, "no building", look words, a smaller building, mezzan
 | Hall | One closed hall over all tracks (Benthem Crouwel, opened 2016) | The footbridge becomes the hall: a deck over all platforms, walls and roof around it |
 | Platforms | 8 platforms, 16 platform tracks, 4 of them terminating (1–3 and 4a at the north end) | 8 through islands. The terminating tracks are not built. A track count gives islands (2 tracks each); an odd count falls back to plain platforms with a warning |
 | Hall depth along the tracks | about 85 m | 128 blocks at 1.5/m (127 built, odd so there is a centre row) on platforms 175 or longer. Shorter platforms get a shallower hall (warned), down to 31 blocks; below platforms 78 long there is no hall |
-| Roof | Steel, three waves across the tracks, highest about 18 m over the rails | Three sine waves. The middle one is 56 % of the width and peaks at y 27; the side ones rise 40 % as high. The eaves are at y 17 |
+| Roof | Steel, three waves across the tracks, highest about 18 m over the rails; the highest wave covers the trains, the two lower ones the tram and bus stations either side (Dezeen) | Three sine waves. The middle one spans the tracks, its feet over the outermost tracks, and peaks at y 27; the side ones cover the hall's ends beyond the tracks and rise 40 % as high. The eaves are at y 17. The bus and tram stations are not built, so the side waves are narrow (the ends are 11 columns inside the hall) |
 | Walls | Glass façades hung from the roof | `utrecht_hall_glass_facade` from the deck to the roof on all four sides |
 | Columns | White "tree" columns | A round steel shaft with the white tree crown, on the platform pier lines every 24 rows |
 | Gate lines | OV-chipkaart gates at the hall's entrances (see the gate sources) | A gate line each side, where the streets meet the hall: 13 gates around the centre line and barriers to the walls |
@@ -64,7 +64,7 @@ Ask with `hamburg hauptbahnhof` or `hamburg hbf`.
 | Platform length | Longer than the shed | 225 (the shed's 150 m) by default; a length word applies |
 | Bridges | The tracks lie in a cutting. The north Wandelhalle (shops on two floors, stairs and lifts) and the narrower Südsteg (escalators) cross at street level | The generator's footbridge with stairs, escalators and lifts to every island. The tracks stay at street level |
 | Building | Neo-Renaissance, "fortification-like", stone reliefs; Reinhardt & Süßenguth, opened 1906. The stone is not named in the sources | The grand station building beside the tracks, in the generator's sandstone (a stand-in) |
-| Clock towers | Two, 45 m, at the west and east entrance halls | One, 5 wide, to y 68 (45 m): stone storeys with string courses and windows, louvred belfry, clocks, pyramid cap |
+| Clock towers | Two, 45 m, square, at the west and east entrance halls of the Wandelhalle | One, 9 wide (an eighth of its height; was 5, 3.3 m, a chimney), its pyramid's point at y 68 (45 m): stone storeys with string courses and three-wide windows, louvred belfry, one-block clocks, pyramid cap. The second tower needs a building on the far street (not planned) |
 | Operator | DB | DB signs, German S-Bahn platform finish, escalators on |
 
 Not built yet: the cutting (the streets are at track level), the second tower and the east entrance hall, the Wandelhalle's shops, the building and main bridge at the north end (they stand at the side), through tracks 9–10, the S-Bahn tunnel (tracks 1–2), the Steintorbrücke and platforms longer than the shed by default.

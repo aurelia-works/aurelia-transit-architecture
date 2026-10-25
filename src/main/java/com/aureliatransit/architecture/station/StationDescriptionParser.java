@@ -608,9 +608,12 @@ public final class StationDescriptionParser {
 			if (stationClass == StationClass.AUTO && era == StationEra.AUTO) {
 				return;
 			}
-			// a real station is built as it is: Studio rolls a class and an era with every seed, so leaving them out is no warning
-			if (real != null && real != RealStation.NONE) {
-				note(-1, real.label() + " is built as it is; the class and era are left out");
+			// a real station is built as it is: Studio rolls a class and an era with every seed, so leaving them out is no warning.
+			// So is the one "utrecht station" means when nothing else in the words is against it: asked before the class fills in
+			// a building, or a rolled "town class" turned Jah's 10-22 Utrecht into a station of its own with the city's look
+			final RealStation asIs = real != null && real != RealStation.NONE ? real : real == null && looseReal != null && looseFits() ? looseReal : null;
+			if (asIs != null) {
+				note(-1, asIs.label() + " is built as it is; the class and era are left out");
 				stationClass = StationClass.AUTO;
 				era = StationEra.AUTO;
 				return;
@@ -681,9 +684,15 @@ public final class StationDescriptionParser {
 							set.add(scale.label() + " station building");
 						}
 						if (!roofSaid && e == StationEra.HISTORIC) {
-							canopy = CanopyShape.GABLE;
+							// a city the words name keeps its own canopies, as it keeps its own shed (Studio rolls an era with
+							// every seed; Teddington's are the look's, not a rolled gable)
 							roof = RoofType.CANOPY;
-							set.add("gable canopies");
+							if (looks.isEmpty()) {
+								canopy = CanopyShape.GABLE;
+								set.add("gable canopies");
+							} else {
+								set.add("the city's own canopies");
+							}
 						} else if (!roofSaid && modern && c == StationClass.REGIONAL && roofMaterial == null) {
 							roofMaterial = RoofMaterial.GLASS;
 							set.add("glass canopies");
@@ -709,8 +718,14 @@ public final class StationDescriptionParser {
 						}
 						if (!roofSaid) {
 							roof = RoofType.HALL;
-							shed = e == StationEra.HISTORIC ? ShedShape.MULTI_ARCH : ShedShape.ARCH;
-							set.add(e == StationEra.HISTORIC ? "a train shed of several arches" : "an arched train shed");
+							// a city the words name keeps its own shed (St Pancras's pointed arch, Frankfurt's row of arches): the
+							// class asks for a shed, the city says which (Studio rolls a class with every seed)
+							if (looks.isEmpty()) {
+								shed = e == StationEra.HISTORIC ? ShedShape.MULTI_ARCH : ShedShape.ARCH;
+								set.add(e == StationEra.HISTORIC ? "a train shed of several arches" : "an arched train shed");
+							} else {
+								set.add("the city's own train shed");
+							}
 						}
 						if (modern && !escalators) {
 							escalators = true;
@@ -2488,8 +2503,9 @@ public final class StationDescriptionParser {
 			if (roof != RoofType.HALL && !roofNone) {
 				final BuildingStyle look = wantsBuilding ? builder.build().building() : buildingStyle != null ? buildingStyle : BuildingStyle.NONE;
 				final CanopyShape own = CanopyShape.forLook(look, style != null ? style : StationStyle.MODERN);
-				// the seed swaps the look's own canopy for another two times in five
-				final CanopyShape shape = canopy != null ? canopy : seed != 0 && dice(5).nextInt(5) < 2
+				// the seed swaps the look's own canopy for another two times in five, but not a city's the words name (its canopy
+				// is part of it, like its shed)
+				final CanopyShape shape = canopy != null ? canopy : seed != 0 && looks.isEmpty() && dice(5).nextInt(5) < 2
 						? pick(dice(6), Arrays.stream(CanopyShape.values()).filter(c -> c != own).toArray(CanopyShape[]::new)) : own;
 				builder.canopy(shape);
 				if (canopy == null && shape != own) {
@@ -2504,8 +2520,10 @@ public final class StationDescriptionParser {
 				final ShedShape own = ShedShape.forLook(wantsBuilding ? builder.build().building() : BuildingStyle.NONE,
 						style != null ? style : StationStyle.MODERN);
 				// one wide arch and a row of arches are both a city's barrel-vaulted shed, so the seed may swap them; a pointed
-				// (St Pancras) or flat shed is the look itself and stays
-				final boolean swap = shed == null && seed != 0 && (own == ShedShape.ARCH || own == ShedShape.MULTI_ARCH) && dice(7).nextInt(5) < 2;
+				// (St Pancras) or flat shed is the look itself and stays, and so does the shed of a city the words name (Jah,
+				// 10-24: Amsterdam Centraal has one arch and Frankfurt Hbf a row of them, whatever the seed)
+				final boolean swap = shed == null && seed != 0 && looks.isEmpty() && (own == ShedShape.ARCH || own == ShedShape.MULTI_ARCH)
+						&& dice(7).nextInt(5) < 2;
 				builder.shed(shed != null ? shed : swap ? (own == ShedShape.ARCH ? ShedShape.MULTI_ARCH : ShedShape.ARCH) : own);
 				if (swap) {
 					seeded.add(own == ShedShape.ARCH ? "a train shed of several arches" : "one arched train shed");

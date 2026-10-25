@@ -64,6 +64,8 @@ function check(ok, what) {
 }
 
 await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+// the seed and its dice sit in the More panel, closed on a fresh page
+await page.evaluate(() => { const more = document.getElementById('more'); if (more) more.open = true; });
 await page.waitForTimeout(1500);
 const locks = await page.$$eval('[data-lock]', bs => bs.map(b => b.dataset.lock));
 for (const lock of Object.keys(KEEPS)) {
@@ -116,6 +118,7 @@ if (plans[plans.length - 1].plan.built.building === 'no building') {
 await setLocks(['shape']);
 const shape = KEEPS.shape(plans[plans.length - 1]);
 await page.reload({ waitUntil: 'networkidle' });
+await page.evaluate(() => { const more = document.getElementById('more'); if (more) more.open = true; });
 await page.waitForTimeout(1500);
 check((await page.getAttribute('[data-lock="shape"]', 'aria-pressed')) === 'true', 'the shape lock survives a reload');
 check(KEEPS.shape(await rollOnce()) === shape, 'after a reload a roll still keeps the shape');

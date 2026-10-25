@@ -7,7 +7,9 @@ that is not `localhost`/`127.0.0.1`.
 Requests carry the **same parameters** wherever they say "the plan parameters": the form fields the page sends (`look`, `mix`,
 `mode`, `tracks`, `length`, `layout`, `building`, `size`, `roof`, `esc`, `walls`, `trav`, `bed`, `name`, `text`, `platforms`,
 `pinned`, `seed`, and from this round `class`, `era`, `facing`). `StudioApi.description(q)` turns them into the words the planner
-reads, so the preview, the export and the game all plan the same station.
+reads, so the preview, the export and the game all plan the same station. Optional `rolled` (10-24) lists the pinned controls only
+the dice set; words naming a city or a look take the look, building and roof among them (see `STUDIO_DESIGN.md`). Without it every
+pin holds.
 
 | Endpoint | Method | What |
 |---|---|---|

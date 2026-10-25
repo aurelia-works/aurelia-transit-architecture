@@ -145,9 +145,11 @@ abstract class PlanColumns extends PlanMovingWalks {
 	}
 
 	List<Integer> canopyV(TrackLayout.PlatformBand band) {
+		// over the canopy's own stretch of the platform (all of it, but beside a compact building)
+		final int start = canopyStart(band);
 		final List<Integer> positions = new ArrayList<>();
-		for (final int v : canopyPositions(band.length())) {
-			positions.add(band.vFrom() + v);
+		for (final int v : canopyPositions(canopyEnd(band) - start + 1)) {
+			positions.add(start + v);
 		}
 		return positions;
 	}
@@ -218,11 +220,13 @@ abstract class PlanColumns extends PlanMovingWalks {
 		final int reach = StationGeometry.MAX_CANTILEVER;
 		supports.addAll(extra);
 		supports.sort(Comparator.naturalOrder());
-		if (supports.get(supports.size() - 1) < band.vTo() - reach) {
-			endColumn(kept, band, line, top, new int[]{band.vTo() - 2, band.vTo() - 1, band.vTo() - 3, band.vTo() - 4, band.vTo()});
+		final int first = canopyStart(band);
+		final int last = canopyEnd(band);
+		if (supports.get(supports.size() - 1) < last - reach) {
+			endColumn(kept, band, line, top, new int[]{last - 2, last - 1, last - 3, last - 4, last});
 		}
-		if (supports.get(0) > band.vFrom() + reach) {
-			endColumn(kept, band, line, top, new int[]{band.vFrom() + 2, band.vFrom() + 1, band.vFrom() + 3, band.vFrom() + 4, band.vFrom()});
+		if (supports.get(0) > first + reach) {
+			endColumn(kept, band, line, top, new int[]{first + 2, first + 1, first + 3, first + 4, first});
 		}
 		return kept;
 	}

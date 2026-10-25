@@ -15,6 +15,8 @@ const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console
 let fail = 0; const check = (ok, what) => { console.log((ok ? 'PASS ' : 'FAIL ') + what); if (!ok) fail++; };
 const t0 = Date.now();
 await p.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+// the seed and its dice sit in the More panel, closed on a fresh page
+await p.evaluate(() => { const more = document.getElementById('more'); if (more) more.open = true; });
 // the first visit rolls a random station, and the biggest take seconds to plan: wait for the plan, not a fixed time
 await p.waitForFunction(() => /Planned in/.test(document.getElementById('status').textContent), null, { timeout: 30000 }).catch(() => {});
 check(await p.title() !== '' && (await p.$$('.look')).length > 10, `studio opens (${Date.now() - t0} ms, ${(await p.$$('.look')).length} looks)`);

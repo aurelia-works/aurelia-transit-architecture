@@ -131,7 +131,7 @@ abstract class PlanBridges extends PlanConcourse {
 			// each flight glazed (or walled) and roofed like the corridor it leaves
 			for (final TrackLayout.PlatformBand band : site.bridgeBands(layout)) {
 				for (final StationLayout.Flight flight : site.flights(band)) {
-					if (roof(band) == RoofType.CANOPY) {
+					if (canopyOver(band, flight)) {
 						stairShaft(band, flight, b);
 					} else {
 						stairHood(band, flight, b);
@@ -195,6 +195,9 @@ abstract class PlanBridges extends PlanConcourse {
 			}
 			final int flankTop = StationGeometry.CANOPY_Y;
 			for (final StationLayout.Flight flight : site.flights(band)) {
+				if (!canopyOver(band, flight)) {
+					continue;
+				}
 				final List<Integer> open = opening(band, flight);
 				final int landing = flight.landingV();
 				for (final int su : open) {
@@ -243,7 +246,7 @@ abstract class PlanBridges extends PlanConcourse {
 				for (int y = 1; y <= StationGeometry.STAIR_STEPS; y++) {
 					final int v = flight.stepV(y);
 					for (int rail = StationGeometry.WALK_Y; rail <= y + 1; rail++) {
-						if (rail == StationGeometry.CANOPY_Y && roof(band) == RoofType.CANOPY) {
+						if (rail == StationGeometry.CANOPY_Y && canopyOver(band, flight)) {
 							continue;
 						}
 						// on a boarding edge the rail starts above head height (the edge stays clear to board from); every rail
@@ -442,7 +445,8 @@ abstract class PlanBridges extends PlanConcourse {
 	void realHall(int from, int to, int wallLo, int wallHi) {
 		final int vB = site.bridgeV();
 		final int floor = StationGeometry.UPPER_WALK_Y;
-		final int[] surface = spec.real().roofProfile(to - from, floor + HALL_EAVES);
+		// the highest wave over the tracks, its feet where the ends meet the outermost tracks; the lower waves over the ends
+		final int[] surface = spec.real().roofProfile(to - from, floor + HALL_EAVES, site.street().uMax() - from, site.farStreet().uMin() - from);
 		// full blocks under each step up, meeting the lower neighbour's top, so the shell is closed
 		final int[] low = steps(surface, true);
 		for (int u = from; u <= to; u++) {

@@ -96,4 +96,30 @@ class StudioWordsTest {
 		assertEquals(com.aureliatransit.architecture.station.Operator.NS, tokyoNs.operator());
 		assertEquals(com.aureliatransit.architecture.station.StationStyle.DUTCH, StationDescriptionParser.parse("2 tracks, ns").spec().style());
 	}
+
+	@Test
+	void wordsNamingNoLookLeaveThePagesMixAlone() {
+		// a fresh page rolled Teddington + Zurich; "2 track station" planned that mix, but wordsLook said TEDDINGTON, so the page
+		// cleared the mix without planning again and the next change (a block swap, 10-25) built another station
+		final StudioApi api = new StudioApi(new BlockModels((namespace, path) -> {
+			final Path file = Path.of("src/main/resources/assets", namespace, path);
+			return Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
+		}));
+		final Map<String, String> q = new java.util.HashMap<>(Map.ofEntries(Map.entry("text", "2 track station, station building, 64 long"),
+				Map.entry("mode", "through"), Map.entry("layout", "AUTO"), Map.entry("tracks", "4"), Map.entry("length", "80"),
+				Map.entry("look", "TEDDINGTON"), Map.entry("mix", "ZURICH"), Map.entry("roof", "AUTO"), Map.entry("building", "1"),
+				Map.entry("size", "COMPACT"), Map.entry("bed", "andesite"), Map.entry("seed", "qy6ty4"),
+				Map.entry("pinned", "look,mix,era,mode,tracks,length,layout,building,size,roof,esc,walls,trav,bed,class,text"),
+				Map.entry("rolled", "look,mix,era,mode,tracks,length,layout,building,size,roof,esc,walls,trav,bed,class")));
+		final Map<String, Object> first = Json.object(Json.parse(api.plan(q)));
+		assertEquals("", first.get("wordsLook"));
+		// what the page's followWords then sets: the plan's tracks and length (and, with a wordsLook, that look and no mix)
+		q.put("tracks", "2");
+		q.put("length", "64");
+		final Map<String, Object> again = Json.object(Json.parse(api.plan(q)));
+		assertEquals(first.get("fingerprint"), again.get("fingerprint"), (String) again.get("text"));
+		// words that name a look still move the city button
+		q.put("text", "2 track munich station, station building, 64 long");
+		assertEquals("MUNICH", Json.object(Json.parse(api.plan(q))).get("wordsLook"));
+	}
 }

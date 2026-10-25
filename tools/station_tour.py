@@ -191,7 +191,9 @@ def views(key, fx, fz, direction="south"):
     deck = [b for b in blocks if b[3] == "BRIDGE_DECK"]
     if deck:
         u, v = middle(deck)
-        view("bridge", (max(b[0] for b in deck) - 1, 6, v), (u - 6, 7, v))
+        # standing on the deck, whatever height it is planned at
+        y = deck[0][1] + 1
+        view("bridge", (max(b[0] for b in deck) - 1, y, v), (u - 6, y + 1, v))
     building_u = max(b[0] for b in floors) if floors else -1
     stairs = [b for b in blocks if b[3] == "STAIR" and b[1] <= 2 and b[0] > building_u]
     if stairs:

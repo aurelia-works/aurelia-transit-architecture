@@ -363,10 +363,13 @@ abstract class PlanLandmark extends PlanUnderground {
 	void flatRoof(Front f, Volume m) {
 		final Skin s = m.skin();
 		final int top = m.height();
+		// the lamps hang under the slab: in it they lay open to the sky (Grand Central's roof was dotted with 678 of them)
 		for (int x = m.x0() + 1; x < m.x1(); x++) {
 			for (int z = m.z0() + 1; z < m.z1(); z++) {
-				final boolean lamp = Math.floorMod(x + z, 4) == 0;
-				at(f, lamp ? Role.LIGHT_PANEL : Role.BUILDING_ROOF, x, top, z, Dir.OUT, lamp ? palette.building().light() : s.roof());
+				at(f, Role.BUILDING_ROOF, x, top, z, Dir.OUT, s.roof());
+				if (Math.floorMod(x + z, 4) == 0) {
+					at(f, Role.LIGHT_PANEL, x, top - 1, z, Dir.OUT, palette.building().light());
+				}
 			}
 		}
 		// the parapet round the edge

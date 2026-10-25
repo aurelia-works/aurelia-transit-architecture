@@ -112,7 +112,7 @@ abstract class PlanHead extends PlanLifts {
 			for (int v = vL; v <= vE; v++) {
 				final boolean inner = u > u0 && u < u1 && v > vL && v < vE;
 				put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y, v, LocalDir.PLUS_V, inner && (u + v) % 4 == 0 ? b.light() : b.roof());
-				put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, inner ? b.roof() : b.cornice());
+				put(Role.BUILDING_ROOF, u, StationGeometry.BUILDING_ROOF_Y + 1, v, LocalDir.PLUS_V, inner ? flatRoof() : b.cornice());
 			}
 		}
 	}

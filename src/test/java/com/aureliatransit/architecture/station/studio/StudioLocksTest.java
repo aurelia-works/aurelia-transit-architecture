@@ -1,15 +1,23 @@
 package com.aureliatransit.architecture.station.studio;
 
+import com.aureliatransit.architecture.station.BuildingStyle;
+import com.aureliatransit.architecture.station.RealStation;
+import com.aureliatransit.architecture.station.RoofType;
+import com.aureliatransit.architecture.station.ShedShape;
 import com.aureliatransit.architecture.station.StationDescriptionParser;
 import com.aureliatransit.architecture.station.StationRecipe;
+import com.aureliatransit.architecture.station.StationSpec;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * The studio's Building lock keeps the roof and size a station was planned with ("resolved" in the plan), not the word
@@ -85,5 +93,103 @@ class StudioLocksTest {
 			final Map<String, Object> plan = Json.object(Json.parse(api.plan(q)));
 			assertEquals("Utrecht Centraal, 10 tracks, 200 long", plan.get("title"), q.toString());
 		}
+	}
+
+	/** A fresh page as the dice left it: every rolled control pinned, and said to be rolled. */
+	private static Map<String, String> rolledPage(String words, String look, String mix, String roof, String building, String stationClass) {
+		final String all = "look,mix,era,mode,tracks,length,layout,building,size,roof,esc,walls,trav,bed,class";
+		return new HashMap<>(Map.ofEntries(Map.entry("text", words), Map.entry("mode", "through"), Map.entry("layout", "ISLAND"),
+				Map.entry("tracks", "4"), Map.entry("length", "96"), Map.entry("look", look), Map.entry("mix", mix), Map.entry("roof", roof),
+				Map.entry("building", building), Map.entry("size", "AUTO"), Map.entry("bed", "andesite"), Map.entry("class", stationClass),
+				Map.entry("era", "auto"), Map.entry("pinned", all), Map.entry("rolled", all), Map.entry("seed", "u34zpj")));
+	}
+
+	private static StationSpec spec(Map<String, String> q) {
+		return StationDescriptionParser.parse(StudioApi.description(q)).spec();
+	}
+
+	@Test
+	void aNamedCityKeepsItsBuildingAndRoofWhateverThePageRolled() {
+		// two fresh pages: one rolled Teddington mixed with Hamburg, a flat shed and no building; one Beijing with pointed arches
+		final Map<String, String> a = rolledPage("amsterdam station", "TEDDINGTON", "HAMBURG", "FLAT_SHED", "0", "auto");
+		final Map<String, String> b = rolledPage("amsterdam station", "BEIJING", "", "POINTED", "1", "auto");
+		for (final Map<String, String> q : List.of(a, b)) {
+			assertEquals(BuildingStyle.AMSTERDAM, spec(q).building(), StudioApi.description(q));
+			assertTrue(StudioApi.wordsWon(q).containsAll(List.of("building", "look", "roof")), StudioApi.wordsWon(q).toString());
+		}
+		// the same words and seed give the same station whatever the dice had rolled
+		assertEquals(spec(a).building(), spec(b).building());
+		assertEquals(spec(a).roof(), spec(b).roof());
+		assertEquals(spec(a).shed(), spec(b).shed());
+		assertEquals(spec(a).canopy(), spec(b).canopy());
+	}
+
+	@Test
+	void aRealStationKeepsItsOwnTracksAndLengthWhateverThePageRolled() {
+		// a fresh page rolled 4 tracks, 96 long: "hamburg hauptbahnhof" was a 4-track, 96-long station (10-24)
+		final StationSpec own = StationDescriptionParser.parse("hamburg hauptbahnhof").spec();
+		final Map<String, String> q = rolledPage("hamburg hauptbahnhof", "TEDDINGTON", "", "FLAT_SHED", "1", "auto");
+		assertEquals(own.trackCount(), spec(q).trackCount(), StudioApi.description(q));
+		assertEquals(own.platformLength(), spec(q).platformLength(), StudioApi.description(q));
+		// a count and a length the player set by hand still go in with the words
+		q.put("rolled", "look,mix,era,mode,layout,building,size,roof,esc,walls,trav,bed,class");
+		assertFalse(StudioApi.wordsWon(q).contains("tracks"), StudioApi.wordsWon(q).toString());
+		assertFalse(StudioApi.wordsWon(q).contains("length"), StudioApi.wordsWon(q).toString());
+	}
+
+	@Test
+	void aRolledClassGivesWayToANamedCityButOneSetByHandHolds() {
+		// a fresh page that rolled a grand class pins nothing else: "teddington station" came out under a gabled train shed (10-24)
+		final String words = "two track teddington station, side platforms, 200 long, small station building with footbridge, named Teddington";
+		final Map<String, String> q = rolledPage(words, "FRANKFURT", "", "ARCHES", "1", "grand");
+		q.put("pinned", "text");
+		q.put("rolled", "class");
+		final StationSpec own = StationDescriptionParser.parse(words).spec();
+		assertEquals(RoofType.CANOPY, spec(q).roof(), StudioApi.description(q));
+		assertEquals(own.canopy(), spec(q).canopy());
+		assertEquals(own.building(), spec(q).building());
+		// the same class chosen by hand still asks for a grand station's shed
+		q.put("rolled", "");
+		assertEquals(RoofType.HALL, spec(q).roof(), StudioApi.description(q));
+		// with no city in the words a rolled class still decides
+		q.put("rolled", "class");
+		q.put("text", "two track station, side platforms, 200 long");
+		assertTrue(StudioApi.description(q).contains("grand class"), StudioApi.description(q));
+	}
+
+	@Test
+	void aRoofOrBuildingSetByHandStillHoldsAgainstACity() {
+		final Map<String, String> q = rolledPage("amsterdam station", "TEDDINGTON", "", "FLAT_SHED", "1", "auto");
+		// the player picked the flat shed themselves: only the rest was rolled
+		q.put("rolled", "look,mix,era,mode,tracks,length,layout,building,size,esc,walls,trav,bed,class");
+		assertEquals(ShedShape.FLAT, spec(q).shed(), StudioApi.description(q));
+		assertEquals(RoofType.HALL, spec(q).roof());
+		assertEquals(BuildingStyle.AMSTERDAM, spec(q).building());
+		// a page that says nothing of rolling (the wrench, an older page) keeps every pin, as before
+		q.remove("rolled");
+		assertEquals(ShedShape.FLAT, spec(q).shed());
+	}
+
+	@Test
+	void aRolledClassDoesNotTurnUtrechtStationIntoUtrechtStyle() {
+		// Jah's 10-22 words on pages that rolled a class: it gave the station a building of its own and kept only the look
+		for (final String stationClass : List.of("town", "grand", "city", "regional", "halt")) {
+			final Map<String, String> q = rolledPage("10 track utrecht station, 200 long", "FRANKFURT", "", "ARCHES", "1", stationClass);
+			assertEquals(RealStation.UTRECHT_CENTRAAL, spec(q).real(), stationClass + ": " + StudioApi.description(q));
+			q.put("era", "modern");
+			assertEquals(RealStation.UTRECHT_CENTRAAL, spec(q).real(), stationClass + " modern: " + StudioApi.description(q));
+		}
+		// "utrecht style" still asks for the look on a station of the player's own
+		assertEquals(RealStation.NONE, StationDescriptionParser.parse("10 track utrecht style station, 200 long, town class").spec().real());
+	}
+
+	@Test
+	void aClassAsksForAShedButANamedCitySaysWhichShed() {
+		assertEquals(ShedShape.POINTED, StationDescriptionParser.parse("st pancras terminus, grand class").spec().shed());
+		assertEquals(ShedShape.MULTI_ARCH, StationDescriptionParser.parse("frankfurt terminus, grand class, modern era").spec().shed());
+		assertEquals(ShedShape.ARCH, StationDescriptionParser.parse("amsterdam station, grand class, historic era").spec().shed());
+		// with no city named the class and era still choose
+		assertEquals(ShedShape.ARCH, StationDescriptionParser.parse("four track station, grand class, modern era").spec().shed());
+		assertEquals(ShedShape.MULTI_ARCH, StationDescriptionParser.parse("four track station, grand class, historic era").spec().shed());
 	}
 }

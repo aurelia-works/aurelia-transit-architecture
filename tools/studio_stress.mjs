@@ -60,6 +60,8 @@ const heap = async (cdp) => {
 const pct = (a, q) => a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(a.length * q))];
 
 await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+// the seed and its dice sit in the More panel, closed on a fresh page
+await page.evaluate(() => { const more = document.getElementById('more'); if (more) more.open = true; });
 await idle();
 const cdp = await page.context().newCDPSession(page);
 await cdp.send('Performance.enable');

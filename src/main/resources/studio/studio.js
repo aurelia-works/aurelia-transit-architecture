@@ -35,7 +35,11 @@
 			q[f] = $(f).value;
 		}
 		// the controls the player changed: the server only prepends these to a typed description, so the rest stays the words'
-		q.pinned = [...pinnedNow()].join(",");
+		const pins = pinnedNow();
+		q.pinned = [...pins].join(",");
+		// which of them only the dice set: words naming a city or a look move those (its own building and roof), not the player's
+		// (and a rolled class, which pins nothing: words naming a city set aside a class the dice chose, not one the player did)
+		q.rolled = [...pins].filter((f) => rolled.has(f)).concat(rolled.has("class") && !pins.has("class") ? ["class"] : []).join(",");
 		// the generator seed: the dice's, or the one kept while Details is locked
 		q.seed = seeds.detail;
 		return q;
@@ -955,6 +959,10 @@
 		if (plan.wordsLook) {
 			want.look = plan.wordsLook;
 			want.mix = "";
+			// the city's own roof replaced a rolled one: show Auto (the look's own), not the dice's roof the plan did not use
+			if ((plan.wordsWon || []).includes("roof")) {
+				want.roof = "AUTO";
+			}
 		}
 		let moved = false;
 		for (const [f, v] of Object.entries(want)) {

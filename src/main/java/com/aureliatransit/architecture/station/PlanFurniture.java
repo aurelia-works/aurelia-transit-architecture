@@ -24,12 +24,18 @@ abstract class PlanFurniture extends PlanRoofs {
 			return;
 		}
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			if (roof(band) != RoofType.NONE) {
+			// lamps on poles in the open: on an open platform, and past a canopy that covers part of its platform (its own
+			// lights are in its roof)
+			final boolean canopy = roof(band) == RoofType.CANOPY;
+			if (roof(band) != RoofType.NONE && !canopy) {
 				continue;
 			}
 			final int u = band.island() ? (band.uMin() + band.uMax()) / 2 : backColumn(band);
 			final LocalDir front = band.island() ? LocalDir.MINUS_U : towardTrack(band);
 			for (int v = band.vFrom() + 4; v <= band.vTo(); v += 8) {
+				if (canopy && v >= canopyStart(band) - 2 && v <= canopyEnd(band) + 2) {
+					continue;
+				}
 				// a lamp standard where there is room: the lamp on a pole, high enough to carry a speaker above head height
 				boolean room = true;
 				for (int y = StationGeometry.WALK_Y; y <= LAMP_HEAD_Y; y++) {

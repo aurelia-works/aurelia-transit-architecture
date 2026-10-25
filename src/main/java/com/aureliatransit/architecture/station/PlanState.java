@@ -107,12 +107,102 @@ abstract class PlanState {
 		this.site = StationLayout.of(spec, layout);
 		this.far = site.farBridge(spec, layout);
 		this.scale = spec.buildingScale();
-		this.wingBays = site.building() ? wingBays(scale, length, site.vStart(), site.vEnd()) : 0;
+		// a real train shed is the station's whole mass, entered at its ends (Hamburg's Wandelhalle and bridges): beside it the
+		// building is the entrance block under its tower, not a wing along the full shed (10-24)
+		this.wingBays = site.building() && !spec.real().trainShed() ? wingBays(scale, length, site.vStart(), site.vEnd()) : 0;
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			canopySpans.put(band, canopySpan(spec, layout, site, band));
+		}
+	}
+
+	/** Each platform's first and last canopy row. */
+	final java.util.Map<TrackLayout.PlatformBand, int[]> canopySpans = new java.util.HashMap<>();
+
+	/**
+	 * Platforms at least this long beside a compact building get a canopy over part of their length only: a town station's
+	 * canopy covers the building and the footbridge stairs, and the platform runs on past it in the open (Teddington, 10-24).
+	 */
+	static final int PARTIAL_CANOPY_PLATFORM = 96;
+
+	/** A partial canopy's share of its platform, in fifths: two fifths, so 80 of a 200-long platform (53 m). */
+	static final int PARTIAL_CANOPY_FIFTHS = 2;
+
+	/** Rows a partial canopy reaches past the building, stairs and lift it covers. */
+	static final int PARTIAL_CANOPY_MARGIN = 4;
+
+	/**
+	 * First and last row a platform canopy covers: the whole platform, except beside a compact building on a long through
+	 * platform, where it covers the building's frontage and the main footbridge's flights and lift on that platform, and at
+	 * least {@link #PARTIAL_CANOPY_FIFTHS} fifths of the platform, centred on them.
+	 */
+	static int[] canopySpan(StationSpec spec, TrackLayout layout, StationLayout site, TrackLayout.PlatformBand band) {
+		final int[] whole = {band.vFrom(), band.vTo()};
+		if (spec.buildingScale() != StationScale.COMPACT || !site.building() || layout.terminus() || band.length() < PARTIAL_CANOPY_PLATFORM) {
+			return whole;
+		}
+		int lo = site.vStart();
+		int hi = site.vEnd();
+		// the main footbridge's flights and lift; the far one's stand in the open under hoods of their own
+		for (final StationLayout.Flight flight : site.flights(band)) {
+			lo = Math.min(lo, Math.min(flight.landingV(), flight.wallV()));
+			hi = Math.max(hi, Math.max(flight.landingV(), flight.wallV()));
+		}
+		final StationLayout.Lift lift = site.platformLift(band, layout);
+		if (lift != null) {
+			lo = Math.min(lo, lift.vMin());
+			hi = Math.max(hi, lift.vMax());
+		}
+		lo -= PARTIAL_CANOPY_MARGIN;
+		hi += PARTIAL_CANOPY_MARGIN;
+		final int least = band.length() * PARTIAL_CANOPY_FIFTHS / 5;
+		if (hi - lo + 1 < least) {
+			final int grow = least - (hi - lo + 1);
+			lo -= grow / 2;
+			hi += grow - grow / 2;
+		}
+		// slid back onto the platform where it ran off one end
+		if (lo < band.vFrom()) {
+			hi += band.vFrom() - lo;
+			lo = band.vFrom();
+		}
+		if (hi > band.vTo()) {
+			lo = Math.max(band.vFrom(), lo - (hi - band.vTo()));
+			hi = band.vTo();
+		}
+		return new int[]{lo, hi};
+	}
+
+	/** First row of this platform's canopy. */
+	int canopyStart(TrackLayout.PlatformBand band) {
+		return canopySpans.getOrDefault(band, new int[]{band.vFrom(), band.vTo()})[0];
+	}
+
+	/** Last row of this platform's canopy. */
+	int canopyEnd(TrackLayout.PlatformBand band) {
+		return canopySpans.getOrDefault(band, new int[]{band.vFrom(), band.vTo()})[1];
+	}
+
+	/**
+	 * True when a platform canopy runs over the whole of this flight, so the canopy roofs it; a flight past a partial canopy
+	 * (the far footbridge's at a town station) has a hood of its own.
+	 */
+	boolean canopyOver(TrackLayout.PlatformBand band, StationLayout.Flight flight) {
+		if (roof(band) != RoofType.CANOPY) {
+			return false;
+		}
+		// a canopy over the whole platform roofs every flight on it, even one whose top runs on past a short platform's end
+		final boolean partial = canopyStart(band) > band.vFrom() || canopyEnd(band) < band.vTo();
+		return !partial || underCanopy(band, flight.wallV()) && underCanopy(band, flight.landingV());
+	}
+
+	/** True where row v of this platform is under its canopy. */
+	boolean underCanopy(TrackLayout.PlatformBand band, int v) {
+		return v >= canopyStart(band) && v <= canopyEnd(band);
 	}
 
 	/** Whole bays per wing so the block and both wings cover about the scale's share of the platform, the same both sides. */
 	static int wingBays(StationScale scale, int length, int vStart, int vEnd) {
-		final int span = length * scale.wingPercent() / 100;
+		final int span = scale.wingSpan(length);
 		if (span == 0) {
 			return 0;
 		}

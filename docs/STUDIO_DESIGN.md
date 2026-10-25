@@ -96,6 +96,24 @@ becomes a top bar.
 - Typed words win over the settings above where they clash (Jah, 2026-10-18). A roll pins every setting, but the server
   leaves out each pinned setting the words set themselves (`StationDescriptionParser.controlsSaid`) and returns them as
   `wordsWon`; the page names them under the text box.
+- Changing the typed words keeps every control as it is; nothing resets. Which of them the next plan uses (Jah, 2026-10-24):
+  - a setting the player changed by hand, or a locked group, holds unless the words say that same thing;
+  - a setting only the dice rolled holds too (so "named Foo" keeps the rolled station), except that words naming a city or a
+    look ("amsterdam station") also take the look, the building and the roof the dice had rolled: the page sends those pins as
+    `rolled`, and `StudioApi.wordsWon` lets the city's own win (`LOOK_FIXES`). The roof control then shows Auto, the look's own;
+  - words naming a real station ("utrecht centraal", or "utrecht station" with nothing against it) fix its look, type, building,
+    size, roof and layout whatever was pinned, and its own tracks and length beat rolled ones (a fresh page made Hamburg 1 to 4
+    tracks, 64 long; `StudioApi.REAL_ROLLED`), while a count or length set by hand holds; a class or era (rolled or chosen) is
+    left out with a note;
+  - a class the dice rolled gives way to words naming a city, a look or a real station (`StudioApi.rolledClassGivesWay`: a rolled
+    grand class put "teddington station" under a train shed); the page sends a rolled class in `rolled` even though a class pins
+    nothing. A class chosen by hand still asks for its kind of station;
+  - a class asks for a train shed, but a city the words name says which (St Pancras pointed, Frankfurt a row of arches); in the
+    same way a rolled historic era asks for canopies but a named city keeps its own (Surbiton's flat ones), and the seed never
+    swaps a named city's canopy or shed (`StationRealismTest.aNamedCityKeepsItsOwnCanopies`).
+  So the same words and seed give the same city, building and roof on any fresh page; the shape (type, tracks, length,
+  platforms), size and stairs still come from the seed's roll where the words leave them open. A request without `rolled`
+  (the wrench, an older page) keeps every pin, as before.
 
 ## Checking it
 
@@ -109,6 +127,9 @@ latency, frame time on the largest station, rapid input, memory over 50 rerolls,
   "no building" only rolls halt or Auto), so older seeds still roll the same other settings. With a class or an era chosen the backend
   fills only what is open, so the page sends as `pinned` just the settings the player set or locked: the dice's settings are open
   again and the controls then follow what the plan came to (`followWords`).
+  `followWords` moves the look buttons (and clears the second look) only when the words name a look or a real station: the
+  plan's `wordsLook` is empty otherwise, since words naming none planned with the page's own look and mix (10-25: clearing a
+  rolled mix the plan had used made the next change, a block swap, build another station).
 - **Entrance faces** is the facing (Auto, N, E, S, W). A chosen facing draws the station on the map's frame: the compass gets an N that
   turns with the camera and a "Faces east" line, and the Plan view is north up (Auto keeps the street at the bottom).
 - **Download .schem** posts the plan parameters to `/api/export` and saves the file under the server's name; the note under it shows

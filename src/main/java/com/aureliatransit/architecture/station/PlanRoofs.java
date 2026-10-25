@@ -53,7 +53,7 @@ abstract class PlanRoofs extends PlanColumns {
 				purlinLeft[i] = left > StationGeometry.MAX_CANTILEVER ? Math.min(armLeft[i], left - StationGeometry.MAX_CANTILEVER) : 0;
 				purlinRight[i] = right > StationGeometry.MAX_CANTILEVER ? Math.min(armRight[i], right - StationGeometry.MAX_CANTILEVER) : 0;
 			}
-			for (int v = band.vFrom(); v <= band.vTo(); v++) {
+			for (int v = canopyStart(band); v <= canopyEnd(band); v++) {
 				// under a real station's hall its floor is the roof: no canopy and no girders under it, but in its two edge rows,
 				// where the canopy's girders run in to the piers inside its walls and carry the canopy's end
 				if (underHall(v) && Math.abs(v - site.bridgeV()) < bridgeWall() - 1) {
@@ -549,6 +549,9 @@ abstract class PlanRoofs extends PlanColumns {
 				previous = u;
 			}
 		}
+		if (!free) {
+			buildingLineWall(u0, beamY);
+		}
 		final int roofY = beamY + 1;
 		final int[] top = new int[n];
 		for (int i = 0; i < n; i++) {
@@ -785,6 +788,36 @@ abstract class PlanRoofs extends PlanColumns {
 					put(window ? Role.WINDOW : Role.WALL, u, y, v, u == u0 ? LocalDir.MINUS_U : LocalDir.PLUS_U,
 							window ? ata("wired_glass_pane") : real.sideWall());
 				}
+			}
+		}
+	}
+
+	/**
+	 * The shed's wall on its building side wherever the side building does not stand: the building's track-side wall line
+	 * carried on under the eaves, with a tall window every six cells. A side building that is only an entrance block
+	 * (Hamburg) or ends short of the shed (Amsterdam) otherwise leaves the shed open to the street there, its platform
+	 * columns standing in a row under the roof. The far side over the outer track stays as it is (no wall may stand in a
+	 * track's envelope), and a station without a side building, or with a street between it and the tracks, is untouched.
+	 * Rows where anything already stands in the wall line (the building, its end walls, a bridge) are left alone.
+	 */
+	void buildingLineWall(int u0, int beamY) {
+		final int u = u0 - 1;
+		if (!spec.sideBuilding() || site.street() != null || u0 != layout.buildingWidth() || u < 0) {
+			return;
+		}
+		final String wall = palette.building().wall();
+		final String window = palette.building().window();
+		for (int v = 0; v < length; v++) {
+			boolean clear = true;
+			for (int y = StationGeometry.WALK_Y; y <= beamY && clear; y++) {
+				clear = !taken(u, y, v);
+			}
+			if (!clear) {
+				continue;
+			}
+			for (int y = StationGeometry.WALK_Y; y <= beamY; y++) {
+				final boolean glazed = Math.floorMod(v, 6) >= 2 && Math.floorMod(v, 6) <= 3 && y >= 2 && y <= beamY - 2;
+				put(glazed ? Role.WINDOW : Role.WALL, u, y, v, LocalDir.MINUS_U, glazed ? window : wall);
 			}
 		}
 	}

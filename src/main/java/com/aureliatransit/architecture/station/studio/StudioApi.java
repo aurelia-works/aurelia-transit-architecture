@@ -165,6 +165,9 @@ public final class StudioApi {
 	/** The controls a real station fixes itself: its look, through tracks, hall or shed, and island platforms. */
 	static final List<String> REAL_FIXES = List.of("look", "mode", "building", "size", "roof", "layout");
 
+	/** The controls a real station sets unless the player set them by hand: its own tracks and platform length. */
+	static final List<String> REAL_ROLLED = List.of("tracks", "length");
+
 	/** The pinned controls the typed words set themselves, and so overrule (sorted, for the page's note). */
 	public static List<String> wordsWon(Map<String, String> q) {
 		final String words = q.getOrDefault("text", "").strip();
@@ -185,8 +188,17 @@ public final class StudioApi {
 					won.add(key);
 				}
 			}
+			// its own track count and platform length beat what the dice rolled (a fresh page made Hamburg 1 to 4 tracks, 64
+			// long, 10-24); a count or length set by hand still holds
+			final Set<String> rolled = keys(q.getOrDefault("rolled", ""));
+			for (final String key : REAL_ROLLED) {
+				if (asked.contains(key) && rolled.contains(key)) {
+					won.add(key);
+				}
+			}
 		}
-		for (final String key : StationDescriptionParser.controlsSaid(words)) {
+		final Set<String> said = StationDescriptionParser.controlsSaid(words);
+		for (final String key : said) {
 			if (won.contains(key)) {
 				continue;
 			}
@@ -194,8 +206,46 @@ public final class StudioApi {
 				won.add(key);
 			}
 		}
+		// words that name a city or a look ("amsterdam station") bring its own building and roof: what the dice rolled on the page
+		// gives way to them (a rolled flat shed or "no building" made Amsterdam something else); a control set by hand still holds
+		if (said.contains("look")) {
+			final Set<String> rolled = keys(q.getOrDefault("rolled", ""));
+			for (final String key : LOOK_FIXES) {
+				if (asked.contains(key) && rolled.contains(key) && !won.contains(key)) {
+					won.add(key);
+				}
+			}
+		}
 		won.sort(null);
 		return won;
+	}
+
+	/**
+	 * True when the class is one the dice rolled and the typed words name a city, a look or a real station: the city's own
+	 * station then stands, as with its building and roof (a rolled grand class put "teddington station" under a train shed,
+	 * 10-24). A class chosen by hand still asks for its kind of station.
+	 */
+	static boolean rolledClassGivesWay(Map<String, String> q) {
+		final String words = q.getOrDefault("text", "").strip();
+		if (words.isEmpty() || !keys(q.getOrDefault("rolled", "")).contains("class")) {
+			return false;
+		}
+		return StationDescriptionParser.controlsSaid(words).contains("look") || StationDescriptionParser.parse(words).spec().real() != RealStation.NONE;
+	}
+
+	/** The controls a city or look named in the words brings with it, unless the player set them by hand. */
+	static final List<String> LOOK_FIXES = List.of("look", "building", "roof");
+
+	/** A page's comma-separated control names, the second look counted as the look. */
+	static Set<String> keys(String list) {
+		final Set<String> keys = new HashSet<>();
+		for (final String part : list.split(",")) {
+			final String key = part.strip();
+			if (!key.isEmpty()) {
+				keys.add(key.equals("mix") ? "look" : key);
+			}
+		}
+		return keys;
 	}
 
 	/**
@@ -209,7 +259,7 @@ public final class StudioApi {
 	 * "halt class" and "postwar era", which the parser reads without the older meaning of the bare words, and the facing as "facing north".
 	 */
 	public static String description(Map<String, String> q) {
-		final StationClass stationClass = StationClass.of(q.get("class"));
+		final StationClass stationClass = rolledClassGivesWay(q) ? StationClass.AUTO : StationClass.of(q.get("class"));
 		final StationEra era = StationEra.of(q.get("era"));
 		final Facing facing = Facing.of(q.get("facing"));
 		String text;
@@ -460,8 +510,11 @@ public final class StudioApi {
 				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
-		// the city button the words came to, so the page's buttons follow what was typed
-		final StationRecipe.Look wordsLook = typed.isEmpty() ? null : spec.real() != RealStation.NONE ? lookOf(spec.real()) : lookOf(spec.building());
+		// the city button the words came to, so the page's buttons follow what was typed; only when the words name a look or a
+		// real station: the page then clears its second look, and words naming none planned with the page's own look and mix
+		// (10-25: "2 track station" under a rolled Teddington + Zurich showed that mix, then the next change planned without it)
+		final StationRecipe.Look wordsLook = typed.isEmpty() ? null : spec.real() != RealStation.NONE ? lookOf(spec.real())
+				: StationDescriptionParser.controlsSaid(typed).contains("look") ? lookOf(spec.building()) : null;
 		out.append(",\"wordsLook\":").append(Json.quote(wordsLook == null ? "" : wordsLook.name()));
 		out.append(",\"seed\":").append(Json.quote(StationSeed.format(spec.seed())));
 		out.append(",\"fingerprint\":").append(Json.quote(PlanFingerprint.of(plan)));

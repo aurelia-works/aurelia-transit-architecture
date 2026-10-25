@@ -163,24 +163,41 @@ public enum RealStation {
 	/**
 	 * The roof's top y across the hall, from one long wall ({@code i = 0}) to the other ({@code i = span}): the waves side by
 	 * side, each rising from {@code eaves}, the middle one to {@link #roofTopY()} and the others {@link #SIDE_WAVE} as high.
-	 * An odd number of waves has a middle one; with one wave it spans the hall.
+	 * An odd number of waves has a middle one; with one wave it spans the hall. The middle wave takes {@link #MIDDLE_WAVE}
+	 * of the width.
 	 */
 	public int[] roofProfile(int span, int eaves) {
+		final double side = (1 - MIDDLE_WAVE) / 2;
+		return roofProfile(span, eaves, side, 1 - side);
+	}
+
+	/**
+	 * {@link #roofProfile(int, int)} with the middle wave from {@code midFrom} to {@code midTo} across the hall (both in
+	 * 0..span) and the side waves sharing what is left each side: Utrecht Centraal's highest wave is over the tracks and the
+	 * lower ones over the bus and tram stations beyond them (Dezeen, 2017), so the hall puts the middle wave's feet over the
+	 * outermost tracks and the side waves over its ends.
+	 */
+	public int[] roofProfile(int span, int eaves, int midFrom, int midTo) {
+		return span == 0 ? roofProfile(span, eaves) : roofProfile(span, eaves, (double) midFrom / span, (double) midTo / span);
+	}
+
+	private int[] roofProfile(int span, int eaves, double midStart, double midEnd) {
 		final int[] surface = new int[span + 1];
 		final int rise = Math.max(0, roofTopY() - eaves);
 		final int sides = (waves - 1) / 2;
-		final double side = waves <= 1 ? 0 : (1 - MIDDLE_WAVE) / (2 * sides);
-		final double midStart = sides * side;
-		final double midEnd = 1 - midStart;
+		final double lo = sides == 0 ? 0 : midStart;
+		final double hi = sides == 0 ? 1 : midEnd;
 		for (int i = 0; i <= span; i++) {
 			final double f = span == 0 ? 0.5 : (double) i / span;
 			final double h;
-			if (f < midStart) {
-				h = SIDE_WAVE * rise * Math.sin(Math.PI * (f % side) / side);
-			} else if (f > midEnd) {
-				h = SIDE_WAVE * rise * Math.sin(Math.PI * ((f - midEnd) % side) / side);
+			if (f < lo) {
+				final double w = lo / sides;
+				h = SIDE_WAVE * rise * Math.sin(Math.PI * (f % w) / w);
+			} else if (f > hi) {
+				final double w = (1 - hi) / sides;
+				h = SIDE_WAVE * rise * Math.sin(Math.PI * ((f - hi) % w) / w);
 			} else {
-				h = rise * Math.sin(Math.PI * (f - midStart) / (midEnd - midStart));
+				h = rise * Math.sin(Math.PI * (f - lo) / (hi - lo));
 			}
 			surface[i] = eaves + (int) Math.round(h);
 		}
