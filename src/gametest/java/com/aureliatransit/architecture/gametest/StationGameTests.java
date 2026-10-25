@@ -65,8 +65,6 @@ import net.minecraft.test.TestContext;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.WrittenBookItem;
 import net.minecraft.item.ItemUsageContext;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.nbt.NbtCompound;
@@ -1089,12 +1087,11 @@ public class StationGameTests implements FabricGameTest {
 
 	// ---- guide book -------------------------------------------------------------------------------------------------
 
-	/** The guide is a valid written book with every page; an operator gets it once on joining, a non-operator never. */
+	/** The guide is the Station Codex item; an operator gets it once on joining, a non-operator never. */
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
 	public void guideBookIsGivenOnceToOperators(TestContext context) {
-		final ItemStack book = StationGuide.book();
-		check(book.isOf(Items.WRITTEN_BOOK) && WrittenBookItem.isValid(book.getNbt()), "the guide is not a valid written book: " + book.getNbt());
-		check(WrittenBookItem.getPageCount(book) == StationGuide.PAGES.size(), "guide pages " + WrittenBookItem.getPageCount(book));
+		final ItemStack codex = StationGuide.codex();
+		check(codex.isOf(ModItems.STATION_CODEX) && codex.getCount() == 1, "the guide is not the Station Codex: " + codex);
 
 		final ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
 		check(!player.hasPermissionLevel(StationActions.PERMISSION_LEVEL), "the mock player is already an operator; this test needs one that is not");
@@ -1108,7 +1105,7 @@ public class StationGameTests implements FabricGameTest {
 	private static int books(ServerPlayerEntity player) {
 		int count = 0;
 		for (int slot = 0; slot < player.getInventory().size(); slot++) {
-			if (player.getInventory().getStack(slot).isOf(Items.WRITTEN_BOOK)) {
+			if (player.getInventory().getStack(slot).isOf(ModItems.STATION_CODEX)) {
 				count += player.getInventory().getStack(slot).getCount();
 			}
 		}

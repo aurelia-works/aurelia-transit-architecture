@@ -225,6 +225,7 @@
   "block.aurelia_transit_architecture.wired_glass_pane": "Wired Glass Pane",
   "block.aurelia_transit_architecture.wooden_bench": "Wooden Bench",
   "item.aurelia_transit_architecture.station_wrench": "Station Wrench",
+  "item.aurelia_transit_architecture.station_codex": "Station Codex",
   "item.aurelia_transit_architecture.transit_card": "Transit Card",
   "itemGroup.aurelia_transit_architecture.bus_street": "ATA Bus / Street Transit",
   "itemGroup.aurelia_transit_architecture.glass": "ATA Glass",

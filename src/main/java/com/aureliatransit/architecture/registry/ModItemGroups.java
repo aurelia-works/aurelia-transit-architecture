@@ -48,6 +48,7 @@ public final class ModItemGroups {
 							if (tab == BlockFamily.Tab.PASSENGER_EQUIPMENT) {
 								entries.add(ModItems.TRANSIT_CARD);
 								entries.add(ModItems.STATION_WRENCH);
+								entries.add(ModItems.STATION_CODEX);
 							}
 						})
 						.build()));

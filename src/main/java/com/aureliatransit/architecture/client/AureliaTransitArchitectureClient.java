@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.client;
 
+import com.aureliatransit.architecture.station.world.StationCodexItem;
 import com.aureliatransit.architecture.station.world.StationWrenchItem;
 import com.aureliatransit.architecture.block.TextSignBlock;
 import com.aureliatransit.architecture.client.interactive.InteractiveClient;
@@ -34,6 +35,7 @@ public final class AureliaTransitArchitectureClient implements ClientModInitiali
 		}
 
 		StationWrenchItem.openScreen = StationWrenchScreen::open;
+		StationCodexItem.openScreen = CodexScreen::open;
 		TextSignBlock.openEditor = pos -> {
 			final MinecraftClient client = MinecraftClient.getInstance();
 			if (client.world != null && client.world.getBlockEntity(pos) instanceof TextSignBlockEntity sign) {
