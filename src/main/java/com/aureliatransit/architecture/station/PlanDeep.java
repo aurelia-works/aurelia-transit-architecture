@@ -260,7 +260,8 @@ abstract class PlanDeep extends PlanUnderground {
 			for (int y = low; y <= top + 1; y++) {
 				for (int k = -2; k <= 3; k++) {
 					final PlannedBlock block = at(c, y, vD + k * out);
-					final boolean landing = k < 0 && c >= c0 && c <= c1 && y <= low + 2;
+					// the landing is cleared up to a lamp's head (WALK_Y + 3 = low + 3): a lamp standing on the landing's pole goes with it
+					final boolean landing = k < 0 && c >= c0 && c <= c1 && y <= low + 3;
 					if (block != null && !block.role().flatFloor() && (landing || k >= 0)) {
 						cells.remove(new Cell(c, y, vD + k * out));
 					}

@@ -130,4 +130,15 @@ class DeepStationTest {
 		assertEquals(39, vijzelgracht.options().streetDepth());
 		assertEquals(Operator.GVB, vijzelgracht.operator());
 	}
+
+	/** The 188-long island box (the preset's real length): its lift landing's lamp used to float, so it must plan clean and grounded. */
+	@Test
+	void vijzelgrachtAt188IsCleanAndGrounded() {
+		final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse(presetText("vijzelgracht")).spec());
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		final StationAudit.Result report = StationAudit.audit(plan);
+		assertEquals(StationAudit.Status.PASS, report.checks(StationAudit.Topic.GROUNDED).get(0).status(), report.checks().toString());
+		assertTrue(report.checks().stream().noneMatch(c -> c.topic() == StationAudit.Topic.FALLS && c.status() != StationAudit.Status.PASS),
+				report.checks().toString());
+	}
 }

@@ -77,7 +77,7 @@ Not built yet: the cutting (the streets are at track level), the second tower an
 
 ## Deep stations: Angel, Canary Wharf, Vijzelgracht
 
-Ask with the preset buttons, or with `2 track deep tube station, 40 blocks deep, 120 long, no ramps, tfl signs, named Angel`, `2 track cut and cover box station, 24 m deep, 200 long, tfl signs, named Canary Wharf`, or `2 track cut and cover box station, island platform, 26 m deep, 150 long, gvb signs, named Vijzelgracht`.
+Ask with the preset buttons, or with `2 track deep tube station, 40 blocks deep, 120 long, no ramps, tfl signs, named Angel`, `2 track cut and cover box station, 24 m deep, 200 long, tfl signs, named Canary Wharf`, or `2 track cut and cover box station, island platform, 26 m deep, 188 long, gvb signs, named Vijzelgracht`.
 The operator is only the name sign (the operator's sign block and text style); the signs are not the London Underground roundel set (no LU-only blocks were added).
 
 | Fact | Real | Built |
@@ -91,12 +91,12 @@ The operator is only the name sign (the operator's sign block and text style); t
 | Canary Wharf: platforms | Two platforms in one box, screen doors; the sources do not say island or side | Two side platforms in one box |
 | Canary Wharf: access | 20 escalators and 3 lifts for 2 platforms | Lifts (a box always has them), escalator banks from the generator; the 20 are not matched |
 | Vijzelgracht: type and depth | Cut-and-cover, 26 m deep (Amsterdam Metro line 52, Benthem Crouwel) | Cut-and-cover box, 39 blocks deep |
-| Vijzelgracht: platform | One island platform, 125 m by 9 m | Island platform, 150 long (125 m is 188 blocks; a 188-block island box fails the ground check, see the known failure below) |
+| Vijzelgracht: platform | One island platform, 125 m by 9 m | Island platform, 188 long (125 m is 188 blocks; the lift landing's lamp used to float there, fixed in PlanDeep) |
 | Vijzelgracht: access | Lifts and escalators; south escalators about 47 m | Lifts, and the generator's escalator banks; the 47 m run is not matched |
 | Vijzelgracht: operator | GVB | `gvb signs`: the GVB name sign |
 
-Not built: the Angel's two tunnels and the 1990s wide southbound platform, Canary Wharf's glass canopies and the matched escalator count, the Vijzelgracht artwork over its escalators, and Westminster (its stacked platforms come later).
-Known failure: a 188-block island box fails the ground check (one block not joined to the ground), so Vijzelgracht is built 150 long for now.
+Not built: the Angel's two tunnels and the 1990s wide southbound platform, Canary Wharf's glass canopies and the matched escalator count, the Vijzelgracht artwork over its escalators, and Westminster (stacked platforms: not started, see HANDOFF.md).
+Fixed: a 188-block island box failed the ground check because a lamp on a lift landing kept its head after the landing's pole was cleared; PlanDeep now clears the landing to the lamp head. Vijzelgracht is built 188 long (DeepStationTest checks it).
 Known gap: the preset test asks every preset for a footbridge or a terminus (a concourse), which a deep station does not have, so the Angel preset fails that check until Jah decides how deep stations should count.
 
 ### Sources

@@ -82,14 +82,14 @@ public final class StationPresets {
 					"two track berlin underground station, island platform, 130 long, named Rosenthaler Platz"),
 			// deep stations (research 10-20, docs/research): Angel is a bored tube 27 m down (40 blocks; 27 m would round to 41) with escalators only ("no ramps": no lift);
 			// Canary Wharf and Vijzelgracht are cut-and-cover boxes (24 m and 26 m, 36 and 39 blocks) with lifts. Lengths are the
-			// most the generator builds (Canary Wharf's 265 m is capped at 300 blocks); Vijzelgracht's 125 m island is built 150 long
-			// (a 188-long island box fails the ground check, still open)
+			// most the generator builds (Canary Wharf's 265 m is capped at 300 blocks); Vijzelgracht's 125 m island is built 188 long
+			// (a lamp on a lift landing used to float at 188; PlanDeep clears the landing to the lamp head)
 			new Preset("angel", BuildingStyle.NONE,
 					"2 track deep tube station, 40 blocks deep, 120 long, no ramps, tfl signs, named Angel"),
 			new Preset("canary_wharf", BuildingStyle.NONE,
 					"2 track cut and cover box station, 24 m deep, 200 long, tfl signs, named Canary Wharf"),
 			new Preset("vijzelgracht", BuildingStyle.NONE,
-					"2 track cut and cover box station, island platform, 26 m deep, 150 long, gvb signs, named Vijzelgracht"),
+					"2 track cut and cover box station, island platform, 26 m deep, 188 long, gvb signs, named Vijzelgracht"),
 			new Preset("modern", BuildingStyle.MODERN,
 					"four track modern station, two island platforms, 96 long, glass canopy, station building with footbridge"));
 
