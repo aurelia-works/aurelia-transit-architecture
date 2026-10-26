@@ -36,6 +36,10 @@ class EnviroFixesTest {
 				if (bench.role() != Role.BENCH || bench.y() < StationGeometry.UPPER_WALK_Y) {
 					continue;
 				}
+				// a stacked station's upper platform is a platform, not a concourse upstairs (Jah 10-26)
+				if (plan.layout().levels().contains(bench.y() - StationGeometry.WALK_Y)) {
+					continue;
+				}
 				final boolean inRoom = boards.stream().anyMatch(board -> Math.abs(board.v() - bench.v()) <= StationGeometry.BAY);
 				// or one of a concourse's islands of seats (ConcourseFit): a bench back to back with it and one beside it
 				final boolean island = (benches.contains(bench.u() + "," + bench.y() + "," + (bench.v() - 1))

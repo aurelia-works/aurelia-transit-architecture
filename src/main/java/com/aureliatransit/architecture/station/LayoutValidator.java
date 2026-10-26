@@ -172,7 +172,9 @@ public final class LayoutValidator {
 			for (int i = 0; i + 1 < tracks.size(); i++) {
 				final TrackLayout.Track a = tracks.get(i);
 				final TrackLayout.Track b = tracks.get(i + 1);
-				if (b.u() - a.u() >= StationGeometry.TRACK_SPACING || platformBetween(a.u(), b.u())) {
+				// tracks one over another (a stacked station) are apart by their height, not their columns
+				if (b.u() - a.u() >= StationGeometry.TRACK_SPACING || platformBetween(a.u(), b.u())
+						|| Math.abs(b.level() - a.level()) >= StationGeometry.ENVELOPE_HEIGHT) {
 					continue;
 				}
 				found.add(new Violation(Violation.Kind.TRACK_SPACING, a.u(), StationGeometry.PLATFORM_Y, 0,
@@ -214,16 +216,16 @@ public final class LayoutValidator {
 		/** One violation at the first v where the platform edge next to a track is missing or faces the wrong way. */
 		private void edgeAlongTrack(List<Violation> found, TrackLayout.Track track, int edgeU, LocalDir toward) {
 			for (int v = layout.platformFrom(track); v <= layout.platformTo(track); v++) {
-				if (!hasEdgeFacing(edgeU, v, toward)) {
-					found.add(new Violation(Violation.Kind.PLATFORM_OFFSET, edgeU, StationGeometry.PLATFORM_Y, v,
+				if (!hasEdgeFacing(edgeU, v, toward, track.level())) {
+					found.add(new Violation(Violation.Kind.PLATFORM_OFFSET, edgeU, track.level(), v,
 							"track " + track.number() + " needs a platform edge facing it at u=" + edgeU + " (v=" + v + " has none)"));
 					return;
 				}
 			}
 		}
 
-		private boolean hasEdgeFacing(int u, int v, LocalDir front) {
-			final List<PlannedBlock> blocks = cells.get(new Cell(u, StationGeometry.PLATFORM_Y, v));
+		private boolean hasEdgeFacing(int u, int v, LocalDir front, int level) {
+			final List<PlannedBlock> blocks = cells.get(new Cell(u, level, v));
 			if (blocks != null) {
 				for (final PlannedBlock block : blocks) {
 					if (block.role() == Role.PLATFORM_EDGE && block.front() == front) {
@@ -251,11 +253,26 @@ public final class LayoutValidator {
 			return false;
 		}
 
+		/**
+		 * The level of the platform floor under a block at (u, y, v): the highest of the station's levels below it that has one there,
+		 * else the default. A stacked station has a platform floor over another at the same (u, v).
+		 */
+		private int levelAt(int u, int y, int v) {
+			int found = StationGeometry.PLATFORM_Y;
+			for (final int level : layout.levels()) {
+				if (level < y && isPlatformFloor(u, level, v)) {
+					found = level;
+				}
+			}
+			return found;
+		}
+
 		List<Violation> headroom() {
 			final List<Violation> found = new ArrayList<>();
 			for (final PlannedBlock block : plan.blocks()) {
-				if (block.role().roofPart() && block.y() < StationGeometry.MIN_ROOF_Y
-						&& isPlatformFloor(block.u(), StationGeometry.PLATFORM_Y, block.v())) {
+				final int level = levelAt(block.u(), block.y(), block.v());
+				if (block.role().roofPart() && block.y() < level + StationGeometry.MIN_ROOF_Y
+						&& isPlatformFloor(block.u(), level, block.v())) {
 					found.add(at(Violation.Kind.HEADROOM, block,
 							where(block) + " is below the headroom limit y=" + StationGeometry.MIN_ROOF_Y + " over a platform"));
 				}
@@ -269,9 +286,10 @@ public final class LayoutValidator {
 				if (block.role() == Role.RAILING && platformEnd(block.u(), block.v())) {
 					continue; // the fence across a platform's end runs to the edge, so nobody steps off onto the tracks there
 				}
-				if (block.role().obstructsWalkway() && block.y() >= StationGeometry.WALK_Y
-						&& block.y() <= StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1
-						&& has(block.u(), StationGeometry.PLATFORM_Y, block.v(), Role.PLATFORM_EDGE)) {
+				final int level = levelAt(block.u(), block.y(), block.v());
+				if (block.role().obstructsWalkway() && block.y() >= level + StationGeometry.WALK_Y
+						&& block.y() <= level + StationGeometry.WALK_Y + StationGeometry.HEADROOM - 1
+						&& has(block.u(), level, block.v(), Role.PLATFORM_EDGE)) {
 					found.add(at(Violation.Kind.EDGE_CLEARWAY, block, where(block) + " stands on a platform edge"));
 				}
 			}
@@ -304,11 +322,14 @@ public final class LayoutValidator {
 			final List<Violation> found = new ArrayList<>();
 			for (final Map.Entry<Column, List<PlannedBlock>> entry : columns.entrySet()) {
 				final Column column = entry.getKey();
-				final List<PlannedBlock> stack = new ArrayList<>(entry.getValue());
-				stack.sort(Comparator.comparingInt(PlannedBlock::y));
-				final String problem = columnProblem(column, stack);
-				if (problem != null) {
-					found.add(new Violation(Violation.Kind.UNSUPPORTED_COLUMN, column.u(), stack.get(0).y(), column.v(), problem));
+				final List<PlannedBlock> all = new ArrayList<>(entry.getValue());
+				all.sort(Comparator.comparingInt(PlannedBlock::y));
+				// a stacked station's columns stand one over another: a run starting on an upper level is a column of its own
+				for (final List<PlannedBlock> stack : runs(all)) {
+					final String problem = columnProblem(column, stack);
+					if (problem != null) {
+						found.add(new Violation(Violation.Kind.UNSUPPORTED_COLUMN, column.u(), stack.get(0).y(), column.v(), problem));
+					}
 				}
 			}
 			return found;
@@ -318,11 +339,26 @@ public final class LayoutValidator {
 		 * Null if the column stands on a platform floor (or the floor beside a terminus overrun, level with it), runs unbroken
 		 * from y = 1 to one cap and has a roof part above.
 		 */
+		/** The stack split where a run starts on another of the station's levels (a stacked station's upper column); else whole. */
+		private List<List<PlannedBlock>> runs(List<PlannedBlock> sorted) {
+			final List<List<PlannedBlock>> out = new ArrayList<>();
+			for (final PlannedBlock block : sorted) {
+				final boolean gap = !out.isEmpty() && block.y() > out.get(out.size() - 1).get(out.get(out.size() - 1).size() - 1).y() + 1;
+				if (out.isEmpty() || gap && block.y() - StationGeometry.WALK_Y != StationGeometry.PLATFORM_Y
+						&& layout.levels().contains(block.y() - StationGeometry.WALK_Y)) {
+					out.add(new ArrayList<>());
+				}
+				out.get(out.size() - 1).add(block);
+			}
+			return out;
+		}
+
 		private String columnProblem(Column column, List<PlannedBlock> stack) {
-			if (!isPlatformFloor(column.u(), StationGeometry.PLATFORM_Y, column.v()) && !has(column.u(), StationGeometry.PLATFORM_Y, column.v(), Role.FLOOR)) {
+			final int level = stack.get(0).y() - StationGeometry.WALK_Y;
+			if (!isPlatformFloor(column.u(), level, column.v()) && !has(column.u(), level, column.v(), Role.FLOOR)) {
 				return "column at u=" + column.u() + " v=" + column.v() + " does not stand on a platform floor";
 			}
-			int expectedY = StationGeometry.WALK_Y;
+			int expectedY = level + StationGeometry.WALK_Y;
 			for (int i = 0; i < stack.size(); i++) {
 				final PlannedBlock block = stack.get(i);
 				final boolean last = i == stack.size() - 1;
@@ -603,6 +639,10 @@ public final class LayoutValidator {
 
 		/** Footbridge deck runs must be carried by piers: overhangs of at most 4 and spans of at most 12. */
 		List<Violation> deckSpans() {
+			// a deep station's escalators are dug into the ground (their shaft's lining carries them), not decks over the tracks
+			if (plan.spec().options().deepStation()) {
+				return new ArrayList<>();
+			}
 			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
 			for (final PlannedBlock block : plan.blocks()) {
 				// an escalator's top landing lies in the corridor's wall row and carries on its deck
