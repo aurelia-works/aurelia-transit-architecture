@@ -23,9 +23,16 @@ import java.util.List;
  *                       0 without one); they are outside the building, so not indoor
  * @param forecourtDepth rows v = headEnd + {@link StationGeometry#HEAD_APRON} + 1 .. past the head building's entrance ramps, taken by a
  *                       hub's forecourt with its bus interchange and taxi rank ({@link StationGeometry#FORECOURT_DEPTH}, 0 without one)
+ * @param accessRows     rows before the ramps at the low-v end taken by a deep tube station's escalator shaft and ticket hall
+ *                       ({@link PlanDeep}); 0 for any other station
  */
 public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
-		int headDepth, int hubThrough, int parkingWidth, int forecourtDepth) {
+		int headDepth, int hubThrough, int parkingWidth, int forecourtDepth, int accessRows) {
+
+	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
+			int headDepth, int hubThrough, int parkingWidth, int forecourtDepth) {
+		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, hubThrough, parkingWidth, forecourtDepth, 0);
+	}
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -197,7 +204,7 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	/** First v of the footprint (start of the ramps, or 0). */
 	public int vMin() {
-		return -rampLength;
+		return -rampLength - accessRows;
 	}
 
 	/** Last v of the footprint (the end of the ramps, or of a terminus head building's apron and the forecourt past it). */

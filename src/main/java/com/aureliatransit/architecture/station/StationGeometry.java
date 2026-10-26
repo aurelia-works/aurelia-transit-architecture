@@ -275,7 +275,7 @@ public final class StationGeometry {
 				previousU = u;
 			} else {
 				// a side platform back to back with the one before touches it
-				final int uMin = i == 0 ? 0 : leftIsPlatform ? previousU + 1 : previousU + EDGE_OFFSET;
+				final int uMin = i == 0 ? 0 : leftIsPlatform ? previousU + 1 + pillar(spec) : previousU + EDGE_OFFSET;
 				final int uMax = uMin + platformWidth(spec, platforms.size()) - 1;
 				final int[] run = platformRun(spec, platforms.size());
 				final boolean deadEnd = spec.listed() && !spec.terminus() && spec.platforms().get(platforms.size()).bay();
@@ -289,15 +289,16 @@ public final class StationGeometry {
 		final int parking = spec.parking() && spec.sideBuilding() ? PARKING_DEPTH : 0;
 		// an underground station's box: a wall column each side, and two rows past each platform end for its end walls (its
 		// platforms never ramp down onto the tracks)
-		final int box = spec.options().underground() ? 1 : 0;
-		final int ramps = spec.stepFree() || box > 0 ? RAMP_LENGTH : 0;
+		final int box = boxMargin(spec);
+		final int ramps = spec.options().deepStation() ? deepEndRows(spec) : spec.stepFree() || box > 0 ? RAMP_LENGTH : 0;
+		final int access = spec.options().deepStation() ? accessRows(spec) : 0;
 		final int shift = box + parking + (spec.sideBuilding() ? APRON + buildingDepth(scale) : streetEntrance(spec) ? streetWidth(spec) : 0);
 		if (shift == 0) {
 			// a terminus's tracks run on past the platforms to their buffer stops, so its track zone is that much longer
 			final int built = builtLength(spec.platformLength());
 			final int zone = built + (spec.terminus() ? overrun(built) + 1 : 0);
 			return new TrackLayout(railWidth, zone, ramps, tracks, platforms, 0,
-					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, forecourtDepth(spec));
+					spec.terminus() ? headDepth(scale, spec.trackCount()) + HEAD_APRON : 0, hubThrough(spec), 0, forecourtDepth(spec), access);
 		}
 		final List<TrackLayout.Track> shiftedTracks = new ArrayList<>();
 		for (final TrackLayout.Track track : tracks) {
@@ -311,7 +312,33 @@ public final class StationGeometry {
 		// a real station's hall is entered from the street beside the last track too
 		final int farStreet = spec.real().hallOverTracks() && streetEntrance(spec) ? streetWidth(spec) : 0;
 		return new TrackLayout(railWidth + shift + farStreet + box, builtLength(spec.platformLength()), ramps, shiftedTracks, shiftedPlatforms,
-				spec.sideBuilding() ? shift : 0, 0, 0, parking);
+				spec.sideBuilding() ? shift : 0, 0, 0, parking, 0, access);
+	}
+
+	/** Columns of rock and lining each side of an underground station's rails: one for the shallow box, two round a bored tube. */
+	public static int boxMargin(StationSpec spec) {
+		if (!spec.options().underground()) {
+			return 0;
+		}
+		return spec.options().type() == UndergroundType.DEEP_TUBE ? 2 : 1;
+	}
+
+	/** Columns between the two platforms of a deep tube station: the pillar of rock (a wall, with cross-passages) between its bores. */
+	public static int pillar(StationSpec spec) {
+		return spec.options().deepStation() && spec.options().type() == UndergroundType.DEEP_TUBE ? 1 : 0;
+	}
+
+	/**
+	 * Rows past each platform end of a deep station that the box takes: a cut-and-cover box's end zones (a mezzanine, the street
+	 * escalator bank and the platform bank), a bored tube's few rows of bore running on.
+	 */
+	public static int deepEndRows(StationSpec spec) {
+		return spec.options().type() == UndergroundType.CUT_AND_COVER ? PlanDeep.boxEndRows(spec.options().streetDepth()) : RAMP_LENGTH;
+	}
+
+	/** Rows before a deep tube station's platforms taken by its escalator shaft and ticket hall; 0 for a box. */
+	public static int accessRows(StationSpec spec) {
+		return spec.options().type() == UndergroundType.DEEP_TUBE ? PlanDeep.tubeAccessRows(spec.options().streetDepth()) : 0;
 	}
 
 	/** Columns of the street entrance beside the first track: a side platform's width, so its stair and lift fit as on one. */
@@ -438,6 +465,10 @@ public final class StationGeometry {
 	private static String bandPattern(StationSpec spec) {
 		final int tracks = spec.trackCount();
 		final StringBuilder bands = new StringBuilder();
+		if (spec.options().deepStation() && spec.options().type() == UndergroundType.DEEP_TUBE) {
+			// twin bores: a track and its platform in each, the two platforms facing each other across a pillar
+			return "TPPT";
+		}
 		if (spec.listed()) {
 			// each platform brings its tracks: an island one on each side, a side platform one. A side platform's back is the
 			// station's edge, or the back of the side platform after it; a side platform with an island after it gets a gap

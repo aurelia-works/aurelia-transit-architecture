@@ -24,7 +24,7 @@ import java.util.List;
  * One layer of {@link Planning}: the layers extend one another in order, from {@code PlanState} down to {@code Planning}, and
  * share one set of planned cells.
  */
-abstract class PlanLandmark extends PlanUnderground {
+abstract class PlanLandmark extends PlanDeep {
 
 	/** An upside-down stair: a cornice, a sill or the shoulder of a round window head. */
 	static final String TOP = "half=top,shape=straight";

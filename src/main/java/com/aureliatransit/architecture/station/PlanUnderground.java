@@ -45,9 +45,16 @@ abstract class PlanUnderground extends PlanStairs {
 		};
 	}
 
+	/** A deep station (a bored tube or a cut-and-cover box): see {@link PlanDeep}. */
+	abstract void deepStation();
+
 	/** Planned last, so it only fills what the station left free. */
 	void underground() {
 		if (!spec.options().underground()) {
+			return;
+		}
+		if (spec.options().deepStation()) {
+			deepStation();
 			return;
 		}
 		final int w = layout.width();

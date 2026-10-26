@@ -603,6 +603,10 @@ public final class LayoutValidator {
 
 		/** Footbridge deck runs must be carried by piers: overhangs of at most 4 and spans of at most 12. */
 		List<Violation> deckSpans() {
+			// a deep station's escalators are dug into the ground (their shaft's lining carries them), not decks over the tracks
+			if (plan.spec().options().deepStation()) {
+				return new ArrayList<>();
+			}
 			final Map<Long, TreeMap<Integer, PlannedBlock>> lines = new TreeMap<>();
 			for (final PlannedBlock block : plan.blocks()) {
 				// an escalator's top landing lies in the corridor's wall row and carries on its deck

@@ -1097,9 +1097,14 @@ public final class StationAudit {
 				if (!STANDING.contains(floor.role()) || floor.y() < StationGeometry.PLATFORM_Y || !open(u, y, v)) {
 					continue;
 				}
+				// the street over a deep station is the ground: its edges drop nowhere, but for the hole its shaft makes in the hall floor
+				final boolean ground = spec.options().deepStation() && floor.y() == spec.options().streetDepth() - 1;
 				for (final int[] side : SIDES) {
 					final int nu = u + side[0], nv = v + side[1];
 					if (!open(nu, y, nv)) {
+						continue;
+					}
+					if (ground && !dug(nu, y - 1, nv)) {
 						continue;
 					}
 					int drop = 0;
@@ -1118,6 +1123,25 @@ public final class StationAudit {
 				fail(Topic.FALLS, found.size() + " open edges, first " + found.get(0),
 						"Plan again; if it stays, copy the description and report it: an edge needs a wall, window or barrier.");
 			}
+		}
+
+		private Set<Long> dugCells;
+
+		/** True when the cell is dug out (a box of the plan's headroom): a deep station's void, where the ground is not. */
+		private boolean dug(int u, int y, int v) {
+			if (dugCells == null) {
+				dugCells = new HashSet<>();
+				for (final Box box : plan.headroom()) {
+					for (int bu = box.uMin(); bu <= box.uMax(); bu++) {
+						for (int by = box.yMin(); by <= box.yMax(); by++) {
+							for (int bv = box.vMin(); bv <= box.vMax(); bv++) {
+								dugCells.add(key(bu, by, bv));
+							}
+						}
+					}
+				}
+			}
+			return dugCells.contains(key(u, y, v));
 		}
 
 		/** True when a passenger fits at (u, y, v): that cell and the one above are empty. */
