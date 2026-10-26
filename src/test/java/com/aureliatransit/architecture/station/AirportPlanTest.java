@@ -227,6 +227,43 @@ class AirportPlanTest {
 		assertEquals(List.of(), LayoutValidator.validate(plan(words)));
 	}
 
+	@Test
+	void runwayNumbersComeFromTheWords() {
+		assertEquals(9, StationDescriptionParser.parse("airport").spec().airport().heading());
+		assertEquals(5, StationDescriptionParser.parse("airport, runway 05/23").spec().airport().heading());
+		assertEquals(5, StationDescriptionParser.parse("airport, runway 23/05").spec().airport().heading());
+		assertEquals(5, StationDescriptionParser.parse("airport, runway 05").spec().airport().heading());
+		assertEquals(18, StationDescriptionParser.parse("airport, runway 18/36").spec().airport().heading());
+		final ParseResult southend = StationDescriptionParser.parse("airport, one 1856 m runway 05/23");
+		assertEquals(5, southend.spec().airport().heading());
+		assertEquals(2784, southend.spec().airport().runwayLength());
+		assertTrue(southend.ignored().isEmpty() && southend.warnings().isEmpty(), southend.ignored() + " " + southend.warnings());
+		// a number after "runway" with no partner 18 apart and no leading zero is still its length
+		assertEquals(9, StationDescriptionParser.parse("small airport, runway 200 long").spec().airport().heading());
+		assertEquals("05", AirportSpec.defaults().withHeading(5).runwayNumber(false));
+		assertEquals("23", AirportSpec.defaults().withHeading(5).runwayNumber(true));
+	}
+
+	@Test
+	void theRunwayCarriesItsNumbersAtBothEnds() {
+		final StationPlan plan = plan("airport, runway 05/23 named N");
+		final AirportGeometry air = AirportGeometry.of(plan.spec().airport());
+		final java.util.Set<String> white = new java.util.HashSet<>();
+		for (final PlannedBlock b : plan.blocks()) {
+			if (b.y() == StationGeometry.PLATFORM_Y && b.blockId().equals(PlanAirport.PAINT_WHITE)) {
+				white.add(b.u() + "," + b.v());
+			}
+		}
+		final int scale = 3;
+		final int c = air.runwayCentre(0);
+		for (final int[] cell : PlanAirport.textCells(List.of("05"), scale, c, air.runwayV0() + air.dims().numberOffset(), 0, 1)) {
+			assertTrue(white.contains(cell[0] + "," + cell[1]), "05 at the low end: " + cell[0] + "," + cell[1]);
+		}
+		for (final int[] cell : PlanAirport.textCells(List.of("23"), scale, c, air.runwayV1() - air.dims().numberOffset(), 0, -1)) {
+			assertTrue(white.contains(cell[0] + "," + cell[1]), "23 at the high end: " + cell[0] + "," + cell[1]);
+		}
+	}
+
 	static void assertCells(List<String> expected, List<int[]> actual) {
 		assertEquals(expected.stream().sorted().toList(), actual.stream().map(c -> c[0] + "," + c[1]).sorted().toList());
 	}

@@ -114,8 +114,8 @@ abstract class PlanAirport extends PlanFitOut {
 
 	/**
 	 * One runway's paint and lights: edge lines and flush edge lights, green threshold lights, threshold stripes, the numbers, and a
-	 * dashed centreline. The runway lies along v, so its low end is the "09" end and its high end "27"; with two, the first is
-	 * "09L / 27R" and the second "09R / 27L" (left and right as a pilot looking along +v sees them).
+	 * dashed centreline. The runway lies along v; its low end carries the spec's number ("09" unless the words gave one) and its
+	 * high end that plus 18 ("27"); with two, the first is "09L / 27R" and the second "09R / 27L" (left and right as a pilot looking along +v sees them).
 	 */
 	void runwayMarks(int i) {
 		final AirportGeometry.Dims d = air.dims();
@@ -151,8 +151,8 @@ abstract class PlanAirport extends PlanFitOut {
 		final boolean pair = spec.airport().runways() > 1;
 		final String low = pair ? (i == 0 ? "L" : "R") : "";
 		final String high = pair ? (i == 0 ? "R" : "L") : "";
-		paintText(number("09", low), scale, c, v0 + d.numberOffset(), 0, 1, PAINT_WHITE);
-		paintText(number("27", high), scale, c, v1 - d.numberOffset(), 0, -1, PAINT_WHITE);
+		paintText(number(spec.airport().runwayNumber(false), low), scale, c, v0 + d.numberOffset(), 0, 1, PAINT_WHITE);
+		paintText(number(spec.airport().runwayNumber(true), high), scale, c, v1 - d.numberOffset(), 0, -1, PAINT_WHITE);
 		touchdownMarks(i);
 		final int clear = d.numberOffset() + 3 * AirportGlyphs.height(scale) + 6;
 		final int start = v0 + clear;

@@ -75,6 +75,7 @@ final class AirportWords {
 		private Integer gates;
 		private Boolean terminal;
 		private boolean rail;
+		private Integer heading;
 		private int size;
 		private boolean always;
 
@@ -176,6 +177,9 @@ final class AirportWords {
 				widthWord = true;
 				j++;
 			}
+			if (!lengthWord && !widthWord && designator(i + 1)) {
+				return;
+			}
 			final Integer n = digits(at(j));
 			if (n != null) {
 				final double factor = unit(at(j + 1));
@@ -193,6 +197,36 @@ final class AirportWords {
 				runways = 1;
 				note(i, "a runway");
 			}
+		}
+
+		/**
+		 * A runway's numbers after "runway": "05/23" (two two-digit numbers 18 apart) or "05" (a leading zero). A bare "23" stays a
+		 * length, as before. True when the words named the numbers.
+		 */
+		private boolean designator(int j) {
+			final String first = at(j);
+			final Integer a = first.length() == 2 ? digits(first) : null;
+			if (a == null || a < 1 || a > 36) {
+				return false;
+			}
+			final String second = at(j + 1);
+			final Integer b = second.length() == 2 ? digits(second) : null;
+			final boolean pair = b != null && Math.abs(a - b) == 18;
+			if (!pair && first.charAt(0) != '0') {
+				return false;
+			}
+			final int low = pair ? Math.min(a, b) : a > 18 ? a - 18 : a;
+			use(j - 1, pair ? j + 1 : j);
+			if (heading == null) {
+				heading = low;
+				note(j - 1, String.format(java.util.Locale.ROOT, "runway %02d/%02d", low, low + 18));
+			} else if (heading != low) {
+				warn("runway numbers given twice; using " + String.format(java.util.Locale.ROOT, "%02d/%02d", heading, heading + 18));
+			}
+			if (runways == null) {
+				runways = 1;
+			}
+			return true;
 		}
 
 		private void gateWord(int i) {
@@ -245,6 +279,8 @@ final class AirportWords {
 				} else {
 					setSize(false, n, factor == 0 ? 1 : factor, i, j);
 				}
+				// "1856 m runway 05/23": the numbers after the noun
+				designator(j + 1);
 			} else if (GATE.contains(noun) && factor == 0) {
 				setGates(n, i, j);
 			} else if (TERMINAL.contains(noun) && factor == 0) {
@@ -363,7 +399,7 @@ final class AirportWords {
 			if (terminal == null) {
 				defaulted.add("a terminal building (default)");
 			}
-			AirportSpec spec = new AirportSpec(r, len, wid, g, t);
+			AirportSpec spec = new AirportSpec(r, len, wid, g, t).withHeading(heading == null ? AirportSpec.DEFAULT_HEADING : heading);
 			if (rail) {
 				if (!t) {
 					warn("a railway station needs the terminal over it; left out");
