@@ -204,6 +204,33 @@ class AirportPlanTest {
 		}
 	}
 
+	@Test
+	void digitsReadUprightFromTheTerminalSideOfAStandAndFromTheThreshold() {
+		// "1" at scale 1: rows top to bottom 010, 110, 010, 010, 111 (a flag on the left, a foot along the bottom), set at column 10, row 20
+		// a viewer on the terminal side facing out over the apron has +u as up and -v on the right, so the flag is at the high v side
+		assertCells(List.of("14,20", "13,21", "13,20", "12,20", "11,20", "10,21", "10,20", "10,19"),
+				PlanAirport.textCells(List.of("1"), 1, 10, 20, 1, 0));
+		// a viewer at the threshold facing +v has +u on the right, so the flag is at the low u side
+		assertCells(List.of("10,24", "9,23", "10,23", "10,22", "10,21", "9,20", "10,20", "11,20"),
+				PlanAirport.textCells(List.of("1"), 1, 10, 20, 0, 1));
+	}
+
+	@Test
+	void southendPresetIsItsRealRunwayAndPlansCleanly() {
+		final String words = AirportPresets.ALL.stream().filter(p -> p.key().equals("southend")).findFirst().orElseThrow().description();
+		final AirportSpec spec = StationDescriptionParser.parse(words).spec().airport();
+		assertEquals(1, spec.runways());
+		// 1,856 m at 1.5 blocks a metre
+		assertEquals(2784, spec.runwayLength());
+		assertEquals(5, spec.gates());
+		assertTrue(spec.terminal());
+		assertEquals(List.of(), LayoutValidator.validate(plan(words)));
+	}
+
+	static void assertCells(List<String> expected, List<int[]> actual) {
+		assertEquals(expected.stream().sorted().toList(), actual.stream().map(c -> c[0] + "," + c[1]).sorted().toList());
+	}
+
 	static boolean overlaps(AirportGeometry.Area a, AirportGeometry.Area b) {
 		return a.u0() <= b.u1() && b.u0() <= a.u1() && a.v0() <= b.v1() && b.v0() <= a.v1();
 	}

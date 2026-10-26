@@ -191,21 +191,30 @@ abstract class PlanAirport extends PlanFitOut {
 	 * +u on the right; the right hand is a quarter turn clockwise from the viewing direction.
 	 */
 	private void paintText(List<String> lines, int scale, int ou, int ov, int upU, int upV, String id) {
+		for (final int[] cell : textCells(lines, scale, ou, ov, upU, upV)) {
+			paint(cell[0], cell[1], id);
+		}
+	}
+
+	/** The cells {@code {u, v}} that {@link #paintText} paints for these lines, in the same frame. Static so the tests can check a glyph's orientation. */
+	static List<int[]> textCells(List<String> lines, int scale, int ou, int ov, int upU, int upV) {
 		final int rightU = upV != 0 ? upV : 0;
 		final int rightV = upU != 0 ? -upU : 0;
 		final int h = AirportGlyphs.height(scale);
 		final int gap = 2 * scale;
 		final int total = lines.size() * h + (lines.size() - 1) * gap;
+		final List<int[]> out = new ArrayList<>();
 		int row0 = 0;
 		for (final String line : lines) {
 			final int w = AirportGlyphs.width(line, scale);
 			for (final int[] px : AirportGlyphs.pixels(line, scale)) {
 				final int d = total - 1 - (row0 + px[1]);
 				final int x = px[0] - w / 2;
-				paint(ou + d * upU + x * rightU, ov + d * upV + x * rightV, id);
+				out.add(new int[]{ou + d * upU + x * rightU, ov + d * upV + x * rightV});
 			}
 			row0 += h + gap;
 		}
+		return out;
 	}
 
 	// ---- taxiways -----------------------------------------------------------------------------------------------------
@@ -301,9 +310,9 @@ abstract class PlanAirport extends PlanFitOut {
 			for (int v = c - bar; v <= c + bar; v++) {
 				paint(stop, v, PAINT_WHITE);
 			}
-			// the number, upright for a pilot taxiing in towards the terminal
+			// the number, upright for someone on the terminal side of the stand facing out over the apron: up is +u, the near edge is the terminal side
 			final int scale = numberScale() > 1 ? 2 : 1;
-			paintText(List.of(Integer.toString(i + 1)), scale, stop + 4 + AirportGlyphs.height(scale), c + air.dims().standPitch() / 4, -1, 0, PAINT_WHITE);
+			paintText(List.of(Integer.toString(i + 1)), scale, stop + 4, c + air.dims().standPitch() / 4, 1, 0, PAINT_WHITE);
 		}
 	}
 

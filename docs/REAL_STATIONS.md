@@ -80,3 +80,20 @@ Not built yet: the cutting (the streets are at track level), the second tower an
 1. Add an entry to `RealStation` with its operator, islands, hall depth, height, number of waves and kind. Cite every number here.
 2. If the station is not "one hall over island platforms, streets at both sides", it needs its own rule in the planner. Do not stretch Utrecht's.
 3. Add its facts and its subset table to this page. Add a test for its parse result and for a plan with 0 violations that the audit can build.
+
+## Airports
+
+Presets: `AirportPresets`. The Southend preset is "airport, one 1856 m runway, 5 gates, terminal, named London Southend" (key `southend`).
+The default "airport" stays generic and operator-neutral.
+
+London Southend (EGMC), from a Google Maps satellite reference: one runway 05/23 of 1,856 m (2,784 blocks at 1.5 blocks a metre), a
+parallel taxiway with links to the runway, an apron with about 5 stands, and a terminal on the far side of the apron from the runway,
+beside the railway station. Built: the runway, taxiway, apron, 5 stands with bridges, the terminal and the control tower.
+
+Simplifications:
+- The runway is not turned to its compass heading. The layout runs the runway along the local v axis with the terminal parallel to
+  it; the real runway meets the terminal line at about 45 degrees. There is no heading option.
+- The runway is 45 blocks wide (30 m), the planner's cap; the real runway is about 45 m.
+- The railway station and its platform are not built, and nothing in an airport runs on rails.
+- Stands are generic: no real stand layout, hangars, cargo, car park, fire station or the Jet Centre.
+- One parallel taxiway with links, no holding bays.
