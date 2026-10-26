@@ -44,18 +44,97 @@ public final class SiteSurvey {
 	}
 
 	public static SurveyReport survey(StationPlan plan, LocalFrame frame, SiteProbe probe, boolean replaceTerrain) {
-		final Run run = new Run(plan, frame, probe, replaceTerrain);
-		run.scanPlanned();
-		for (final Box box : plan.trackEnvelopes()) {
-			run.scanClearance(box);
+		final Survey survey = start(plan, frame, probe, replaceTerrain);
+		survey.step(Long.MAX_VALUE);
+		return survey.report();
+	}
+
+	/**
+	 * A survey walked a piece at a time ({@link Survey#step}), so a site too big for one tick is read over several and the
+	 * chunks it loads can unload between them. Same order, issues and ops as {@link #survey}.
+	 */
+	public static Survey start(StationPlan plan, LocalFrame frame, SiteProbe probe, boolean replaceTerrain) {
+		return new Survey(new Run(plan, frame, probe, replaceTerrain));
+	}
+
+	/** A survey in progress; see {@link #start}. */
+	public static final class Survey {
+
+		private final Run run;
+		private final List<Box> clearance = new ArrayList<>();
+		private final List<Box> support;
+		/** 0: planned blocks, 1: clearance boxes, 2: support boxes, 3: done. */
+		private int phase;
+		/** Planned block index in phase 0, box index in phases 1 and 2. */
+		private int index;
+		/** Column within the current box, counted v-major then u, as the scan order says. */
+		private int column;
+
+		private Survey(Run run) {
+			this.run = run;
+			clearance.addAll(run.plan.trackEnvelopes());
+			clearance.addAll(run.plan.headroom());
+			support = run.plan.supportAreas();
+			run.markPlanned();
 		}
-		for (final Box box : plan.headroom()) {
-			run.scanClearance(box);
+
+		/** Reads cells until the survey is done or {@code deadline} ({@link System#nanoTime}) has passed; true when done. */
+		public boolean step(long deadline) {
+			while (phase < 3) {
+				if (phase == 0) {
+					if (index < run.plan.blocks().size()) {
+						run.checkPlanned(run.plan.blocks().get(index++));
+					} else {
+						next();
+					}
+				} else {
+					final List<Box> boxes = phase == 1 ? clearance : support;
+					if (index >= boxes.size()) {
+						next();
+						continue;
+					}
+					final Box box = boxes.get(index);
+					final int width = box.uMax() - box.uMin() + 1;
+					final int depth = box.vMax() - box.vMin() + 1;
+					final int columns = width > 0 && depth > 0 ? width * depth : 0;
+					if (column >= columns) {
+						index++;
+						column = 0;
+						continue;
+					}
+					final int u = box.uMin() + column % width;
+					final int v = box.vMin() + column / width;
+					column++;
+					if (phase == 1) {
+						run.checkClearance(box, u, v);
+					} else {
+						run.checkSupportColumn(box, u, v);
+					}
+				}
+				if (System.nanoTime() >= deadline) {
+					return phase == 3;
+				}
+			}
+			return true;
 		}
-		for (final Box box : plan.supportAreas()) {
-			run.scanSupport(box);
+
+		private void next() {
+			phase++;
+			index = 0;
+			column = 0;
 		}
-		return run.report();
+
+		public boolean done() {
+			return phase == 3;
+		}
+
+		/** @throws IllegalStateException before the survey is done */
+		public SurveyReport report() {
+			if (!done()) {
+				throw new IllegalStateException("survey not finished");
+			}
+			return run.report();
+		}
 	}
 
 	/** One survey: the inputs, the cells already checked and everything found so far. */
@@ -106,62 +185,57 @@ public final class SiteSurvey {
 			};
 		}
 
-		void scanPlanned() {
+		void markPlanned() {
 			for (final PlannedBlock block : plan.blocks()) {
 				first(block.u(), block.y(), block.v());
 			}
-			for (final PlannedBlock block : plan.blocks()) {
-				final int x = frame.x(block.u(), block.v());
-				final int y = frame.y(block.y());
-				final int z = frame.z(block.u(), block.v());
-				final CellKind kind = probe.kind(x, y, z);
+		}
+
+		void checkPlanned(PlannedBlock block) {
+			final int x = frame.x(block.u(), block.v());
+			final int y = frame.y(block.y());
+			final int z = frame.z(block.u(), block.v());
+			final CellKind kind = probe.kind(x, y, z);
+			final SiteIssue.Kind hard = hard(kind);
+			if (kind == CellKind.RAIL_NODE && block.role() == Role.RAIL_NODE) {
+				kept.add(block);
+			} else if (hard != null) {
+				issue(hard, x, y, z);
+			} else if (kind != CellKind.AIR) {
+				issue(SiteIssue.Kind.OCCUPIED, x, y, z);
+				terrainChanges++;
+			}
+		}
+
+		/** One column (u, v) of a track envelope or headroom box, y ascending. */
+		void checkClearance(Box box, int u, int v) {
+			for (int y = box.yMin(); y <= box.yMax(); y++) {
+				if (!first(u, y, v)) {
+					continue;
+				}
+				final int x = frame.x(u, v);
+				final int wy = frame.y(y);
+				final int z = frame.z(u, v);
+				final CellKind kind = probe.kind(x, wy, z);
 				final SiteIssue.Kind hard = hard(kind);
-				if (kind == CellKind.RAIL_NODE && block.role() == Role.RAIL_NODE) {
-					kept.add(block);
-				} else if (hard != null) {
-					issue(hard, x, y, z);
-				} else if (kind != CellKind.AIR) {
-					issue(SiteIssue.Kind.OCCUPIED, x, y, z);
+				if (kind == CellKind.RAIL_NODE) {
+					continue;
+				}
+				if (hard != null) {
+					issue(hard, x, wy, z);
+				} else if (kind == CellKind.SOLID || kind == CellKind.FLUID) {
+					issue(SiteIssue.Kind.OBSTRUCTED, x, wy, z);
 					terrainChanges++;
+					clears.add(new WorldOp(WorldOp.Kind.CLEAR, x, wy, z, null, WorldOp.AIR, frame.forward(), ""));
 				}
 			}
 		}
 
-		void scanClearance(Box box) {
-			for (int v = box.vMin(); v <= box.vMax(); v++) {
-				for (int u = box.uMin(); u <= box.uMax(); u++) {
-					for (int y = box.yMin(); y <= box.yMax(); y++) {
-						if (!first(u, y, v)) {
-							continue;
-						}
-						final int x = frame.x(u, v);
-						final int wy = frame.y(y);
-						final int z = frame.z(u, v);
-						final CellKind kind = probe.kind(x, wy, z);
-						final SiteIssue.Kind hard = hard(kind);
-						if (kind == CellKind.RAIL_NODE) {
-							continue;
-						}
-						if (hard != null) {
-							issue(hard, x, wy, z);
-						} else if (kind == CellKind.SOLID || kind == CellKind.FLUID) {
-							issue(SiteIssue.Kind.OBSTRUCTED, x, wy, z);
-							terrainChanges++;
-							clears.add(new WorldOp(WorldOp.Kind.CLEAR, x, wy, z, null, WorldOp.AIR, frame.forward(), ""));
-						}
-					}
-				}
-			}
-		}
-
-		void scanSupport(Box box) {
-			for (int v = box.vMin(); v <= box.vMax(); v++) {
-				for (int u = box.uMin(); u <= box.uMax(); u++) {
-					for (int y = box.yMin(); y <= box.yMax(); y++) {
-						if (first(u, y, v)) {
-							checkSupport(u, y, v);
-						}
-					}
+		/** One column (u, v) of a support box, y ascending. */
+		void checkSupportColumn(Box box, int u, int v) {
+			for (int y = box.yMin(); y <= box.yMax(); y++) {
+				if (first(u, y, v)) {
+					checkSupport(u, y, v);
 				}
 			}
 		}

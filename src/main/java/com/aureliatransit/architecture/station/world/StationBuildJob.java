@@ -25,7 +25,9 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -39,13 +41,20 @@ import java.util.function.Consumer;
 /**
  * Builds the ops of a survey (or undoes a build) in small batches, driven by {@link StationSessions}. Every cell is probed
  * again just before it is written; the first surprise stops the job and keeps the undo log. The probe loads the chunks it
- * needs (and holds them with a short ticket), so a station longer than the view distance builds; the job only pauses if a
- * chunk still is not loaded.
+ * needs and holds a bounded window of them ({@link WorldSiteProbe}), so a station longer than the view distance builds and a
+ * site of any size streams through; a batch ends after {@link #LOADS_PER_STEP} chunks that cost the server loading or
+ * generation ({@link WorldSiteProbe#loads}), so a big build on fresh terrain is spread over ticks. The job only pauses if a chunk still is not loaded. Once every op is done, the finishing steps (escalator shapes,
+ * screens, signs, lifts, MTR) run in batches too, and the job lets go of its chunks when it ends.
  */
 public final class StationBuildJob {
 
 	/** Ops one job runs in a batch; the sessions run batches until the tick's time budget is used. */
 	public static final int OPS_PER_TICK = 64;
+	/**
+	 * Chunks a batch may make the server load or generate before it ends early (Jah 10-26: about 8 a tick keeps the server
+	 * smooth on fresh terrain); a station among loaded chunks costs none and builds at full speed.
+	 */
+	public static final int LOADS_PER_STEP = 8;
 	/** Consecutive ticks a job may wait for a chunk before it gives up. */
 	public static final int MAX_PAUSED_TICKS = 200;
 
@@ -79,7 +88,7 @@ public final class StationBuildJob {
 	}
 
 	private final ServerWorld world;
-	private final WorldSiteProbe probe;
+	private WorldSiteProbe probe;
 	private final Mode mode;
 	private final UUID owner;
 	private final Consumer<Text> out;
@@ -108,6 +117,13 @@ public final class StationBuildJob {
 	/** Rebuild only: how many of the first ops are the left-out cells taken back, from the undo log, before any write. */
 	private final int removals;
 	private int kept;
+	/** The finishing steps, one cell (or one lift group, or the MTR registration) each; null until every op is done. */
+	private Deque<Runnable> finishing;
+	/** Name sign row owners already written, so a joined row gets its text once. */
+	private final Set<BlockPos> signOwners = new HashSet<>();
+	/** Lift stops by column and call buttons found by the finishing steps. */
+	private final Map<Long, TreeMap<Integer, BlockPos>> liftColumns = new HashMap<>();
+	private final List<BlockPos> liftButtons = new ArrayList<>();
 
 	private State state = State.RUNNING;
 	private int done;
@@ -177,10 +193,15 @@ public final class StationBuildJob {
 	 */
 	public static StationBuildJob rebuild(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out,
 										  StationZone zone, UndoLog last) {
+		return rebuild(world, owner, resolution, approved, out, zone, last, ours(world, last));
+	}
+
+	/** {@link #rebuild} with {@link #ours} of {@code last} already worked out (by an {@link Ours} walk). */
+	public static StationBuildJob rebuild(ServerWorld world, UUID owner, BlockStateResolver.Resolution resolution, boolean approved, Consumer<Text> out,
+										  StationZone zone, UndoLog last, Map<BlockPos, UndoLog.Entry> cells) {
 		if (!resolution.ok()) {
 			throw new IllegalArgumentException("unknown blocks: " + String.join(", ", resolution.missing()));
 		}
-		final Map<BlockPos, UndoLog.Entry> cells = ours(world, last);
 		// a rebuild that cannot start must leave the last build's MTR lifts and station alone, so nothing above may fail after this
 		final Map<BlockPos, String> built = new java.util.LinkedHashMap<>();
 		for (final Map.Entry<BlockPos, String> key : last.keys().entrySet()) {
@@ -228,18 +249,67 @@ public final class StationBuildJob {
 	 * each with its state before the build and after its last write.
 	 */
 	static Map<BlockPos, UndoLog.Entry> ours(ServerWorld world, UndoLog log) {
-		final WorldSiteProbe probe = WorldSiteProbe.loading(world);
-		final Map<BlockPos, UndoLog.Entry> ours = new java.util.LinkedHashMap<>();
-		for (final Map.Entry<BlockPos, UndoLog.Entry> cell : log.cells().entrySet()) {
-			final BlockPos pos = cell.getKey();
-			final BlockState current = world.getBlockState(pos);
-			// a node connected by the platform rail the build laid itself is still ours
-			if (probe.loaded(pos.getX(), pos.getZ()) && (stillPlaced(current, cell.getValue().placed())
-					|| log.railNode(pos) && current.getBlock() == cell.getValue().placed().getBlock())) {
-				ours.put(pos, cell.getValue());
-			}
+		final Ours walk = new Ours(world, log);
+		walk.step(Long.MAX_VALUE);
+		return walk.result();
+	}
+
+	/**
+	 * {@link #ours} walked a piece at a time, so a big build's cells are read over several ticks and the chunks they load can
+	 * unload between them.
+	 */
+	public static final class Ours {
+
+		private final ServerWorld world;
+		private final UndoLog log;
+		private final WorldSiteProbe probe;
+		private final java.util.Iterator<Map.Entry<BlockPos, UndoLog.Entry>> cells;
+		private final Map<BlockPos, UndoLog.Entry> ours = new java.util.LinkedHashMap<>();
+		private boolean done;
+
+		public Ours(ServerWorld world, UndoLog log) {
+			this.world = world;
+			this.log = log;
+			this.probe = WorldSiteProbe.loading(world);
+			this.cells = new ArrayList<>(log.cells().entrySet()).iterator();
 		}
-		return ours;
+
+		/** Reads cells until all are read or {@code deadline} ({@link System#nanoTime}) has passed; true when done. */
+		public boolean step(long deadline) {
+			while (!done) {
+				if (!cells.hasNext()) {
+					done = true;
+					probe.release();
+					break;
+				}
+				final Map.Entry<BlockPos, UndoLog.Entry> cell = cells.next();
+				final BlockPos pos = cell.getKey();
+				// a node connected by the platform rail the build laid itself is still ours
+				if (probe.loaded(pos.getX(), pos.getZ())) {
+					final BlockState current = world.getBlockState(pos);
+					if (stillPlaced(current, cell.getValue().placed()) || log.railNode(pos) && current.getBlock() == cell.getValue().placed().getBlock()) {
+						ours.put(pos, cell.getValue());
+					}
+				}
+				if (System.nanoTime() >= deadline) {
+					break;
+				}
+			}
+			return done;
+		}
+
+		/** Lets go of the chunks held before the walk is done (the rebuild was called off). */
+		public void cancel() {
+			probe.release();
+		}
+
+		/** @throws IllegalStateException before the walk is done */
+		public Map<BlockPos, UndoLog.Entry> result() {
+			if (!done) {
+				throw new IllegalStateException("walk not finished");
+			}
+			return ours;
+		}
 	}
 
 	/** What identifies a write completely, for {@link RebuildDiff}: the block state as resolved and any sign or screen text. */
@@ -336,6 +406,21 @@ public final class StationBuildJob {
 		return log;
 	}
 
+	/** Chunks the job holds loaded right now (at most its window). */
+	public int heldChunks() {
+		return probe.held();
+	}
+
+	/** Holds at most {@code cap} chunks instead of {@link com.aureliatransit.architecture.station.ChunkHold#DEFAULT_CAP}; only before the first step. For the game tests. */
+	public StationBuildJob holdingAtMost(int cap) {
+		if (done > 0 || finishing != null) {
+			throw new IllegalStateException("the job has started");
+		}
+		probe.release();
+		probe = WorldSiteProbe.loading(world, cap);
+		return this;
+	}
+
 	/** Runs at most {@code budget} ops and returns how many it handled. */
 	public int step(int budget) {
 		if (state != State.RUNNING) {
@@ -343,7 +428,8 @@ public final class StationBuildJob {
 		}
 		int used = 0;
 		boolean blocked = false;
-		while (used < budget && done < total) {
+		final int loads = probe.loads() + LOADS_PER_STEP;
+		while (used < budget && done < total && probe.loads() < loads) {
 			final Step step = mode == Mode.UNDO || done < removals ? undoNext() : buildNext();
 			if (step == Step.WAIT) {
 				blocked = true;
@@ -362,7 +448,16 @@ public final class StationBuildJob {
 			return used;
 		}
 		if (done >= total) {
-			finish();
+			if (finishing == null) {
+				finishing = finishingSteps();
+			}
+			while (used < budget && !finishing.isEmpty() && probe.loads() < loads) {
+				finishing.poll().run();
+				used++;
+			}
+			if (finishing.isEmpty()) {
+				finish();
+			}
 		}
 		return used;
 	}
@@ -374,6 +469,7 @@ public final class StationBuildJob {
 		}
 		state = State.CANCELLED;
 		paused = false;
+		probe.release();
 		if (mode != Mode.UNDO) {
 			say(Formatting.YELLOW, "Build cancelled at " + done + "/" + total + ": " + placed + " blocks placed, " + terrainChanged
 					+ " terrain cells changed." + (log.isEmpty() ? "" : " /ata_station undo reverts them."));
@@ -478,25 +574,60 @@ public final class StationBuildJob {
 	private void stop(String reason, boolean undoHint) {
 		state = State.STOPPED;
 		paused = false;
+		probe.release();
 		final String tail = mode != Mode.UNDO
 				? done + " of " + total + " ops done." + (undoHint && !log.isEmpty() ? " /ata_station undo reverts them." : "")
 				: restored + " restored, " + skipped + " skipped, " + (total - done) + " left; /ata_station undo continues.";
 		say(Formatting.RED, reason + tail);
 	}
 
-	private void finish() {
-		state = State.DONE;
-		paused = false;
-		if (mode != Mode.UNDO) {
-			escalators();
-			screens();
-			nameSigns();
-			wayfindingSigns();
-			lifts();
+	/**
+	 * What a build does once every op is done, in this order, one step per cell: escalator shapes, screen styles, name signs,
+	 * wayfinding signs, then the lifts (one step per stop or button cell, then one forming them all) and the MTR station and
+	 * platform rails. Nothing for an undo.
+	 */
+	private Deque<Runnable> finishingSteps() {
+		final Deque<Runnable> steps = new ArrayDeque<>();
+		if (mode == Mode.UNDO) {
+			return steps;
+		}
+		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
+			if (part(cell.getValue().getBlock()) == Part.ESCALATOR) {
+				steps.add(() -> escalator(cell.getKey()));
+			}
+		}
+		for (int i = 0; i < screenCells.size(); i++) {
+			final int screen = i;
+			steps.add(() -> screen(screen));
+		}
+		for (int i = 0; i < signCells.size(); i++) {
+			final int sign = i;
+			steps.add(() -> nameSign(sign));
+		}
+		for (final Map.Entry<BlockPos, String> sign : wayfindingTexts.entrySet()) {
+			steps.add(() -> wayfindingSign(sign.getKey(), sign.getValue()));
+		}
+		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
+			final Part part = part(cell.getValue().getBlock());
+			if (part == Part.LIFT_STOP || part == Part.LIFT_BUTTONS) {
+				steps.add(() -> liftPart(cell.getKey(), cell.getValue(), part));
+			}
+		}
+		steps.add(this::lifts);
+		steps.add(() -> {
 			MtrStationContract.register(world, zone, log, out);
 			if (zone != null) {
 				MtrRailContract.lay(world, zone.rails(), log, out);
 			}
+		});
+		return steps;
+	}
+
+	private void finish() {
+		state = State.DONE;
+		paused = false;
+		probe.release();
+		if (mode != Mode.UNDO) {
 			out.accept(Text.literal((mode == Mode.REBUILD ? "Station rebuilt: " + kept + " cells kept as they stood, " + restored + " taken back, " : "Station built: ")
 					+ placed + " blocks placed, " + terrainChanged + " terrain cells changed. ").formatted(Formatting.GREEN)
 					.append(StationText.button("Undo", "/ata_station undo", Formatting.YELLOW, "Take the whole station away again")));
@@ -523,78 +654,79 @@ public final class StationBuildJob {
 		return id.getNamespace().equals("mtr") && id.getPath().startsWith("escalator_");
 	}
 
-	/** Each escalator step takes its landing, transition or slope shape from the finished flight around it, kept steps too. */
-	private void escalators() {
-		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
-			if (part(cell.getValue().getBlock()) != Part.ESCALATOR) {
-				continue;
-			}
-			final BlockPos pos = cell.getKey();
-			if (!probe.loaded(pos.getX(), pos.getZ())) {
-				continue;
-			}
-			final BlockState state = world.getBlockState(pos);
-			final BlockState shaped = escalator(state) ? Block.postProcessState(state, world, pos) : state;
-			if (shaped != state && escalator(shaped)) {
-				world.setBlockState(pos, shaped, Block.NOTIFY_LISTENERS);
-			}
+	/** An escalator step takes its landing, transition or slope shape from the finished flight around it, kept steps too. */
+	private void escalator(BlockPos pos) {
+		if (!probe.loaded(pos.getX(), pos.getZ())) {
+			return;
+		}
+		final BlockState state = world.getBlockState(pos);
+		final BlockState shaped = escalator(state) ? Block.postProcessState(state, world, pos) : state;
+		if (shaped != state && escalator(shaped)) {
+			world.setBlockState(pos, shaped, Block.NOTIFY_LISTENERS);
 		}
 	}
 
-	/** Each built screen's owner (the top-left block of a joined screen) takes the planned display style. */
-	private void screens() {
-		for (int i = 0; i < screenCells.size(); i++) {
-			final BlockPos pos = screenCells.get(i);
-			final BlockState state = world.getBlockState(pos);
-			final com.aureliatransit.architecture.live.DisplayStyle style = com.aureliatransit.architecture.live.DisplayConfig.styleById(screenStyles.get(i));
-			if (style == null || !(state.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock block)) {
-				continue;
-			}
-			if (world.getBlockEntity(block.findOwner(world, pos, state)) instanceof com.aureliatransit.architecture.live.PidsBlockEntity screen
-					&& screen.config().style() != style) {
-				screen.setConfig(screen.config().withStyle(style));
-			}
+	/** A built screen's owner (the top-left block of a joined screen) takes the planned display style. */
+	private void screen(int i) {
+		final BlockPos pos = screenCells.get(i);
+		if (!probe.loaded(pos.getX(), pos.getZ())) {
+			return;
+		}
+		final BlockState state = world.getBlockState(pos);
+		final com.aureliatransit.architecture.live.DisplayStyle style = com.aureliatransit.architecture.live.DisplayConfig.styleById(screenStyles.get(i));
+		if (style == null || !(state.getBlock() instanceof com.aureliatransit.architecture.live.PidsBlock block)) {
+			return;
+		}
+		if (world.getBlockEntity(block.findOwner(world, pos, state)) instanceof com.aureliatransit.architecture.live.PidsBlockEntity screen
+				&& screen.config().style() != style) {
+			screen.setConfig(screen.config().withStyle(style));
 		}
 	}
 
-	/** Each planned wayfinding sign takes its arrow and destination ("DOWN:Platform 2"). */
-	private void wayfindingSigns() {
-		for (final Map.Entry<BlockPos, String> sign : wayfindingTexts.entrySet()) {
-			final BlockPos pos = sign.getKey();
-			final int colon = sign.getValue().indexOf(':');
-			if (colon < 0 || !probe.loaded(pos.getX(), pos.getZ())
-					|| !(world.getBlockEntity(pos) instanceof com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity entity)) {
-				continue;
-			}
-			SignArrow arrow = SignArrow.NONE;
-			try {
-				arrow = SignArrow.valueOf(sign.getValue().substring(0, colon));
-			} catch (IllegalArgumentException ignored) {
-				// an unknown arrow name: no arrow
-			}
-			entity.setWayfinding(entity.getWayfinding().withDirection(arrow, sign.getValue().substring(colon + 1)));
+	/** A planned wayfinding sign takes its arrow and destination ("DOWN:Platform 2"). */
+	private void wayfindingSign(BlockPos pos, String text) {
+		final int colon = text.indexOf(':');
+		if (colon < 0 || !probe.loaded(pos.getX(), pos.getZ())
+				|| !(world.getBlockEntity(pos) instanceof com.aureliatransit.architecture.block.entity.WayfindingSignBlockEntity entity)) {
+			return;
 		}
+		SignArrow arrow = SignArrow.NONE;
+		try {
+			arrow = SignArrow.valueOf(text.substring(0, colon));
+		} catch (IllegalArgumentException ignored) {
+			// an unknown arrow name: no arrow
+		}
+		entity.setWayfinding(entity.getWayfinding().withDirection(arrow, text.substring(colon + 1)));
 	}
 
 	/** Name text goes to the block entity of each joined row's owner, once, after the whole row exists. */
-	private void nameSigns() {
-		final Set<BlockPos> owners = new HashSet<>();
-		for (int i = 0; i < signCells.size(); i++) {
-			final BlockPos pos = signCells.get(i);
-			if (!probe.loaded(pos.getX(), pos.getZ())) {
-				continue;
-			}
-			final BlockState sign = world.getBlockState(pos);
-			if (!(sign.getBlock() instanceof TextSignBlock block)) {
-				continue;
-			}
-			final BlockPos rowOwner = block.findRowOwner(world, pos, sign);
-			if (probe.loaded(rowOwner.getX(), rowOwner.getZ()) && owners.add(rowOwner) && world.getBlockEntity(rowOwner) instanceof TextSignBlockEntity entity) {
-				// a number plate shows its text as the big number, not as the small caption under it
-				final boolean plate = block.getLayout().style().isNumberPlate();
-				entity.setData(new SignData(plate ? "" : signTexts.get(i), "", TextAlignment.CENTER, AccentPalette.NONE, SignArrow.NONE,
-						plate ? signTexts.get(i) : "", false, List.of()));
-			}
+	private void nameSign(int i) {
+		final BlockPos pos = signCells.get(i);
+		if (!probe.loaded(pos.getX(), pos.getZ())) {
+			return;
+		}
+		final BlockState sign = world.getBlockState(pos);
+		if (!(sign.getBlock() instanceof TextSignBlock block)) {
+			return;
+		}
+		final BlockPos rowOwner = block.findRowOwner(world, pos, sign);
+		if (probe.loaded(rowOwner.getX(), rowOwner.getZ()) && signOwners.add(rowOwner) && world.getBlockEntity(rowOwner) instanceof TextSignBlockEntity entity) {
+			// a number plate shows its text as the big number, not as the small caption under it
+			final boolean plate = block.getLayout().style().isNumberPlate();
+			entity.setData(new SignData(plate ? "" : signTexts.get(i), "", TextAlignment.CENTER, AccentPalette.NONE, SignArrow.NONE,
+					plate ? signTexts.get(i) : "", false, List.of()));
+		}
+	}
+
+	/** A lift stop or call button cell that still holds its planned block joins its column (or the buttons) for {@link #lifts}. */
+	private void liftPart(BlockPos pos, BlockState wanted, Part part) {
+		if (!probe.loaded(pos.getX(), pos.getZ()) || world.getBlockState(pos).getBlock() != wanted.getBlock()) {
+			return;
+		}
+		if (part == Part.LIFT_STOP) {
+			liftColumns.computeIfAbsent(BlockPos.asLong(pos.getX(), 0, pos.getZ()), key -> new TreeMap<>()).put(pos.getY(), pos);
+		} else {
+			liftButtons.add(pos);
 		}
 	}
 
@@ -603,26 +735,12 @@ public final class StationBuildJob {
 	 * stands in a corner of the car against the side glass, its FACING towards the glass: the car is the 2×2 reaching from
 	 * the stop away from the glass and one row towards the landing doors, which stand two cells along from the stop. So the
 	 * car's centre is half a cell from the stop's centre away from the glass and half a cell towards the doors. A stop with
-	 * no doors there is an older shaft's, against the back wall with the car in front of it and clockwise.
+	 * no doors there is an older shaft's, against the back wall with the car in front of it and clockwise. The stops and buttons
+	 * are the ones {@link #liftPart} found.
 	 */
 	private void lifts() {
-		final Map<Long, TreeMap<Integer, BlockPos>> columns = new HashMap<>();
-		final List<BlockPos> buttons = new ArrayList<>();
-		for (final Map.Entry<BlockPos, BlockState> cell : planned.entrySet()) {
-			final Part part = part(cell.getValue().getBlock());
-			if (part != Part.LIFT_STOP && part != Part.LIFT_BUTTONS) {
-				continue;
-			}
-			final BlockPos pos = cell.getKey();
-			if (!probe.loaded(pos.getX(), pos.getZ()) || world.getBlockState(pos).getBlock() != cell.getValue().getBlock()) {
-				continue;
-			}
-			if (part == Part.LIFT_STOP) {
-				columns.computeIfAbsent(BlockPos.asLong(pos.getX(), 0, pos.getZ()), key -> new TreeMap<>()).put(pos.getY(), pos);
-			} else {
-				buttons.add(pos);
-			}
-		}
+		final Map<Long, TreeMap<Integer, BlockPos>> columns = liftColumns;
+		final List<BlockPos> buttons = liftButtons;
 		final List<MtrLiftContract.Shaft> shafts = new ArrayList<>();
 		for (final TreeMap<Integer, BlockPos> stops : columns.values()) {
 			if (stops.size() < 2) {

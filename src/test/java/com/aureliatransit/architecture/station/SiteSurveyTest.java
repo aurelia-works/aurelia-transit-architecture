@@ -10,6 +10,7 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SiteSurveyTest {
@@ -589,6 +590,20 @@ class SiteSurveyTest {
 		final FakeProbe shared = flat().grass(wx(0), wy(0), wz(1));
 		assertEquals(survey(shared, false), survey(shared, false));
 		assertFalse(first.equals(survey(flat(), true)));
+	}
+
+	@Test
+	void aSurveyWalkedOneCellAtATimeGivesTheSameReport() {
+		final SiteSurvey.Survey survey = SiteSurvey.start(miniPlan(), NORTH,
+				flat().grass(wx(0), wy(0), wz(1)).log(wx(2), wy(2), wz(2)).hole(wx(1), 63, wz(3), 2), true);
+		int steps = 0;
+		// a deadline already passed: each step reads one planned block or one column and returns
+		while (!survey.step(Long.MIN_VALUE)) {
+			steps++;
+			assertThrows(IllegalStateException.class, survey::report);
+		}
+		assertTrue(steps > 10);
+		assertEquals(survey(flat().grass(wx(0), wy(0), wz(1)).log(wx(2), wy(2), wz(2)).hole(wx(1), 63, wz(3), 2), true), survey.report());
 	}
 
 	// ---- frames ------------------------------------------------------------------------------------------------------------
