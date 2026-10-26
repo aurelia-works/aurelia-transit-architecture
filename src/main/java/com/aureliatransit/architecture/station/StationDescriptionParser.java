@@ -128,6 +128,8 @@ public final class StationDescriptionParser {
 			Map.entry("surbiton", StationStyle.MODERN), Map.entry("coventry", StationStyle.MODERN));
 	/** Width of a bored tube's platform: a platform tunnel with room to walk, about 4 m. */
 	private static final int TUBE_PLATFORM_WIDTH = 6;
+	/** A stacked tube's platform: the bank of two escalators beside the lift and a walkway. */
+	private static final int STACKED_PLATFORM_WIDTH = 7;
 	/** Narrowest platform of a cut-and-cover box: an escalator bank of three and a column either side. */
 	private static final int BOX_PLATFORM_WIDTH = 8;
 	private static final Set<String> UNDERGROUND_WORDS = Set.of("underground", "subway", "tunnel", "tube");
@@ -898,7 +900,8 @@ public final class StationDescriptionParser {
 				}
 				if (UNDERGROUND_WORDS.contains(at(j)) || token.equals("deep") && j > i + 1) {
 					final int last = UNDERGROUND_WORDS.contains(at(j)) ? j : j - 1;
-					return setDeep(UndergroundType.DEEP_TUBE, i, last, token + " " + (last > i + 1 ? "level " : "") + (last == j ? at(j) : "level"));
+					final boolean stacked = i > 0 && tokens[i - 1].equals("stacked");
+					return setDeep(stacked ? UndergroundType.DEEP_STACKED : UndergroundType.DEEP_TUBE, stacked ? i - 1 : i, last, token + " " + (last > i + 1 ? "level " : "") + (last == j ? at(j) : "level"));
 				}
 				return false;
 			}
@@ -2211,7 +2214,7 @@ public final class StationDescriptionParser {
 		 * it is two tracks with its platforms facing each other; a box takes the tracks and platforms asked for.
 		 */
 		private void deepDefaults() {
-			final boolean tube = deepType == UndergroundType.DEEP_TUBE;
+			final boolean tube = deepType != null && deepType.tube();
 			if (terminus || hub) {
 				warn("a deep underground terminus is not built yet; building a deep through station");
 				terminus = false;
@@ -2233,6 +2236,7 @@ public final class StationDescriptionParser {
 			underpass = false;
 			tram = false;
 			mezzanine = false;
+			final int tubeWidth = deepType == UndergroundType.DEEP_STACKED ? STACKED_PLATFORM_WIDTH : TUBE_PLATFORM_WIDTH;
 			if (tube) {
 				if (tracks != null && tracks != 2 || !listed.isEmpty()) {
 					warn("a deep tube station is two bores of one track each; building two tracks");
@@ -2246,15 +2250,15 @@ public final class StationDescriptionParser {
 				islandAt = -1;
 				islandPlatforms = null;
 				sidePlatforms = false;
-				if (narrow || small || width != null && width < TUBE_PLATFORM_WIDTH) {
-					warn("a bored tube's platform needs " + TUBE_PLATFORM_WIDTH + " columns for its escalator shaft and lift; using " + TUBE_PLATFORM_WIDTH);
+				if (narrow || small || width != null && width < tubeWidth) {
+					warn("a bored tube's platform needs " + tubeWidth + " columns for its escalator shaft and lift; using " + tubeWidth);
 					narrow = false;
 					small = false;
 					width = null;
 				}
 				if (width == null && !wide) {
-					width = TUBE_PLATFORM_WIDTH;
-					defaulted.add("width " + TUBE_PLATFORM_WIDTH + " (a bored tube's platform)");
+					width = tubeWidth;
+					defaulted.add("width " + tubeWidth + " (a bored tube's platform)");
 				}
 			}
 			if (!tube && (narrow || small)) {

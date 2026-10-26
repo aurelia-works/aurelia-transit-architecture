@@ -25,7 +25,6 @@ public record PlatformRail(String name, int x1, int y1, int z1, int x2, int y2, 
 			return rails;
 		}
 		final TrackLayout layout = plan.layout();
-		final int y = frame.y(StationGeometry.PLATFORM_Y);
 		for (final TrackLayout.Track track : layout.tracks()) {
 			final int number = layout.platformNumber(track);
 			if (number <= 0) {
@@ -33,6 +32,7 @@ public record PlatformRail(String name, int x1, int y1, int z1, int x2, int y2, 
 			}
 			final int from = layout.platformFrom(track);
 			final int to = layout.platformTo(track);
+			final int y = frame.y(track.level());
 			rails.add(new PlatformRail(Integer.toString(number), frame.x(track.u(), from), y, frame.z(track.u(), from),
 					frame.x(track.u(), to), y, frame.z(track.u(), to)));
 		}
@@ -41,6 +41,7 @@ public record PlatformRail(String name, int x1, int y1, int z1, int x2, int y2, 
 			final int to = layout.platformTo(track);
 			final int end = layout.trackEnd(track);
 			if (layout.platformNumber(track) > 0 && layout.buffered(track) && end > to) {
+				final int y = frame.y(track.level());
 				rails.add(new PlatformRail("", frame.x(track.u(), to), y, frame.z(track.u(), to), frame.x(track.u(), end), y, frame.z(track.u(), end), true));
 			}
 		}

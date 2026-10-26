@@ -80,6 +80,11 @@ public record StationOptions(GateStyle gates, int entranceWidth, Map<String, Str
 		return underground && type.deep();
 	}
 
+	/** True for a deep tube whose second platform is raised over the first ({@link UndergroundType#DEEP_STACKED}). */
+	public boolean stacked() {
+		return underground && type == UndergroundType.DEEP_STACKED;
+	}
+
 	/** Blocks from rail level up to the street of a deep station: the asked depth, else the type's. */
 	public int streetDepth() {
 		return depth > 0 ? depth : type.defaultDepth();

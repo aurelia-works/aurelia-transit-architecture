@@ -16,7 +16,12 @@ public enum UndergroundType {
 	 * A cut-and-cover box station (Canary Wharf, Vijzelgracht): one deep rectangular box, a mezzanine at each end, long
 	 * escalator banks and a glass canopy at each street entrance. Canary Wharf is 24 m down.
 	 */
-	CUT_AND_COVER("cut-and-cover box", 36);
+	CUT_AND_COVER("cut-and-cover box", 36),
+	/**
+	 * A bored tube whose two platforms are at different heights (Westminster's deep Jubilee platforms, one above the other in a
+	 * 39 m box): {@link StationGeometry#STACK_RISE} between them, a bank of escalators and a three-stop lift joining the levels.
+	 */
+	DEEP_STACKED("stacked deep tube", 58);
 
 	private final String label;
 	private final int defaultDepth;
@@ -33,6 +38,11 @@ public enum UndergroundType {
 	/** Blocks from rail level up to the street for this type when no depth is asked (0 for the shallow box, which has its own). */
 	public int defaultDepth() {
 		return defaultDepth;
+	}
+
+	/** True for the bored types: twin bores, a pillar between them and one escalator shaft. */
+	public boolean tube() {
+		return this == DEEP_TUBE || this == DEEP_STACKED;
 	}
 
 	/** True for the types that go deep: bored tube and cut-and-cover. */

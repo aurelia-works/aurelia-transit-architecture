@@ -250,7 +250,7 @@ public final class StationAudit {
 			final List<int[]> runs = new ArrayList<>();
 			int start = Integer.MIN_VALUE;
 			for (int v = layout.vMin(); v <= layout.vMax() + 1; v++) {
-				final PlannedBlock block = v <= layout.vMax() ? at(edgeU, StationGeometry.PLATFORM_Y, v) : null;
+				final PlannedBlock block = v <= layout.vMax() ? at(edgeU, track.level(), v) : null;
 				final boolean edge = block != null && block.role() == Role.PLATFORM_EDGE && block.front() == toward;
 				if (edge && start == Integer.MIN_VALUE) {
 					start = v;
@@ -327,7 +327,7 @@ public final class StationAudit {
 					}
 				}
 				for (final int v : new int[]{first, last}) {
-					if (!has(track.u(), StationGeometry.PLATFORM_Y, v, Role.RAIL_NODE)) {
+					if (!has(track.u(), track.level(), v, Role.RAIL_NODE)) {
 						fail(Topic.RAIL_NODES, "track " + track.number() + " has no rail node at the platform end v=" + v, "Something blocks the rail node at the platform end: make the platform longer or plan again with fewer extras at its ends.");
 					}
 				}
@@ -416,7 +416,7 @@ public final class StationAudit {
 			final int top = plan.maxY();
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
-				if (block.y() != StationGeometry.PLATFORM_Y && block.y() != StationGeometry.UPPER_FLOOR_Y
+				if (!layout.levels().contains(block.y()) && block.y() != StationGeometry.UPPER_FLOOR_Y
 						|| !(role.flatFloor() || role == Role.RAMP_LOWER || role == Role.RAMP_UPPER)
 						|| !standableAt(block.u(), block.y() + 1, block.v())) {
 					continue;
@@ -1117,11 +1117,12 @@ public final class StationAudit {
 				String firstWorst = "";
 				for (int u = band.uMin(); u <= band.uMax(); u++) {
 					for (int v = band.vFrom(); v <= band.vTo(); v++) {
-						if (!has(u, StationGeometry.PLATFORM_Y, v, Role.PLATFORM_EDGE) || at(u, StationGeometry.WALK_Y, v) != null) {
+						final int walkY = band.level() + StationGeometry.WALK_Y;
+						if (!has(u, band.level(), v, Role.PLATFORM_EDGE) || at(u, walkY, v) != null) {
 							continue;
 						}
 						edges++;
-						final int i = deepIndex(u, StationGeometry.WALK_Y, v);
+						final int i = deepIndex(u, walkY, v);
 						final Access cell = flat[i] ? Access.STEP_FREE : all[i] ? Access.STAIRS : Access.UNREACHABLE;
 						if (cell.ordinal() > worst.ordinal()) {
 							worst = cell;
@@ -1289,6 +1290,10 @@ public final class StationAudit {
 				final int u = floor.u(), y = floor.y() + 1, v = floor.v();
 				// paving below platform level is open ground (a forecourt), not a floor of the station
 				if (!STANDING.contains(floor.role()) || floor.y() < StationGeometry.PLATFORM_Y || !open(u, y, v)) {
+					continue;
+				}
+				// the lining under a raised track (a stacked station's upper bore) is paving below its rail level, like the one at level 0
+				if (floor.role() == Role.FLOOR && layout.tracks().stream().anyMatch(t -> t.level() > StationGeometry.PLATFORM_Y && t.level() == y)) {
 					continue;
 				}
 				// the street over a deep station is the ground: its edges drop nowhere, but for the hole its shaft makes in the hall floor

@@ -693,8 +693,8 @@ final class Planning extends PlanFitOut {
 		final List<Box> envelopes = new ArrayList<>();
 		final List<Box> supports = new ArrayList<>();
 		for (final TrackLayout.Track track : layout.tracks()) {
-			envelopes.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.PLATFORM_Y, layout.vMin(),
-					track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, StationGeometry.ENVELOPE_HEIGHT - 1, layout.trackEnd(track)));
+			envelopes.add(new Box(track.u() - StationGeometry.ENVELOPE_HALF_WIDTH, track.level(), layout.vMin(),
+					track.u() + StationGeometry.ENVELOPE_HALF_WIDTH, track.level() + StationGeometry.ENVELOPE_HEIGHT - 1, layout.trackEnd(track)));
 		}
 		final List<Box> headroom = new ArrayList<>();
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
