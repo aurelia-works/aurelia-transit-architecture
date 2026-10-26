@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station.studio;
 
+import com.aureliatransit.architecture.station.AirportPresets;
 import com.aureliatransit.architecture.station.BlockFamilies;
 import com.aureliatransit.architecture.station.BuildingStyle;
 import com.aureliatransit.architecture.station.CanopyShape;
@@ -317,13 +318,6 @@ public final class StudioApi {
 		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
 	}
 
-	/** The airport cards the page offers beside the station presets: key, label and the words they put in the box. */
-	static final List<String[]> AIRPORTS = List.of(
-			new String[]{"regional", "Regional airport", "airport, one 1700 m runway, 4 gates, terminal, named Regional Airport"},
-			new String[]{"small", "Small airport", "small airport named Small Airfield"},
-			new String[]{"twin", "Two runways", "airport, 2 runways, 6 gates, named Twin Runway Airport"},
-			new String[]{"remote", "Airstrip", "airport, 1 runway, 2 gates, no terminal, named Remote Airstrip"});
-
 	/**
 	 * What to tell the player about a seed field that is not a seed: it is left out of the description, so the parser never sees
 	 * it. Null for no seed or a good one.
@@ -374,10 +368,10 @@ public final class StudioApi {
 		out.append(",\"blocks\":").append(Json.strings(BlockFamilies.suggestions()));
 		out.append(",\"maxTyped\":").append(MAX_TYPED).append(",\"maxName\":").append(StationSpec.MAX_NAME);
 		out.append(",\"airports\":[");
-		for (int i = 0; i < AIRPORTS.size(); i++) {
-			final String[] a = AIRPORTS.get(i);
-			out.append(i == 0 ? "" : ",").append("{\"key\":").append(Json.quote(a[0])).append(",\"label\":").append(Json.quote(a[1])).append(",\"text\":")
-					.append(Json.quote(a[2])).append('}');
+		for (int i = 0; i < AirportPresets.ALL.size(); i++) {
+			final AirportPresets.Preset a = AirportPresets.ALL.get(i);
+			out.append(i == 0 ? "" : ",").append("{\"key\":").append(Json.quote(a.key())).append(",\"label\":").append(Json.quote(a.label())).append(",\"text\":")
+					.append(Json.quote(a.description())).append('}');
 		}
 		out.append("],\"presets\":[");
 		for (int i = 0; i < StationPresets.ALL.size(); i++) {

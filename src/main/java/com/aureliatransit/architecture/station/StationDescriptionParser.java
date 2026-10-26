@@ -209,6 +209,18 @@ public final class StationDescriptionParser {
 	private StationDescriptionParser() {
 	}
 
+	/**
+	 * {@code description} as the words of an airport: unchanged when they already describe one, else prefixed "airport, " (the airport
+	 * wrench and the Airport Generator always plan an airport, whatever the words say about the rest).
+	 */
+	public static String airportWords(String description) {
+		final String text = description == null ? "" : description.strip();
+		if (text.isEmpty()) {
+			return "airport";
+		}
+		return parse(text).spec().isAirport() ? text : "airport, " + text;
+	}
+
 	public static ParseResult parse(String description) {
 		return new Parse().run(description == null ? "" : description);
 	}

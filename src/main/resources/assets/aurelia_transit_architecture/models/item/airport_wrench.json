@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {
+    "layer0": "aurelia_transit_architecture:item/airport_wrench"
+  }
+}

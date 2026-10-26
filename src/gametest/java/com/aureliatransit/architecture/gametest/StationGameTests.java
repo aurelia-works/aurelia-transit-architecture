@@ -112,6 +112,25 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SMALL = "1 track, length 16, width 3, canopy, named Test";
 	private static final String ATA = AureliaTransitArchitecture.MOD_ID + ":";
 
+	/**
+	 * The airport wrench is registered, is a station wrench, and its words plan an airport whose every block exists in the game and
+	 * which passes the design rules and the checks (the plan the wrench's next click would survey and build).
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void airportWrenchPlansAnAirportWhoseBlocksAllExist(TestContext context) {
+		final net.minecraft.item.Item item = Registries.ITEM.get(AureliaTransitArchitecture.id("airport_wrench"));
+		check(item instanceof com.aureliatransit.architecture.station.world.AirportWrenchItem, "airport_wrench is not registered");
+		final net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item);
+		StationWrenchItem.setDescription(stack, "small airport, 2 gates, named Test");
+		final StationCommand.Design design = StationCommand.design(StationDescriptionParser.parse(
+				StationDescriptionParser.airportWords(StationWrenchItem.description(stack))));
+		check(design.plan().spec().isAirport(), "the wrench's words did not plan an airport");
+		check(design.violations().isEmpty(), "design violations: " + design.violations());
+		check(design.audit().buildable() && design.audit().problems().isEmpty(), "checks: " + design.audit().problems());
+		check(design.check().ok(), "blocks missing from the game: " + design.check().missing());
+		context.complete();
+	}
+
 	// ---- resolution and probing ------------------------------------------------------------------------------------
 
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)

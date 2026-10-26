@@ -130,4 +130,25 @@ class AirportPlanTest {
 		}
 		assertEquals(List.of(), out);
 	}
+
+	@Test
+	void everyAirportPresetParsesWithoutWarningsAndPlansCleanly() {
+		for (final AirportPresets.Preset preset : AirportPresets.ALL) {
+			final ParseResult parsed = StationDescriptionParser.parse(preset.description());
+			assertTrue(parsed.spec().isAirport(), preset.key());
+			assertEquals(List.of(), parsed.warnings(), preset.key());
+			assertEquals(List.of(), parsed.ignored(), preset.key());
+			final StationPlan plan = StationPlanner.plan(parsed.spec());
+			assertEquals(List.of(), LayoutValidator.validate(plan), preset.key());
+			assertTrue(StationAudit.audit(plan).buildable(), preset.key());
+		}
+	}
+
+	@Test
+	void theAirportWrenchAlwaysPlansAnAirport() {
+		assertEquals("airport", StationDescriptionParser.airportWords(""));
+		assertEquals("airport, 3 gates", StationDescriptionParser.airportWords("3 gates"));
+		assertEquals("small airport", StationDescriptionParser.airportWords("small airport"));
+		assertTrue(StationDescriptionParser.parse(StationDescriptionParser.airportWords("2 track station")).spec().isAirport());
+	}
 }

@@ -242,7 +242,8 @@ def main():
             problem(f"missing tooltip lang key {tip}")
 
     # Items that are not blocks (ModItems.java): an item model whose textures resolve, and an English name
-    for item_id in re.findall(r'id\("([a-z0-9_]+)"\)', (REGISTRY / "ModItems.java").read_text(encoding="utf-8")):
+    item_ids = set(re.findall(r'id\("([a-z0-9_]+)"\)', (REGISTRY / "ModItems.java").read_text(encoding="utf-8")))
+    for item_id in sorted(item_ids):
         if not (ASSETS / "models" / "item" / f"{item_id}.json").is_file():
             problem(f"item {item_id}: no item model (models/item/{item_id}.json)")
         else:
@@ -260,7 +261,7 @@ def main():
         recipe_count += 1
         text = path.read_text(encoding="utf-8")
         for ref in re.findall(rf'"{MOD}:([a-z0-9_]+)"', text):
-            if ref not in ids:
+            if ref not in ids and ref not in item_ids:
                 problem(f"recipe {path.name} references unknown {ref}")
 
     families = {}
