@@ -22,6 +22,10 @@
 - **New real-station fronts:** Tokyo (the red-brick Marunouchi building), Beijing, Kuala Lumpur, Surbiton, Munich, Berlin and Coventry. Tokyo is close to the real building; the others approximate its massing and materials.
 - **A plain "amsterdam" station** gets a grand building by default.
 
+### Build job
+
+- **Big sites stream their chunks:** the survey, the build, undo and rebuild hold at most 1024 chunks loaded at a time and let go of the rest as they go, and a survey that takes longer than a tick carries on over the next ticks. A site of any size (an airport) no longer keeps every chunk it touched loaded for ten minutes. Chunk loading is spread over ticks, 4 per batch.
+
 ### Station Codex
 
 - **The Station Codex replaces the guide book:** a new item (Passenger Equipment tab; operators get it once on joining, `/ata_guide` gives another) that opens an in-game book with a tab per chapter, a contents page, search, and turning previews of the blocks it describes. Commands run on a click; the ones that build or undo, the examples, the real stations and every wrench preset (by its own name) go to the chat box ready to send; hover for what each does. It reopens where you left it. New pages for Station Studio, underground stations, swapping blocks, British looks and every `/ata_station` command (preview, rebuild, verify and help were missing). Platforms are now listed as 3 to 20 wide (the old book said 8). The written guide book is gone; old copies stay as they are, and players who had it get the Codex with `/ata_guide`.
