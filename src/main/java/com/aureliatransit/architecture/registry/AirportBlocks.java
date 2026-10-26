@@ -29,7 +29,7 @@ public final class AirportBlocks {
 	private static final VoxelShape BOARD = box(0, 2, 13, 16, 14, 16);
 	/** A windsock on top of its post: the post's head, the swivel and the cone blowing north. */
 	private static final VoxelShape SOCK = union(box(7, 0, 7, 9, 12, 9), box(5, 9, 0, 11, 15, 9));
-	private static final VoxelShape FLOODLIGHT = box(2, 8, 2, 14, 16, 14);
+	private static final VoxelShape FLOODLIGHT = union(box(7, 0, 7, 9, 8, 9), box(2, 8, 2, 14, 16, 14));
 
 	public static final Block RUNWAY_EDGE_LIGHT = ModBlocks.register("runway_edge_light", BlockFamily.AIRPORT, RenderKind.SOLID,
 			new Block(ModBlocks.paving(MapColor.BLACK).luminance(state -> 15)), TIP_GROUND_LIGHT);

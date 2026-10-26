@@ -26,16 +26,21 @@ abstract class PlanAirport extends PlanFitOut {
 	static final String PAINT_WHITE = "minecraft:white_concrete";
 	static final String PAINT_YELLOW = "minecraft:yellow_concrete";
 	/** Runway edge lights: white, flush in the pavement. */
-	static final String EDGE_LIGHT = "minecraft:sea_lantern";
+	static final String EDGE_LIGHT = "aurelia_transit_architecture:runway_edge_light";
 	/** Runway threshold lights: green. */
-	static final String THRESHOLD_LIGHT = "minecraft:verdant_froglight";
+	static final String THRESHOLD_LIGHT = "aurelia_transit_architecture:runway_threshold_light";
 	/** Taxiway edge lights: blue. */
-	static final String TAXI_LIGHT = "minecraft:blue_ice";
+	static final String TAXI_LIGHT = "aurelia_transit_architecture:taxiway_edge_light";
 	/** The control tower: a white shaft, a light grey cab floor and roof, and glass walls round the cab. */
 	static final String TOWER_SHAFT = "minecraft:white_concrete";
 	static final String TOWER_FLOOR = "minecraft:light_gray_concrete";
 	static final String TOWER_GLASS = "minecraft:glass";
-	static final String MAST_LAMP = "aurelia_transit_architecture:platform_lamp";
+	static final String MAST_LAMP = "aurelia_transit_architecture:apron_floodlight";
+	static final String CHECK_IN_DESK = "aurelia_transit_architecture:check_in_desk";
+	static final String DEPARTURES_BOARD = "aurelia_transit_architecture:departures_board";
+	static final String BAGGAGE_BELT = "aurelia_transit_architecture:baggage_belt";
+	static final String WINDSOCK = "aurelia_transit_architecture:windsock";
+	static final String TERMINAL_FLOOR = "aurelia_transit_architecture:terminal_terrazzo";
 	/** The airport's geometry; null for a railway station. */
 	final AirportGeometry air;
 
@@ -59,6 +64,7 @@ abstract class PlanAirport extends PlanFitOut {
 			boardingBridges();
 		}
 		controlTower();
+		windsock();
 		masts();
 		standMarks();
 		for (int i = 0; i < spec.airport().runways(); i++) {
@@ -345,6 +351,17 @@ abstract class PlanAirport extends PlanFitOut {
 		}
 	}
 
+	/** A windsock on a pole at the apron's far corner, past the control tower, its cone blowing along +v. */
+	void windsock() {
+		final AirportGeometry.Area t = air.tower();
+		final int u = t.u1();
+		final int v = air.apronV0() + 1;
+		for (int y = StationGeometry.WALK_Y; y < StationGeometry.WALK_Y + 4; y++) {
+			put(Role.FIXTURE, u, y, v, LocalDir.PLUS_V, LAMP_POLE);
+		}
+		put(Role.FIXTURE, u, StationGeometry.WALK_Y + 4, v, LocalDir.PLUS_V, WINDSOCK);
+	}
+
 	/** Floodlight masts on the apron between the stands. */
 	void masts() {
 		final int u = air.apronU1() - 6;
@@ -414,7 +431,7 @@ abstract class PlanAirport extends PlanFitOut {
 		}
 		for (int v = v0; v <= v1; v++) {
 			for (int u = u0; u <= u1; u++) {
-				put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, b.floor());
+				put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, TERMINAL_FLOOR);
 				if (u > u0 && u < u1 && v > v0 && v < v1) {
 					final boolean lit = Math.floorMod(u + v, 4) == 0;
 					put(lit ? Role.LIGHT_PANEL : Role.BUILDING_ROOF, u, terminalRoofY(), v, LocalDir.PLUS_V, lit ? b.light() : b.roof());
@@ -452,12 +469,18 @@ abstract class PlanAirport extends PlanFitOut {
 					put(Role.COLUMN, u, y, v, LocalDir.PLUS_V);
 				}
 				put(Role.COLUMN_CAP, u, top, v, LocalDir.PLUS_V);
+				// departures boards on both faces of every column along v, above head height
+				put(Role.FIXTURE, u, StationGeometry.WALK_Y + 2, v - 1, LocalDir.MINUS_V, DEPARTURES_BOARD);
+				put(Role.FIXTURE, u, StationGeometry.WALK_Y + 2, v + 1, LocalDir.PLUS_V, DEPARTURES_BOARD);
 			}
 		}
 		// check-in counters along the landside, facing the entrance, and benches facing the glass in front of every gate
 		for (int v = v0 + 5; v <= v1 - 5; v += 6) {
 			if (Math.abs(v - door) > half + 3) {
-				kiosk(u0 + 3, StationGeometry.WALK_Y, v, LocalDir.MINUS_U);
+				for (int k = 0; k < 3; k++) {
+					put(Role.FIXTURE, u0 + 3, StationGeometry.WALK_Y, v + k - 1, LocalDir.MINUS_U, CHECK_IN_DESK);
+				}
+				put(Role.FIXTURE, u0 + 4, StationGeometry.WALK_Y, v, LocalDir.MINUS_U, BAGGAGE_BELT);
 			}
 		}
 		final int off = d.standPitch() / 4;

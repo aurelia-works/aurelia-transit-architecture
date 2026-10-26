@@ -114,6 +114,7 @@ def models():
     m["taxiway_edge_light"] = cube("taxiway_edge_light_top", "airfield_concrete")
     m["terminal_terrazzo"] = {"parent": "minecraft:block/cube_all", "textures": {"all": g.tx("terminal_terrazzo")}}
     m["apron_floodlight"] = g.model({"particle": "floodlight_housing", "housing": "floodlight_housing", "lens": "floodlight_lens"}, [
+        g.el([7, 0, 7], [9, 8, 9], "#housing"),
         g.el([2, 8, 2], [14, 16, 14], "#housing", faces={"down": "#lens"}),
     ])
     m["check_in_desk"] = g.model({"particle": "check_in_desk_front", "front": "check_in_desk_front", "top": "check_in_desk_top",
