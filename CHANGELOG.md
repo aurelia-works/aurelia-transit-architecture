@@ -25,6 +25,10 @@
 - **A plain "amsterdam" station** gets a grand building by default.
 - **Deep stations:** `deep tube` builds a bored tube 27 m down ("40 blocks deep"), escalator-only with `no ramps`; `cut and cover` builds a deep box with lifts. Presets: Angel (tube, TfL signs), Canary Wharf (box, TfL signs), Vijzelgracht (island box, GVB signs). Shallow underground is unchanged.
 
+### Build job
+
+- **Big sites stream their chunks:** the survey, the build, undo and rebuild hold at most 1024 chunks loaded at a time and let go of the rest as they go, and a survey that takes longer than a tick carries on over the next ticks. A site of any size (an airport) no longer keeps every chunk it touched loaded for ten minutes. On terrain never generated before, a build has at most 8 chunks loaded or generated per tick, so the server stays smooth.
+
 ### Station Codex
 
 - **The Station Codex replaces the guide book:** a new item (Passenger Equipment tab; operators get it once on joining, `/ata_guide` gives another) that opens an in-game book with a tab per chapter, a contents page, search, and turning previews of the blocks it describes. Commands run on a click; the ones that build or undo, the examples, the real stations and every wrench preset (by its own name) go to the chat box ready to send; hover for what each does. It reopens where you left it. New pages for Station Studio, underground stations, swapping blocks, British looks and every `/ata_station` command (preview, rebuild, verify and help were missing). Platforms are now listed as 3 to 20 wide (the old book said 8). The written guide book is gone; old copies stay as they are, and players who had it get the Codex with `/ata_guide`.

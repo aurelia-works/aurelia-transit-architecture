@@ -84,63 +84,175 @@ public final class StationCommand {
 		return new Design(parse, plan, LayoutValidator.validate(plan), StationAudit.audit(plan), BlockStateResolver.check(plan));
 	}
 
-	/** Places a design with {@code place} and surveys its site (without approval). On the server thread. */
+	/** Places a design with {@code place} and surveys its site (without approval), all at once. On the server thread. */
 	public static StationSessions.Pending place(ServerWorld world, Design design, Function<TrackLayout, LocalFrame> place) {
-		final StationPlan plan = design.plan();
-		final LocalFrame frame = StationPlacement.sunk(design.parse().spec(), place.apply(plan.layout()));
-		final SurveyReport report = SiteSurvey.survey(plan, frame, WorldSiteProbe.loading(world), false);
-		return new StationSessions.Pending(design.parse(), design.parse().spec(), plan, frame, world.getRegistryKey(), design.violations(), design.audit(),
-				report, design.check().railSkipped());
+		final StationSessions.Pending[] pending = {null};
+		place(world, null, false, design, place, placed -> pending[0] = placed);
+		return pending[0];
 	}
 
 	/**
-	 * Re-surveys a pending plan where it was planned and starts its build; returns the job, or null after explaining why not.
+	 * {@link #place} as a site task of {@code owner}'s ({@link StationSessions#startTask}): the survey reads the site over as many
+	 * ticks as it needs, then {@code then} gets the plan. A small site is done before this returns.
+	 *
+	 * @throws IllegalArgumentException at once, when the design cannot be placed there
+	 */
+	public static void placeLater(ServerWorld world, UUID owner, Design design, Function<TrackLayout, LocalFrame> place,
+			Consumer<StationSessions.Pending> then) {
+		place(world, owner, true, design, place, then);
+	}
+
+	private static void place(ServerWorld world, UUID owner, boolean later, Design design, Function<TrackLayout, LocalFrame> place,
+			Consumer<StationSessions.Pending> then) {
+		final StationPlan plan = design.plan();
+		final LocalFrame frame = StationPlacement.sunk(design.parse().spec(), place.apply(plan.layout()));
+		survey(owner, later, WorldSiteProbe.loading(world), plan, frame, false, report -> then.accept(new StationSessions.Pending(design.parse(),
+				design.parse().spec(), plan, frame, world.getRegistryKey(), design.violations(), design.audit(), report, design.check().railSkipped())));
+	}
+
+	/** Surveys with {@code probe} (as {@code owner}'s site task when {@code later}, else at once), lets go of its chunks, then hands on the report. */
+	private static void survey(UUID owner, boolean later, WorldSiteProbe probe, StationPlan plan, LocalFrame frame, boolean replaceTerrain,
+			Consumer<SurveyReport> then) {
+		final SiteSurvey.Survey survey = SiteSurvey.start(plan, frame, probe, replaceTerrain);
+		run(owner, later, new StationSessions.Task() {
+			@Override
+			public boolean step(long deadline) {
+				if (!survey.step(deadline)) {
+					return false;
+				}
+				probe.release();
+				then.accept(survey.report());
+				return true;
+			}
+
+			@Override
+			public void cancel() {
+				probe.release();
+			}
+		});
+	}
+
+	private static void run(UUID owner, boolean later, StationSessions.Task task) {
+		if (later) {
+			StationSessions.startTask(owner, task);
+		} else {
+			task.step(Long.MAX_VALUE);
+		}
+	}
+
+	/**
+	 * Re-surveys a pending plan where it was planned and starts its build, all at once; returns the job, or null after
+	 * explaining why not.
 	 */
 	public static StationBuildJob startBuild(ServerWorld world, UUID owner, StationSessions.Pending pending, boolean replaceTerrain, Consumer<Text> out) {
-		if (!buildable(pending, out)) {
-			return null;
+		final StationBuildJob[] job = {null};
+		startBuild(world, owner, pending, replaceTerrain, out, false, started -> job[0] = started);
+		return job[0];
+	}
+
+	/**
+	 * {@link #startBuild} with the survey as {@code owner}'s site task: {@code then} gets the job, or null after the reason was
+	 * explained. A small site is done before this returns.
+	 */
+	public static void startBuildLater(ServerWorld world, UUID owner, StationSessions.Pending pending, boolean replaceTerrain, Consumer<Text> out,
+			Consumer<StationBuildJob> then) {
+		startBuild(world, owner, pending, replaceTerrain, out, true, then);
+	}
+
+	private static void startBuild(ServerWorld world, UUID owner, StationSessions.Pending pending, boolean replaceTerrain, Consumer<Text> out,
+			boolean later, Consumer<StationBuildJob> then) {
+		if (!buildable(pending, out) || stillBuilding(owner, out)) {
+			then.accept(null);
+			return;
 		}
-		final SurveyReport report = SiteSurvey.survey(pending.plan(), pending.frame(), WorldSiteProbe.loading(world), replaceTerrain);
-		if (!report.buildable()) {
-			out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
-			StationText.site(report, out);
-			return null;
+		survey(owner, later, WorldSiteProbe.loading(world), pending.plan(), pending.frame(), replaceTerrain, report -> {
+			if (!report.buildable()) {
+				out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
+				StationText.site(report, out);
+				then.accept(null);
+				return;
+			}
+			final StationBuildJob job = StationBuildJob.build(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
+					zone(pending, pending.frame(), report));
+			if (!StationSessions.start(job)) {
+				stillBuilding(owner, out);
+				then.accept(null);
+				return;
+			}
+			then.accept(job);
+		});
+	}
+
+	/** True, after saying so, when a build of the owner's is still running. */
+	private static boolean stillBuilding(UUID owner, Consumer<Text> out) {
+		if (StationSessions.job(owner) == null) {
+			return false;
 		}
-		final StationBuildJob job = StationBuildJob.build(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
-				zone(pending, pending.frame(), report));
-		if (!StationSessions.start(job)) {
-			out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
-			return null;
-		}
-		return job;
+		out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
+		return true;
 	}
 
 	/**
 	 * Builds a pending plan where the last build stands, writing only what changed (see {@link StationBuildJob#rebuild}): the
-	 * plan is surveyed in {@code frame} with the last build's own cells read as the site they replaced. Returns the job, or null
-	 * after explaining why not.
+	 * plan is surveyed in {@code frame} with the last build's own cells read as the site they replaced. All at once; returns the
+	 * job, or null after explaining why not.
 	 */
 	public static StationBuildJob startRebuild(ServerWorld world, UUID owner, StationSessions.Pending pending, LocalFrame frame, UndoLog last,
 			boolean replaceTerrain, Consumer<Text> out) {
-		if (!buildable(pending, out)) {
-			return null;
+		final StationBuildJob[] job = {null};
+		startRebuild(world, owner, pending, frame, last, replaceTerrain, out, false, started -> job[0] = started);
+		return job[0];
+	}
+
+	/**
+	 * {@link #startRebuild} with the look at the last build's cells and the survey as {@code owner}'s site task: {@code then}
+	 * gets the job, or null after the reason was explained. A small site is done before this returns.
+	 */
+	public static void startRebuildLater(ServerWorld world, UUID owner, StationSessions.Pending pending, LocalFrame frame, UndoLog last,
+			boolean replaceTerrain, Consumer<Text> out, Consumer<StationBuildJob> then) {
+		startRebuild(world, owner, pending, frame, last, replaceTerrain, out, true, then);
+	}
+
+	private static void startRebuild(ServerWorld world, UUID owner, StationSessions.Pending pending, LocalFrame frame, UndoLog last,
+			boolean replaceTerrain, Consumer<Text> out, boolean later, Consumer<StationBuildJob> then) {
+		if (!buildable(pending, out) || stillBuilding(owner, out)) {
+			then.accept(null);
+			return;
 		}
-		if (StationSessions.job(owner) != null) {
-			out.accept(Text.literal("A build of yours is still running; /ata_station cancel stops it.").formatted(Formatting.RED));
-			return null;
-		}
-		final java.util.Map<BlockPos, net.minecraft.block.BlockState> site = new java.util.HashMap<>();
-		StationBuildJob.ours(world, last).forEach((pos, entry) -> site.put(pos, entry.previous()));
-		final SurveyReport report = SiteSurvey.survey(pending.plan(), frame, WorldSiteProbe.under(world, site), replaceTerrain);
-		if (!report.buildable()) {
-			out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
-			StationText.site(report, out);
-			return null;
-		}
-		final StationBuildJob job = StationBuildJob.rebuild(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
-				zone(pending, frame, report), last);
-		StationSessions.start(job);
-		return job;
+		final StationBuildJob.Ours walk = new StationBuildJob.Ours(world, last);
+		run(owner, later, new StationSessions.Task() {
+			@Override
+			public boolean step(long deadline) {
+				if (!walk.step(deadline)) {
+					return false;
+				}
+				final java.util.Map<BlockPos, UndoLog.Entry> cells = walk.result();
+				final java.util.Map<BlockPos, net.minecraft.block.BlockState> site = new java.util.HashMap<>();
+				cells.forEach((pos, entry) -> site.put(pos, entry.previous()));
+				survey(owner, later, WorldSiteProbe.under(world, site), pending.plan(), frame, replaceTerrain, report -> {
+					if (!report.buildable()) {
+						out.accept(Text.literal("The site changed or needs approval:").formatted(Formatting.RED));
+						StationText.site(report, out);
+						then.accept(null);
+						return;
+					}
+					if (stillBuilding(owner, out)) {
+						then.accept(null);
+						return;
+					}
+					final StationBuildJob job = StationBuildJob.rebuild(world, owner, BlockStateResolver.resolve(report.ops()), replaceTerrain, out,
+							zone(pending, frame, report), last, cells);
+					StationSessions.start(job);
+					then.accept(job);
+				});
+				return true;
+			}
+
+			@Override
+			public void cancel() {
+				walk.cancel();
+			}
+		});
 	}
 
 	/** The MTR station area of a build and the platform rails it lays, or null when nothing is placed. */

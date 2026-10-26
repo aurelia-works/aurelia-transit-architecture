@@ -23,8 +23,9 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 /**
- * Per-player state of the station generator and the one tick that drives it: pending plans, previews, running jobs and the
- * last build's undo log. Server thread only. A pending plan and its preview go when the player leaves; a running job does not.
+ * Per-player state of the station generator and the one tick that drives it: pending plans, previews, site tasks, running
+ * jobs and the last build's undo log. Server thread only. A pending plan, its preview and a site task go when the player
+ * leaves; a running job does not.
  */
 public final class StationSessions {
 
@@ -46,6 +47,19 @@ public final class StationSessions {
 			List<Violation> violations, StationAudit.Result audit, SurveyReport report, boolean railSkipped) {
 	}
 
+	/**
+	 * Work for a player that reads a site over as many ticks as it needs (a survey, a rebuild's look at its own cells), so the
+	 * chunks it loads can unload between ticks. It does whatever comes next itself once it is done.
+	 */
+	public interface Task {
+
+		/** Works until done or {@code deadline} ({@link System#nanoTime}) has passed; true when done. */
+		boolean step(long deadline);
+
+		/** Called off before it is done: let go of what it holds. */
+		void cancel();
+	}
+
 	/** The station a player's last confirmed build was planned as, for {@code /ata_station verify}; kept after the pending plan goes. */
 	public record Built(StationPlan plan, StationSpec spec, LocalFrame frame, RegistryKey<World> dimension, boolean railSkipped) {
 	}
@@ -54,6 +68,9 @@ public final class StationSessions {
 	private static final Map<UUID, StationPreview> PREVIEWS = new HashMap<>();
 	private static final Map<UUID, Built> BUILT = new HashMap<>();
 	private static final Map<UUID, StationBuildJob> JOBS = new LinkedHashMap<>();
+	private static final Map<UUID, Task> TASKS = new LinkedHashMap<>();
+	/** Server time the site tasks together may use in a tick; see {@link #taskBudget}. */
+	private static long taskNanos = NANOS_PER_TICK;
 	private static final Map<UUID, UndoLog> UNDO = new HashMap<>();
 	/** Server tick of each player's last wrench cancel, so a held left-click does not repeat it. */
 	private static final Map<UUID, Integer> LAST_CANCEL = new HashMap<>();
@@ -94,8 +111,9 @@ public final class StationSessions {
 		return PREVIEWS.get(player);
 	}
 
-	/** A player left: their pending plan and preview go, a running job keeps going. */
+	/** A player left: their pending plan, preview and site task go, a running job keeps going. */
 	public static void forgetPlayer(UUID player) {
+		cancelTask(player);
 		discard(player);
 		BUILT.remove(player);
 		LAST_CANCEL.remove(player);
@@ -108,6 +126,46 @@ public final class StationSessions {
 			return false;
 		}
 		LAST_CANCEL.put(player, now);
+		return true;
+	}
+
+	// ---- site tasks ------------------------------------------------------------------------------------------------
+
+	/**
+	 * Runs a player's task for up to a tick's time budget now, so a small site is done at once, and leaves the rest to the
+	 * following ticks. Calls off a task the player already has.
+	 */
+	public static void startTask(UUID player, Task task) {
+		final Task old = TASKS.remove(player);
+		if (old != null && old != task) {
+			old.cancel();
+		}
+		TASKS.put(player, task);
+		if (task.step(System.nanoTime() + taskNanos) && TASKS.get(player) == task) {
+			TASKS.remove(player);
+		}
+	}
+
+	/**
+	 * Sets the server time site tasks may use in a tick ({@link #NANOS_PER_TICK} unless set); 0 makes each task read one piece
+	 * a tick, so a game test can follow a small site through several ticks.
+	 */
+	public static void taskBudget(long nanos) {
+		taskNanos = nanos;
+	}
+
+	/** The player's unfinished task, or null. */
+	public static Task task(UUID player) {
+		return TASKS.get(player);
+	}
+
+	/** Calls off the player's unfinished task; true when there was one. */
+	public static boolean cancelTask(UUID player) {
+		final Task task = TASKS.remove(player);
+		if (task == null) {
+			return false;
+		}
+		task.cancel();
 		return true;
 	}
 
@@ -175,6 +233,8 @@ public final class StationSessions {
 		PREVIEWS.clear();
 		BUILT.clear();
 		JOBS.clear();
+		TASKS.values().forEach(Task::cancel);
+		TASKS.clear();
 		UNDO.clear();
 		LAST_CANCEL.clear();
 	}
@@ -183,14 +243,36 @@ public final class StationSessions {
 
 	/** Registered once by {@link StationSystems}; returns at once when nothing is active. */
 	static void tick(MinecraftServer server) {
-		if (JOBS.isEmpty() && PREVIEWS.isEmpty()) {
+		if (JOBS.isEmpty() && PREVIEWS.isEmpty() && TASKS.isEmpty()) {
 			return;
+		}
+		if (!TASKS.isEmpty()) {
+			tickTasks();
 		}
 		if (!JOBS.isEmpty()) {
 			tickJobs();
 		}
 		if (!PREVIEWS.isEmpty()) {
 			PREVIEWS.values().removeIf(preview -> !preview.tick(server));
+		}
+	}
+
+	/**
+	 * The tasks share one tick's time budget, in turn, the first at least one piece; a task done hands over to whatever it
+	 * started next.
+	 */
+	private static void tickTasks() {
+		final long deadline = System.nanoTime() + taskNanos;
+		boolean first = true;
+		for (final Map.Entry<UUID, Task> entry : new ArrayList<>(TASKS.entrySet())) {
+			if (!first && System.nanoTime() >= deadline) {
+				break;
+			}
+			first = false;
+			final Task task = entry.getValue();
+			if (TASKS.get(entry.getKey()) == task && task.step(deadline) && TASKS.get(entry.getKey()) == task) {
+				TASKS.remove(entry.getKey());
+			}
 		}
 	}
 

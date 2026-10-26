@@ -9,7 +9,9 @@
 	"entrypoints": {
 		"fabric-gametest": [
 			"com.aureliatransit.architecture.gametest.AureliaGameTests",
-			"com.aureliatransit.architecture.gametest.StationGameTests"
+			"com.aureliatransit.architecture.gametest.StationGameTests",
+			"com.aureliatransit.architecture.gametest.ChunkStreamingGameTests",
+			"com.aureliatransit.architecture.gametest.AirportScaleGameTests"
 		]
 	},
 	"depends": {

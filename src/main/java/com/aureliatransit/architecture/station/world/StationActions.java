@@ -84,6 +84,10 @@ public final class StationActions {
 				? layout -> LocalFrame.inFrontOf(feet.getX(), feet.getY(), feet.getZ(), facing, layout)
 				: layout -> LocalFrame.onBlock(clicked.getX(), clicked.getY(), clicked.getZ(), facing, layout);
 		final long request = REQUESTS.merge(id, 1L, Long::sum);
+		// a new plan replaces whatever site the player was still surveying, a build or rebuild waiting on its survey too
+		if (StationSessions.cancelTask(id)) {
+			player.sendMessage(Text.literal("Stopped surveying the earlier site; nothing was built from it.").formatted(Formatting.YELLOW), false);
+		}
 		if (parse.spec().trackCount() * parse.spec().platformLength() <= PLAN_HERE_UP_TO) {
 			StationCommand.Design design = null;
 			RuntimeException failure = null;
@@ -114,7 +118,10 @@ public final class StationActions {
 		return true;
 	}
 
-	/** On the server thread: places and surveys a design, or explains why there is none. False when nothing was planned. */
+	/**
+	 * On the server thread: places a design and surveys its site (over several ticks for a big site), or explains why there is
+	 * none. False when nothing was planned.
+	 */
 	private static boolean finishPlan(MinecraftServer server, UUID id, long request, ServerWorld world, Function<TrackLayout, LocalFrame> place,
 			@Nullable StationCommand.Design design, @Nullable RuntimeException failure) {
 		if (REQUESTS.getOrDefault(id, 0L) != request) {
@@ -139,27 +146,37 @@ public final class StationActions {
 			out.accept(Text.literal("You changed dimension while it was planned; plan it again here.").formatted(Formatting.RED));
 			return false;
 		}
-		final StationSessions.Pending pending;
 		try {
-			pending = StationCommand.place(world, design, place);
+			StationCommand.placeLater(world, id, design, place, pending -> {
+				if (REQUESTS.getOrDefault(id, 0L) != request || server.getPlayerManager().getPlayer(id) == null) {
+					return;
+				}
+				StationSessions.discard(id);
+				StationSessions.setPending(id, pending);
+				StationText.shortSummary(pending, design.check(), out);
+				StationSessions.startPreview(new StationPreview(id, pending.dimension(), pending.plan(), pending.frame(), pending.report()));
+			});
 		} catch (IllegalArgumentException e) {
 			out.accept(Text.literal("Cannot plan that station: " + e.getMessage()).formatted(Formatting.RED));
 			return false;
 		}
-		StationSessions.discard(id);
-		StationSessions.setPending(id, pending);
-		StationText.shortSummary(pending, design.check(), out);
-		StationSessions.startPreview(new StationPreview(id, pending.dimension(), pending.plan(), pending.frame(), pending.report()));
+		if (StationSessions.task(id) != null) {
+			player.sendMessage(Text.literal("Surveying a big site...").formatted(Formatting.GRAY), true);
+		}
 		return true;
 	}
 
-	/** True while a big plan of this player's is still being worked out; tells them so. */
+	/** True while a big plan of this player's is still being worked out or a site of theirs surveyed; tells them so. */
 	private static boolean stillPlanning(ServerPlayerEntity player) {
-		if (!PLANNING.contains(player.getUuid())) {
-			return false;
+		if (PLANNING.contains(player.getUuid())) {
+			error(player, "Still planning the station; try again in a moment.");
+			return true;
 		}
-		error(player, "Still planning the station; try again in a moment.");
-		return true;
+		if (StationSessions.task(player.getUuid()) != null) {
+			error(player, "Still surveying the site; try again in a moment, or cancel.");
+			return true;
+		}
+		return false;
 	}
 
 	/** The full plan summary: what was understood, the footprint, rail nodes, block counts, both checks and the site. */
@@ -200,15 +217,22 @@ public final class StationActions {
 			error(player, "The plan is in " + pending.dimension().getValue() + "; go back there to confirm it.");
 			return false;
 		}
-		final StationBuildJob job = StationCommand.startBuild(world, id, pending, replaceTerrain, message(player));
-		if (job == null) {
-			return false;
+		final Consumer<Text> out = message(player);
+		final boolean[] failed = {false};
+		StationCommand.startBuildLater(world, id, pending, replaceTerrain, out, job -> {
+			if (job == null) {
+				failed[0] = true;
+				return;
+			}
+			StationSessions.setBuilt(id, pending);
+			StationSessions.discard(id);
+			out.accept(Text.literal("Building " + job.total() + " changes, " + StationBuildJob.OPS_PER_TICK + " per tick. Cancel stops it.")
+					.formatted(Formatting.GREEN));
+		});
+		if (StationSessions.task(id) != null) {
+			out.accept(Text.literal("Surveying a big site before building; cancel stops it.").formatted(Formatting.GRAY));
 		}
-		StationSessions.setBuilt(id, pending);
-		StationSessions.discard(id);
-		player.sendMessage(Text.literal("Building " + job.total() + " changes, " + StationBuildJob.OPS_PER_TICK + " per tick. Cancel stops it.")
-				.formatted(Formatting.GREEN), false);
-		return true;
+		return !failed[0];
 	}
 
 	/**
@@ -244,6 +268,10 @@ public final class StationActions {
 		if (StationSessions.cancelJob(player.getUuid())) {
 			return true;
 		}
+		if (StationSessions.cancelTask(player.getUuid())) {
+			player.sendMessage(Text.literal("Survey stopped.").formatted(Formatting.YELLOW), false);
+			return true;
+		}
 		if (PLANNING.remove(player.getUuid())) {
 			// the plan still being worked out is dropped when it arrives
 			REQUESTS.merge(player.getUuid(), 1L, Long::sum);
@@ -267,6 +295,9 @@ public final class StationActions {
 		}
 		if (StationSessions.job(id) != null) {
 			error(player, "A build of yours is still running; cancel it first.");
+			return false;
+		}
+		if (stillPlanning(player)) {
 			return false;
 		}
 		final ServerWorld world = player.getServer().getWorld(log.dimension());
@@ -306,14 +337,21 @@ public final class StationActions {
 		}
 		final StationSessions.Pending there = new StationSessions.Pending(pending.parse(), pending.spec(), pending.plan(), built.frame(),
 				pending.dimension(), pending.violations(), pending.audit(), pending.report(), pending.railSkipped());
-		final StationBuildJob job = StationCommand.startRebuild(world, id, there, built.frame(), log, replaceTerrain, message(player));
-		if (job == null) {
-			return false;
+		final Consumer<Text> out = message(player);
+		final boolean[] failed = {false};
+		StationCommand.startRebuildLater(world, id, there, built.frame(), log, replaceTerrain, out, job -> {
+			if (job == null) {
+				failed[0] = true;
+				return;
+			}
+			StationSessions.setBuilt(id, there);
+			StationSessions.discard(id);
+			out.accept(Text.literal("Rebuilding: " + job.kept() + " cells stay as they are, " + job.total() + " changes.").formatted(Formatting.GREEN));
+		});
+		if (StationSessions.task(id) != null) {
+			out.accept(Text.literal("Surveying a big site before rebuilding; cancel stops it.").formatted(Formatting.GRAY));
 		}
-		StationSessions.setBuilt(id, there);
-		StationSessions.discard(id);
-		player.sendMessage(Text.literal("Rebuilding: " + job.kept() + " cells stay as they are, " + job.total() + " changes.").formatted(Formatting.GREEN), false);
-		return true;
+		return !failed[0];
 	}
 
 	public static boolean status(ServerPlayerEntity player) {
@@ -321,7 +359,8 @@ public final class StationActions {
 		final StationSessions.Pending pending = StationSessions.pending(id);
 		final StationBuildJob job = StationSessions.job(id);
 		final UndoLog log = StationSessions.undoLog(id);
-		player.sendMessage(Text.literal("Pending plan: " + (pending == null ? "none" : StationText.planLine(pending.spec()))), false);
+		player.sendMessage(Text.literal("Pending plan: " + (pending == null ? "none" : StationText.planLine(pending.spec()))
+				+ (StationSessions.task(id) != null ? " (surveying a site)" : "")), false);
 		player.sendMessage(Text.literal("Job: " + (job == null ? "none"
 				: job.mode().name().toLowerCase(Locale.ROOT) + " " + job.done() + "/" + job.total() + (job.paused() ? " (waiting for an unloaded chunk)" : ""))), false);
 		player.sendMessage(Text.literal("Undo: " + (log == null || log.isEmpty() ? "nothing" : log.size() + " changes")), false);
