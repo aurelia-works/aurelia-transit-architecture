@@ -258,7 +258,15 @@ public final class StationCommand {
 	/** The MTR station area of a build and the platform rails it lays, or null when nothing is placed. */
 	private static StationZone zone(StationSessions.Pending pending, LocalFrame frame, SurveyReport report) {
 		final StationZone zone = StationZone.of(pending.spec().name(), report.ops());
-		return zone == null ? null : zone.withRails(com.aureliatransit.architecture.station.PlatformRail.of(pending.plan(), frame));
+		if (zone == null) {
+			return null;
+		}
+		final StationZone railed = zone.withRails(com.aureliatransit.architecture.station.PlatformRail.of(pending.plan(), frame));
+		if (!pending.spec().isAirport()) {
+			return railed;
+		}
+		return railed.withAirRails(com.aureliatransit.architecture.station.AirportRails.of(
+				com.aureliatransit.architecture.station.AirportRoute.of(com.aureliatransit.architecture.station.AirportGeometry.of(pending.spec().airport())), frame));
 	}
 
 	/** The checks before any build: no broken design rules, no failed station checks, every block known. */

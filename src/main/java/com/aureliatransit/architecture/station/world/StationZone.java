@@ -10,15 +10,21 @@ import java.util.List;
  * clearing and fill left out), one block wider all round so the platforms' rail nodes at the ends are inside. MTR areas are
  * columns: like the dashboard, the zone covers every height.
  */
-public record StationZone(String name, int color, int minX, int minZ, int maxX, int maxZ, int centerY, List<PlatformRail> rails) {
+public record StationZone(String name, int color, int minX, int minZ, int maxX, int maxZ, int centerY, List<PlatformRail> rails, List<com.aureliatransit.architecture.station.AirportRails.AirRail> airRails) {
 
 	public StationZone {
 		rails = List.copyOf(rails);
+		airRails = List.copyOf(airRails);
 	}
 
 	/** The same zone with the platform rails the build lays and numbers. */
 	public StationZone withRails(List<PlatformRail> platformRails) {
-		return new StationZone(name, color, minX, minZ, maxX, maxZ, centerY, platformRails);
+		return new StationZone(name, color, minX, minZ, maxX, maxZ, centerY, platformRails, airRails);
+	}
+
+	/** The same zone with the gate-loop rails of an airport, which the build lays. */
+	public StationZone withAirRails(List<com.aureliatransit.architecture.station.AirportRails.AirRail> loopRails) {
+		return new StationZone(name, color, minX, minZ, maxX, maxZ, centerY, rails, loopRails);
 	}
 
 	public static final String UNNAMED = "New Station";
@@ -47,7 +53,7 @@ public record StationZone(String name, int color, int minX, int minZ, int maxX, 
 			return null;
 		}
 		final String name = stationName == null || stationName.isBlank() ? UNNAMED : stationName.trim();
-		return new StationZone(name, colorFor(name), minX - MARGIN, minZ - MARGIN, maxX + MARGIN, maxZ + MARGIN, (minY + maxY) / 2, List.of());
+		return new StationZone(name, colorFor(name), minX - MARGIN, minZ - MARGIN, maxX + MARGIN, maxZ + MARGIN, (minY + maxY) / 2, List.of(), List.of());
 	}
 
 	/** A steady, readable colour per name (MTR shows it on the map and route maps). */
