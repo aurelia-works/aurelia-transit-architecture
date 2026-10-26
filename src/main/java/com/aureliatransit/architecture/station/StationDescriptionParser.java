@@ -2245,7 +2245,13 @@ public final class StationDescriptionParser {
 				islandAt = -1;
 				islandPlatforms = null;
 				sidePlatforms = false;
-				if (width == null && !wide && !narrow && !small) {
+				if (narrow || small || width != null && width < TUBE_PLATFORM_WIDTH) {
+					warn("a bored tube's platform needs " + TUBE_PLATFORM_WIDTH + " columns for its escalator shaft and lift; using " + TUBE_PLATFORM_WIDTH);
+					narrow = false;
+					small = false;
+					width = null;
+				}
+				if (width == null && !wide) {
 					width = TUBE_PLATFORM_WIDTH;
 					defaulted.add("width " + TUBE_PLATFORM_WIDTH + " (a bored tube's platform)");
 				}
