@@ -34,10 +34,19 @@ public final class LayoutValidator {
 		add(all, check.outOfBounds());
 		add(all, check.overlaps());
 		add(all, check.envelopeIntrusions());
-		add(all, check.trackSpacing());
-		add(all, check.platformOffsets());
-		add(all, check.headroom());
-		add(all, check.edgeClearway());
+		final AirportStation rail = plan.spec().isAirport() ? AirportStation.of(plan.spec()) : null;
+		if (rail == null) {
+			add(all, check.trackSpacing());
+			add(all, check.platformOffsets());
+			add(all, check.headroom());
+			add(all, check.edgeClearway());
+		} else {
+			// an airport's railway station: the track and platform rules on the station's own plan, in its own layout, moved under
+			// the terminal; the rules below check the station as composed with the terminal over it
+			for (final Violation found : validate(StationPlanner.plan(rail.spec()))) {
+				all.add(new Violation(found.kind(), found.u() + rail.du(), found.y() + rail.dy(), found.v() + rail.dv(), "railway station: " + found.message()));
+			}
+		}
 		add(all, check.unsupportedColumns());
 		add(all, check.unsupportedRoof());
 		add(all, check.roofSpans());
@@ -119,7 +128,9 @@ public final class LayoutValidator {
 
 		List<Violation> outOfBounds() {
 			final List<Violation> found = new ArrayList<>();
-			final int minY = plan.spec().underpass() ? StationGeometry.UNDERPASS_FLOOR_Y : MIN_Y;
+			// an airport's railway station is dug under its terminal, down to the box's floor
+			final AirportStation rail = plan.spec().isAirport() ? AirportStation.of(plan.spec()) : null;
+			final int minY = plan.spec().underpass() ? StationGeometry.UNDERPASS_FLOOR_Y : rail != null ? rail.dy() + MIN_Y : MIN_Y;
 			for (final PlannedBlock block : plan.blocks()) {
 				if (block.u() < 0 || block.u() >= layout.width() || block.v() < layout.vMin() || block.v() > layout.vMax() || block.y() < minY
 						|| block.y() > MAX_Y) {

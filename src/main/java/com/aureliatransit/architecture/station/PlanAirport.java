@@ -1,7 +1,9 @@
 package com.aureliatransit.architecture.station;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.aureliatransit.architecture.station.StationPlanner.*;
 
@@ -43,10 +45,19 @@ abstract class PlanAirport extends PlanFitOut {
 	static final String TERMINAL_FLOOR = "aurelia_transit_architecture:terminal_terrazzo";
 	/** The airport's geometry; null for a railway station. */
 	final AirportGeometry air;
+	/** The railway station under the terminal ({@link AirportStation}); null without one. */
+	final AirportStation rail;
+	/** The station's terrain to dig, track envelopes and supports, moved under the terminal by {@link #railStation}. */
+	final List<Box> railHeadroom = new ArrayList<>();
+	final List<Box> railEnvelopes = new ArrayList<>();
+	final List<Box> railSupports = new ArrayList<>();
+	/** The airport's own support cells over the dug box: not asked for, the box is there. */
+	final Set<Cell> railHoles = new HashSet<>();
 
 	PlanAirport(StationSpec spec) {
 		super(spec);
 		this.air = spec.isAirport() ? AirportGeometry.of(spec.airport()) : null;
+		this.rail = spec.isAirport() ? AirportStation.of(spec) : null;
 	}
 
 	/** The terminal's roof, one above its walls. */
@@ -58,6 +69,9 @@ abstract class PlanAirport extends PlanFitOut {
 	void airport() {
 		if (air == null) {
 			return;
+		}
+		if (rail != null) {
+			railStation();
 		}
 		if (spec.airport().terminal()) {
 			terminal();
@@ -522,6 +536,89 @@ abstract class PlanAirport extends PlanFitOut {
 				}
 			}
 		}
+	}
+
+	// ---- the railway station under the terminal ---------------------------------------------------------------------------
+
+	/**
+	 * The railway station under the terminal: the box station planned on its own and moved under the hall. Its blocks are copied as
+	 * planned (role, front, state and text kept); its street slab becomes the terminal's floor; above the floor only its escalators,
+	 * lift (with the lift's own shaft walls and roof) and the glass barriers round its wells stay, the street pavilions and pylons go,
+	 * as the hall is their roof. Its dig is kept clear of the terminal's floor, columns and fit-out. Planned before the terminal.
+	 */
+	void railStation() {
+		final StationPlan station = StationPlanner.plan(rail.spec());
+		final int du = rail.du();
+		final int dy = rail.dy();
+		final int dv = rail.dv();
+		int liftU0 = Integer.MAX_VALUE;
+		int liftU1 = Integer.MIN_VALUE;
+		int liftV0 = Integer.MAX_VALUE;
+		int liftV1 = Integer.MIN_VALUE;
+		for (final PlannedBlock b : station.blocks()) {
+			if (b.role() == Role.LIFT && b.y() + dy >= 1) {
+				liftU0 = Math.min(liftU0, b.u() - 1);
+				liftU1 = Math.max(liftU1, b.u() + 1);
+				liftV0 = Math.min(liftV0, b.v() - 1);
+				liftV1 = Math.max(liftV1, b.v() + 1);
+			}
+		}
+		for (final PlannedBlock b : station.blocks()) {
+			final int y = b.y() + dy;
+			final boolean lift = b.u() >= liftU0 && b.u() <= liftU1 && b.v() >= liftV0 && b.v() <= liftV1;
+			if (y >= 1 && b.role() != Role.ESCALATOR && b.role() != Role.LIFT && b.role() != Role.BARRIER && !lift
+					|| b.blockId().endsWith(":entrance_pylon")) {
+				continue;
+			}
+			final int u = b.u() + du;
+			final int v = b.v() + dv;
+			final boolean floor = y == 0 && (b.role() == Role.BUILDING_ROOF || b.role() == Role.FLOOR);
+			cells.put(new Cell(u, y, v), floor ? new PlannedBlock(u, y, v, Role.FLOOR, TERMINAL_FLOOR, LocalDir.PLUS_V, "", "")
+					: new PlannedBlock(u, y, v, b.role(), b.blockId(), b.front(), b.text(), b.state()));
+		}
+		for (final Box box : station.headroom()) {
+			final Box moved = moved(box);
+			railHeadroom.add(moved);
+			for (int y = Math.max(0, moved.yMin()); y <= moved.yMax(); y++) {
+				for (int v = moved.vMin(); v <= moved.vMax(); v++) {
+					for (int u = moved.uMin(); u <= moved.uMax(); u++) {
+						keepClear(u, y, v);
+					}
+				}
+			}
+		}
+		station.trackEnvelopes().forEach(box -> railEnvelopes.add(moved(box)));
+		station.supportAreas().forEach(box -> railSupports.add(moved(box)));
+		final int length = rail.layout().platformLength();
+		for (int v = dv - AirportStation.END; v <= dv + length - 1 + AirportStation.END; v++) {
+			for (int u = du; u < du + AirportStation.WIDTH; u++) {
+				railHoles.add(new Cell(u, -1, v));
+				wellBarriers(u, v);
+			}
+		}
+	}
+
+	/**
+	 * Glass barriers round a well in the hall floor at {@code (u, v)}: the street pavilions' walls closed its sides, and they are left
+	 * out, so every floor cell beside the opening with nothing standing on it gets a panel on its side over the drop.
+	 */
+	private void wellBarriers(int u, int v) {
+		if (cells.containsKey(new Cell(u, 0, v)) || !super.air.contains(new Cell(u, 0, v))) {
+			return;
+		}
+		for (final LocalDir side : LocalDir.values()) {
+			final int su = u - (side == LocalDir.PLUS_U ? 1 : side == LocalDir.MINUS_U ? -1 : 0);
+			final int sv = v - (side == LocalDir.PLUS_V ? 1 : side == LocalDir.MINUS_V ? -1 : 0);
+			final PlannedBlock floor = cells.get(new Cell(su, 0, sv));
+			if (floor != null && floor.role() == Role.FLOOR) {
+				put(Role.BARRIER, su, StationGeometry.WALK_Y, sv, side, Planning.GLASS_BARRIER, "edge=true");
+			}
+		}
+	}
+
+	private Box moved(Box box) {
+		return new Box(box.uMin() + rail.du(), box.yMin() + rail.dy(), box.vMin() + rail.dv(), box.uMax() + rail.du(), box.yMax() + rail.dy(),
+				box.vMax() + rail.dv());
 	}
 
 	// ---- the plan -----------------------------------------------------------------------------------------------------

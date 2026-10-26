@@ -22,6 +22,9 @@ final class AirportWords {
 	private static final Set<String> SMALL = Set.of("small", "tiny", "regional", "minor", "local");
 	private static final Set<String> LARGE = Set.of("large", "big", "major", "international", "huge");
 	private static final Set<String> NO = Set.of("no", "without", "remote");
+	/** Words for a railway station under the terminal ("airport with a train station", "transit", "rail link"). */
+	private static final Set<String> RAIL = Set.of("train", "trains", "rail", "railway", "metro", "subway", "transit");
+	private static final Set<String> RAIL_NOUN = Set.of("station", "link", "stop", "connection");
 	private static final Map<String, Integer> NUMBERS = Map.ofEntries(Map.entry("one", 1), Map.entry("single", 1), Map.entry("two", 2),
 			Map.entry("twin", 2), Map.entry("dual", 2), Map.entry("parallel", 2), Map.entry("three", 3), Map.entry("four", 4), Map.entry("five", 5),
 			Map.entry("six", 6), Map.entry("seven", 7), Map.entry("eight", 8), Map.entry("nine", 9), Map.entry("ten", 10), Map.entry("eleven", 11),
@@ -71,6 +74,7 @@ final class AirportWords {
 		private Integer width;
 		private Integer gates;
 		private Boolean terminal;
+		private boolean rail;
 		private int size;
 		private boolean always;
 
@@ -131,6 +135,8 @@ final class AirportWords {
 					gateWord(i);
 				} else if (TERMINAL.contains(token)) {
 					terminalWord(i);
+				} else if (RAIL.contains(token)) {
+					railWord(i);
 				} else if (ALWAYS.contains(token)) {
 					use(i, i);
 					always = true;
@@ -207,6 +213,17 @@ final class AirportWords {
 			if (terminal == null) {
 				terminal = !none;
 				note(none ? i - 1 : i, none ? "no terminal: the stands are remote, out on the apron" : "a terminal building");
+			}
+		}
+
+		/** "train station", "rail link", "metro", "transit": a railway station under the terminal; "no train station" says none. */
+		private void railWord(int i) {
+			final boolean none = NO.contains(at(i - 1));
+			final int end = RAIL_NOUN.contains(at(i + 1)) ? i + 1 : i;
+			use(none ? i - 1 : i, end);
+			if (!none && !rail) {
+				rail = true;
+				note(i, "a railway station under the terminal");
 			}
 		}
 
@@ -346,7 +363,18 @@ final class AirportWords {
 			if (terminal == null) {
 				defaulted.add("a terminal building (default)");
 			}
-			return new AirportSpec(r, len, wid, g, t);
+			AirportSpec spec = new AirportSpec(r, len, wid, g, t);
+			if (rail) {
+				if (!t) {
+					warn("a railway station needs the terminal over it; left out");
+				} else if (!AirportStation.fits(spec)) {
+					warn("a railway station fits only under a terminal at least " + AirportStation.MIN_TERMINAL_DEPTH
+							+ " deep (a runway " + AirportGeometry.REAL_WIDTH + " or more wide); left out");
+				} else {
+					spec = spec.withRail(true);
+				}
+			}
+			return spec;
 		}
 	}
 }

@@ -746,8 +746,23 @@ final class Planning extends PlanAirport {
 	private StationPlan airportPlan() {
 		final List<PlannedBlock> blocks = new ArrayList<>(cells.values());
 		blocks.sort(java.util.Comparator.comparingInt((PlannedBlock b) -> Math.floorDiv(b.v(), BAND)).thenComparing(BUILD_ORDER));
-		return new StationPlan(spec, layout, swapped(blocks), List.of(), airportHeadroom(), airportSupports(),
-				spec.options().swapped("minecraft:stone_bricks"));
+		final List<Box> headroom = new ArrayList<>(airportHeadroom());
+		headroom.addAll(railHeadroom);
+		final List<Box> supports = new ArrayList<>();
+		for (final Box box : airportSupports()) {
+			// only a box over the dug station can hold one of its holes
+			supports.addAll(railHoles.isEmpty() || !overRail(box) ? List.of(box) : without(List.of(box), railHoles));
+		}
+		supports.addAll(railSupports);
+		return new StationPlan(spec, layout, swapped(blocks), railEnvelopes, headroom, supports, spec.options().swapped("minecraft:stone_bricks"));
+	}
+
+	/** True when a box reaches over the railway station's footprint at its support row. */
+	private boolean overRail(Box box) {
+		final int u0 = rail.du();
+		final int v0 = rail.dv() - AirportStation.END;
+		final int v1 = rail.dv() + rail.layout().platformLength() - 1 + AirportStation.END;
+		return box.yMin() <= -1 && box.yMax() >= -1 && box.uMax() >= u0 && box.uMin() < u0 + AirportStation.WIDTH && box.vMax() >= v0 && box.vMin() <= v1;
 	}
 
 	/** The plan's blocks with the player's block swaps made (Enviro, 10-20: "a way to replace blocks he doesn't like"). */

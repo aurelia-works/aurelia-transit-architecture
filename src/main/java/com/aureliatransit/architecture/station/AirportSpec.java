@@ -12,8 +12,13 @@ package com.aureliatransit.architecture.station;
  * @param runwayWidth   width of each runway
  * @param gates         aircraft stands along the apron, each with its boarding bridge when there is a terminal
  * @param terminal      a terminal building behind the apron, with a road in front of it; without one the stands are remote
+ * @param rail          a railway station under the terminal ("airport with a train station"), planned by {@link AirportStation}
  */
-public record AirportSpec(int runways, int runwayLength, int runwayWidth, int gates, boolean terminal) {
+public record AirportSpec(int runways, int runwayLength, int runwayWidth, int gates, boolean terminal, boolean rail) {
+
+	public AirportSpec(int runways, int runwayLength, int runwayWidth, int gates, boolean terminal) {
+		this(runways, runwayLength, runwayWidth, gates, terminal, false);
+	}
 
 	/** Real airports are built at this many blocks to the metre. */
 	public static final double BLOCKS_PER_METRE = 1.5;
@@ -35,7 +40,7 @@ public record AirportSpec(int runways, int runwayLength, int runwayWidth, int ga
 
 	public AirportSpec {
 		if (runways == 0) {
-			if (runwayLength != 0 || runwayWidth != 0 || gates != 0 || terminal) {
+			if (runwayLength != 0 || runwayWidth != 0 || gates != 0 || terminal || rail) {
 				throw new IllegalArgumentException("no runways, but an airport's other settings");
 			}
 		} else {
@@ -49,6 +54,11 @@ public record AirportSpec(int runways, int runwayLength, int runwayWidth, int ga
 	/** A regional airport: one runway 1,700 m by 30 m, a terminal and four gates. */
 	public static AirportSpec defaults() {
 		return new AirportSpec(1, DEFAULT_RUNWAY_LENGTH, DEFAULT_RUNWAY_WIDTH, DEFAULT_GATES, true);
+	}
+
+	/** The same airport with or without a railway station under its terminal. */
+	public AirportSpec withRail(boolean value) {
+		return new AirportSpec(runways, runwayLength, runwayWidth, gates, terminal, value);
 	}
 
 	/** True for an airport; false for a railway station. */
