@@ -179,6 +179,10 @@ abstract class PlanDeep extends PlanUnderground {
 		final int doorHalf = 2;
 		carve.box(uc - doorHalf, d, hallFront, uc + doorHalf, d + 2, hallFront);
 
+		if (spec.stepFree()) {
+			// the lift beside the shaft's foot, up to a pavilion on the surface over the platforms' low end
+			deepLift(carve, uc + 4, -1, -1, new int[]{StationGeometry.WALK_Y, d}, building.pier());
+		}
 		lineVoid(carve, d, hallFront, hallU0, hallU1, hallFrom, hallTo, building);
 		extraHeadroom.addAll(carve.runs());
 		hallFitOut(carve, d, hallFront, hallU0, hallU1, hallFrom, hallTo, uc, building);
@@ -229,6 +233,85 @@ abstract class PlanDeep extends PlanUnderground {
 				put(Role.LIGHT_PANEL, u, y, v, LocalDir.PLUS_V, building.light());
 			} else {
 				put(Role.WALL, u, y, v, LocalDir.PLUS_V, station ? tile : TUNNEL_LINING);
+			}
+		}
+	}
+
+	/**
+	 * A lift (MTR's own, formed when the build ends from its column of stops, as {@link PlanLifts#shaft} does) dug through the
+	 * ground: a 2x2 car in the two rows past the door row, a track column in its back row fixed to the side wall, a pair of landing
+	 * doors and a call button at every stop of {@code stops} (walking levels, ascending), walls round it from the lowest stop to a
+	 * roof over the highest, and a pit under the car.
+	 *
+	 * @param c0   first column of the car (the second is {@code c0 + 1})
+	 * @param vD   the door row; the landing is the row before it, the car the two rows after it in {@code out}'s direction
+	 * @param out  +1 or -1: the way the shaft lies from its door row
+	 */
+	void deepLift(Carve carve, int c0, int vD, int out, int[] stops, String wallId) {
+		final int c1 = c0 + 1;
+		final LocalDir in = out > 0 ? LocalDir.PLUS_V : LocalDir.MINUS_V;
+		final int vBack = vD + 3 * out;
+		final int low = stops[0];
+		final int high = stops[stops.length - 1];
+		final int top = high + 3;
+		final int cT = in == LocalDir.PLUS_V ? c0 : c1;
+		// anything of the platform's furniture standing in the shaft or on its landing comes out
+		for (int c = c0 - 1; c <= c1 + 1; c++) {
+			for (int y = low; y <= top + 1; y++) {
+				for (int k = -2; k <= 3; k++) {
+					final PlannedBlock block = at(c, y, vD + k * out);
+					final boolean landing = k < 0 && c >= c0 && c <= c1 && y <= low + 2;
+					if (block != null && !block.role().flatFloor() && (landing || k >= 0)) {
+						cells.remove(new Cell(c, y, vD + k * out));
+					}
+				}
+			}
+		}
+		// the void: the car with its pit (the door row is planned blocks, doors and wall)
+		carve.box(c0, low - 1, Math.min(vD + out, vD + 2 * out), c1, top, Math.max(vD + out, vD + 2 * out));
+		// the track fixed to the inside of one side wall, in the car's back row
+		final boolean left = out > 0;
+		final int cTrack = left ? c0 : c1;
+		final LocalDir toWall = left ? LocalDir.MINUS_U : LocalDir.PLUS_U;
+		for (int y = low; y <= high + 1; y++) {
+			boolean stop = false;
+			for (final int s : stops) {
+				stop |= s == y;
+			}
+			put(Role.LIFT, cTrack, y, vD + 2 * out, toWall, stop ? StylePalette.MTR_LIFT_FLOOR : StylePalette.MTR_LIFT_TRACK);
+		}
+		for (final int stop : stops) {
+			for (int c = c0; c <= c1; c++) {
+				final String side = c == cT ? "side=left" : "side=right";
+				put(Role.LIFT, c, stop, vD, in, StylePalette.MTR_LIFT_DOOR, "half=lower," + side + ",unlocked=true");
+				put(Role.LIFT, c, stop + 1, vD, in, StylePalette.MTR_LIFT_DOOR, "half=upper," + side + ",unlocked=true");
+			}
+		}
+		// the walls: the door row between the stops, the sides, the back, and the roof
+		for (int y = low; y <= top; y++) {
+			for (int c = c0 - 1; c <= c1 + 1; c++) {
+				put(Role.WALL, c, y, vD, in.opposite(), wallId);
+				put(Role.WALL, c, y, vBack, in, wallId);
+			}
+			for (int v = vD + out; v != vBack; v += out) {
+				put(Role.WALL, c0 - 1, y, v, LocalDir.MINUS_U, wallId);
+				put(Role.WALL, c1 + 1, y, v, LocalDir.PLUS_U, wallId);
+			}
+		}
+		for (int c = c0 - 1; c <= c1 + 1; c++) {
+			for (int v = vD; v != vBack + out; v += out) {
+				put(Role.BUILDING_ROOF, c, top + 1, v, LocalDir.PLUS_V, palette.building().roof());
+			}
+		}
+		// a call button on the wall post beside each pair of doors, facing the landing
+		for (final int stop : stops) {
+			cells.put(new Cell(c0 - 1, stop + 1, vD), new PlannedBlock(c0 - 1, stop + 1, vD, Role.LIFT, StylePalette.MTR_LIFT_BUTTONS, in.opposite(), "", "unlocked=true"));
+		}
+		for (int c = c0; c <= c1; c++) {
+			for (int v = vD + out; v != vBack; v += out) {
+				for (int y = low; y <= top; y++) {
+					air.add(new Cell(c, y, v));
+				}
 			}
 		}
 	}
@@ -338,6 +421,11 @@ abstract class PlanDeep extends PlanUnderground {
 				bank(carve, a, endV(low, hs + 9 + ym + 2), toward, 0, ym, up, true, bw);
 			}
 		}
+		// a lift up each platform's middle, from its floor through the open box and the roof to a pavilion on the street
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final int c0 = band.uMin() + (band.width() - 2) / 2;
+			deepLift(carve, c0, (band.vFrom() + band.vTo()) / 2, 1, new int[]{StationGeometry.WALK_Y, d}, building.pier());
+		}
 		final String floor = palette.blockId(Role.PLATFORM_SURFACE);
 		for (final Carve.Lining l : carve.lining()) {
 			if (l.y() < -1) {
@@ -386,6 +474,15 @@ abstract class PlanDeep extends PlanUnderground {
 			final int v = vFirst + dv * i;
 			final int y = stepY(base, rise, i);
 			carve.box(a, y, v, a + width - 1, y + STEP_CLEAR, v);
+			for (int u = a - 1; u <= a + width; u++) {
+				// the platform's furniture standing where the bank comes down is cleared
+				for (int clear = base + 1; clear <= y + STEP_CLEAR + 1; clear++) {
+					final PlannedBlock block = at(u, clear, v);
+					if (block != null && !block.role().flatFloor()) {
+						cells.remove(new Cell(u, clear, v));
+					}
+				}
+			}
 			for (int u = a; u < a + width; u++) {
 				for (int under = base + 1; under < y; under++) {
 					put(Role.BRIDGE_PIER, u, under, v, up, palette.building().pier());
@@ -493,7 +590,7 @@ abstract class PlanDeep extends PlanUnderground {
 			}
 			final int u = (band.uMin() + band.uMax()) / 2;
 			for (int v = bankRows + 1; v <= layout.platformLength() - 1 - bankRows; v += StationGeometry.COLUMN_SPACING) {
-				if (!freeColumn(u, 1, d - 3, v)) {
+				if (!freeColumn(u, 1, d - 2, v)) {
 					continue;
 				}
 				for (int y = 1; y <= d - 2; y++) {

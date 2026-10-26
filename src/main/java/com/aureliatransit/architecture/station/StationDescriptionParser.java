@@ -903,7 +903,11 @@ public final class StationDescriptionParser {
 				return false;
 			}
 			if (token.equals("cut") && (at(i + 1).equals("and") && at(i + 2).equals("cover") || at(i + 1).equals("cover"))) {
-				return setDeep(UndergroundType.CUT_AND_COVER, i, at(i + 1).equals("and") ? i + 2 : i + 1, "cut and cover");
+				int last = at(i + 1).equals("and") ? i + 2 : i + 1;
+				if (at(last + 1).equals("box")) {
+					last++;
+				}
+				return setDeep(UndergroundType.CUT_AND_COVER, i, last, "cut and cover");
 			}
 			if (token.equals("box") && (at(i + 1).equals("station") || at(i + 1).equals("underground"))) {
 				return setDeep(UndergroundType.CUT_AND_COVER, i, i + 1, "box");
