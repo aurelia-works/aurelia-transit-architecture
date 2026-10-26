@@ -583,6 +583,62 @@ public class StationGameTests implements FabricGameTest {
 	}
 
 	/**
+	 * A rebuild as the player gets it: its look at the last build's cells and its survey run as the player's site task over
+	 * several ticks (one piece a tick here), then hand over to the rebuild job, which builds on the server tick.
+	 */
+	@GameTest(templateName = SITE_Z, tickLimit = 2000, batchId = "site_tasks")
+	public void aRebuildOverSeveralTicksWalksSurveysAndStartsItsJob(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final UUID owner = new UUID(0, 52);
+		final StationSessions.Pending first = StationCommand.prepare(world, SMALL, context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationBuildJob build = StationBuildJob.build(world, owner, first.report().ops(), false, text -> {
+		});
+		while (!build.finished()) {
+			build.step(StationBuildJob.OPS_PER_TICK);
+		}
+		check(build.state() == StationBuildJob.State.DONE, "first build " + build.state());
+		final List<Text> said = new ArrayList<>();
+		final StationSessions.Pending second = StationCommand.prepare(world, "1 track, length 16, width 3, no roof, named Test",
+				context.getAbsolutePos(FEET_Z), Heading.SOUTH);
+		final StationBuildJob[] started = {null};
+		final int[] ticks = {0, -1};
+		StationSessions.taskBudget(0);
+		try {
+			StationCommand.startRebuildLater(world, owner, second, first.frame(), build.undoLog(), false, said::add, job -> {
+				started[0] = job;
+				ticks[1] = ticks[0];
+			});
+			check(ticks[1] < 0 && StationSessions.task(owner) != null, "the rebuild did not carry on over later ticks");
+		} catch (RuntimeException | AssertionError e) {
+			StationSessions.taskBudget(StationSessions.NANOS_PER_TICK);
+			throw e;
+		}
+		context.runAtEveryTick(() -> {
+			ticks[0]++;
+			if (ticks[1] < 0) {
+				return;
+			}
+			StationSessions.taskBudget(StationSessions.NANOS_PER_TICK);
+			final StationBuildJob job = started[0];
+			check(job != null, "the rebuild was refused: " + said);
+			if (!job.finished()) {
+				return;
+			}
+			check(StationSessions.task(owner) == null, "the site task is still there");
+			check(ticks[1] > 10, "the walk and survey took " + ticks[1] + " ticks, not several");
+			check(job.state() == StationBuildJob.State.DONE && job.kept() > 0 && job.restored() > 0, "rebuild " + job.state() + ", kept "
+					+ job.kept() + ", taken back " + job.restored() + " " + said);
+			StationSessions.cancelJob(owner); // forgets the finished job, as the server tick would
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			context.complete();
+		});
+	}
+
+	/**
 	 * Rebuild at the same spot: a second plan over the first build writes only what differs (the renamed sign, the roof that
 	 * goes), keeps the rest as it stands, needs no terrain approval for its own cells, and one undo afterwards gives back the
 	 * site as it was before either build.

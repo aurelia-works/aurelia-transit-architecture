@@ -24,7 +24,7 @@
 
 ### Build job
 
-- **Big sites stream their chunks:** the survey, the build, undo and rebuild hold at most 1024 chunks loaded at a time and let go of the rest as they go, and a survey that takes longer than a tick carries on over the next ticks. A site of any size (an airport) no longer keeps every chunk it touched loaded for ten minutes. Chunk loading is spread over ticks, 4 per batch.
+- **Big sites stream their chunks:** the survey, the build, undo and rebuild hold at most 1024 chunks loaded at a time and let go of the rest as they go, and a survey that takes longer than a tick carries on over the next ticks. A site of any size (an airport) no longer keeps every chunk it touched loaded for ten minutes.
 
 ### Station Codex
 

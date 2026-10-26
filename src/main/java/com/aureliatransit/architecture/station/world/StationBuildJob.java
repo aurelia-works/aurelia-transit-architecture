@@ -42,8 +42,8 @@ import java.util.function.Consumer;
  * Builds the ops of a survey (or undoes a build) in small batches, driven by {@link StationSessions}. Every cell is probed
  * again just before it is written; the first surprise stops the job and keeps the undo log. The probe loads the chunks it
  * needs and holds a bounded window of them ({@link WorldSiteProbe}), so a station longer than the view distance builds and a
- * site of any size streams through; a batch ends after {@link #LOADS_PER_STEP} chunk loads so loading stays spread over
- * ticks. The job only pauses if a chunk still is not loaded. Once every op is done, the finishing steps (escalator shapes,
+ * site of any size streams through; a batch ends after {@link #LOADS_PER_STEP} chunks it had to load itself (neighbours
+ * a held chunk's ticket loaded already do not count). The job only pauses if a chunk still is not loaded. Once every op is done, the finishing steps (escalator shapes,
  * screens, signs, lifts, MTR) run in batches too, and the job lets go of its chunks when it ends.
  */
 public final class StationBuildJob {

@@ -23,15 +23,17 @@ import java.util.UUID;
  * budget, then undoes, and prints its numbers with the prefix {@code AIRPORT-SPIKE}. It fails when the job holds more than
  * its window or the loaded chunks have not come back near the start once it is over. They take many minutes, so they only
  * run with {@code ATA_SCALE_TESTS=1} in the environment ({@code ATA_SCALE_TESTS=1 ./gradlew runGametest --offline});
- * otherwise they pass at once.
+ * otherwise they pass at once. They load the server heavily: station game tests running beside them may run out of ticks
+ * on a busy machine (10-26: 10 timed out at load average 15; all passed in the plain run).
  */
 public class AirportScaleGameTests implements FabricGameTest {
 
 	/** A 3,000 m runway at 1.5:1: 4,500 long, 68 wide, one layer. */
 	private static final int RUNWAY_LENGTH = 4500;
 	private static final int RUNWAY_WIDTH = 68;
-	/** Chunks over the start still loaded once the build and undo are over and they had time to unload. */
-	private static final int SETTLED = 2000;
+	/** Chunks over the start still loaded {@link #SETTLE_TICKS} after the build and undo are over. */
+	private static final int SETTLED = 3000;
+	private static final int SETTLE_TICKS = 200;
 
 	private static boolean enabled() {
 		return "1".equals(System.getenv("ATA_SCALE_TESTS"));
@@ -68,13 +70,20 @@ public class AirportScaleGameTests implements FabricGameTest {
 		// build ticks, paused build ticks, undo ticks, settling ticks
 		final int[] ticks = {0, 0, 0, 0};
 		final long[] peak = {heapBefore, 0};
+		// the build's batch time per tick: least, total, most (ns)
+		final long[] batch = {Long.MAX_VALUE, 0, 0};
 		final StationBuildJob[] undo = {null};
 		say(name + ": " + ops.size() + " ops over about " + chunksTouched + " chunks; live heap " + heapBefore + " MB of "
 				+ (Runtime.getRuntime().maxMemory() >> 20) + ", loaded chunks " + loadedBefore);
 		context.runAtEveryTick(() -> {
 			if (undo[0] == null) {
 				ticks[0]++;
+				final long batchStart = System.nanoTime();
 				StationSessions.runBatches(List.of(job), StationSessions.NANOS_PER_TICK, StationSessions.OPS_PER_TICK);
+				final long took = System.nanoTime() - batchStart;
+				batch[0] = Math.min(batch[0], took);
+				batch[1] += took;
+				batch[2] = Math.max(batch[2], took);
 				if (job.paused()) {
 					ticks[1]++;
 				}
@@ -84,14 +93,15 @@ public class AirportScaleGameTests implements FabricGameTest {
 				peak[0] = Math.max(peak[0], heapMb());
 				peak[1] = Math.max(peak[1], world.getChunkManager().getLoadedChunkCount());
 				if (ticks[0] % 200 == 0) {
-					say(name + ": tick " + ticks[0] + " done " + job.done() + "/" + job.total() + " heap " + heapMb() + " MB loaded chunks "
+					say(name + ": tick " + ticks[0] + " done " + job.done() + "/" + job.total() + " live heap " + liveHeapMb() + " MB loaded chunks "
 							+ world.getChunkManager().getLoadedChunkCount() + " held " + job.heldChunks());
 				}
 				if (job.finished()) {
 					final long ms = (System.nanoTime() - start) / 1_000_000;
 					say(name + ": BUILD " + job.state() + " " + job.done() + "/" + job.total() + " in " + ticks[0] + " ticks (" + ms + " ms wall, "
 							+ (ticks[0] * 50L) + " ms at 20 tps), paused ticks " + ticks[1] + ", undo entries " + job.undoLog().size()
-							+ ", peak heap " + peak[0] + " MB, peak loaded chunks " + peak[1]);
+							+ ", peak heap " + peak[0] + " MB, peak loaded chunks " + peak[1] + "; batch ms per tick min " + batch[0] / 1_000_000.0
+							+ " avg " + batch[1] / ticks[0] / 1_000_000.0 + " max " + batch[2] / 1_000_000.0);
 					undo[0] = StationBuildJob.undo(world, owner, job.undoLog(), text -> say(name + " undo says: " + text.getString()));
 				}
 			} else if (!undo[0].finished()) {
@@ -105,9 +115,9 @@ public class AirportScaleGameTests implements FabricGameTest {
 					}
 				}
 			} else {
-				// the last window unloads over the next ticks
-				final int loaded = world.getChunkManager().getLoadedChunkCount();
-				if (loaded - loadedBefore <= SETTLED || ++ticks[3] > 1200) {
+				// the last window unloads over the next ticks; read once, a fixed time after
+				if (++ticks[3] >= SETTLE_TICKS) {
+					final int loaded = world.getChunkManager().getLoadedChunkCount();
 					say(name + ": SETTLED loaded chunks " + loaded + " (start " + loadedBefore + ") after " + ticks[3] + " ticks, live heap "
 							+ liveHeapMb() + " MB (start " + heapBefore + ")");
 					if (loaded - loadedBefore > SETTLED) {

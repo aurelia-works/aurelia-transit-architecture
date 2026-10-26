@@ -69,6 +69,8 @@ public final class StationSessions {
 	private static final Map<UUID, Built> BUILT = new HashMap<>();
 	private static final Map<UUID, StationBuildJob> JOBS = new LinkedHashMap<>();
 	private static final Map<UUID, Task> TASKS = new LinkedHashMap<>();
+	/** Server time the site tasks together may use in a tick; see {@link #taskBudget}. */
+	private static long taskNanos = NANOS_PER_TICK;
 	private static final Map<UUID, UndoLog> UNDO = new HashMap<>();
 	/** Server tick of each player's last wrench cancel, so a held left-click does not repeat it. */
 	private static final Map<UUID, Integer> LAST_CANCEL = new HashMap<>();
@@ -139,9 +141,17 @@ public final class StationSessions {
 			old.cancel();
 		}
 		TASKS.put(player, task);
-		if (task.step(System.nanoTime() + NANOS_PER_TICK) && TASKS.get(player) == task) {
+		if (task.step(System.nanoTime() + taskNanos) && TASKS.get(player) == task) {
 			TASKS.remove(player);
 		}
+	}
+
+	/**
+	 * Sets the server time site tasks may use in a tick ({@link #NANOS_PER_TICK} unless set); 0 makes each task read one piece
+	 * a tick, so a game test can follow a small site through several ticks.
+	 */
+	public static void taskBudget(long nanos) {
+		taskNanos = nanos;
 	}
 
 	/** The player's unfinished task, or null. */
@@ -247,13 +257,18 @@ public final class StationSessions {
 		}
 	}
 
-	/** The tasks share one tick's time budget, in turn; a task done hands over to whatever it started next. */
+	/**
+	 * The tasks share one tick's time budget, in turn, the first at least one piece; a task done hands over to whatever it
+	 * started next.
+	 */
 	private static void tickTasks() {
-		final long deadline = System.nanoTime() + NANOS_PER_TICK;
+		final long deadline = System.nanoTime() + taskNanos;
+		boolean first = true;
 		for (final Map.Entry<UUID, Task> entry : new ArrayList<>(TASKS.entrySet())) {
-			if (System.nanoTime() >= deadline) {
+			if (!first && System.nanoTime() >= deadline) {
 				break;
 			}
+			first = false;
 			final Task task = entry.getValue();
 			if (TASKS.get(entry.getKey()) == task && task.step(deadline) && TASKS.get(entry.getKey()) == task) {
 				TASKS.remove(entry.getKey());

@@ -84,6 +84,10 @@ public final class StationActions {
 				? layout -> LocalFrame.inFrontOf(feet.getX(), feet.getY(), feet.getZ(), facing, layout)
 				: layout -> LocalFrame.onBlock(clicked.getX(), clicked.getY(), clicked.getZ(), facing, layout);
 		final long request = REQUESTS.merge(id, 1L, Long::sum);
+		// a new plan replaces whatever site the player was still surveying, a build or rebuild waiting on its survey too
+		if (StationSessions.cancelTask(id)) {
+			player.sendMessage(Text.literal("Stopped surveying the earlier site; nothing was built from it.").formatted(Formatting.YELLOW), false);
+		}
 		if (parse.spec().trackCount() * parse.spec().platformLength() <= PLAN_HERE_UP_TO) {
 			StationCommand.Design design = null;
 			RuntimeException failure = null;
