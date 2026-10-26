@@ -10,7 +10,7 @@ import java.util.List;
  * The MTR rails of each gate's loop, in world blocks. The loop ({@link AirportRoute}) is cut into straight rails between nodes.
  * MTR does not join two straight rails at a right angle, so a corner is cut instead: a curve from the cell before the corner,
  * through the corner cell, to the cell after it. A corner is cut only when both straight rails beside it have at least one
- * block of straight left and both edges belong to the same kind of leg; any other corner is left open, and the route reports it.
+ * block of straight left; any other corner is left open, and the route reports it. A straight rail takes the kind of its first step.
  */
 public final class AirportRails {
 	private AirportRails() {
@@ -55,11 +55,20 @@ public final class AirportRails {
 	private record Chunk(List<Cell> cells, List<Kind> kinds) {
 	}
 
+	/** The loop starts at its landing leg, so the siding's deep end (where the loop closes) sits inside one chunk, and the only break is the flight. */
 	private static List<Chunk> chunks(AirportRoute.Gate gate) {
 		final List<Chunk> out = new ArrayList<>();
+		final List<Leg> legs = gate.legs();
+		int from = 0;
+		for (int i = 0; i < legs.size(); i++) {
+			if (legs.get(i).kind() == Kind.LANDING) {
+				from = i;
+			}
+		}
 		List<Cell> cells = null;
 		List<Kind> kinds = null;
-		for (final Leg leg : gate.legs()) {
+		for (int k = 0; k < legs.size(); k++) {
+			final Leg leg = legs.get((from + k) % legs.size());
 			for (final Cell cell : leg.cells()) {
 				if (cells != null) {
 					final Cell last = cells.get(cells.size() - 1);
@@ -85,11 +94,11 @@ public final class AirportRails {
 		final List<Cell> cs = chunk.cells();
 		final List<Kind> ks = chunk.kinds();
 		final int n = ks.size();
-		// straight runs: edges of one kind going one way; a run is cells [first, end]
+		// straight runs: edges going one way; a run is cells [first, end]
 		final List<int[]> runs = new ArrayList<>();
 		for (int i = 0; i < n;) {
 			int j = i;
-			while (j + 1 < n && ks.get(j + 1) == ks.get(i) && sameStep(cs, j + 1, i)) {
+			while (j + 1 < n && sameStep(cs, j + 1, i)) {
 				j++;
 			}
 			runs.add(new int[] {i, j});

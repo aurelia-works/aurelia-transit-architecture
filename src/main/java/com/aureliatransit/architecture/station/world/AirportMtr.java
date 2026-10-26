@@ -1,14 +1,17 @@
 package com.aureliatransit.architecture.station.world;
 
+import com.aureliatransit.architecture.AureliaTransitArchitecture;
 import com.aureliatransit.architecture.station.AirportRails.AirRail;
 import com.aureliatransit.architecture.station.AirportRails.Pos;
 import com.aureliatransit.architecture.station.AirportRoute.Kind;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.BlockPos;
 import org.mtr.core.data.Depot;
 import org.mtr.core.data.Platform;
 import org.mtr.core.data.Position;
@@ -18,6 +21,7 @@ import org.mtr.core.data.RoutePlatformData;
 import org.mtr.core.data.Siding;
 import org.mtr.core.data.TransportMode;
 import org.mtr.core.data.VehicleCar;
+import org.mtr.core.operation.DeleteDataRequest;
 import org.mtr.core.operation.DepotOperationByIds;
 import org.mtr.core.operation.UpdateDataRequest;
 import org.mtr.core.operation.UpdateDataResponse;
@@ -37,7 +41,7 @@ final class AirportMtr {
 	private AirportMtr() {
 	}
 
-	static void lay(ServerWorld world, List<AirRail> rails, Consumer<Text> out) {
+	static void lay(ServerWorld world, List<AirRail> rails, UndoLog log, Consumer<Text> out) {
 		if (!MtrRailContract.available() || rails.isEmpty()) {
 			return;
 		}
@@ -50,6 +54,7 @@ final class AirportMtr {
 			final Rail built = rail(rail);
 			if (built.isValid()) {
 				request.addRail(built);
+				log.addRail(block(rail.from()), block(rail.to()));
 			} else {
 				invalid++;
 			}
@@ -59,17 +64,46 @@ final class AirportMtr {
 		}
 		Init.sendMessageC2S("update_data", server, mtrWorld, request, (UpdateDataResponse response) -> {
 			PacketUpdateData.sendDirectlyToClientDepotUpdate(serverWorld, response);
-			depot(server, mtrWorld, serverWorld, rails, response, out);
+			depot(server, mtrWorld, serverWorld, rails, response, log, out);
 		}, UpdateDataResponse.class);
 	}
 
+	/** The MTR ids one airport build added: its gate platforms, sidings, route and depot. */
+	record Ids(List<Long> platforms, List<Long> sidings, long route, long depot) {
+	}
+
+	/** Deletes what the airport builds added to MTR, from the undo log. */
+	static void remove(ServerWorld world, List<Ids> airports) {
+		if (!MtrRailContract.available() || airports.isEmpty()) {
+			return;
+		}
+		final DeleteDataRequest request = new DeleteDataRequest();
+		for (final Ids ids : airports) {
+			ids.platforms().forEach(request::addPlatformId);
+			ids.sidings().forEach(request::addSidingId);
+			request.addRouteId(ids.route());
+			request.addDepotId(ids.depot());
+		}
+		try {
+			MtrStations.delete(world, request);
+		} catch (RuntimeException | LinkageError e) {
+			AureliaTransitArchitecture.LOGGER.warn("Could not delete the MTR route and depot of an undone airport", e);
+		}
+	}
+
+	private static BlockPos block(Pos p) {
+		return new BlockPos(p.x(), p.y(), p.z());
+	}
+
 	private static void depot(org.mtr.mapping.holder.MinecraftServer server, org.mtr.mapping.holder.World mtrWorld,
-			org.mtr.mapping.holder.ServerWorld serverWorld, List<AirRail> rails, UpdateDataResponse response, Consumer<Text> out) {
+			org.mtr.mapping.holder.ServerWorld serverWorld, List<AirRail> rails, UpdateDataResponse response, UndoLog log, Consumer<Text> out) {
 		final List<Platform> platforms = MtrRails.platforms(response);
 		final List<Siding> sidings = sidings(response);
 		final UpdateDataRequest next = new UpdateDataRequest(new MinecraftClientData());
 		final Route route = new Route(TransportMode.AIRPLANE, new MinecraftClientData());
 		route.setName("Airport");
+		final List<Long> platformIds = new ArrayList<>();
+		final List<Long> sidingIds = new ArrayList<>();
 		final ObjectArrayList<VehicleCar> cars = new ObjectArrayList<>();
 		cars.add(new VehicleCar("a320", 30, 2, -14.25, -2, 0, 0));
 		int gates = 0;
@@ -87,6 +121,7 @@ final class AirportMtr {
 					if (platform.containsPos(position(rail.from())) && platform.containsPos(position(rail.to()))) {
 						platform.setName("Gate " + (rail.gate() + 1));
 						next.addPlatform(platform);
+						platformIds.add(platform.getId());
 						route.getRoutePlatforms().add(new RoutePlatformData(platform.getId()));
 						gates++;
 						break;
@@ -98,6 +133,7 @@ final class AirportMtr {
 						siding.setVehicleCars(cars);
 						siding.setMaxVehicles(1);
 						next.addSiding(siding);
+						sidingIds.add(siding.getId());
 						break;
 					}
 				}
@@ -118,6 +154,7 @@ final class AirportMtr {
 			depot.setFrequency(hour, 4);
 		}
 		next.addRoute(route).addDepot(depot);
+		log.addAirport(new Ids(platformIds, sidingIds, route.getId(), depot.getId()));
 		Init.sendMessageC2S("update_data", server, mtrWorld, next, (UpdateDataResponse named) -> {
 			PacketUpdateData.sendDirectlyToClientDepotUpdate(serverWorld, named);
 			final DepotOperationByIds generate = new DepotOperationByIds();

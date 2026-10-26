@@ -35,6 +35,8 @@ public class AirportMtrGameTests implements FabricGameTest {
 	private static final BlockPos FEET = new BlockPos(6000, 3, 6000);
 	/** Two minutes at 50 ms a tick, the wait for a plane to leave once the depot is deployed. */
 	private static final int DEPARTURE_TICKS = 2400;
+	/** Ten seconds at 50 ms, for MTR to drop the airport after undo. */
+	private static final int UNDO_TICKS = 200;
 	/** Ten minutes at 50 ms, for the build and the depot to generate. */
 	private static final int SETUP_TICKS = 12000;
 
@@ -74,6 +76,21 @@ public class AirportMtrGameTests implements FabricGameTest {
 		}
 	}
 
+	/** True while MTR still holds the airport: a gate platform or the depot. */
+	private static boolean airportInMtr(Simulator simulator) {
+		for (final Platform platform : simulator.platforms) {
+			if (platform.getName().startsWith("Gate ")) {
+				return true;
+			}
+		}
+		for (final Depot candidate : simulator.depotIdMap.values()) {
+			if ("Airport".equals(candidate.getName())) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 60000, batchId = "airport_mtr")
 	public void planeLeavesAGate(TestContext context) {
 		final ServerWorld world = context.getWorld();
@@ -91,6 +108,7 @@ public class AirportMtrGameTests implements FabricGameTest {
 		final long[] lastTick = {System.currentTimeMillis()};
 		final int[] built = {-1};
 		final long[] deployedAt = {-1};
+		final long[] undoneAt = {-1};
 		final Simulator[] sim = {null};
 		context.runAtEveryTick(() -> {
 			ticks[0]++;
@@ -117,6 +135,17 @@ public class AirportMtrGameTests implements FabricGameTest {
 				sim[0] = simulator(world);
 			}
 			if (ticks[0] % 20 != 0) {
+				return;
+			}
+			if (undoneAt[0] >= 0) {
+				if (!airportInMtr(sim[0])) {
+					say("undo removed the airport's route, depot and gate platforms from MTR");
+					context.complete();
+					return;
+				}
+				if (ticks[0] - undoneAt[0] > UNDO_TICKS) {
+					throw new GameTestException("undo left the airport in MTR " + UNDO_TICKS + " ticks later");
+				}
 				return;
 			}
 			final Simulator simulator = sim[0];
@@ -158,7 +187,12 @@ public class AirportMtrGameTests implements FabricGameTest {
 				for (final Vehicle vehicle : vehicles(siding)) {
 					if (vehicle.getIsOnRoute()) {
 						say("plane on its route " + (ticks[0] - deployedAt[0]) + " ticks after deploy");
-						context.complete();
+						// undo takes the airport's route, depot and gate platforms out of MTR; the next checks see whether it did
+						final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> say("undo says: " + text.getString()));
+						while (!undo.finished()) {
+							undo.step(StationBuildJob.OPS_PER_TICK);
+						}
+						undoneAt[0] = ticks[0];
 						return;
 					}
 				}

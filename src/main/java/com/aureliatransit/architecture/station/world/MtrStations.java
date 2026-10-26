@@ -71,6 +71,11 @@ final class MtrStations {
 	static void remove(ServerWorld world, List<Long> ids) {
 		final DeleteDataRequest request = new DeleteDataRequest();
 		ids.forEach(request::addStationId);
+		delete(world, request);
+	}
+
+	/** Sends a delete to MTR: straight on the server when MTR allows it, else as a client message. */
+	static void delete(ServerWorld world, DeleteDataRequest request) {
 		final org.mtr.mapping.holder.ServerWorld serverWorld = new org.mtr.mapping.holder.ServerWorld(world);
 		try {
 			final java.lang.reflect.Method outbound = PacketRequestResponseBase.class.getDeclaredMethod("runServerOutbound",
