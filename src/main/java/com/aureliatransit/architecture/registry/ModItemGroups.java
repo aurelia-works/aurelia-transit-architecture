@@ -30,6 +30,7 @@ public final class ModItemGroups {
 		register(BlockFamily.Tab.GLASS, () -> GlassBlocks.CLEAR_FLOAT_GLASS);
 		register(BlockFamily.Tab.STATIONS, () -> StationBlocksNlBe.UTRECHT_WAVE_ROOF_PANEL);
 		register(BlockFamily.Tab.METRO, () -> MetroBlocks.METRO_COFFER_CEILING);
+		register(BlockFamily.Tab.AIRPORT, () -> AirportBlocks.CHECK_IN_DESK);
 	}
 
 	private ModItemGroups() {

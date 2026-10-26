@@ -692,5 +692,16 @@
   "screen.aurelia_transit_architecture.station_wrench.preset.rosenthaler_platz": "Rosenthaler Platz",
   "block.aurelia_transit_architecture.buffer_stop": "Buffer Stop",
   "block.aurelia_transit_architecture.heritage_buffer_stop": "Heritage Buffer Stop",
-  "tooltip.aurelia_transit_architecture.buffer_joins": "Place several side by side across a track: they join into one buffer"
+  "tooltip.aurelia_transit_architecture.buffer_joins": "Place several side by side across a track: they join into one buffer",
+  "block.aurelia_transit_architecture.runway_edge_light": "Runway Edge Light",
+  "block.aurelia_transit_architecture.runway_threshold_light": "Runway Threshold Light",
+  "block.aurelia_transit_architecture.taxiway_edge_light": "Taxiway Edge Light",
+  "block.aurelia_transit_architecture.apron_floodlight": "Apron Floodlight",
+  "block.aurelia_transit_architecture.check_in_desk": "Check-in Desk",
+  "block.aurelia_transit_architecture.baggage_belt": "Baggage Belt",
+  "block.aurelia_transit_architecture.departures_board": "Departures Board",
+  "block.aurelia_transit_architecture.windsock": "Windsock",
+  "block.aurelia_transit_architecture.terminal_terrazzo": "Terminal Terrazzo",
+  "itemGroup.aurelia_transit_architecture.airport": "Aurelia Transit: Airport",
+  "tooltip.aurelia_transit_architecture.airport_ground_light": "Set flush into the airfield; gives light"
 }

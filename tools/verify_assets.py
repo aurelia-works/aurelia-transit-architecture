@@ -22,7 +22,7 @@ ASSETS = RES / "assets" / MOD
 DATA = RES / "data"
 REGISTRY = ROOT / "src" / "main" / "java" / "com" / "aureliatransit" / "architecture" / "registry"
 JAVA = REGISTRY / "ModBlocks.java"
-REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksOperators.java", "StationBlocksDeIt.java", "MetroBlocks.java", "StationFittingBlocks.java", "StationBlocksUk.java")
+REGISTRY_FILES = ("ModBlocks.java", "LiveBlocks.java", "InteractiveBlocks.java", "WayfindingBlocks.java", "ElevatedBlocks.java", "GlassBlocks.java", "StationBlocksNlBe.java", "StationBlocksOperators.java", "StationBlocksDeIt.java", "MetroBlocks.java", "StationFittingBlocks.java", "StationBlocksUk.java", "AirportBlocks.java")
 
 # Properties the blockstate variants key on. FreePlacement's angle and offset are left out on purpose: no model keys on
 # them, a client model wrapper turns and moves the quads.

@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:glowstone"
+  },
+  "result": "aurelia_transit_architecture:taxiway_edge_light",
+  "count": 4
+}

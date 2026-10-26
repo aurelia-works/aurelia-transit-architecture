@@ -1,0 +1,8 @@
+{
+  "type": "minecraft:stonecutting",
+  "ingredient": {
+    "item": "minecraft:glowstone"
+  },
+  "result": "aurelia_transit_architecture:runway_threshold_light",
+  "count": 4
+}

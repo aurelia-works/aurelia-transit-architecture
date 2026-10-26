@@ -1,0 +1,79 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/floodlight_housing",
+    "housing": "aurelia_transit_architecture:block/floodlight_housing",
+    "lens": "aurelia_transit_architecture:block/floodlight_lens"
+  },
+  "elements": [
+    {
+      "from": [
+        2,
+        8,
+        2
+      ],
+      "to": [
+        14,
+        16,
+        14
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#lens"
+        },
+        "up": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#housing",
+          "cullface": "up"
+        },
+        "north": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            8
+          ],
+          "texture": "#housing"
+        },
+        "south": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            8
+          ],
+          "texture": "#housing"
+        },
+        "west": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            8
+          ],
+          "texture": "#housing"
+        },
+        "east": {
+          "uv": [
+            2,
+            0.0,
+            14,
+            8
+          ],
+          "texture": "#housing"
+        }
+      }
+    }
+  ]
+}

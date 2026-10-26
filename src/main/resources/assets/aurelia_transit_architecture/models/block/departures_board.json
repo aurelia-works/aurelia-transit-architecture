@@ -1,0 +1,81 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/departures_board_face",
+    "face": "aurelia_transit_architecture:block/departures_board_face",
+    "steel": "aurelia_transit_architecture:block/steel_dark"
+  },
+  "elements": [
+    {
+      "from": [
+        0,
+        2,
+        13
+      ],
+      "to": [
+        16,
+        14,
+        16
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            3
+          ],
+          "texture": "#steel"
+        },
+        "up": {
+          "uv": [
+            0.0,
+            13,
+            16.0,
+            16.0
+          ],
+          "texture": "#steel"
+        },
+        "north": {
+          "uv": [
+            0.0,
+            2,
+            16.0,
+            14
+          ],
+          "texture": "#face"
+        },
+        "south": {
+          "uv": [
+            0.0,
+            2,
+            16.0,
+            14
+          ],
+          "texture": "#steel",
+          "cullface": "south"
+        },
+        "west": {
+          "uv": [
+            13,
+            2,
+            16.0,
+            14
+          ],
+          "texture": "#steel",
+          "cullface": "west"
+        },
+        "east": {
+          "uv": [
+            0.0,
+            2,
+            3,
+            14
+          ],
+          "texture": "#steel",
+          "cullface": "east"
+        }
+      }
+    }
+  ]
+}
