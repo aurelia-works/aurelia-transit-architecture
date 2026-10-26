@@ -23,9 +23,16 @@ import java.util.List;
  *                       0 without one); they are outside the building, so not indoor
  * @param forecourtDepth rows v = headEnd + {@link StationGeometry#HEAD_APRON} + 1 .. past the head building's entrance ramps, taken by a
  *                       hub's forecourt with its bus interchange and taxi rank ({@link StationGeometry#FORECOURT_DEPTH}, 0 without one)
+ * @param accessRows     rows before the ramps at the low-v end taken by a deep tube station's escalator shaft and ticket hall
+ *                       ({@link PlanDeep}); 0 for any other station
  */
 public record TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
-		int headDepth, int hubThrough, int parkingWidth, int forecourtDepth) {
+		int headDepth, int hubThrough, int parkingWidth, int forecourtDepth, int accessRows) {
+
+	public TrackLayout(int width, int platformLength, int rampLength, List<Track> tracks, List<PlatformBand> platforms, int buildingWidth,
+			int headDepth, int hubThrough, int parkingWidth, int forecourtDepth) {
+		this(width, platformLength, rampLength, tracks, platforms, buildingWidth, headDepth, hubThrough, parkingWidth, forecourtDepth, 0);
+	}
 
 	public TrackLayout {
 		tracks = List.copyOf(tracks);
@@ -33,7 +40,7 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 		final List<PlatformBand> bands = new ArrayList<>();
 		for (final PlatformBand band : platforms) {
 			bands.add(band.vTo() < 0 ? new PlatformBand(band.number(), band.uMin(), band.uMax(), band.trackLeft(), band.trackRight(), 0,
-					platformLength - 1, band.deadEnd()) : band);
+					platformLength - 1, band.deadEnd(), band.level()) : band);
 		}
 		platforms = List.copyOf(bands);
 	}
@@ -197,7 +204,7 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 
 	/** First v of the footprint (start of the ramps, or 0). */
 	public int vMin() {
-		return -rampLength;
+		return -rampLength - accessRows;
 	}
 
 	/** Last v of the footprint (the end of the ramps, or of a terminus head building's apron and the forecourt past it). */
@@ -229,6 +236,21 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 			}
 		}
 		return 0;
+	}
+
+	/** The levels (y of platform floors) the station has, lowest first: one unless its platforms are stacked. */
+	public List<Integer> levels() {
+		final java.util.TreeSet<Integer> levels = new java.util.TreeSet<>();
+		for (final Track track : tracks) {
+			levels.add(track.level());
+		}
+		for (final PlatformBand band : platforms) {
+			levels.add(band.level());
+		}
+		if (levels.isEmpty()) {
+			levels.add(StationGeometry.PLATFORM_Y);
+		}
+		return List.copyOf(levels);
 	}
 
 	/** The tracks along a platform's edges, left first: one for a side platform, two for an island. */
@@ -269,8 +291,13 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	 * @param number        1-based, left to right
 	 * @param platformLeft  a platform edge is at u - {@link StationGeometry#EDGE_OFFSET}
 	 * @param platformRight a platform edge is at u + {@link StationGeometry#EDGE_OFFSET}
+	 * @param level         y of its rail level: {@link StationGeometry#PLATFORM_Y} except in a station whose platforms are stacked
 	 */
-	public record Track(int number, int u, boolean platformLeft, boolean platformRight) {
+	public record Track(int number, int u, boolean platformLeft, boolean platformRight, int level) {
+
+		public Track(int number, int u, boolean platformLeft, boolean platformRight) {
+			this(number, u, platformLeft, platformRight, StationGeometry.PLATFORM_Y);
+		}
 
 		/** No platform on either side: trains run through. */
 		public boolean through() {
@@ -286,8 +313,13 @@ public record TrackLayout(int width, int platformLength, int rampLength, List<Tr
 	 * @param trackLeft  a track runs along its uMin edge
 	 * @param trackRight a track runs along its uMax edge
 	 * @param deadEnd    a through station's bay platform: its tracks end at buffer stops just past vTo
+	 * @param level      y of its floor: {@link StationGeometry#PLATFORM_Y} except in a station whose platforms are stacked
 	 */
-	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo, boolean deadEnd) {
+	public record PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo, boolean deadEnd, int level) {
+
+		public PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo, boolean deadEnd) {
+			this(number, uMin, uMax, trackLeft, trackRight, vFrom, vTo, deadEnd, StationGeometry.PLATFORM_Y);
+		}
 
 		/** A platform the trains run on past. */
 		public PlatformBand(int number, int uMin, int uMax, boolean trackLeft, boolean trackRight, int vFrom, int vTo) {

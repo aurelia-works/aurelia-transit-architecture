@@ -329,6 +329,91 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/** A cut-and-cover box dug into solid ground, built block for block, its void clear, and given back by undo. */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 1500, batchId = "deep_box")
+	public void deepBoxIsDugBuiltAndUndone(TestContext context) {
+		deepStationIsDugBuiltAndUndone(context, "2 track cut and cover box station, island platform, 16 blocks deep, 48 long, named Test", new UUID(0, 71));
+	}
+
+	/** A stacked deep tube (Westminster's kind): both levels built, one over the other, and given back by undo. */
+	@GameTest(templateName = SITE_LARGE, tickLimit = 1500, batchId = "deep_stacked")
+	public void stackedTubeIsDugBuiltAndUndone(TestContext context) {
+		deepStationIsDugBuiltAndUndone(context, "2 track stacked deep tube station, 30 blocks deep, 40 long, step-free, named Test", new UUID(0, 72));
+	}
+
+	/**
+	 * A deep station on a block of stone as deep as it is: it digs, so it needs terrain approval; built with it, every planned block
+	 * stands, the dug void is air, and undo gives the stone back.
+	 */
+	private static void deepStationIsDugBuiltAndUndone(TestContext context, String words, UUID owner) {
+		final ServerWorld world = context.getWorld();
+		final int depth = StationDescriptionParser.parse(words).spec().options().streetDepth();
+		final BlockPos feet = context.getAbsolutePos(FEET_LARGE).up(depth + 4);
+		final StationSessions.Pending sizing = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		final TrackLayout site = sizing.plan().layout();
+		for (int u = -2; u <= site.width() + 1; u++) {
+			for (int v = site.vMin() - 2; v <= site.vMax() + 2; v++) {
+				for (int y = -3; y < depth; y++) {
+					world.setBlockState(pos(sizing.frame(), u, y, v), Blocks.STONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+				}
+			}
+		}
+		final StationSessions.Pending pending = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		check(pending.spec().options().deepStation(), "not a deep station: " + words);
+		check(pending.violations().isEmpty() && pending.audit().buildable(), "plan: " + pending.violations() + " " + pending.audit().problems());
+		final List<Text> said = new ArrayList<>();
+		check(StationCommand.startBuild(world, owner, pending, false, said::add) == null, "a deep station was built without terrain approval");
+		final java.util.Set<BlockPos> planned = new java.util.HashSet<>();
+		for (final PlannedBlock block : pending.plan().blocks()) {
+			planned.add(cellPos(pending, block));
+		}
+		final Map<BlockPos, BlockState> ground = new HashMap<>();
+		for (final com.aureliatransit.architecture.station.Box box : pending.plan().headroom()) {
+			for (int u = box.uMin(); u <= box.uMax(); u++) {
+				for (int y = box.yMin(); y <= Math.min(box.yMax(), depth - 2); y++) {
+					for (int v = box.vMin(); v <= box.vMax(); v++) {
+						final BlockPos pos = pos(pending.frame(), u, y, v);
+						if (!planned.contains(pos)) {
+							ground.put(pos, world.getBlockState(pos));
+						}
+					}
+				}
+			}
+		}
+		said.clear();
+		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, true, said::add);
+		check(job != null, "build refused: " + said);
+		context.runAtEveryTick(() -> {
+			if (!job.finished()) {
+				return;
+			}
+			check(job.state() == StationBuildJob.State.DONE, "job " + job.state() + " " + said);
+			final List<String> problems = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				final String id = Registries.BLOCK.getId(world.getBlockState(cellPos(pending, block)).getBlock()).toString();
+				if (!id.equals(block.blockId())) {
+					problems.add(block + ": found " + id);
+				}
+			}
+			for (final BlockPos pos : ground.keySet()) {
+				if (!world.getBlockState(pos).isAir()) {
+					problems.add("not dug at " + pos + ": " + world.getBlockState(pos));
+				}
+			}
+			Fixtures.failIfAny(problems, words);
+			StationSessions.cancelJob(owner);
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			for (final Map.Entry<BlockPos, BlockState> cell : ground.entrySet()) {
+				check(world.getBlockState(cell.getKey()).getBlock() == cell.getValue().getBlock(), "undo did not give back the ground at " + cell.getKey());
+			}
+			context.complete();
+		});
+	}
+
 	/** A terminus (head building, buffer stops, gate line, train shed) built in the world. */
 	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
 	public void terminusBuildsThroughTheCommandPath(TestContext context) {

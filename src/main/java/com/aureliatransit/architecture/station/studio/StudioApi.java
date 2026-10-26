@@ -620,7 +620,9 @@ public final class StudioApi {
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
 				.append(",\"scale\":").append(Json.quote(spec.hasBuilding() ? spec.buildingScale().label() : "-"))
 				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(StationLayout.of(spec, layout).bridge())
-				.append(",\"airport\":").append(airportJson(spec)).append(",\"underground\":").append(spec.options().underground()).append(",\"streetY\":").append(StationGeometry.UPPER_FLOOR_Y)
+				.append(",\"airport\":").append(airportJson(spec)).append(",\"underground\":").append(spec.options().underground()).append(",\"streetY\":")
+				.append(spec.options().deepStation() ? spec.options().streetDepth() - 1 : StationGeometry.UPPER_FLOOR_Y)
+				.append(",\"undergroundType\":").append(Json.quote(spec.options().underground() ? spec.options().type().label() : ""))
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")
 				.append(audit.height()).append(",\"blocks\":").append(plan.blocks().size()).append('}');
@@ -940,7 +942,7 @@ public final class StudioApi {
 
 	private static String roof(StationSpec spec) {
 		if (spec.options().underground()) {
-			return "underground";
+			return spec.options().deepStation() ? spec.options().type().label() : "underground";
 		}
 		return switch (spec.roof()) {
 			case NONE -> "no roof";

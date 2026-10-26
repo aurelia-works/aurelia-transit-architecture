@@ -257,7 +257,7 @@ public final class StationAudit {
 			final List<int[]> runs = new ArrayList<>();
 			int start = Integer.MIN_VALUE;
 			for (int v = layout.vMin(); v <= layout.vMax() + 1; v++) {
-				final PlannedBlock block = v <= layout.vMax() ? at(edgeU, StationGeometry.PLATFORM_Y, v) : null;
+				final PlannedBlock block = v <= layout.vMax() ? at(edgeU, track.level(), v) : null;
 				final boolean edge = block != null && block.role() == Role.PLATFORM_EDGE && block.front() == toward;
 				if (edge && start == Integer.MIN_VALUE) {
 					start = v;
@@ -334,7 +334,7 @@ public final class StationAudit {
 					}
 				}
 				for (final int v : new int[]{first, last}) {
-					if (!has(track.u(), StationGeometry.PLATFORM_Y, v, Role.RAIL_NODE)) {
+					if (!has(track.u(), track.level(), v, Role.RAIL_NODE)) {
 						fail(Topic.RAIL_NODES, "track " + track.number() + " has no rail node at the platform end v=" + v, "Something blocks the rail node at the platform end: make the platform longer or plan again with fewer extras at its ends.");
 					}
 				}
@@ -423,7 +423,7 @@ public final class StationAudit {
 			final int top = plan.maxY();
 			for (final PlannedBlock block : plan.blocks()) {
 				final Role role = block.role();
-				if (block.y() != StationGeometry.PLATFORM_Y && block.y() != StationGeometry.UPPER_FLOOR_Y
+				if (!layout.levels().contains(block.y()) && block.y() != StationGeometry.UPPER_FLOOR_Y
 						|| !(role.flatFloor() || role == Role.RAMP_LOWER || role == Role.RAMP_UPPER)
 						|| !standableAt(block.u(), block.y() + 1, block.v())) {
 					continue;
@@ -896,6 +896,10 @@ public final class StationAudit {
 		}
 
 		private void access() {
+			if (spec.options().deepStation()) {
+				deepAccess();
+				return;
+			}
 			final Ground[] grid = new Ground[(uMax() - uMin() + 1) * (vMax() - vMin() + 1)];
 			for (int u = uMin(); u <= uMax(); u++) {
 				for (int v = vMin(); v <= vMax(); v++) {
@@ -959,18 +963,209 @@ public final class StationAudit {
 						}
 					}
 				}
+				reportAccess(band, edges, worst, atWorst, firstWorst);
+			}
+		}
+
+		// ---- a deep station's access: a walk through the plan's own cells -----------------------------------------------
+
+		/** Walkers' feet cell grid of a deep station: bounds of the plan, with the street's level and some air above it. */
+		private int dyMin;
+		private int dyMax;
+		private int dvMin;
+		private int dvMax;
+
+		private boolean inDeepGrid(int u, int y, int v) {
+			return u >= 0 && u < layout.width() && y >= dyMin && y <= dyMax && v >= dvMin && v <= dvMax;
+		}
+
+		/** A cell a walker's body fits in: air dug out, open sky over the street, or a planned cell people pass (escalator rails, open gates). */
+		private boolean deepOpen(int u, int y, int v) {
+			if (!inDeepGrid(u, y, v)) {
+				return false;
+			}
+			final PlannedBlock block = at(u, y, v);
+			if (block != null) {
+				return block.role().passable() || block.role() == Role.ESCALATOR && !block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP);
+			}
+			return y >= spec.options().streetDepth() || dug(u, y, v);
+		}
+
+		private boolean isStep(int u, int y, int v) {
+			final PlannedBlock block = at(u, y, v);
+			return block != null && (block.role() == Role.STAIR || block.role() == Role.ESCALATOR && block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP));
+		}
+
+		/** Something to stand on: a floor, a platform, the street's slab or step, or the ground itself at the street's level. */
+		private boolean deepFloor(int u, int y, int v) {
+			final PlannedBlock block = at(u, y - 1, v);
+			if (block == null) {
+				return y == spec.options().streetDepth() && !dug(u, y - 1, v);
+			}
+			return block.role().flatFloor() || block.role() == Role.BUILDING_ROOF || block.role() == Role.STAIR
+					|| block.role() == Role.ESCALATOR && block.blockId().equals(StylePalette.MTR_ESCALATOR_STEP);
+		}
+
+		private boolean deepStand(int u, int y, int v) {
+			return deepOpen(u, y, v) && deepOpen(u, y + 1, v) && deepFloor(u, y, v);
+		}
+
+		private int deepIndex(int u, int y, int v) {
+			return ((u * (dyMax - dyMin + 1)) + (y - dyMin)) * (dvMax - dvMin + 1) + (v - dvMin);
+		}
+
+		/**
+		 * Which feet cells a walker coming in from the street reaches: along the floor, up and down escalator steps and stairs
+		 * (only when {@code steps}), and between the landings of a lift, which are the cells in front of its doors at every stop.
+		 */
+		private boolean[] deepReach(boolean steps, Map<Long, List<int[]>> lifts) {
+			final boolean[] seen = new boolean[layout.width() * (dyMax - dyMin + 1) * (dvMax - dvMin + 1)];
+			final ArrayDeque<int[]> queue = new ArrayDeque<>();
+			final int street = spec.options().streetDepth();
+			for (int u = 0; u < layout.width(); u++) {
+				for (int v = dvMin; v <= dvMax; v++) {
+					final boolean edge = u == 0 || u == layout.width() - 1 || v == dvMin || v == dvMax;
+					if (edge && deepStand(u, street, v) && !seen[deepIndex(u, street, v)]) {
+						seen[deepIndex(u, street, v)] = true;
+						queue.add(new int[]{u, street, v});
+					}
+				}
+			}
+			while (!queue.isEmpty()) {
+				final int[] cell = queue.poll();
+				final int u = cell[0];
+				final int y = cell[1];
+				final int v = cell[2];
+				for (final int[] side : SIDES) {
+					final int nu = u + side[0];
+					final int nv = v + side[1];
+					if (!inDeepGrid(nu, y, nv)) {
+						continue;
+					}
+					if (deepStand(nu, y, nv)) {
+						enqueue(seen, queue, nu, y, nv);
+					}
+					if (steps) {
+						if (isStep(nu, y, nv) && deepStand(nu, y + 1, nv) && deepOpen(u, y + 2, v)) {
+							enqueue(seen, queue, nu, y + 1, nv);
+						}
+						if (inDeepGrid(nu, y - 1, nv) && isStep(nu, y - 2, nv) && deepStand(nu, y - 1, nv) && deepOpen(nu, y + 1, nv)) {
+							enqueue(seen, queue, nu, y - 1, nv);
+						}
+					}
+				}
+				final List<int[]> landings = lifts.get(AuditLift.key(u, v, 0));
+				if (landings != null) {
+					for (final int[] other : landings) {
+						if (deepStand(other[0], other[1], other[2])) {
+							enqueue(seen, queue, other[0], other[1], other[2]);
+						}
+					}
+				}
+			}
+			return seen;
+		}
+
+		private void enqueue(boolean[] seen, ArrayDeque<int[]> queue, int u, int y, int v) {
+			if (inDeepGrid(u, y, v) && !seen[deepIndex(u, y, v)]) {
+				seen[deepIndex(u, y, v)] = true;
+				queue.add(new int[]{u, y, v});
+			}
+		}
+
+		/** Helper for lift landings keyed by their cell. */
+		private static final class AuditLift {
+			static Long key(int u, int v, int unused) {
+				return ((long) u << 32) ^ (v & 0xFFFFFFFFL);
+			}
+		}
+
+		/**
+		 * Landings of every lift: the doors planned as {@link Role#LIFT} {@code mtr:lift_door_1}, in pairs per (column, row,
+		 * facing). The landing is the cell in front of a door; every stop of one shaft reaches every other. Keyed by the landing's
+		 * (u, v), valued with all the landings of the shaft (u, feet y, v).
+		 */
+		private Map<Long, List<int[]>> deepLifts() {
+			final Map<String, List<int[]>> shafts = new HashMap<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role() != Role.LIFT || !block.blockId().equals(StylePalette.MTR_LIFT_DOOR) || !block.state().startsWith("half=lower")) {
+					continue;
+				}
+				final int du = block.front() == LocalDir.PLUS_U ? 1 : block.front() == LocalDir.MINUS_U ? -1 : 0;
+				final int dv = block.front() == LocalDir.PLUS_V ? 1 : block.front() == LocalDir.MINUS_V ? -1 : 0;
+				shafts.computeIfAbsent(block.u() + "," + block.v() + "," + block.front(), k -> new ArrayList<>())
+						.add(new int[]{block.u() - du, block.y(), block.v() - dv});
+			}
+			final Map<Long, List<int[]>> byCell = new HashMap<>();
+			for (final List<int[]> landings : shafts.values()) {
+				for (final int[] landing : landings) {
+					byCell.computeIfAbsent(AuditLift.key(landing[0], landing[2], 0), k -> new ArrayList<>()).addAll(landings);
+				}
+			}
+			return byCell;
+		}
+
+		/**
+		 * A deep station's platforms are reached from the street through its hall and shaft: by walking the floor, climbing the
+		 * escalator steps and stairs, and (step-free) riding the lifts. A platform's grade is its worst boarding cell's.
+		 */
+		private void deepAccess() {
+			dyMin = -1;
+			dyMax = spec.options().streetDepth() + PlanDeep.HALL_HEIGHT + 2;
+			dvMin = layout.vMin();
+			dvMax = layout.vMax();
+			final Map<Long, List<int[]>> lifts = deepLifts();
+			final boolean[] flat = deepReach(false, lifts);
+			final boolean[] all = deepReach(true, lifts);
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				int edges = 0;
+				Access worst = Access.STEP_FREE;
+				int atWorst = 0;
+				String firstWorst = "";
+				for (int u = band.uMin(); u <= band.uMax(); u++) {
+					for (int v = band.vFrom(); v <= band.vTo(); v++) {
+						final int walkY = band.level() + StationGeometry.WALK_Y;
+						if (!has(u, band.level(), v, Role.PLATFORM_EDGE) || at(u, walkY, v) != null) {
+							continue;
+						}
+						edges++;
+						final int i = deepIndex(u, walkY, v);
+						final Access cell = flat[i] ? Access.STEP_FREE : all[i] ? Access.STAIRS : Access.UNREACHABLE;
+						if (cell.ordinal() > worst.ordinal()) {
+							worst = cell;
+							atWorst = 0;
+							firstWorst = " (e.g. u=" + u + " v=" + v + ")";
+						}
+						if (cell == worst) {
+							atWorst++;
+						}
+					}
+				}
+				reportAccess(band, edges, worst, atWorst, firstWorst);
+			}
+		}
+
+		/** One platform's access finding: its worst boarding cell's grade, or no free boarding edge. */
+		private void reportAccess(TrackLayout.PlatformBand band, int edges, Access worst, int atWorst, String firstWorst) {
+			{
 				access.add(edges == 0 ? Access.UNREACHABLE : worst);
 				final String name = "Platform " + band.number();
 				if (edges == 0) {
 					fail(Topic.ACCESS, name + " has no free boarding edge to stand on", "Make the platform longer, or remove travelators and stairs from its edge.");
-					continue;
+					return;
 				}
 				final String which = atWorst == edges ? name + " is"
 						: atWorst + " of " + edges + " boarding cells on platform " + band.number() + firstWorst + " are";
 				switch (worst) {
 					case STEP_FREE -> pass(Topic.ACCESS, name + " is reached step-free from beside the station");
 					case STAIRS -> {
-						if (spec.stepFree()) {
+						if (spec.options().deepStation()) {
+							if (spec.stepFree()) {
+								warn(Topic.ACCESS, which + " only reached by escalators, so not step-free (no lift)", "Say \"step-free\" (not \"no ramps\") so a lift is planned.");
+							} else {
+								pass(Topic.ACCESS, which + " reached by escalators (no lift, as requested)");
+							}
+						} else if (spec.stepFree()) {
 							// step-free is the default, so this is not always something the description asked for
 							warn(Topic.ACCESS, which + " only reached by stairs, so not step-free (no room for a lift)", "Widen the platform to 10 blocks (islands 11) so a lift fits, or turn step-free off.");
 						} else {
@@ -1104,9 +1299,18 @@ public final class StationAudit {
 				if (!STANDING.contains(floor.role()) || floor.y() < StationGeometry.PLATFORM_Y || !open(u, y, v)) {
 					continue;
 				}
+				// the lining under a raised track (a stacked station's upper bore) is paving below its rail level, like the one at level 0
+				if (floor.role() == Role.FLOOR && layout.tracks().stream().anyMatch(t -> t.level() > StationGeometry.PLATFORM_Y && t.level() == y)) {
+					continue;
+				}
+				// the street over a deep station is the ground: its edges drop nowhere, but for the hole its shaft makes in the hall floor
+				final boolean ground = spec.options().deepStation() && floor.y() == spec.options().streetDepth() - 1;
 				for (final int[] side : SIDES) {
 					final int nu = u + side[0], nv = v + side[1];
 					if (!open(nu, y, nv)) {
+						continue;
+					}
+					if (ground && !dug(nu, y - 1, nv)) {
 						continue;
 					}
 					int drop = 0;
@@ -1125,6 +1329,25 @@ public final class StationAudit {
 				fail(Topic.FALLS, found.size() + " open edges, first " + found.get(0),
 						"Plan again; if it stays, copy the description and report it: an edge needs a wall, window or barrier.");
 			}
+		}
+
+		private Set<Long> dugCells;
+
+		/** True when the cell is dug out (a box of the plan's headroom): a deep station's void, where the ground is not. */
+		private boolean dug(int u, int y, int v) {
+			if (dugCells == null) {
+				dugCells = new HashSet<>();
+				for (final Box box : plan.headroom()) {
+					for (int bu = box.uMin(); bu <= box.uMax(); bu++) {
+						for (int by = box.yMin(); by <= box.yMax(); by++) {
+							for (int bv = box.vMin(); bv <= box.vMax(); bv++) {
+								dugCells.add(key(bu, by, bv));
+							}
+						}
+					}
+				}
+			}
+			return dugCells.contains(key(u, y, v));
 		}
 
 		/** True when a passenger fits at (u, y, v): that cell and the one above are empty. */

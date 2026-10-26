@@ -126,6 +126,12 @@ public final class StationDescriptionParser {
 			Map.entry("moorish", StationStyle.MODERN), Map.entry("mumbai", StationStyle.MODERN), Map.entry("bombay", StationStyle.MODERN),
 			Map.entry("india", StationStyle.MODERN), Map.entry("indian", StationStyle.MODERN), Map.entry("teddington", StationStyle.MODERN),
 			Map.entry("surbiton", StationStyle.MODERN), Map.entry("coventry", StationStyle.MODERN));
+	/** Width of a bored tube's platform: a platform tunnel with room to walk, about 4 m. */
+	private static final int TUBE_PLATFORM_WIDTH = 6;
+	/** A stacked tube's platform: the bank of two escalators beside the lift and a walkway. */
+	private static final int STACKED_PLATFORM_WIDTH = 7;
+	/** Narrowest platform of a cut-and-cover box: an escalator bank of three and a column either side. */
+	private static final int BOX_PLATFORM_WIDTH = 8;
 	private static final Set<String> UNDERGROUND_WORDS = Set.of("underground", "subway", "tunnel", "tube");
 	private static final Set<String> ELEVATED_WORDS = Set.of("elevated", "viaduct");
 	/** Colours an underground station's walls are tiled in ("orange tiles": Berlin's U8, Rosenthaler Platz). */
@@ -293,6 +299,11 @@ public final class StationDescriptionParser {
 		private boolean tram;
 		/** "underground", "subway", "tube", "tunnel": a box under the street (Enviro, 10-20); the word's index, or -1. */
 		private int undergroundAt = -1;
+		/** "deep tube", "bored tube", "cut and cover", "box station": which deep underground station the words ask for, or null. */
+		private UndergroundType deepType;
+		/** "27 m deep": blocks from rail level to the street asked for, or 0. */
+		private int depthAsked;
+		private int depthAt = -1;
 		/** "orange tiles" and the like: an underground station's wall tiles, or null. */
 		private String tile;
 		private boolean mezzanine;
@@ -413,7 +424,7 @@ public final class StationDescriptionParser {
 		 * roofed station keeps the default width, so an empty description plans as before.
 		 */
 		private boolean impliedHalt(boolean buildingComing, int trackCount, boolean stairGroup) {
-			return stationClass == StationClass.AUTO && roofNone && !buildingComing && !terminus && !hub && trackCount <= 2 && listed.isEmpty()
+			return stationClass == StationClass.AUTO && undergroundAt < 0 && roofNone && !buildingComing && !terminus && !hub && trackCount <= 2 && listed.isEmpty()
 					&& !Boolean.TRUE.equals(footbridge) && !stairGroup && !escalators && !travelators;
 		}
 
@@ -910,10 +921,73 @@ public final class StationDescriptionParser {
 
 		private void scan(int i) {
 			final String token = tokens[i];
-			if (negation(i) || entranceWords(i) || number(i) || gateWords(i) || phrase(i)) {
+			if (negation(i) || entranceWords(i) || deepWords(i) || number(i) || gateWords(i) || phrase(i)) {
 				return;
 			}
 			keyword(i, token);
+		}
+
+		/**
+		 * The deep underground stations (1.7.0): "deep tube", "deep level", "deep underground", "bored tube" (a bored tube like
+		 * Angel); "cut and cover", "box station" (a cut-and-cover box like Canary Wharf); and "27 m deep" / "40 blocks deep" for
+		 * the street's depth over the rails, metres unless blocks are said.
+		 */
+		private boolean deepWords(int i) {
+			final String token = tokens[i];
+			if (token.equals("deep") || token.equals("bored")) {
+				int j = i + 1;
+				if (at(j).equals("level")) {
+					j++;
+				}
+				if (UNDERGROUND_WORDS.contains(at(j)) || token.equals("deep") && j > i + 1) {
+					final int last = UNDERGROUND_WORDS.contains(at(j)) ? j : j - 1;
+					final boolean stacked = i > 0 && tokens[i - 1].equals("stacked");
+					return setDeep(stacked ? UndergroundType.DEEP_STACKED : UndergroundType.DEEP_TUBE, stacked ? i - 1 : i, last, token + " " + (last > i + 1 ? "level " : "") + (last == j ? at(j) : "level"));
+				}
+				return false;
+			}
+			if (token.equals("cut") && (at(i + 1).equals("and") && at(i + 2).equals("cover") || at(i + 1).equals("cover"))) {
+				int last = at(i + 1).equals("and") ? i + 2 : i + 1;
+				if (at(last + 1).equals("box")) {
+					last++;
+				}
+				return setDeep(UndergroundType.CUT_AND_COVER, i, last, "cut and cover");
+			}
+			if (token.equals("box") && (at(i + 1).equals("station") || at(i + 1).equals("underground"))) {
+				return setDeep(UndergroundType.CUT_AND_COVER, i, i + 1, "box");
+			}
+			final Integer n = value(token);
+			if (n != null) {
+				int j = i + 1;
+				boolean blocks = false;
+				if (UNITS.contains(at(j))) {
+					blocks = at(j).startsWith("block");
+					j++;
+				}
+				if (at(j).equals("deep") || at(j).equals("depth")) {
+					depthAsked = blocks ? n : (int) Math.round(n * StationGeometry.BLOCKS_PER_METRE);
+					depthAt = i;
+					use(i, j);
+					note(i, "street " + depthAsked + " blocks over the rails");
+					return true;
+				}
+			}
+			return false;
+		}
+
+		private boolean setDeep(UndergroundType type, int from, int to, String what) {
+			if (deepType == null) {
+				deepType = type;
+				note(from, type.label() + " (\"" + what + "\")");
+			} else if (deepType != type) {
+				warn("a deep tube and a cut-and-cover box both given; using the " + deepType.label());
+			}
+			if (undergroundAt < 0) {
+				undergroundAt = from;
+			}
+			setStyle(StationStyle.METRO, from);
+			use(from, to);
+			return true;
 		}
 
 		private static final Set<String> ENTRANCE_NOUNS = Set.of("entrance", "entrances", "door", "doors", "doorway", "doorways");
@@ -1358,6 +1432,7 @@ public final class StationDescriptionParser {
 				warn("two operators given; the first (" + operator.name() + ") is used");
 			}
 			final int end = two ? i + 1 : i;
+			use(i, end);
 			if (two) {
 				use(i + 1, i + 1);
 			}
@@ -2125,6 +2200,13 @@ public final class StationDescriptionParser {
 			if (undergroundAt < 0) {
 				return;
 			}
+			if (deepType != null) {
+				deepDefaults();
+				return;
+			}
+			if (depthAsked > 0) {
+				warn("a depth only applies to a deep tube or a cut-and-cover box; the shallow underground station keeps its own");
+			}
 			// a terminus comes with its head building, which the warning about the terminus covers
 			final boolean askedBuilding = Boolean.TRUE.equals(building) && !terminus && !hub;
 			if (terminus || hub) {
@@ -2165,6 +2247,89 @@ public final class StationDescriptionParser {
 				};
 			}
 			options = options.withUnderground(true).withTile(tile == null ? "" : tile);
+		}
+
+		/**
+		 * A deep tube or a cut-and-cover box (1.7.0) is a through station with no building, roof or footbridge of its own: its
+		 * ticket hall and its escalators are part of the dig ({@link PlanDeep}). A deep tube is twin bores of one track each, so
+		 * it is two tracks with its platforms facing each other; a box takes the tracks and platforms asked for.
+		 */
+		private void deepDefaults() {
+			final boolean tube = deepType != null && deepType.tube();
+			if (terminus || hub) {
+				warn("a deep underground terminus is not built yet; building a deep through station");
+				terminus = false;
+				hub = false;
+			}
+			if (Boolean.TRUE.equals(building)) {
+				warn("a deep station has its ticket hall over the escalators, not a station building");
+			}
+			building = false;
+			if (roof != null && roof != RoofType.NONE) {
+				warn("a deep station's roof is the ground above it; no platform roof");
+			}
+			roof = null;
+			roofNone = true;
+			if (Boolean.TRUE.equals(footbridge) || underpass || tram || mezzanine) {
+				warn("a deep station is reached by its escalators only: no footbridge, underpass, tram stop or mezzanine");
+			}
+			footbridge = false;
+			underpass = false;
+			tram = false;
+			mezzanine = false;
+			final int tubeWidth = deepType == UndergroundType.DEEP_STACKED ? STACKED_PLATFORM_WIDTH : TUBE_PLATFORM_WIDTH;
+			if (tube) {
+				if (tracks != null && tracks != 2 || !listed.isEmpty()) {
+					warn("a deep tube station is two bores of one track each; building two tracks");
+				}
+				tracks = 2;
+				tracksAt = tracksAt < 0 ? undergroundAt : tracksAt;
+				listed.clear();
+				if (islandAt >= 0 || islandPlatforms != null || sidePlatforms) {
+					warn("a deep tube station's platforms face each other across the pillar between its bores; island and side platforms are left out");
+				}
+				islandAt = -1;
+				islandPlatforms = null;
+				sidePlatforms = false;
+				if (narrow || small || width != null && width < tubeWidth) {
+					warn("a bored tube's platform needs " + tubeWidth + " columns for its escalator shaft and lift; using " + tubeWidth);
+					narrow = false;
+					small = false;
+					width = null;
+				}
+				if (width == null && !wide) {
+					width = tubeWidth;
+					defaulted.add("width " + tubeWidth + " (a bored tube's platform)");
+				}
+			}
+			if (!tube && (narrow || small)) {
+				narrow = false;
+				small = false;
+				warn("a box station's platform needs " + BOX_PLATFORM_WIDTH + " columns for its escalator bank; \"narrow\" and \"small\" are left out");
+			}
+			if (!tube && width != null && width < BOX_PLATFORM_WIDTH) {
+				warn("a box station's platform needs " + BOX_PLATFORM_WIDTH + " columns for its escalator bank; using " + BOX_PLATFORM_WIDTH);
+				width = BOX_PLATFORM_WIDTH;
+			}
+			if (depthAsked > 0 && (depthAsked < StationOptions.MIN_DEPTH || depthAsked > StationOptions.MAX_DEPTH)) {
+				warn(depthAsked + " blocks deep is outside " + StationOptions.MIN_DEPTH + "-" + StationOptions.MAX_DEPTH + "; using "
+						+ Math.max(StationOptions.MIN_DEPTH, Math.min(StationOptions.MAX_DEPTH, depthAsked)));
+				depthAsked = Math.max(StationOptions.MIN_DEPTH, Math.min(StationOptions.MAX_DEPTH, depthAsked));
+			}
+			if (style == null) {
+				style = StationStyle.METRO;
+			}
+			if (tile == null && buildingStyle != null) {
+				tile = switch (buildingStyle) {
+					case BERLIN, CLINKER, SANDSTONE -> ATA + "metro_tile_orange";
+					case CONCRETE -> ATA + "metro_ribbed_concrete";
+					case GOTHIC_BRICK, VICTORIAN, ART_DECO, MODERNIST -> ATA + "metro_tile_green";
+					case MODERN, AMSTERDAM -> ATA + "metro_pale_concrete";
+					case TOKYO, BEIJING, HONG_KONG -> "minecraft:smooth_quartz";
+					default -> null;
+				};
+			}
+			options = options.withType(deepType).withDepth(depthAsked).withTile(tile == null ? "" : tile);
 		}
 
 		private StationSpec resolve(boolean blank) {
@@ -2290,6 +2455,17 @@ public final class StationDescriptionParser {
 			} else {
 				defaulted.add("length " + StationSpec.DEFAULT_LENGTH + " (default)");
 			}
+			if (deepType == UndergroundType.CUT_AND_COVER) {
+				// the box's two platform banks and some platform between them need this much length
+				final int need = PlanDeep.boxMinLength(depthAsked > 0 ? depthAsked : deepType.defaultDepth());
+				if (length == null && lengthAdjective == null && !small && !large) {
+					builder.platformLength(Math.max(need, 96));
+					defaulted.add("length " + Math.max(need, 96) + " (a cut-and-cover box's)");
+				} else if (builder.build().platformLength() < need) {
+					warn("a cut-and-cover box this deep needs platforms " + need + " long for its escalator banks; using " + need);
+					builder.platformLength(need);
+				}
+			}
 			// the station is as long as its longest listed platform
 			final int longest = list.stream().mapToInt(PlatformSpec::length).max().orElse(0);
 			if (longest > 0) {
@@ -2314,7 +2490,7 @@ public final class StationDescriptionParser {
 				if (footbridge == null) {
 					footbridge = true;
 					defaulted.add(sideEdge ? "footbridge (the platforms between the tracks need one)" : "footbridge with a street entrance (the platforms between the tracks need a way in)");
-				} else if (!footbridge && !(tram && !hub)) {
+				} else if (!footbridge && !(tram && !hub) && deepType == null) {
 					warn("with no footbridge the platforms between the tracks are reached by walking across a track");
 				}
 			}

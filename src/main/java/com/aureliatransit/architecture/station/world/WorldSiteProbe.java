@@ -32,7 +32,10 @@ public final class WorldSiteProbe implements SiteProbe {
 	private final ServerWorld world;
 	private final boolean load;
 	private final ChunkHold held;
-	/** Chunks this probe found unloaded and loaded (or generated), so a walk can pace itself by them. */
+	/**
+	 * Chunks this probe made the server load or generate: one it found unloaded, or one it newly holds while a neighbour is not
+	 * loaded yet (the ticket loads that ring too). A walk paces itself by them.
+	 */
 	private int loads;
 	/** Cells read as another state than the world's: a rebuild surveys the last build's cells as the site they replaced. */
 	private final Map<BlockPos, BlockState> under;
@@ -77,10 +80,12 @@ public final class WorldSiteProbe implements SiteProbe {
 			// another probe letting go of the same chunk drops this one's ticket too (equal tickets are one), so look again
 			final boolean unloaded = !world.isChunkLoaded(cx, cz);
 			if (!held.holds(key) || unloaded) {
+				if (unloaded || !ringLoaded(cx, cz)) {
+					loads++;
+				}
 				final ChunkPos pos = new ChunkPos(cx, cz);
 				world.getChunkManager().addTicket(HOLD, pos, 1, pos);
 				if (unloaded) {
-					loads++;
 					world.getChunk(cx, cz);
 				}
 			}
@@ -93,7 +98,19 @@ public final class WorldSiteProbe implements SiteProbe {
 		return world.isChunkLoaded(cx, cz);
 	}
 
-	/** Chunks this probe has loaded so far that were not loaded when it asked. */
+	/** True when the eight chunks around this one are loaded, so holding it costs the server no loading. */
+	private boolean ringLoaded(int cx, int cz) {
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				if ((dx != 0 || dz != 0) && !world.isChunkLoaded(cx + dx, cz + dz)) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	/** Chunks this probe has made the server load or generate so far (see {@link #loads}). */
 	public int loads() {
 		return loads;
 	}

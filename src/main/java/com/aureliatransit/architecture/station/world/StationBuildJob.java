@@ -42,16 +42,19 @@ import java.util.function.Consumer;
  * Builds the ops of a survey (or undoes a build) in small batches, driven by {@link StationSessions}. Every cell is probed
  * again just before it is written; the first surprise stops the job and keeps the undo log. The probe loads the chunks it
  * needs and holds a bounded window of them ({@link WorldSiteProbe}), so a station longer than the view distance builds and a
- * site of any size streams through; a batch ends after {@link #LOADS_PER_STEP} chunks it had to load itself (neighbours
- * a held chunk's ticket loaded already do not count). The job only pauses if a chunk still is not loaded. Once every op is done, the finishing steps (escalator shapes,
+ * site of any size streams through; a batch ends after {@link #LOADS_PER_STEP} chunks that cost the server loading or
+ * generation ({@link WorldSiteProbe#loads}), so a big build on fresh terrain is spread over ticks. The job only pauses if a chunk still is not loaded. Once every op is done, the finishing steps (escalator shapes,
  * screens, signs, lifts, MTR) run in batches too, and the job lets go of its chunks when it ends.
  */
 public final class StationBuildJob {
 
 	/** Ops one job runs in a batch; the sessions run batches until the tick's time budget is used. */
 	public static final int OPS_PER_TICK = 64;
-	/** Chunks a batch may load before it ends early; loading or generating one costs milliseconds. */
-	public static final int LOADS_PER_STEP = 4;
+	/**
+	 * Chunks a batch may make the server load or generate before it ends early (Jah 10-26: about 8 a tick keeps the server
+	 * smooth on fresh terrain); a station among loaded chunks costs none and builds at full speed.
+	 */
+	public static final int LOADS_PER_STEP = 8;
 	/** Consecutive ticks a job may wait for a chunk before it gives up. */
 	public static final int MAX_PAUSED_TICKS = 200;
 
@@ -553,11 +556,9 @@ public final class StationBuildJob {
 		BlockState result = state;
 		for (final Direction direction : Direction.values()) {
 			final BlockPos neighbour = pos.offset(direction);
-			BlockState there = world.getBlockState(neighbour);
+			// the neighbour the plan gives it, even where the ground still stands (a deep station's lower half under rock not yet dug)
 			final BlockState future = planned.get(neighbour);
-			if (future != null && there.isAir()) {
-				there = future;
-			}
+			final BlockState there = future != null ? future : world.getBlockState(neighbour);
 			result = result.getStateForNeighborUpdate(direction, there, world, pos, neighbour);
 		}
 		return result;

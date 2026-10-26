@@ -146,6 +146,10 @@ abstract class PlanPlatforms extends PlanState {
 	 * last, so it only takes cells nothing else wanted.
 	 */
 	void endFences() {
+		// a deep station's platforms end in the bore's walls, or open into its concourse
+		if (spec.options().deepStation()) {
+			return;
+		}
 		final Set<TrackLayout.PlatformBand> ramped = new HashSet<>(rampedBands());
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			for (int u = band.uMin(); u <= band.uMax(); u++) {

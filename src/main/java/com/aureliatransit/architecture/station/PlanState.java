@@ -47,7 +47,8 @@ abstract class PlanState {
 
 	final StationSpec spec;
 
-	final TrackLayout layout;
+	/** Not final: a stacked deep station moves its second bore over the first once the shared layers have planned it beside it. */
+	TrackLayout layout;
 
 	final StylePalette palette;
 

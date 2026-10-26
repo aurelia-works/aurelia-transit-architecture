@@ -15,7 +15,7 @@ public record LocalFrame(int ox, int oy, int oz, Heading forward) {
 	 */
 	public static LocalFrame inFrontOf(int px, int py, int pz, Heading facing, TrackLayout layout) {
 		final Heading right = facing.right();
-		final int ahead = GAP_IN_FRONT + layout.rampLength();
+		final int ahead = GAP_IN_FRONT - layout.vMin();
 		final int across = -(layout.width() / 2);
 		return new LocalFrame(px + facing.dx() * ahead + right.dx() * across, py, pz + facing.dz() * ahead + right.dz() * across, facing);
 	}
@@ -26,7 +26,7 @@ public record LocalFrame(int ox, int oy, int oz, Heading forward) {
 	 */
 	public static LocalFrame onBlock(int bx, int by, int bz, Heading facing, TrackLayout layout) {
 		final Heading right = facing.right();
-		final int ahead = layout.rampLength();
+		final int ahead = -layout.vMin();
 		final int across = -(layout.width() / 2);
 		return new LocalFrame(bx + facing.dx() * ahead + right.dx() * across, by + 1, bz + facing.dz() * ahead + right.dz() * across, facing);
 	}

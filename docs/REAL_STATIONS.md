@@ -75,6 +75,38 @@ Not built yet: the cutting (the streets are at track level), the second tower an
 - Structurae: <https://structurae.net/en/structures/hamburg-central-station>
 - Entwicklungsstadt: <https://www.entwicklungsstadt.de/hauptbahnhof-hamburg-vom-flickenteppich-zum-knotenpunkt/>
 
+## Deep stations: Angel, Canary Wharf, Vijzelgracht, Westminster
+
+Ask with the preset buttons, or with `2 track deep tube station, 40 blocks deep, 120 long, no ramps, tfl signs, named Angel`, `2 track cut and cover box station, 24 m deep, 200 long, tfl signs, named Canary Wharf`, or `2 track cut and cover box station, island platform, 26 m deep, 188 long, gvb signs, named Vijzelgracht`.
+The operator is only the name sign (the operator's sign block and text style); the signs are not the London Underground roundel set (no LU-only blocks were added).
+
+| Fact | Real | Built |
+|---|---|---|
+| Angel: type and depth | Bored tube, 27 m below street (`docs/research/angel.md`) | Deep tube, 40 blocks (the research figure; 27 m at 1.5 blocks a metre would be 41) |
+| Angel: platforms | Two side platforms in two tunnels, 2 tracks; platform length not in the sources | Two side platforms in one tube; 120 long (a guess, the real length is unknown) |
+| Angel: access | Escalators only, one long flight to a ticket hall at Angel Square | One escalator shaft to a surface ticket hall; no lift ("no ramps") |
+| Angel: operator | TfL | `tfl signs`: the existing Underground name sign with its roundel mark on the row end (see the note below) |
+| Canary Wharf: type and depth | Cut-and-cover pit, 24 m deep (Jubilee line, Foster, 1999) | Cut-and-cover box, 36 blocks deep |
+| Canary Wharf: length | 265 m long | 200 blocks (265 m is 397 blocks, over the 300-block limit) |
+| Canary Wharf: platforms | Two platforms in one box, screen doors; the sources do not say island or side | Two side platforms in one box |
+| Canary Wharf: access | 20 escalators and 3 lifts for 2 platforms | Lifts (a box always has them), escalator banks from the generator; the 20 are not matched |
+| Vijzelgracht: type and depth | Cut-and-cover, 26 m deep (Amsterdam Metro line 52, Benthem Crouwel) | Cut-and-cover box, 39 blocks deep |
+| Vijzelgracht: platform | One island platform, 125 m by 9 m | Island platform, 188 long (125 m is 188 blocks; the lift landing's lamp used to float there, fixed in PlanDeep) |
+| Vijzelgracht: access | Lifts and escalators; south escalators about 47 m | Lifts, and the generator's escalator banks; the 47 m run is not matched |
+| Vijzelgracht: operator | GVB | `gvb signs`: the GVB name sign |
+| Westminster: type and depth | Deep Jubilee platforms in a 39 m station box, the platforms one above the other (`docs/research/westminster.md`) | Stacked deep tube, 58 blocks deep (`2 track stacked deep tube station, 58 blocks deep, 100 long, step-free, tfl signs, named Westminster`) |
+| Westminster: platforms | Two platform tunnels, one above the other; length unknown | Two bores one over the other, 12 blocks apart in height (`StationGeometry.STACK_RISE`): track over track, platform over platform, 7 wide, 100 long (a guess) |
+| Westminster: access | 17 escalators and 5 lifts | The tube's shaft to the lower platform's end, a bank of two escalators in its own inclined lane beside the bores up to a passage onto the upper platform, one three-stop lift at the platforms' end (lower platform, upper platform, street) |
+| Westminster: operator | TfL | `tfl signs` from the preset only; no London-only blocks |
+
+Not built: the Angel's two tunnels and the 1990s wide southbound platform, Canary Wharf's glass canopies and the matched escalator count, the Vijzelgracht artwork over its escalators, and Westminster's sub-surface District/Circle platforms, its Portcullis House and clock tower, and the real escalator and lift counts. The planner now takes a platform level per track and platform band (`TrackLayout.Track.level`, `PlatformBand.level`, default 0), so every other station plans exactly as before.
+Fixed: a 188-block island box failed the ground check because a lamp on a lift landing kept its head after the landing's pole was cleared; PlanDeep now clears the landing to the lamp head. Vijzelgracht is built 188 long (DeepStationTest checks it).
+Known gap: the preset test asks every preset for a footbridge or a terminus (a concourse), which a deep station does not have, so the Angel preset fails that check until Jah decides how deep stations should count.
+
+### Sources
+
+- `docs/research/angel.md`, `docs/research/canary-wharf.md`, `docs/research/vijzelgracht.md` (Wikipedia figures; TfL and GVB pages not fetched)
+
 ## Adding a station
 
 1. Add an entry to `RealStation` with its operator, islands, hall depth, height, number of waves and kind. Cite every number here.
