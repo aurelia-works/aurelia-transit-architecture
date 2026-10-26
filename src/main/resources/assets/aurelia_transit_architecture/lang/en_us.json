@@ -328,6 +328,7 @@
   "screen.aurelia_transit_architecture.airport_wrench.example": "e.g. airport, 2 runways, 6 gates, named Harbour",
   "screen.aurelia_transit_architecture.airport_wrench.hint": "Pick an airport or describe one, then plan it in front of you",
   "screen.aurelia_transit_architecture.airport_wrench.plan": "Plan in front of me",
+  "screen.aurelia_transit_architecture.airport_wrench.preset.rail": "Airport with station",
   "screen.aurelia_transit_architecture.airport_wrench.preset.regional": "Regional airport",
   "screen.aurelia_transit_architecture.airport_wrench.preset.remote": "Airstrip",
   "screen.aurelia_transit_architecture.airport_wrench.preset.small": "Small airport",
