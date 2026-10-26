@@ -379,9 +379,9 @@ public final class Landmarks {
 					"Amsterdam Centraal Station")
 			.skin(AMSTERDAM_BRICK)
 			.facade(new Facade(Window.ROUND, 4, 2, 5, 1, 3, 2, 3, true))
-			// the towers flanking the middle, the clock on the east one
+			// the towers flanking the middle, a dial on each: the clock on the east one, the wind dial (drawn as a clock) on the west
 			.tower(13, 3, 3, 1, 36, Cap.SPIRE, 14, true)
-			.tower(-13, 3, 3, 1, 36, Cap.SPIRE, 14, false)
+			.tower(-13, 3, 3, 1, 36, Cap.SPIRE, 14, true)
 			// the raised middle: the tall gable, its three round-headed windows and the pinnacles along its parapet
 			.gable(0, 0, 9, 22, 10, false)
 			.arch(-6, 0, 2, 8, 15, false)
@@ -392,8 +392,8 @@ public final class Landmarks {
 			.facade(new Facade(Window.RECT, 4, 2, 6, 2, 3, 2, 3, true))
 			.gable(END - 7, 0, 6, 20, 8, true)
 			.gable(-END + 7, 0, 6, 20, 8, true)
-			.volume(17, END - 14, 0, 40, 15, Roof.MANSARD, 3, false, true)
-			.volume(-END + 14, -17, 0, 40, 15, Roof.MANSARD, 3, false, true)
+			.volume(17, END - 14, 0, 40, 15, Roof.GABLE_X, 1, false, true)
+			.volume(-END + 14, -17, 0, 40, 15, Roof.GABLE_X, 1, false, true)
 			.volume(END - 13, END, 0, 40, 20, Roof.GABLE_Z, 2)
 			.volume(-END, -END + 13, 0, 40, 20, Roof.GABLE_Z, 2)
 			.build();

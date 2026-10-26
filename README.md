@@ -22,7 +22,7 @@ Forge, NeoForge and other Minecraft versions are not supported.
 2. Put these in your `mods` folder:
    - [Fabric API](https://modrinth.com/mod/fabric-api) for 1.20.1
    - [Minecraft Transit Railway](https://modrinth.com/mod/minecraft-transit-railway) 4.x, **Fabric 1.20.1** build
-   - `aurelia-transit-architecture-1.6.0+mc1.20.1-fabric.jar`
+   - `aurelia-transit-architecture-1.6.1+mc1.20.1-fabric.jar`
 3. Start the game. The pieces are in five creative tabs: **ATA Architecture**, **ATA Wayfinding**, **ATA Passenger Equipment**, **ATA Bus / Street Transit** and **ATA Glass**.
 
 Install the mod on both the server and the clients.
