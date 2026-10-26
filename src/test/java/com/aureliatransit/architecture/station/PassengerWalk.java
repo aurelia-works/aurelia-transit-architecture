@@ -27,6 +27,15 @@ final class PassengerWalk {
 	private boolean streetHi = true;
 	/** An underground station is come to from the street on its roof. */
 	private final boolean underground;
+	/**
+	 * A deep station's street is at its depth, not at y = 0: the ground is solid up to {@link #ground} wherever the dig did not clear
+	 * it ({@link #dug}: the plan's headroom and track envelopes), and walkable on top.
+	 */
+	private final boolean deep;
+	/** y of the ground's top: 0, or the street's floor over a deep station. */
+	private final int ground;
+	/** A deep station's void below the street, as keys. */
+	private final Set<Long> dug = new HashSet<>();
 	/** Every cell a passenger's feet reach. */
 	final Set<Long> reached = new HashSet<>();
 	/** Each lift: its landings (the cell in front of the bottom of each door), by level. */
@@ -36,6 +45,21 @@ final class PassengerWalk {
 
 	PassengerWalk(StationPlan plan) {
 		underground = plan.spec().options().underground();
+		deep = plan.spec().options().deepStation();
+		ground = deep ? plan.spec().options().streetDepth() - 1 : 0;
+		if (deep) {
+			final List<Box> voids = new ArrayList<>(plan.headroom());
+			voids.addAll(plan.trackEnvelopes());
+			for (final Box box : voids) {
+				for (int u = box.uMin(); u <= box.uMax(); u++) {
+					for (int y = box.yMin(); y <= Math.min(box.yMax(), ground); y++) {
+						for (int v = box.vMin(); v <= box.vMax(); v++) {
+							dug.add(key(u, y, v));
+						}
+					}
+				}
+			}
+		}
 		for (final PlannedBlock block : plan.blocks()) {
 			at.put(key(block.u(), block.y(), block.v()), block);
 			uLo = Math.min(uLo, block.u());
@@ -74,6 +98,10 @@ final class PassengerWalk {
 	private boolean open(int u, int y, int v) {
 		final PlannedBlock block = block(u, y, v);
 		if (block == null) {
+			if (deep) {
+				// over a deep station the ground is everywhere but where it was dug
+				return y > ground || dug.contains(key(u, y, v));
+			}
 			// the ground outside the station
 			return !(y <= 0 && outside(u, v));
 		}
@@ -89,11 +117,15 @@ final class PassengerWalk {
 	private boolean floor(int u, int y, int v) {
 		final PlannedBlock block = block(u, y, v);
 		if (block == null) {
+			if (deep) {
+				// a deep station's street: the top of the ground anywhere it was not dug, its tracks far below
+				return y == ground && !dug.contains(key(u, y, v));
+			}
 			// beside the station, or past an end that is street, the ground is walkable
 			return y == 0 && outside(u, v) && (v >= vLo || streetLo) && (v <= vHi || streetHi);
 		}
 		// an underground station's roof is the street
-		return block.role().flatFloor() || sloped(block) || underground && block.role() == Role.BUILDING_ROOF && y == StationGeometry.UPPER_FLOOR_Y;
+		return block.role().flatFloor() || sloped(block) || underground && block.role() == Role.BUILDING_ROOF && y == (deep ? ground : StationGeometry.UPPER_FLOOR_Y);
 	}
 
 	private boolean outside(int u, int v) {
@@ -186,12 +218,12 @@ final class PassengerWalk {
 		// in from the ground all round the station, wherever it is walkable
 		for (int u = uLo - 1; u <= uHi + 1; u++) {
 			for (int v = vLo - 1; v <= vHi + 1; v++) {
-				if (outside(u, v) && (u == uLo - 1 || u == uHi + 1 || v == vLo - 1 || v == vHi + 1) && stand(u, 1, v) && reached.add(key(u, 1, v))) {
-					queue.add(new int[]{u, 1, v});
+				if (outside(u, v) && (u == uLo - 1 || u == uHi + 1 || v == vLo - 1 || v == vHi + 1) && stand(u, ground + 1, v) && reached.add(key(u, ground + 1, v))) {
+					queue.add(new int[]{u, ground + 1, v});
 				}
 				// underground, in from the street on the roof at the box's edge
 				final int street = StationGeometry.UPPER_WALK_Y;
-				if (underground && (u == uLo || u == uHi || v == vLo || v == vHi) && stand(u, street, v) && reached.add(key(u, street, v))) {
+				if (underground && !deep && (u == uLo || u == uHi || v == vLo || v == vHi) && stand(u, street, v) && reached.add(key(u, street, v))) {
 					queue.add(new int[]{u, street, v});
 				}
 			}
