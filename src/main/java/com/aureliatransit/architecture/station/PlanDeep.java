@@ -233,12 +233,15 @@ abstract class PlanDeep extends PlanUnderground {
 		}
 	}
 
-	/** The ticket hall's fit-out: a rail round the shaft's opening, the gate line, ticket machines, the name and the pylon. */
-	void hallFitOut(Carve carve, int d, int hallFront, int hallU0, int hallU1, int hallFrom, int hallTo, int uc, StylePalette.Building building) {
-		// a rail on the floor round the hole the shaft makes in it
-		for (int u = hallU0; u <= hallU1; u++) {
-			for (int v = hallFrom; v <= hallTo; v++) {
-				if (at(u, d - 1, v) == null || at(u, d - 1, v).role() != Role.FLOOR) {
+	/**
+	 * A rail on the street's floor round every hole the dig makes in it (an escalator shaft coming up, a lift): wherever a street
+	 * cell has a dug cell beside it at its own level that nothing planned fills. The open end of a canopy or a door is not a hole.
+	 */
+	void streetRails(Carve carve, int d) {
+		for (int u = 0; u < layout.width(); u++) {
+			for (int v = layout.vMin(); v <= layout.vMax(); v++) {
+				final PlannedBlock floor = at(u, d - 1, v);
+				if (floor == null || floor.role() != Role.FLOOR && floor.role() != Role.BUILDING_ROOF || taken(u, d, v)) {
 					continue;
 				}
 				for (final int[] side : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
@@ -249,6 +252,11 @@ abstract class PlanDeep extends PlanUnderground {
 				}
 			}
 		}
+	}
+
+	/** The ticket hall's fit-out: a rail round the shaft's opening, the gate line, ticket machines, the name and the pylon. */
+	void hallFitOut(Carve carve, int d, int hallFront, int hallU0, int hallU1, int hallFrom, int hallTo, int uc, StylePalette.Building building) {
+		streetRails(carve, d);
 		// the gate line across the hall between the shaft's head and the street door
 		final int gateV = shaftTopV() - 3;
 		final int half = 3;
@@ -351,6 +359,7 @@ abstract class PlanDeep extends PlanUnderground {
 			}
 		}
 		extraHeadroom.addAll(carve.runs());
+		streetRails(carve, d);
 		boxFitOut(carve, d, ym, hs);
 	}
 
@@ -381,6 +390,11 @@ abstract class PlanDeep extends PlanUnderground {
 				for (int under = base + 1; under < y; under++) {
 					put(Role.BRIDGE_PIER, u, under, v, up, palette.building().pier());
 				}
+			}
+			// a glass balustrade down each side, so nobody steps off a bank into the open box
+			for (final int u : new int[]{a - 1, a + width}) {
+				put(Role.BARRIER, u, y, v, LocalDir.PLUS_U);
+				put(Role.BARRIER, u, y + 1, v, LocalDir.PLUS_U);
 			}
 		}
 		for (int e = 0; e < width / 2; e++) {
