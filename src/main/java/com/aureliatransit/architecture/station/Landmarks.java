@@ -88,6 +88,11 @@ public final class Landmarks {
 			"minecraft:cyan_stained_glass_pane", "minecraft:bricks", "minecraft:brick_stairs", "minecraft:smooth_quartz_stairs",
 			"minecraft:yellow_terracotta");
 
+	/** Amsterdam Centraal's dark red brick banded with pale sandstone, over a sandstone plinth, under dark slate. */
+	static final Skin AMSTERDAM_BRICK = new Skin("aurelia_transit_architecture:amsterdam_red_brick", "minecraft:smooth_sandstone",
+			"minecraft:cut_sandstone", "minecraft:gray_stained_glass_pane", "minecraft:deepslate_tiles", "minecraft:deepslate_tile_stairs",
+			"minecraft:smooth_sandstone_stairs", "aurelia_transit_architecture:amsterdam_brick_sandstone_band");
+
 	/** A great arched window's look: sky-reflecting glass in dark iron glazing bars, so it reads against pale stone. */
 	static Skin glazing(Skin s) {
 		return s.withGlass("minecraft:light_blue_stained_glass_pane").withTrim("minecraft:polished_deepslate");
@@ -362,6 +367,38 @@ public final class Landmarks {
 			.build();
 
 	/**
+	 * Amsterdam Centraal, city side (P. J. H. Cuypers and A. L. van Gendt, 1881-89): a long Neo-Renaissance front of dark red
+	 * brick banded with pale sandstone. Its raised middle is a tall gable over three round-headed windows between two towers
+	 * with steep pinnacled caps, the clock on the east one (on the right from the Stationsplein) and a wind dial on the west
+	 * one; long two-storey wings run to both sides under steep slate roofs with rows of dormers, and end in gabled pavilions.
+	 * The platforms and the arched sheds (45 m spans) stand behind it. Sources and photos: ATA-research/stations/amsterdam.
+	 * The middle block stays the generic building (as at Tokyo, so the footbridge's lifts keep their shaft); the wings and
+	 * pavilions follow the station's length.
+	 */
+	static final Landmark AMSTERDAM = Landmark.side("amsterdam", "Amsterdam Centraal", "Amsterdam Central", "Amsterdam CS",
+					"Amsterdam Centraal Station")
+			.skin(AMSTERDAM_BRICK)
+			.facade(new Facade(Window.ROUND, 4, 2, 5, 1, 3, 2, 3, true))
+			// the towers flanking the middle, the clock on the east one
+			.tower(13, 3, 3, 1, 36, Cap.SPIRE, 14, true)
+			.tower(-13, 3, 3, 1, 36, Cap.SPIRE, 14, false)
+			// the raised middle: the tall gable, its three round-headed windows and the pinnacles along its parapet
+			.gable(0, 0, 9, 22, 10, false)
+			.arch(-6, 0, 2, 8, 15, false)
+			.arch(0, 0, 2, 8, 16, false)
+			.arch(6, 0, 2, 8, 15, false)
+			.pinnacles(-9, 9, 0, 23, 6, "minecraft:smooth_sandstone", "minecraft:chiseled_sandstone")
+			// the wings: two storeys under steep slate with dormers, to the end pavilions and their stepped gables
+			.facade(new Facade(Window.RECT, 4, 2, 6, 2, 3, 2, 3, true))
+			.gable(END - 7, 0, 6, 20, 8, true)
+			.gable(-END + 7, 0, 6, 20, 8, true)
+			.volume(17, END - 14, 0, 40, 15, Roof.MANSARD, 3, false, true)
+			.volume(-END + 14, -17, 0, 40, 15, Roof.MANSARD, 3, false, true)
+			.volume(END - 13, END, 0, 40, 20, Roof.GABLE_Z, 2)
+			.volume(-END, -END + 13, 0, 40, 20, Roof.GABLE_Z, 2)
+			.build();
+
+	/**
 	 * Beijing Railway Station (Chen Deng'ao and others, 1959): a pale grey stone building 200 m wide, its tall middle hall under
 	 * a clock tower, a tower at each end under a Chinese pavilion roof of blue-green glazed tiles, long flat-roofed wings between.
 	 */
@@ -467,7 +504,7 @@ public final class Landmarks {
 			.build();
 
 	static final List<Landmark> ALL = List.of(ST_PANCRAS, ANTWERP, GRAND_CENTRAL, FRANKFURT, ZURICH, PARIS, MILAN, MUMBAI, BANGKOK, MUNICH, BERLIN,
-			COVENTRY, TOKYO, BEIJING, KUALA_LUMPUR, SURBITON);
+			COVENTRY, TOKYO, AMSTERDAM, BEIJING, KUALA_LUMPUR, SURBITON);
 
 	/** The sheet of the real station {@code spec} is named after, or null. */
 	public static Landmark of(StationSpec spec) {
