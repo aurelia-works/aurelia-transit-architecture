@@ -67,4 +67,30 @@ class MessageRotationTest {
 		assertEquals(0, MessageRotation.index(boundary + D, slots));
 		assertEquals(0, MessageRotation.scrollStart(MessageRotation.elapsedInSlot(boundary + D, slots), 30), "scrolling message restarts at its beginning");
 	}
+
+	@Test
+	void aLongMessageIsReadToItsEndBeforeTheNextOne() {
+		final float speed = 24;
+		final float width = 400;
+		final float window = 150;
+		final long slot = MessageRotation.readSlotMillis(width, speed, 6000);
+		assertEquals(0, MessageRotation.readOffset(0, width - window, speed), "starts at the left edge, not entering from the right");
+		assertEquals(0, MessageRotation.readOffset(MessageRotation.HOLD_MILLIS, width - window, speed), "holds before it moves");
+		float previous = 0;
+		for (long t = 0; t < slot; t += 20) {
+			final float offset = MessageRotation.readOffset(t, width - window, speed);
+			assertTrue(offset >= previous && offset <= width - window, "one way, never past its end");
+			previous = offset;
+		}
+		assertEquals(width - window, MessageRotation.readOffset(slot - MessageRotation.HOLD_MILLIS, width - window, speed), 1e-3F,
+				"the end has been reached with a hold left before the next message");
+		assertEquals(0, MessageRotation.readOffset(5000, -10, speed), "text that fits never moves");
+	}
+
+	@Test
+	void readSlotsDependOnTheTextNotTheBoard() {
+		assertEquals(6000, MessageRotation.readSlotMillis(50, 24, 6000), "short text keeps the dwell");
+		assertEquals(MessageRotation.readSlotMillis(400, 24, 6000), MessageRotation.readSlotMillis(400, 24, 6000));
+		assertTrue(MessageRotation.readSlotMillis(800, 24, 6000) > MessageRotation.readSlotMillis(400, 24, 6000));
+	}
 }

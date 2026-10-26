@@ -14,6 +14,7 @@ import com.aureliatransit.architecture.live.display.Pagination;
 import com.aureliatransit.architecture.text.Tr;
 import com.aureliatransit.architecture.transit.ServiceSnapshot;
 import com.aureliatransit.architecture.transit.StationSnapshot;
+import com.aureliatransit.architecture.wayfinding.MessageRotation;
 import com.aureliatransit.architecture.wayfinding.ServiceMessage;
 import com.aureliatransit.architecture.wayfinding.SuffixContext;
 import net.minecraft.client.font.TextRenderer;
@@ -63,6 +64,9 @@ final class BoardBuilder {
 
 	// colour screens
 	private static final float MARGIN = 4;
+	/** The message strip: virtual units a second a long message scrolls, and the least time each message shows. */
+	private static final float STRIP_SCROLL = 24;
+	private static final long STRIP_DWELL_MILLIS = 6000;
 	private static final int NS_RULE = 0xFF2A4884;
 	private static final int DB_RULE = 0xFF3A5DA6;
 	private static final int METRO_RULE = 0xFF262626;
@@ -857,8 +861,17 @@ final class BoardBuilder {
 		if (b.messages.isEmpty()) {
 			return;
 		}
-		final long slot = 6000;
-		final ServiceMessage message = b.messages.get((int) ((b.now / slot) % b.messages.size()));
+		final float k = 0.8F;
+		final float x0 = MARGIN;
+		final float x1 = b.vw - MARGIN;
+		// a long message holds, scrolls once to its end and holds, inside a slot made long enough for that; a marquee cut
+		// it off on the way in and the next message swapped in mid-scroll (Jah 10-26: "text cropped mid-scroll")
+		final long[] slots = new long[b.messages.size()];
+		for (int i = 0; i < slots.length; i++) {
+			slots[i] = MessageRotation.readSlotMillis(b.w(stripText(b.messages.get(i)), font, k), STRIP_SCROLL, STRIP_DWELL_MILLIS);
+		}
+		final ServiceMessage message = b.messages.get(MessageRotation.index(b.now, slots));
+		final long slotStart = b.now - MessageRotation.elapsedInSlot(b.now, slots);
 		final int band;
 		final int color;
 		switch (message.severity()) {
@@ -883,15 +896,12 @@ final class BoardBuilder {
 		final float top = b.vh - h;
 		b.m.rect(0, top, b.vw, h, band, BoardModel.LAYER_BAND);
 		final String text = stripText(message);
-		final float k = 0.8F;
-		final float x0 = MARGIN;
-		final float x1 = b.vw - MARGIN;
 		if (b.w(text, font, k) <= x1 - x0) {
 			b.put(text, font, x0, top + (h - 7 * k) / 2, k, color);
 		} else {
 			b.m.rect(0, top, x0, h, band, BoardModel.LAYER_MASK);
 			b.m.rect(x1, top, b.vw - x1, h, band, BoardModel.LAYER_MASK);
-			b.m.scroll(text, font, b.advances(text, font), x0, x1, top + (h - 7 * k) / 2, k, color, 24, false);
+			b.m.scrollOnce(text, font, b.advances(text, font), x0, x1, top + (h - 7 * k) / 2, k, color, STRIP_SCROLL, slotStart);
 		}
 	}
 

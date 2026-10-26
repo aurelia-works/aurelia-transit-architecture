@@ -100,6 +100,8 @@ final class BoardModel {
 	float[] sv = new float[4];
 	/** True to move in whole font pixels, as an LED board steps column by column. */
 	boolean[] sq = new boolean[4];
+	/** When a line read once through its window started its slot ({@link MessageRotation#readOffset}), or Long.MIN_VALUE for a marquee. */
+	long[] sT0 = new long[4];
 	/** The characters last drawn of each line ({@code first} to {@code end}), kept until the window moves past a character. */
 	int[] sFirst = new int[4];
 	int[] sEnd = new int[4];
@@ -189,6 +191,7 @@ final class BoardModel {
 			sc = Arrays.copyOf(sc, n);
 			sv = Arrays.copyOf(sv, n);
 			sq = Arrays.copyOf(sq, n);
+			sT0 = Arrays.copyOf(sT0, n);
 			sFirst = Arrays.copyOf(sFirst, n);
 			sEnd = Arrays.copyOf(sEnd, n);
 			sDrawn = Arrays.copyOf(sDrawn, n);
@@ -203,8 +206,21 @@ final class BoardModel {
 		sc[scrollCount] = argb;
 		sv[scrollCount] = speed;
 		sq[scrollCount] = stepped;
+		sT0[scrollCount] = Long.MIN_VALUE;
 		sDrawn[scrollCount] = null;
 		scrollCount++;
+	}
+
+	/**
+	 * A line read once through its window: it starts at the window's left edge, holds, scrolls to its end and holds
+	 * ({@link MessageRotation#readOffset}), timed from {@code slotStart}.
+	 */
+	void scrollOnce(String text, Font font, float[] advances, float x0, float x1, float y, float k, int argb, float speed, long slotStart) {
+		final int before = scrollCount;
+		scroll(text, font, advances, x0, x1, y, k, argb, speed, false);
+		if (scrollCount > before) {
+			sT0[before] = slotStart;
+		}
 	}
 
 	/**
@@ -214,6 +230,9 @@ final class BoardModel {
 	 */
 	float scrollStart(int i, long now) {
 		final float width = sa[i][sa[i].length - 1] * sk[i];
+		if (sT0[i] != Long.MIN_VALUE) {
+			return sx0[i] - MessageRotation.readOffset(now - sT0[i], width - (sx1[i] - sx0[i]), sv[i]);
+		}
 		final float cycle = width + (sx1[i] - sx0[i]);
 		final long cycleMillis = Math.max(1, (long) (cycle / sv[i] * 1000));
 		float offset = (now % cycleMillis) * sv[i] / 1000F;
