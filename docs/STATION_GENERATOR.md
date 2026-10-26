@@ -345,6 +345,7 @@ terminal and boarding bridges from `AirportGeometry`; pavement is `Role.PLATFORM
 track envelopes; its support and clearance boxes and its blocks are in 32-row bands along the runway, so surveys and builds sweep along it
 once. `LayoutValidator` adds `AIRFIELD_OBSTACLE`; `AirportAudit` adds Runways, Taxiways, Gates and Terminal checks.
 The runway, taxiways and aprons are flat and long (a 2,550 block runway by default), so an airport works as a landing strip for player-flown aircraft mods; no dependency or code is involved, only geometry (not tested with any such mod). The airport wrench (`AirportWrenchItem`, screen `AirportWrenchScreen`) plans airports in the game through the station wrench's path; it is operator-only like the station wrench. Not built yet: grading of the site, the MTR airplane route, real airport presets, a control tower, rapid exits, boarding bridges at door height.
+The control tower (`PlanAirport.controlTower`: a 3 by 3 shaft to a glazed 5 by 5 cab, on the apron past the last stand line, twice the mast height) and two 30 degree rapid exits from the first runway (`AirportGeometry.rapidExits`, one TAXIWAY strip per gap column in `areas()`) are planned with the airport; Studio's Plan and Street views frame the terminal and apron (`views.focus`).
 
 ## Known limitations
 

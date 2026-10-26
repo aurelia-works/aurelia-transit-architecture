@@ -1808,10 +1808,10 @@
 		for (const name of ["terminal", "apron", "threshold"]) {
 			$(name + "View").hidden = !(plan.views && plan.views[name]);
 		}
-		document.querySelector('[data-view="street"]').hidden = !!plan.head || !!plan.views;
+		document.querySelector('[data-view="street"]').hidden = !!plan.head;
 		if (walk) {
 			// keep walking
-		} else if (plan.views && /^(street|head)$/.test(currentView)) {
+		} else if (plan.views && /^head$/.test(currentView)) {
 			setView("overview");
 		} else if (!plan.head && currentView === "head") {
 			setView("overview");
@@ -1850,8 +1850,10 @@
 			draw();
 			return;
 		}
-		const c = bounds.getCenter(new THREE.Vector3());
-		const size = bounds.getSize(new THREE.Vector3());
+		// an airport's Plan and Street views frame its terminal and apron, not the whole runway
+		const box = ((name === "plan" || name === "street") && airportFocus()) || bounds;
+		const c = box.getCenter(new THREE.Vector3());
+		const size = box.getSize(new THREE.Vector3());
 		const reach = Math.max(size.x, size.z, size.y * 2);
 		view.target.copy(c);
 		view.target.y = Math.min(c.y, 6);
@@ -1884,9 +1886,19 @@
 			Object.assign(view, viewFrom(new THREE.Vector3(p.x + 0.5, p.y, p.z + 0.5), new THREE.Vector3(p.tx + 0.5, p.ty, p.tz + 0.5)));
 		}
 		if (/^(overview|reverse|street|plan)$/.test(name)) {
-			fitView();
+			fitView(box);
 		}
 		draw();
+	}
+
+	// An airport's focus box for the Plan and Street views: its terminal to its taxiway and the apron's rows, at the plan's height.
+	// Null for a station, which frames the whole plan.
+	function airportFocus() {
+		const f = current && current.views && current.views.focus;
+		if (!f || bounds.isEmpty()) {
+			return null;
+		}
+		return new THREE.Box3(new THREE.Vector3(f.x0, bounds.min.y, f.z0), new THREE.Vector3(f.x1 + 1, bounds.max.y, f.z1 + 1));
 	}
 
 	// The plan's own frame has no compass north (the station is built to face the way its player looks), but it does say where
@@ -1937,15 +1949,15 @@
 
 	// Frame the whole station: from the angle already set, back the camera off (or in) and slide it sideways until the eight
 	// corners of the station's box fill the view with a margin, whatever the station's size or the view's shape.
-	function fitView() {
-		if (bounds.isEmpty()) {
+	function fitView(box = bounds) {
+		if (box.isEmpty()) {
 			return;
 		}
 		resize();
 		const corners = [];
-		for (const x of [bounds.min.x, bounds.max.x]) {
-			for (const y of [bounds.min.y, bounds.max.y]) {
-				for (const z of [bounds.min.z, bounds.max.z]) {
+		for (const x of [box.min.x, box.max.x]) {
+			for (const y of [box.min.y, box.max.y]) {
+				for (const z of [box.min.z, box.max.z]) {
 					corners.push(new THREE.Vector3(x, y, z));
 				}
 			}

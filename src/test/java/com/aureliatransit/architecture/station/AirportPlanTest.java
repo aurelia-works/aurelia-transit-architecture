@@ -151,4 +151,69 @@ class AirportPlanTest {
 		assertEquals("small airport", StationDescriptionParser.airportWords("small airport"));
 		assertTrue(StationDescriptionParser.parse(StationDescriptionParser.airportWords("2 track station")).spec().isAirport());
 	}
+
+	@Test
+	void theControlTowerStandsOnTheApronOutsideTheRunwayStrip() {
+		final StationPlan plan = plan("airport");
+		final AirportGeometry g = AirportGeometry.of(plan.spec().airport());
+		final AirportGeometry.Area tower = g.tower();
+		assertTrue(tower.u0() > g.apronU0() && tower.u1() <= g.apronU1() && tower.v1() <= g.apronV1(), "the tower stands on the apron");
+		for (final AirportGeometry.Area area : g.areas()) {
+			if (area.kind() == AirportGeometry.Kind.RUNWAY || area.kind() == AirportGeometry.Kind.SHOULDER
+					|| area.kind() == AirportGeometry.Kind.BLAST_PAD || area.kind() == AirportGeometry.Kind.TAXIWAY) {
+				assertFalse(overlaps(tower, area), "the tower clears " + area);
+			}
+		}
+		int blocks = 0;
+		int top = 0;
+		for (final PlannedBlock block : plan.blocks()) {
+			if (tower.contains(block.u(), block.v()) && block.y() >= StationGeometry.WALK_Y) {
+				blocks++;
+				top = Math.max(top, block.y());
+			}
+		}
+		assertTrue(blocks > 0, "the tower is planned");
+		assertEquals(2 * g.dims().mast(), top, "the cab's roof is the tower's top");
+	}
+
+	@Test
+	void rapidExitsRunFromTheRunwayToTheTaxiwayAt30Degrees() {
+		final StationPlan plan = plan("airport");
+		final AirportGeometry g = AirportGeometry.of(plan.spec().airport());
+		final List<Integer> exits = g.rapidExits();
+		assertEquals(2, exits.size());
+		final int from = g.taxiU1() + 1;
+		final int to = g.runwayU0().get(0) - 1;
+		for (final int start : exits) {
+			final int near = g.exitCentre(start, to);
+			final int far = g.exitCentre(start, from);
+			assertEquals(Math.sqrt(3), (double) (far - near) / (to - from), 0.05, "30 degrees off the runway");
+			assertTrue(blockAt(plan, g.taxiU1(), far) != null, "the exit meets the taxiway");
+			assertTrue(blockAt(plan, to, near) != null, "the exit meets the runway");
+			for (int u = from; u <= to; u++) {
+				final PlannedBlock centre = blockAt(plan, u, g.exitCentre(start, u));
+				assertTrue(centre != null && PlanAirport.PAINT_YELLOW.equals(centre.blockId()), "the centreline runs across the exit at column " + u);
+			}
+		}
+	}
+
+	@Test
+	void towerAndRapidExitsKeepTheValidatorAtZero() {
+		for (final String words : new String[]{"airport", "airport, no terminal", "small airport"}) {
+			assertEquals(List.of(), LayoutValidator.validate(plan(words)), words);
+		}
+	}
+
+	static boolean overlaps(AirportGeometry.Area a, AirportGeometry.Area b) {
+		return a.u0() <= b.u1() && b.u0() <= a.u1() && a.v0() <= b.v1() && b.v0() <= a.v1();
+	}
+
+	static PlannedBlock blockAt(StationPlan plan, int u, int v) {
+		for (final PlannedBlock block : plan.blocks()) {
+			if (block.u() == u && block.v() == v && block.y() == StationGeometry.PLATFORM_Y) {
+				return block;
+			}
+		}
+		return null;
+	}
 }

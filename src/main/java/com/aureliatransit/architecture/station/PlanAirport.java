@@ -31,6 +31,10 @@ abstract class PlanAirport extends PlanFitOut {
 	static final String THRESHOLD_LIGHT = "minecraft:verdant_froglight";
 	/** Taxiway edge lights: blue. */
 	static final String TAXI_LIGHT = "minecraft:blue_ice";
+	/** The control tower: a white shaft, a light grey cab floor and roof, and glass walls round the cab. */
+	static final String TOWER_SHAFT = "minecraft:white_concrete";
+	static final String TOWER_FLOOR = "minecraft:light_gray_concrete";
+	static final String TOWER_GLASS = "minecraft:glass";
 	static final String MAST_LAMP = "aurelia_transit_architecture:platform_lamp";
 	/** The airport's geometry; null for a railway station. */
 	final AirportGeometry air;
@@ -54,6 +58,7 @@ abstract class PlanAirport extends PlanFitOut {
 			terminal();
 			boardingBridges();
 		}
+		controlTower();
 		masts();
 		standMarks();
 		for (int i = 0; i < spec.airport().runways(); i++) {
@@ -231,6 +236,22 @@ abstract class PlanAirport extends PlanFitOut {
 				paint(gapTo - 1, v, PAINT_YELLOW);
 			}
 		}
+		// rapid exits: the same centreline, edge lights and hold-short bar as the links, along each exit's diagonal strip
+		final int half = air.exitHalf();
+		for (final int start : air.rapidExits()) {
+			for (int u = gapFrom; u <= gapTo; u++) {
+				final int c = air.exitCentre(start, u);
+				paint(u, c, PAINT_YELLOW);
+				if (u % air.dims().taxiLightEvery() == 0) {
+					light(u, c - half, TAXI_LIGHT);
+					light(u, c + half, TAXI_LIGHT);
+				}
+			}
+			final int bar = air.exitCentre(start, gapTo - 1);
+			for (int v = bar - half; v <= bar + half; v++) {
+				paint(gapTo - 1, v, PAINT_YELLOW);
+			}
+		}
 		if (spec.airport().runways() > 1) {
 			final int far = air.runwayCentre(1);
 			final int[] around = air.endAround();
@@ -283,6 +304,35 @@ abstract class PlanAirport extends PlanFitOut {
 			// the number, upright for a pilot taxiing in towards the terminal
 			final int scale = numberScale() > 1 ? 2 : 1;
 			paintText(List.of(Integer.toString(i + 1)), scale, stop + 4 + AirportGlyphs.height(scale), c + air.dims().standPitch() / 4, -1, 0, PAINT_WHITE);
+		}
+	}
+
+	/**
+	 * The control tower: a 3 by 3 shaft up to a glazed 5 by 5 cab with a roof, on the apron's far margin by the taxiway. Planned before the
+	 * masts and the pavement, and its footprint is apron only, so the runway strip stays clear.
+	 */
+	void controlTower() {
+		final AirportGeometry.Area t = air.tower();
+		final int cu = (t.u0() + t.u1()) / 2;
+		final int cv = (t.v0() + t.v1()) / 2;
+		final int top = 2 * air.dims().mast();
+		for (int y = StationGeometry.WALK_Y; y <= top - 5; y++) {
+			for (int u = cu - 1; u <= cu + 1; u++) {
+				for (int v = cv - 1; v <= cv + 1; v++) {
+					put(Role.WALL, u, y, v, LocalDir.PLUS_V, TOWER_SHAFT);
+				}
+			}
+		}
+		for (int u = t.u0(); u <= t.u1(); u++) {
+			for (int v = t.v0(); v <= t.v1(); v++) {
+				put(Role.BUILDING_ROOF, u, top - 4, v, LocalDir.PLUS_V, TOWER_FLOOR);
+				put(Role.BUILDING_ROOF, u, top, v, LocalDir.PLUS_V, TOWER_FLOOR);
+				if (u == t.u0() || u == t.u1() || v == t.v0() || v == t.v1()) {
+					for (int y = top - 3; y <= top - 1; y++) {
+						put(Role.WINDOW, u, y, v, LocalDir.PLUS_V, TOWER_GLASS);
+					}
+				}
+			}
 		}
 	}
 

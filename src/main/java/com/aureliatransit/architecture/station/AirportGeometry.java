@@ -117,6 +117,40 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 				taxiU0, taxiU1, taxiV0, taxiV1, runwayV0, runwayV1, List.copyOf(runwayU0), List.copyOf(standV), List.copyOf(links), d);
 	}
 
+	/** A runway this long or longer gets rapid exits from its first runway to the taxiway. */
+	public static final int RAPID_EXIT_LENGTH = 600;
+	/** Rows a 30 degree rapid exit runs along for each column it crosses in the gap (1 / tan 30 degrees). */
+	static final double EXIT_ROWS_PER_COLUMN = Math.sqrt(3);
+
+	/**
+	 * The first row of each rapid exit, where it leaves the first runway: at a quarter and three quarters of its length. None on a runway
+	 * shorter than {@link #RAPID_EXIT_LENGTH}.
+	 */
+	public List<Integer> rapidExits() {
+		if (spec.runwayLength() < RAPID_EXIT_LENGTH) {
+			return List.of();
+		}
+		return List.of(runwayV0 + spec.runwayLength() / 4, runwayV0 + 3 * spec.runwayLength() / 4);
+	}
+
+	/** The centreline row of a rapid exit that leaves the runway at row {@code start}, in column {@code u} of the gap to the taxiway. */
+	public int exitCentre(int start, int u) {
+		return start + (int) Math.round((runwayU0.get(0) - 1 - u) * EXIT_ROWS_PER_COLUMN);
+	}
+
+	/** Half the width of a rapid exit across the rows: the taxiway's half width. */
+	public int exitHalf() {
+		return dims.taxi() / 2;
+	}
+
+	/**
+	 * The control tower's footprint: a 5 by 5 cab on a 3 by 3 shaft, on the apron's far margin past its last stand line, by the taxiway.
+	 * It is apron only, so it stays out of the runway strip.
+	 */
+	public Area tower() {
+		return new Area(Kind.APRON, apronU1 - 5, apronU1 - 1, apronV1 - 4, apronV1, 0);
+	}
+
 	/** Last column of runway {@code i}. */
 	public int runwayU1(int i) {
 		return runwayU0.get(i) + spec.runwayWidth() - 1;
@@ -183,6 +217,13 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 		out.add(new Area(Kind.TAXIWAY, taxiU0, taxiU1, taxiV0, taxiV1, OPEN_CLEARANCE));
 		for (final int[] link : links) {
 			out.add(new Area(Kind.TAXIWAY, taxiU1 + 1, runwayU0.get(0) - 1, link[0], link[1], OPEN_CLEARANCE));
+		}
+		// rapid exits: one column at a time, each a strip of the taxiway's width whose centre moves 30 degrees off the runway
+		for (final int start : rapidExits()) {
+			for (int u = taxiU1 + 1; u <= runwayU0.get(0) - 1; u++) {
+				final int c = exitCentre(start, u);
+				out.add(new Area(Kind.TAXIWAY, u, u, c - exitHalf(), c + exitHalf(), OPEN_CLEARANCE));
+			}
 		}
 		if (spec.runways() > 1) {
 			final int far = runwayCentre(1) + dims.taxi() / 2;

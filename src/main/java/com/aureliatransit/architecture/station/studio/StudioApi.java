@@ -801,10 +801,32 @@ public final class StudioApi {
 			out.append(",\"apron\":").append(eye(frame, g.apronU1() - 4, d.wallTop() * 1.6, stand + d.standPitch() / 3, g.terminalU1(), 3, stand));
 			out.append(',');
 		}
+		out.append("\"focus\":").append(airportFocus(frame, g)).append(',');
 		final int c = g.runwayCentre(0);
 		final int behind = Math.min(30, d.end() - 4);
 		out.append("\"threshold\":").append(eye(frame, c, 14, g.runwayV0() - behind, c, 0, g.runwayV0() + d.numberOffset() + 10));
 		return out.append('}').toString();
+	}
+
+	/**
+	 * The box the Plan and Street views frame on an airport: from the terminal (or the apron without one) to the taxiway, and the apron's
+	 * rows with a margin. The corners go through the frame, which may turn the plan, and the box is their bounds in blocks.
+	 */
+	static String airportFocus(LocalFrame frame, com.aureliatransit.architecture.station.AirportGeometry g) {
+		final int u0 = g.spec().terminal() ? g.terminalU0() : g.apronU0();
+		final int u1 = g.taxiU1();
+		final int v0 = Math.max(0, g.apronV0() - 4);
+		final int v1 = Math.min(g.length() - 1, g.apronV1() + 4);
+		int x0 = Integer.MAX_VALUE, x1 = Integer.MIN_VALUE, z0 = Integer.MAX_VALUE, z1 = Integer.MIN_VALUE;
+		for (final int u : new int[]{u0, u1}) {
+			for (final int v : new int[]{v0, v1}) {
+				x0 = Math.min(x0, frame.x(u, v));
+				x1 = Math.max(x1, frame.x(u, v));
+				z0 = Math.min(z0, frame.z(u, v));
+				z1 = Math.max(z1, frame.z(u, v));
+			}
+		}
+		return "{\"x0\":" + x0 + ",\"z0\":" + z0 + ",\"x1\":" + x1 + ",\"z1\":" + z1 + "}";
 	}
 
 	/** On the apron beside the first stand, looking across the taxiway at the runway. */
