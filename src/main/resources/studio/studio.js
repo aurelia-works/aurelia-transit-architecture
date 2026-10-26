@@ -6,7 +6,9 @@
 	const $ = (id) => document.getElementById(id);
 	const TOKEN = document.body.dataset.token;
 	const IN_GAME = document.body.dataset.ingame === "true";
-	const STORE = "ata-station-studio";
+	/** Which page this is: the station generator, or the airport generator (/airport), the same page with the airport controls. */
+	const PAGE = document.body.dataset.page === "airport" ? "airport" : "station";
+	const STORE = PAGE === "airport" ? "ata-airport-studio" : "ata-station-studio";
 	const FACE_SHADE = { up: 1.0, down: 0.5, north: 0.8, south: 0.8, west: 0.6, east: 0.6 };
 	const TINT = new THREE.Color(0x7cbd4f);
 
@@ -42,6 +44,7 @@
 		q.rolled = [...pins].filter((f) => rolled.has(f)).concat(rolled.has("class") && !pins.has("class") ? ["class"] : []).join(",");
 		// the generator seed: the dice's, or the one kept while Details is locked
 		q.seed = seeds.detail;
+		q.page = PAGE;
 		return q;
 	}
 
@@ -338,6 +341,9 @@
 		}
 		// airports are planned from their words alone: the card only writes them, and the station controls keep their settings
 		const airports = $("airports");
+		if (PAGE !== "airport") {
+			options.airports = [];
+		}
 		airports.innerHTML = "";
 		for (const a of options.airports || []) {
 			const b = document.createElement("button");
@@ -352,6 +358,23 @@
 				changed();
 			});
 			airports.append(b);
+		}
+	}
+
+	/**
+	 * The airport page: the airport words in the box (the first card's, on a first visit), its own titles, and no station controls
+	 * (they stay in the page, hidden, so the shared code keeps working). The station settings the dice rolled are ignored by the
+	 * server: an airport is its words.
+	 */
+	function setupAirportPage(returning) {
+		document.title = "Airport Generator · Aurelia Transit Architecture";
+		document.querySelector(".top h1").textContent = "Airport Generator";
+		document.querySelector(".wordmark .wm").innerHTML = "<b>Airport</b> <i>Generator</i>";
+		$("settings").setAttribute("aria-label", "Airport settings");
+		$("text").placeholder = "e.g. airport with 2 runways, 6 gates and a terminal";
+		$("text").setAttribute("aria-label", "Airport description");
+		if (!returning || !$("text").value.trim()) {
+			$("text").value = (options.airports[0] || { text: "airport" }).text;
 		}
 	}
 
@@ -958,6 +981,10 @@
 			rollSettings(seeds.value);
 			rolling = false;
 		}
+		if (PAGE === "airport") {
+			setupAirportPage(returning);
+		}
+		$((PAGE === "airport" ? "navAirport" : "navStation")).setAttribute("aria-current", "page");
 		setupSeed();
 		setupLayers();
 		setupPhoto();
@@ -1778,9 +1805,14 @@
 		// a terminus faces the street with its head building: the Head view replaces the side-on Street view, which would
 		// only show the edge of the platforms
 		$("headView").hidden = !plan.head;
-		document.querySelector('[data-view="street"]').hidden = !!plan.head;
+		for (const name of ["terminal", "apron", "threshold"]) {
+			$(name + "View").hidden = !(plan.views && plan.views[name]);
+		}
+		document.querySelector('[data-view="street"]').hidden = !!plan.head || !!plan.views;
 		if (walk) {
 			// keep walking
+		} else if (plan.views && /^(street|head)$/.test(currentView)) {
+			setView("overview");
 		} else if (!plan.head && currentView === "head") {
 			setView("overview");
 		} else if (plan.head && currentView === "street") {
@@ -1845,6 +1877,11 @@
 			const eye = front.clone().add(new THREE.Vector3(h.dx, 0, h.dz).multiplyScalar(away)).add(side);
 			eye.y = Math.min(size.y * 0.55, 18);
 			Object.assign(view, viewFrom(eye, front));
+		}
+		if (/^(terminal|apron|threshold)$/.test(name) && current && current.views && current.views[name]) {
+			// an airport's close views: from a point near the terminal, the gates or the runway's end, looking at what they show
+			const p = current.views[name];
+			Object.assign(view, viewFrom(new THREE.Vector3(p.x + 0.5, p.y, p.z + 0.5), new THREE.Vector3(p.tx + 0.5, p.ty, p.tz + 0.5)));
 		}
 		if (/^(overview|reverse|street|plan)$/.test(name)) {
 			fitView();

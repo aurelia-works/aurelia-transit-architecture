@@ -301,7 +301,11 @@ public final class StudioApi {
 		if (text.length() > MAX_TYPED) {
 			text = text.substring(0, MAX_TYPED);
 		}
-		if (text.isEmpty() || !StationDescriptionParser.parse(text).spec().isAirport()) {
+		// the airport generator page always plans an airport, whatever its words say about the rest
+		final boolean page = "airport".equals(q.get("page"));
+		if (page && !StationDescriptionParser.parse(text).spec().isAirport()) {
+			text = text.isEmpty() ? "airport" : "airport, " + text;
+		} else if (text.isEmpty() || !StationDescriptionParser.parse(text).spec().isAirport()) {
 			return null;
 		}
 		text = text + swapWords(q.getOrDefault("swaps", ""));
@@ -656,6 +660,7 @@ public final class StudioApi {
 		out.append("],\"passenger\":").append(spec.isAirport() ? airportPassenger(frame, spec) : passenger(frame, layout, idAt));
 		out.append(",\"street\":").append(spec.isAirport() ? airportStreet(frame, spec) : street(frame, spec, layout, idAt));
 		out.append(",\"head\":").append(headView(frame, layout));
+		out.append(",\"views\":").append(spec.isAirport() ? airportViews(frame, spec) : "null");
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
 		out.append(",\"models\":[").append(String.join(",", modelJson)).append(']');
 		out.append(",\"cells\":[").append(cells).append(']');
@@ -779,6 +784,33 @@ public final class StudioApi {
 			}
 		}
 		return "null";
+	}
+
+	private static String eye(LocalFrame frame, int u, double y, int v, int tu, double ty, int tv) {
+		return "{\"x\":" + frame.x(u, v) + ",\"y\":" + y + ",\"z\":" + frame.z(u, v) + ",\"tx\":" + frame.x(tu, tv) + ",\"ty\":" + ty + ",\"tz\":" + frame.z(tu, tv) + "}";
+	}
+
+	/**
+	 * The close views of an airport, from a point to a point (cell x, z and height y): the terminal's street front from the road, the gates
+	 * and boarding bridges from the apron, and the first runway's threshold with its numbers and bars from behind its end. The terminal
+	 * and gate views are left out without a terminal.
+	 */
+	static String airportViews(LocalFrame frame, StationSpec spec) {
+		final com.aureliatransit.architecture.station.AirportGeometry g = com.aureliatransit.architecture.station.AirportGeometry.of(spec.airport());
+		final com.aureliatransit.architecture.station.AirportGeometry.Dims d = g.dims();
+		final StringBuilder out = new StringBuilder("{");
+		if (spec.airport().terminal()) {
+			final int door = (g.terminalV0() + g.terminalV1()) / 2;
+			final int back = d.terminalDepth();
+			out.append("\"terminal\":").append(eye(frame, g.terminalU0() - back - 6, back * 0.55, door + back / 2, g.terminalU0(), d.wallTop() * 0.4, door));
+			final int stand = g.standV().get(0);
+			out.append(",\"apron\":").append(eye(frame, g.apronU1() - 4, d.wallTop() * 1.6, stand + d.standPitch() / 3, g.terminalU1(), 3, stand));
+			out.append(',');
+		}
+		final int c = g.runwayCentre(0);
+		final int behind = Math.min(30, d.end() - 4);
+		out.append("\"threshold\":").append(eye(frame, c, 14, g.runwayV0() - behind, c, 0, g.runwayV0() + d.numberOffset() + 10));
+		return out.append('}').toString();
 	}
 
 	/** On the apron beside the first stand, looking across the taxiway at the runway. */

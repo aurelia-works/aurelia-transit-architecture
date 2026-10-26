@@ -445,6 +445,7 @@ code { font: 12px var(--mono); color: var(--accent-text); }
 .viewbar .views button { flex: 1 1 auto; }
 #presets { display: none; }
 .airports { margin: 6px 0 2px; }
+body[data-page="airport"] .st-only, body:not([data-page="airport"]) .ap-only { display: none !important; }
 .airports .chip { cursor: pointer; font-size: 12.5px; }
 .airports .chip:hover { border-color: var(--line-strong); background: var(--panel-3); }
 
