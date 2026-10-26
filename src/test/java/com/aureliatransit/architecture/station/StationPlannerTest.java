@@ -506,6 +506,44 @@ class StationPlannerTest {
 	}
 
 	@Test
+	void platformHelpPointsStandUnderTheRoof() {
+		final List<String> descriptions = new ArrayList<>();
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			descriptions.add(preset.description());
+		}
+		// Jah's 10-26 play-test hub: the help points stood at the open tips of the islands
+		descriptions.add("utrecht style hub, 10 tracks, 5 island platforms, 200 long");
+		final List<String> out = new ArrayList<>();
+		for (final String description : descriptions) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			final Set<String> covered = new HashSet<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role().covers() && block.y() > StationGeometry.WALK_Y) {
+					covered.add(block.u() + "," + block.v());
+				}
+			}
+			for (final PlannedBlock block : plan.blocks()) {
+				if (!block.blockId().equals(StationPlanner.HELP_POINT) || block.y() != StationGeometry.WALK_Y) {
+					continue;
+				}
+				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+					if (band.uMin() > block.u() || block.u() > band.uMax() || !band.runs(block.v())) {
+						continue;
+					}
+					boolean roofed = false;
+					for (int v = band.vFrom(); v <= band.vTo() && !roofed; v++) {
+						roofed = covered.contains(block.u() + "," + v);
+					}
+					if (roofed && !covered.contains(block.u() + "," + block.v())) {
+						out.add(description + ": " + block.u() + "," + block.v() + " on " + band.vFrom() + ".." + band.vTo());
+					}
+				}
+			}
+		}
+		assertTrue(out.isEmpty(), out.size() + " help points out in the open on a roofed platform, e.g. " + out.stream().limit(4).toList());
+	}
+
+	@Test
 	void presetBlocksAreAllConnectedToTheGround() {
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
 			final List<PlannedBlock> floating = unconnected(plan(StationDescriptionParser.parse(preset.description()).spec()));

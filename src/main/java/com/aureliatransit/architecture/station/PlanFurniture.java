@@ -429,7 +429,8 @@ abstract class PlanFurniture extends PlanRoofs {
 	 * under a roof without, it hangs from the ceiling, double-sided and facing along the platform, four blocks wide where the platform and the ceiling have room, else two (never over an
 	 * edge cell); on an open
 	 * platform a standing screen is fixed to the back of a lamp post. Points keep clear of footbridge stairs and their
-	 * landings. Each platform also gets one help point, a wall unit, fixed to the post nearest its first screen.
+	 * landings. Each platform also gets one help point, a wall unit, fixed to the post nearest its middle screen (the first
+	 * stood it at the open tip of a long platform; Jah 10-26).
 	 */
 	void platformEquipment() {
 		if (!spec.furniture()) {
@@ -445,7 +446,8 @@ abstract class PlanFurniture extends PlanRoofs {
 					screenOnPost(band, target);
 				}
 			}
-			onPost(band, targets.get(0), StationGeometry.WALK_Y, HELP_POINT);
+			final int middle = (band.vFrom() + band.vTo()) / 2;
+			onPost(band, targets.stream().min(java.util.Comparator.comparingInt(t -> Math.abs(t - middle))).orElseThrow(), StationGeometry.WALK_Y, HELP_POINT);
 		}
 	}
 
