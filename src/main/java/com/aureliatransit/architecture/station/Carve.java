@@ -128,6 +128,19 @@ final class Carve {
 	 * walk on), {@code ceiling} where the void is below it and nothing is above (a roof). The others are walls.
 	 */
 	List<Lining> lining() {
+		return lining(false);
+	}
+
+	/**
+	 * The lining with the cells that meet the void only along an edge as well: a stepped shaft's or a round bore's lining is then
+	 * joined face to face, and a hall's walls meet its roof and its floor with no notch along the corner. The edge cells are walls
+	 * unless the void is straight above or below them, as in {@link #lining()}.
+	 */
+	List<Lining> joinedLining() {
+		return lining(true);
+	}
+
+	private List<Lining> lining(boolean edges) {
 		final List<Lining> out = new ArrayList<>();
 		final boolean[] seen = new boolean[cells.length];
 		for (int u = uMin; u <= uMax; u++) {
@@ -145,8 +158,27 @@ final class Carve {
 				}
 			}
 		}
+		if (!edges) {
+			return out;
+		}
+		for (int u = uMin; u <= uMax; u++) {
+			for (int y = yMin; y <= yMax; y++) {
+				for (int v = vMin; v <= vMax; v++) {
+					if (!cells[index(u, y, v)]) {
+						continue;
+					}
+					for (final int[] d : EDGES) {
+						edge(out, seen, u + d[0], y + d[1], v + d[2]);
+					}
+				}
+			}
+		}
 		return out;
 	}
+
+	/** The twelve neighbours that share an edge, not a face, with a cell. */
+	private static final int[][] EDGES = {{1, 1, 0}, {1, -1, 0}, {-1, 1, 0}, {-1, -1, 0}, {1, 0, 1}, {1, 0, -1}, {-1, 0, 1}, {-1, 0, -1},
+			{0, 1, 1}, {0, 1, -1}, {0, -1, 1}, {0, -1, -1}};
 
 	private void edge(List<Lining> out, boolean[] seen, int u, int y, int v) {
 		if (!in(u, y, v)) {

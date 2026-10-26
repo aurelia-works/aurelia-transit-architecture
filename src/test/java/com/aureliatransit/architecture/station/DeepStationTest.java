@@ -141,4 +141,24 @@ class DeepStationTest {
 		assertTrue(report.checks().stream().noneMatch(c -> c.topic() == StationAudit.Topic.FALLS && c.status() != StationAudit.Status.PASS),
 				report.checks().toString());
 	}
+
+	@Test
+	void westminsterStacksItsTwoPlatforms() {
+		final StationSpec spec = StationDescriptionParser.parse(presetText("westminster")).spec();
+		assertEquals(UndergroundType.DEEP_STACKED, spec.options().type());
+		final StationPlan plan = StationPlanner.plan(spec);
+		assertEquals(List.of(0, StationGeometry.STACK_RISE), plan.layout().levels());
+		assertEquals(List.of(), LayoutValidator.validate(plan));
+		// rail nodes at both levels
+		for (final TrackLayout.Track track : plan.layout().tracks()) {
+			assertTrue(plan.blocks().stream().anyMatch(b -> b.role() == Role.RAIL_NODE && b.u() == track.u() && b.y() == track.level()),
+					"rail node on track " + track.number());
+		}
+		final StationAudit.Result report = StationAudit.audit(plan);
+		for (final StationAudit.Check check : report.checks()) {
+			if (check.topic() == StationAudit.Topic.FALLS || check.topic() == StationAudit.Topic.ACCESS) {
+				assertEquals(StationAudit.Status.PASS, check.status(), check.topic() + ": " + check);
+			}
+		}
+	}
 }

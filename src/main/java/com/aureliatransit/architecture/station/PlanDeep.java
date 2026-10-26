@@ -1,5 +1,6 @@
 package com.aureliatransit.architecture.station;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.aureliatransit.architecture.station.StationPlanner.*;
@@ -71,7 +72,7 @@ abstract class PlanDeep extends PlanUnderground {
 
 	@Override
 	void deepStation() {
-		if (spec.options().type() == UndergroundType.DEEP_TUBE) {
+		if (spec.options().type().tube()) {
 			deepTube();
 		} else {
 			cutAndCover();
@@ -135,28 +136,37 @@ abstract class PlanDeep extends PlanUnderground {
 		final int vMin = layout.vMin();
 		final int vMax = layout.vMax();
 		final int platformRows = layout.platformLength();
-		final TrackLayout.PlatformBand a = layout.platforms().get(0);
-		final TrackLayout.PlatformBand b = layout.platforms().get(1);
 		final int uc = pillarU();
 		final StylePalette.Building building = palette.building();
 		final Carve carve = new Carve(new Box(0, -2, vMin, w - 1, d + HALL_HEIGHT + 1, vMax));
 
+		final boolean stacked = spec.options().stacked();
+		final int rise2 = StationGeometry.STACK_RISE;
+		if (stacked) {
+			// the shared layers planned the second bore beside the first at rail level; it goes up over the first
+			raiseSecondBore(rise2);
+		}
+		final TrackLayout.PlatformBand a = layout.platforms().get(0);
+		final TrackLayout.PlatformBand b = layout.platforms().get(1);
 		// the track bores: the clearance envelope in a round tunnel, the whole way, with the bore past the platforms
 		for (final TrackLayout.Track track : layout.tracks()) {
 			final int t = track.u();
+			final int ty = track.level();
 			final boolean leftBore = t < uc;
-			carve.box(t - 1, StationGeometry.PLATFORM_Y, vMin, t + 1, StationGeometry.ENVELOPE_HEIGHT - 1, vMax);
-			carve.tube(t, 2, 2.9, StationGeometry.PLATFORM_Y, vMin, vMax, u -> leftBore ? u <= t + 1 : u >= t - 1);
+			carve.box(t - 1, ty, vMin, t + 1, ty + StationGeometry.ENVELOPE_HEIGHT - 1, vMax);
+			carve.tube(t, ty + 2, 2.9, ty, vMin, vMax, u -> leftBore ? u <= t + 1 : u >= t - 1);
 		}
 		// the platform bores: wider round tunnels round a track and its platform, three clear cells over the platform's far edge
-		final int tA = layout.tracks().get(0).u();
-		final int tB = layout.tracks().get(1).u();
-		bore(carve, tA - 2, a.uMax(), platformRows);
-		bore(carve, b.uMin(), tB + 2, platformRows);
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			final int t = layout.faces(band).get(0).u();
+			bore(carve, Math.min(t - 2, band.uMin()), Math.max(t + 2, band.uMax()), platformRows, band.level());
+		}
 		// the pillar between them is open for a few rows at the shaft end (one concourse), and has a cross-passage every so often
 		carve.box(uc, 1, 0, uc, 4, JUNCTION - 1);
-		for (int v = JUNCTION + CROSS_PITCH / 2; v <= platformRows - 1 - CROSS_PITCH / 2; v += CROSS_PITCH) {
-			carve.box(uc, 1, v - 1, uc, 3, v + 1);
+		if (!stacked) {
+			for (int v = JUNCTION + CROSS_PITCH / 2; v <= platformRows - 1 - CROSS_PITCH / 2; v += CROSS_PITCH) {
+				carve.box(uc, 1, v - 1, uc, 3, v + 1);
+			}
 		}
 		// the shaft: three escalators side by side, climbing towards -v from the bores' low end to the surface
 		final int cols = uc - 3;
@@ -179,21 +189,108 @@ abstract class PlanDeep extends PlanUnderground {
 		final int doorHalf = 2;
 		carve.box(uc - doorHalf, d, hallFront, uc + doorHalf, d + 2, hallFront);
 
+		if (stacked) {
+			stackedBank(carve, uc, b, rise2);
+		}
 		if (spec.stepFree()) {
 			// the lift beside the shaft's foot, up to a pavilion on the surface over the platforms' low end
-			deepLift(carve, uc + 4, -1, -1, new int[]{StationGeometry.WALK_Y, d}, building.pier());
+			if (stacked) {
+				// at the platforms' low end between the track bore and the shaft, a stop on each platform, over each other
+				deepLift(carve, a.uMin() + 1, -1, -1, new int[]{StationGeometry.WALK_Y, rise2 + StationGeometry.WALK_Y, d}, building.pier());
+			} else {
+				deepLift(carve, uc + 4, -1, -1, new int[]{StationGeometry.WALK_Y, d}, building.pier());
+			}
 		}
 		lineVoid(carve, d, hallFront, hallU0, hallU1, hallFrom, hallTo, building);
 		extraHeadroom.addAll(carve.runs());
 		hallFitOut(carve, d, hallFront, hallU0, hallU1, hallFrom, hallTo, uc, building);
 	}
 
+	/**
+	 * Moves the second bore of a stacked station, planned beside the first at rail level (track then platform, as the first), up
+	 * {@code rise} and across over the first: its track over the first track, its platform over the first platform. The layout
+	 * moves with it, so the checks and the MTR rails read the bore where it is.
+	 */
+	void raiseSecondBore(int rise) {
+		final TrackLayout.PlatformBand a = layout.platforms().get(0);
+		final TrackLayout.PlatformBand b = layout.platforms().get(1);
+		final TrackLayout.Track tA = layout.tracks().get(0);
+		final TrackLayout.Track tB = layout.tracks().get(1);
+		final int du = tA.u() - tB.u();
+		final int from = a.uMax();
+		final List<PlannedBlock> moved = new ArrayList<>();
+		for (final PlannedBlock block : new ArrayList<>(cells.values())) {
+			if (block.u() > from) {
+				cells.remove(new Cell(block.u(), block.y(), block.v()));
+				moved.add(block);
+			}
+		}
+		for (final PlannedBlock block : moved) {
+			cells.put(new Cell(block.u() + du, block.y() + rise, block.v()), new PlannedBlock(block.u() + du, block.y() + rise, block.v(), block.role(),
+					block.blockId(), block.front(), block.text(), block.state()));
+		}
+		final List<Cell> clear = new ArrayList<>();
+		for (final Cell cell : air) {
+			if (cell.u() > from) {
+				clear.add(cell);
+			}
+		}
+		for (final Cell cell : clear) {
+			air.remove(cell);
+			air.add(new Cell(cell.u() + du, cell.y() + rise, cell.v()));
+		}
+		final TrackLayout.Track track = new TrackLayout.Track(tB.number(), tB.u() + du, tB.platformLeft(), tB.platformRight(), tB.level());
+		final TrackLayout.PlatformBand band = new TrackLayout.PlatformBand(b.number(), b.uMin() + du, b.uMax() + du, b.trackLeft(), b.trackRight(),
+				b.vFrom(), b.vTo(), b.deadEnd(), b.level());
+		layout = new TrackLayout(layout.width(), layout.platformLength(), layout.rampLength(), List.of(tA, track), List.of(a, band), layout.buildingWidth(),
+				layout.headDepth(), layout.hubThrough(), layout.parkingWidth(), layout.forecourtDepth(), layout.accessRows());
+	}
+
+	/**
+	 * What joins a stacked station's two levels: a lane beside the bores, from the shaft's foot (where the pillar is open onto it)
+	 * a bank of two escalators climbing along the platforms to the upper level, and a passage through the pillar onto the upper
+	 * platform. Nothing crosses a track: both platforms are on the pillar's side of their bores.
+	 */
+	void stackedBank(Carve carve, int uc, TrackLayout.PlatformBand upper, int rise) {
+		// two columns off the pillar, so the bank's foot is not in line with the shaft's last escalator
+		final int bank = uc + 3;
+		final int top = rise + 2;
+		// the lobby at the lower level: the shaft's landing row and the pillar's opening run on to the bank's foot
+		carve.box(uc + 1, 1, -1, bank + 3, STEP_CLEAR, -1);
+		carve.box(uc + 1, 1, 0, uc + 2, StationGeometry.WALK_Y + 3, JUNCTION - 1);
+		// the flights: two flat steps, the slope, two flat steps, with room over every step
+		for (int i = 0; i <= top; i++) {
+			final int y = stepY(0, rise, i);
+			carve.box(bank, y, i, bank + 3, y + STEP_CLEAR, i);
+		}
+		escalatorRun(bank, 0, 1, 0, rise, LocalDir.PLUS_V, true);
+		escalatorRun(bank + 2, 0, 1, 0, rise, LocalDir.PLUS_V, false);
+		// the top landing, and the passage through the pillar onto the upper platform
+		final int y = rise + StationGeometry.WALK_Y;
+		final int v0 = top + 1;
+		final int v1 = top + 4;
+		carve.box(uc, y, v0, bank + 3, y + 2, v1);
+		for (int v = v0; v <= v1; v++) {
+			for (int yy = y; yy <= y + 2; yy++) {
+				final PlannedBlock block = at(upper.uMax(), yy, v);
+				if (block != null && !block.role().flatFloor()) {
+					cells.remove(new Cell(upper.uMax(), yy, v));
+				}
+			}
+		}
+	}
+
 	/** A round platform bore: the circle that clears {@code uLo..uHi} at the walking surface and three over it. */
 	void bore(Carve carve, int uLo, int uHi, int platformRows) {
+		bore(carve, uLo, uHi, platformRows, StationGeometry.PLATFORM_Y);
+	}
+
+	/** As above, for a platform whose floor is at {@code level}. */
+	void bore(Carve carve, int uLo, int uHi, int platformRows, int level) {
 		final double centre = (uLo + uHi) / 2.0;
 		final double half = (uHi - uLo) / 2.0;
 		final double radius = Math.sqrt(half * half + 1.5 * 1.5) + 0.3;
-		carve.tube(centre, 2.5, radius, 1, 0, platformRows - 1, u -> u >= uLo && u <= uHi);
+		carve.tube(centre, 2.5 + level, radius, 1 + level, 0, platformRows - 1, u -> u >= uLo && u <= uHi);
 	}
 
 	/**
@@ -204,7 +301,7 @@ abstract class PlanDeep extends PlanUnderground {
 		final String tile = undergroundTile();
 		final String floor = palette.blockId(Role.PLATFORM_SURFACE);
 		final int rows = layout.platformLength();
-		for (final Carve.Lining l : carve.lining()) {
+		for (final Carve.Lining l : carve.joinedLining()) {
 			final int u = l.u();
 			final int y = l.y();
 			final int v = l.v();
@@ -220,7 +317,8 @@ abstract class PlanDeep extends PlanUnderground {
 				if (l.floor()) {
 					put(Role.FLOOR, u, y, v, LocalDir.PLUS_V, building.floor());
 				} else if (l.ceiling()) {
-					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, building.roof());
+					// the hall's roof is roofing, not its walls' stone
+					put(Role.BUILDING_ROOF, u, y, v, LocalDir.PLUS_V, PlanBuilding.flatRoof(building, spec.building()));
 				} else {
 					put(Role.WALL, u, y, v, LocalDir.PLUS_V, building.wall());
 				}
@@ -231,6 +329,10 @@ abstract class PlanDeep extends PlanUnderground {
 				put(Role.FLOOR, u, y, v, LocalDir.PLUS_V, floor);
 			} else if (l.ceiling() && station && y >= 6 && Math.floorMod(u + v, LIGHT_EVERY) == 0) {
 				put(Role.LIGHT_PANEL, u, y, v, LocalDir.PLUS_V, building.light());
+				// the fitting is set into the lining: a tile behind it, so the lamp is not the last block before the rock
+				if (!carve.has(u, y + 1, v)) {
+					put(Role.WALL, u, y + 1, v, LocalDir.PLUS_V, tile);
+				}
 			} else {
 				put(Role.WALL, u, y, v, LocalDir.PLUS_V, station ? tile : TUNNEL_LINING);
 			}
@@ -261,7 +363,10 @@ abstract class PlanDeep extends PlanUnderground {
 				for (int k = -2; k <= 3; k++) {
 					final PlannedBlock block = at(c, y, vD + k * out);
 					// the landing is cleared up to a lamp's head (WALK_Y + 3 = low + 3): a lamp standing on the landing's pole goes with it
-					final boolean landing = k < 0 && c >= c0 && c <= c1 && y <= low + 3;
+					boolean landing = k < 0 && c >= c0 && c <= c1 && y <= low + 3;
+					for (int s = 1; s < stops.length - 1; s++) {
+						landing |= k < 0 && c >= c0 && c <= c1 && y >= stops[s] && y <= stops[s] + 3;
+					}
 					if (block != null && !block.role().flatFloor() && (landing || k >= 0)) {
 						cells.remove(new Cell(c, y, vD + k * out));
 					}
@@ -301,7 +406,7 @@ abstract class PlanDeep extends PlanUnderground {
 		}
 		for (int c = c0 - 1; c <= c1 + 1; c++) {
 			for (int v = vD; v != vBack + out; v += out) {
-				put(Role.BUILDING_ROOF, c, top + 1, v, LocalDir.PLUS_V, palette.building().roof());
+				put(Role.BUILDING_ROOF, c, top + 1, v, LocalDir.PLUS_V, PlanBuilding.flatRoof(palette.building(), spec.building()));
 			}
 		}
 		// a call button on the wall post beside each pair of doors, facing the landing
@@ -428,7 +533,7 @@ abstract class PlanDeep extends PlanUnderground {
 			deepLift(carve, c0, (band.vFrom() + band.vTo()) / 2, 1, new int[]{StationGeometry.WALK_Y, d}, building.pier());
 		}
 		final String floor = palette.blockId(Role.PLATFORM_SURFACE);
-		for (final Carve.Lining l : carve.lining()) {
+		for (final Carve.Lining l : carve.joinedLining()) {
 			if (l.y() < -1) {
 				continue;
 			}
@@ -584,6 +689,7 @@ abstract class PlanDeep extends PlanUnderground {
 				}
 			}
 		}
+		openPockets();
 		final int bankRows = mezzY(d) + 4;
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
 			if (band.width() < StationGeometry.BAY + 1) {
@@ -599,5 +705,62 @@ abstract class PlanDeep extends PlanUnderground {
 				}
 			}
 		}
+	}
+
+	/** The largest walled-off patch of platform {@link #openPockets} opens: a gutter beside an escalator bank, not a room. */
+	static final int POCKET = 16;
+
+	/**
+	 * A small patch of platform walled in on every side (the gutter between a side wall and an escalator bank's barrier, closed by
+	 * the platform's bins, benches and sign poles) opens again: the bins and benches round it go, until no patch is shut.
+	 */
+	void openPockets() {
+		boolean changed = true;
+		while (changed) {
+			changed = false;
+			final java.util.Set<Cell> done = new java.util.HashSet<>();
+			for (final TrackLayout.PlatformBand band : layout.platforms()) {
+				final int y = StationGeometry.WALK_Y + band.level();
+				for (int u = band.uMin(); u <= band.uMax(); u++) {
+					for (int v = band.vFrom(); v <= band.vTo(); v++) {
+						if (!walkable(u, y, v) || !done.add(new Cell(u, y, v))) {
+							continue;
+						}
+						final List<Cell> patch = new ArrayList<>(List.of(new Cell(u, y, v)));
+						final List<PlannedBlock> rim = new ArrayList<>();
+						for (int i = 0; i < patch.size() && patch.size() <= POCKET; i++) {
+							final Cell c = patch.get(i);
+							for (final int[] n : new int[][]{{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) {
+								final int nu = c.u() + n[0];
+								final int nv = c.v() + n[1];
+								if (walkable(nu, y, nv)) {
+									if (done.add(new Cell(nu, y, nv))) {
+										patch.add(new Cell(nu, y, nv));
+									}
+								} else if (at(nu, y, nv) != null) {
+									rim.add(at(nu, y, nv));
+								}
+							}
+						}
+						if (patch.size() > POCKET) {
+							continue;
+						}
+						for (final PlannedBlock block : rim) {
+							if (block.role() == Role.BIN || block.role() == Role.BENCH) {
+								cells.remove(new Cell(block.u(), block.y(), block.v()));
+								changed = true;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/** Open platform floor at walking height {@code y}: a floor under it and nothing planned in it. */
+	private boolean walkable(int u, int y, int v) {
+		final PlannedBlock floor = at(u, y - 1, v);
+		final PlannedBlock here = at(u, y, v);
+		return floor != null && floor.role().flatFloor() && (here == null || here.role().passable());
 	}
 }

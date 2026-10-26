@@ -90,6 +90,9 @@ public final class StationPresets {
 					"2 track cut and cover box station, 24 m deep, 200 long, tfl signs, named Canary Wharf"),
 			new Preset("vijzelgracht", BuildingStyle.NONE,
 					"2 track cut and cover box station, island platform, 26 m deep, 188 long, gvb signs, named Vijzelgracht"),
+			// Westminster: the deep Jubilee platforms one above the other in a 39 m (58 block) box; the District/Circle level is not built
+			new Preset("westminster", BuildingStyle.NONE,
+					"2 track stacked deep tube station, 58 blocks deep, 100 long, step-free, tfl signs, named Westminster"),
 			new Preset("modern", BuildingStyle.MODERN,
 					"four track modern station, two island platforms, 96 long, glass canopy, station building with footbridge"));
 
