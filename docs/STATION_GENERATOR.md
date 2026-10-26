@@ -331,6 +331,17 @@ It is a second kind of real station (`RealStation.Kind.TRAIN_SHED`); the hall-ov
 A tower taller than the usual 11 blocks gets stone storeys of 8 with string courses and windows, and its belfry under the clock (`PlanBuilding.tower`).
 The Hamburg *look* is unchanged.
 
+## Deep tube and cut-and-cover
+
+`deep tube` / `tube` (a bored tunnel) and `cut and cover` / `box` (a rectangular pit) make a deep station, planned by `PlanDeep` and not by the shallow underground plan.
+Depth is the type's own (`UndergroundType.defaultDepth`), or the asked one: `40 blocks deep`, or metres at 1.5 blocks a metre (`24 m deep` is 36 blocks).
+- **Deep tube:** two platforms in one tube, one escalator shaft to a surface ticket hall. A lift is built only with the step-free words; `no ramps` gives an escalator-only station (Angel).
+- **Cut-and-cover box:** one deep box with platforms on its long sides or an island, escalator banks and a lift up each platform, and a street slab over the pit. A box always has lifts.
+- The dig is a `Carve` volume: the cells removed from the ground and the lining that touches them. `StationAudit` checks the open edges (FALLS) and the access walk (ACCESS) on it.
+- Presets: Angel (deep tube, 40 blocks, `tfl signs`), Canary Wharf (box, 36 blocks, `tfl signs`), Vijzelgracht (island box, 39 blocks, `gvb signs`). The words "deep tube" and "cut and cover" with no preset stay operator-neutral.
+- Operator signs as elsewhere (`tfl`, `gvb`, ...); the TfL sign is the existing Underground name sign and carries its roundel mark. No LU-only blocks.
+- Not yet: Westminster's stacked platforms (the planner does not stack yet), and a box longer than the 300-block limit.
+
 ## Known limitations
 
 - No elevated stations; underground ones are shallow through stations (see above). Straight stations along one axis. No curves, no catenary, no platform screen doors.

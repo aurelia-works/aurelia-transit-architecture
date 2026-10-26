@@ -671,6 +671,9 @@
   "screen.aurelia_transit_architecture.station_wrench.preset.surbiton": "Surbiton",
   "screen.aurelia_transit_architecture.station_wrench.preset.coventry": "Coventry",
   "screen.aurelia_transit_architecture.station_wrench.preset.rosenthaler_platz": "Rosenthaler Platz",
+  "screen.aurelia_transit_architecture.station_wrench.preset.angel": "Angel",
+  "screen.aurelia_transit_architecture.station_wrench.preset.canary_wharf": "Canary Wharf",
+  "screen.aurelia_transit_architecture.station_wrench.preset.vijzelgracht": "Vijzelgracht",
   "block.aurelia_transit_architecture.buffer_stop": "Buffer Stop",
   "block.aurelia_transit_architecture.heritage_buffer_stop": "Heritage Buffer Stop",
   "tooltip.aurelia_transit_architecture.buffer_joins": "Place several side by side across a track: they join into one buffer"

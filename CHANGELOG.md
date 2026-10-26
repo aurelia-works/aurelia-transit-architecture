@@ -21,6 +21,7 @@
 - **City cards build the real station:** in Station Studio the Utrecht card builds Utrecht Centraal's hall and the Hamburg card Hamburg Hbf's shed; each other city with a real-station front (Frankfurt, St Pancras, Paris, Milan, New York, Munich, Antwerp, Zurich, Mumbai, Bangkok, Tokyo, Beijing, Kuala Lumpur, Berlin, Coventry, Surbiton) sets the shape that front needs (a terminus, or a through station with a building, with enough tracks and length). In words, "real <city>" asks for the same front. Settings set by hand win; where the shape cannot carry the front, the city's look is built without it. All 21 city cards stay.
 - **New real-station fronts:** Tokyo (the red-brick Marunouchi building), Beijing, Kuala Lumpur, Surbiton, Munich, Berlin and Coventry. Tokyo is close to the real building; the others approximate its massing and materials.
 - **A plain "amsterdam" station** gets a grand building by default.
+- **Deep stations:** `deep tube` builds a bored tube 27 m down ("40 blocks deep"), escalator-only with `no ramps`; `cut and cover` builds a deep box with lifts. Presets: Angel (tube, TfL signs), Canary Wharf (box, TfL signs), Vijzelgracht (island box, GVB signs). Shallow underground is unchanged.
 
 ### Station Codex
 

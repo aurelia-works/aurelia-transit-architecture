@@ -95,4 +95,39 @@ class DeepStationTest {
 			assertFalse(carve.has(cell.u(), cell.y(), cell.v()));
 		}
 	}
+
+	/** The three deep presets (Angel, Canary Wharf, Vijzelgracht): their wrench text, by key. */
+	private static String presetText(String key) {
+		return StationPresets.ALL.stream().filter(p -> p.key().equals(key)).findFirst().orElseThrow().description();
+	}
+
+	@Test
+	void theDeepPresetsPlanCleanWithNoFalls() {
+		for (final String key : List.of("angel", "canary_wharf", "vijzelgracht")) {
+			final StationPlan plan = StationPlanner.plan(StationDescriptionParser.parse(presetText(key)).spec());
+			assertEquals(List.of(), LayoutValidator.validate(plan), key);
+			final StationAudit.Result report = StationAudit.audit(plan);
+			assertTrue(report.checks().stream().noneMatch(c -> c.topic() == StationAudit.Topic.FALLS && c.status() != StationAudit.Status.PASS),
+					key + " " + report.checks());
+		}
+	}
+
+	@Test
+	void theDeepPresetsKeepTheirRealDepthTypeAndOperator() {
+		// Angel 27 m is 40 blocks (the research's figure); Canary Wharf 24 m is 36 and Vijzelgracht 26 m is 39, at 1.5 blocks a metre
+		final StationSpec angel = StationDescriptionParser.parse(presetText("angel")).spec();
+		assertEquals(UndergroundType.DEEP_TUBE, angel.options().type());
+		assertEquals(40, angel.options().streetDepth());
+		assertEquals(Operator.UNDERGROUND, angel.operator());
+		// Angel is escalator-only: a tube without the step-free words gets no lift
+		assertFalse(angel.stepFree());
+		final StationSpec canary = StationDescriptionParser.parse(presetText("canary_wharf")).spec();
+		assertEquals(UndergroundType.CUT_AND_COVER, canary.options().type());
+		assertEquals(36, canary.options().streetDepth());
+		assertEquals(Operator.UNDERGROUND, canary.operator());
+		final StationSpec vijzelgracht = StationDescriptionParser.parse(presetText("vijzelgracht")).spec();
+		assertEquals(UndergroundType.CUT_AND_COVER, vijzelgracht.options().type());
+		assertEquals(39, vijzelgracht.options().streetDepth());
+		assertEquals(Operator.GVB, vijzelgracht.operator());
+	}
 }

@@ -1388,6 +1388,7 @@ public final class StationDescriptionParser {
 				warn("two operators given; the first (" + operator.name() + ") is used");
 			}
 			final int end = two ? i + 1 : i;
+			use(i, end);
 			if (two) {
 				use(i + 1, i + 1);
 			}
