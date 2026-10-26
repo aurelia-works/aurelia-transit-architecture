@@ -101,7 +101,7 @@ abstract class PlanState {
 		this.spec = spec;
 		this.layout = StationGeometry.layout(spec);
 		this.palette = StylePalette.of(spec);
-		final Landmark named = Landmarks.of(spec);
+		final Landmark named = spec.isAirport() ? null : Landmarks.of(spec);
 		this.length = layout.platformLength();
 		this.columnV = columnPositions(length);
 		this.site = StationLayout.of(spec, layout);

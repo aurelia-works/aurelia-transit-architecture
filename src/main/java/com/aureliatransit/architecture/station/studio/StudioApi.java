@@ -259,6 +259,10 @@ public final class StudioApi {
 	 * "halt class" and "postwar era", which the parser reads without the older meaning of the bare words, and the facing as "facing north".
 	 */
 	public static String description(Map<String, String> q) {
+		final String airport = airportWords(q);
+		if (airport != null) {
+			return airport;
+		}
 		final StationClass stationClass = rolledClassGivesWay(q) ? StationClass.AUTO : StationClass.of(q.get("class"));
 		final StationEra era = StationEra.of(q.get("era"));
 		final Facing facing = Facing.of(q.get("facing"));
@@ -286,6 +290,35 @@ public final class StudioApi {
 		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
 		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
 	}
+
+	/**
+	 * The words of an airport request, or null for a railway station. An airport is described by the typed words alone: the
+	 * station controls (tracks, look, roof, bed, stairs) say nothing about it and would only show up as ignored words. The facing,
+	 * the seed and the block swaps still apply.
+	 */
+	static String airportWords(Map<String, String> q) {
+		String text = q.getOrDefault("text", "").replace('\n', ' ').strip();
+		if (text.length() > MAX_TYPED) {
+			text = text.substring(0, MAX_TYPED);
+		}
+		if (text.isEmpty() || !StationDescriptionParser.parse(text).spec().isAirport()) {
+			return null;
+		}
+		text = text + swapWords(q.getOrDefault("swaps", ""));
+		final Facing facing = Facing.of(q.get("facing"));
+		if (facing != Facing.AUTO) {
+			text += ", facing " + facing.key();
+		}
+		final String seed = q.getOrDefault("seed", "").strip().toLowerCase(Locale.ROOT);
+		return StationSeed.valid(seed) ? text + ", seed " + seed : text;
+	}
+
+	/** The airport cards the page offers beside the station presets: key, label and the words they put in the box. */
+	static final List<String[]> AIRPORTS = List.of(
+			new String[]{"regional", "Regional airport", "airport, one 1700 m runway, 4 gates, terminal, named Regional Airport"},
+			new String[]{"small", "Small airport", "small airport named Small Airfield"},
+			new String[]{"twin", "Two runways", "airport, 2 runways, 6 gates, named Twin Runway Airport"},
+			new String[]{"remote", "Airstrip", "airport, 1 runway, 2 gates, no terminal, named Remote Airstrip"});
 
 	/**
 	 * What to tell the player about a seed field that is not a seed: it is left out of the description, so the parser never sees
@@ -336,7 +369,13 @@ public final class StudioApi {
 		out.append(",\"facings\":").append(keys(Facing.values(), Facing::key, f -> f == Facing.AUTO ? "Auto" : f.key().substring(0, 1).toUpperCase(Locale.ROOT) + f.key().substring(1)));
 		out.append(",\"blocks\":").append(Json.strings(BlockFamilies.suggestions()));
 		out.append(",\"maxTyped\":").append(MAX_TYPED).append(",\"maxName\":").append(StationSpec.MAX_NAME);
-		out.append(",\"presets\":[");
+		out.append(",\"airports\":[");
+		for (int i = 0; i < AIRPORTS.size(); i++) {
+			final String[] a = AIRPORTS.get(i);
+			out.append(i == 0 ? "" : ",").append("{\"key\":").append(Json.quote(a[0])).append(",\"label\":").append(Json.quote(a[1])).append(",\"text\":")
+					.append(Json.quote(a[2])).append('}');
+		}
+		out.append("],\"presets\":[");
 		for (int i = 0; i < StationPresets.ALL.size(); i++) {
 			final StationPresets.Preset preset = StationPresets.ALL.get(i);
 			out.append(i == 0 ? "" : ",").append(preset(preset));
@@ -425,6 +464,27 @@ public final class StudioApi {
 		return null;
 	}
 
+	/** The headline of an airport: its runways and gates. */
+	static String airportTitle(com.aureliatransit.architecture.station.AirportSpec a) {
+		return "Airport, " + (a.runways() == 1 ? "1 runway " : a.runways() + " runways ") + a.runwayLength() + " long, " + a.gates() + (a.gates() == 1 ? " gate" : " gates")
+				+ (a.terminal() ? "" : ", no terminal");
+	}
+
+	/**
+	 * What the page shows of an airport besides its blocks: the settings it was planned with, as {@code "airport"} in {@code built}
+	 * (null for a railway station).
+	 */
+	static String airportJson(StationSpec spec) {
+		if (!spec.isAirport()) {
+			return "null";
+		}
+		final com.aureliatransit.architecture.station.AirportSpec a = spec.airport();
+		final com.aureliatransit.architecture.station.AirportGeometry g = com.aureliatransit.architecture.station.AirportGeometry.of(a);
+		return "{\"runways\":" + a.runways() + ",\"length\":" + a.runwayLength() + ",\"width\":" + a.runwayWidth() + ",\"gates\":" + a.gates()
+				+ ",\"terminal\":" + a.terminal() + ",\"metres\":" + Math.round(a.runwayLength() / com.aureliatransit.architecture.station.AirportSpec.BLOCKS_PER_METRE)
+				+ ",\"real\":" + (g.dims() == com.aureliatransit.architecture.station.AirportGeometry.REAL) + "}";
+	}
+
 	/** The headline of a station the typed words describe: what they came to, not what the settings above them say. */
 	static String wordsTitle(StationSpec spec) {
 		if (spec.real() != RealStation.NONE) {
@@ -506,7 +566,7 @@ public final class StudioApi {
 		final StringBuilder out = new StringBuilder("{");
 		out.append("\"text\":").append(Json.quote(text));
 		// a platform list sets the tracks (and may lengthen the station), so the title says what it built
-		final String title = !typed.isEmpty() ? wordsTitle(spec) : !spec.listed() ? recipe.title() : recipe.title().replaceFirst(", \\d+ tracks?, \\d+ long$", ", "
+		final String title = spec.isAirport() ? airportTitle(spec.airport()) : !typed.isEmpty() ? wordsTitle(spec) : !spec.listed() ? recipe.title() : recipe.title().replaceFirst(", \\d+ tracks?, \\d+ long$", ", "
 				+ spec.platforms().size() + (spec.platforms().size() == 1 ? " platform, " : " platforms, ") + spec.trackCount()
 				+ (spec.trackCount() == 1 ? " track, " : " tracks, ") + spec.platformLength() + " long");
 		out.append(",\"title\":").append(Json.quote(title));
@@ -554,7 +614,7 @@ public final class StudioApi {
 				.append(",\"length\":").append(recipe.length()).append(",\"look\":").append(Json.quote(recipe.look().label()))
 				.append(",\"roof\":").append(Json.quote(recipe.roof().label())).append(",\"building\":").append(recipe.building())
 				.append(",\"size\":").append(Json.quote(recipe.size().label())).append('}');
-		out.append(",\"built\":{\"mode\":").append(Json.quote(spec.hub() ? "Hub" : spec.terminus() ? "Terminus" : "Through station"))
+		out.append(",\"built\":{\"mode\":").append(Json.quote(spec.isAirport() ? "Airport" : spec.hub() ? "Hub" : spec.terminus() ? "Terminus" : "Through station"))
 				.append(",\"layout\":").append(Json.quote(lower(spec.platformLayout().name()) + " platforms"))
 				.append(",\"tracks\":").append(spec.trackCount()).append(",\"platforms\":").append(layout.platforms().size())
 				.append(",\"faces\":").append(audit.faces().size()).append(",\"length\":").append(spec.platformLength())
@@ -562,7 +622,7 @@ public final class StudioApi {
 				.append(",\"building\":").append(Json.quote(spec.building().label()))
 				.append(",\"scale\":").append(Json.quote(spec.hasBuilding() ? spec.buildingScale().label() : "-"))
 				.append(",\"roof\":").append(Json.quote(roof(spec))).append(",\"footbridge\":").append(StationLayout.of(spec, layout).bridge())
-				.append(",\"underground\":").append(spec.options().underground()).append(",\"streetY\":").append(StationGeometry.UPPER_FLOOR_Y)
+				.append(",\"airport\":").append(airportJson(spec)).append(",\"underground\":").append(spec.options().underground()).append(",\"streetY\":").append(StationGeometry.UPPER_FLOOR_Y)
 				.append(",\"name\":").append(Json.quote(spec.name())).append('}');
 		out.append(",\"size\":{\"width\":").append(audit.width()).append(",\"length\":").append(audit.length()).append(",\"height\":")
 				.append(audit.height()).append(",\"blocks\":").append(plan.blocks().size()).append('}');
@@ -593,8 +653,8 @@ public final class StudioApi {
 					.append(frame.x(u, v)).append(",\"z\":").append(frame.z(u, v)).append(",\"view\":").append(faceView(frame, face, track, idAt))
 					.append('}');
 		}
-		out.append("],\"passenger\":").append(passenger(frame, layout, idAt));
-		out.append(",\"street\":").append(street(frame, spec, layout, idAt));
+		out.append("],\"passenger\":").append(spec.isAirport() ? airportPassenger(frame, spec) : passenger(frame, layout, idAt));
+		out.append(",\"street\":").append(spec.isAirport() ? airportStreet(frame, spec) : street(frame, spec, layout, idAt));
 		out.append(",\"head\":").append(headView(frame, layout));
 		out.append(",\"roles\":").append(Json.strings(names(Role.values())));
 		out.append(",\"models\":[").append(String.join(",", modelJson)).append(']');
@@ -719,6 +779,26 @@ public final class StudioApi {
 			}
 		}
 		return "null";
+	}
+
+	/** On the apron beside the first stand, looking across the taxiway at the runway. */
+	private static String airportPassenger(LocalFrame frame, StationSpec spec) {
+		final com.aureliatransit.architecture.station.AirportGeometry g = com.aureliatransit.architecture.station.AirportGeometry.of(spec.airport());
+		final int u = g.apronU1() - 12;
+		final int v = g.standV().get(0);
+		final int ahead = g.runwayCentre(0);
+		return "{\"x\":" + frame.x(u, v) + ",\"z\":" + frame.z(u, v) + ",\"tx\":" + frame.x(ahead, v + 40) + ",\"tz\":" + frame.z(ahead, v + 40) + "}";
+	}
+
+	/** On the road in front of the terminal, looking at its entrance; null without a terminal. */
+	private static String airportStreet(LocalFrame frame, StationSpec spec) {
+		if (!spec.airport().terminal()) {
+			return "null";
+		}
+		final com.aureliatransit.architecture.station.AirportGeometry g = com.aureliatransit.architecture.station.AirportGeometry.of(spec.airport());
+		final int v = (g.terminalV0() + g.terminalV1()) / 2;
+		final int out = Math.max(0, g.roadU0());
+		return "{\"x\":" + frame.x(out, v) + ",\"z\":" + frame.z(out, v) + ",\"tx\":" + frame.x(g.terminalU0(), v) + ",\"tz\":" + frame.z(g.terminalU0(), v) + "}";
 	}
 
 	/**

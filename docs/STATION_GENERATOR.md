@@ -333,6 +333,19 @@ It is a second kind of real station (`RealStation.Kind.TRAIN_SHED`); the hall-ov
 A tower taller than the usual 11 blocks gets stone storeys of 8 with string courses and windows, and its belfry under the clock (`PlanBuilding.tower`).
 The Hamburg *look* is unchanged.
 
+## Airports (1.7, milestone 1: seen in Station Studio only)
+
+Words with "airport", "airfield", "airstrip" or "runway" plan an airport instead of a station (`AirportWords` in the parser, `AirportSpec`
+in `StationOptions.airport`, `StationSpec.isAirport()`). Default: one runway 2,550 blocks (1,700 m at 1.5 blocks a metre) by 45 (30 m),
+four gates, a terminal. "small airport" is a 240 x 15 compact one; "2 runways", "6 gates", "3000 m runway", "30 wide", "no terminal" work.
+The runway is capped at 3,000 blocks (a warning says so) because every block of the plan is held in memory.
+
+Layers: `PlanAirport` (after `PlanFitOut`) paints runway, markings, edge lights, parallel taxiway with links, apron with stands,
+terminal and boarding bridges from `AirportGeometry`; pavement is `Role.PLATFORM_SURFACE`, lights `Role.LIGHT_PANEL`. The plan has no
+track envelopes; its support and clearance boxes and its blocks are in 32-row bands along the runway, so surveys and builds sweep along it
+once. `LayoutValidator` adds `AIRFIELD_OBSTACLE`; `AirportAudit` adds Runways, Taxiways, Gates and Terminal checks.
+Not built yet: grading of the site, the MTR airplane route, real airport presets, a control tower, rapid exits, boarding bridges at door height.
+
 ## Known limitations
 
 - No elevated stations; underground ones are shallow through stations (see above). Straight stations along one axis. No curves, no catenary, no platform screen doors.

@@ -244,6 +244,11 @@ public final class StationGeometry {
 
 	/** The cross-section and length for a spec. */
 	public static TrackLayout layout(StationSpec spec) {
+		if (spec.isAirport()) {
+			// an airport has no tracks or platforms: the footprint is the airport's width and length
+			final AirportGeometry airport = AirportGeometry.of(spec.airport());
+			return new TrackLayout(airport.width(), airport.length(), 0, List.of(), List.of());
+		}
 		final String bands = bandPattern(spec);
 		final List<TrackLayout.Track> tracks = new ArrayList<>();
 		final List<TrackLayout.PlatformBand> platforms = new ArrayList<>();

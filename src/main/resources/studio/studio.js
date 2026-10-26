@@ -336,6 +336,23 @@
 			b.addEventListener("click", () => applyPreset(p));
 			presets.append(b);
 		}
+		// airports are planned from their words alone: the card only writes them, and the station controls keep their settings
+		const airports = $("airports");
+		airports.innerHTML = "";
+		for (const a of options.airports || []) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "chip airport";
+			b.textContent = a.label;
+			b.title = a.text;
+			b.addEventListener("click", () => {
+				$("text").value = a.text;
+				touched.clear();
+				rolled.clear();
+				changed();
+			});
+			airports.append(b);
+		}
 	}
 
 	/** A preset (or a photo's description) onto the controls. */
@@ -1223,7 +1240,7 @@
 	const NIGHT = new THREE.Color(0x101317);
 	const SKY = new THREE.Color(0xa9bfd3);
 	scene.background = NIGHT;
-	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 4000);
+	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 16000);
 	const station = new THREE.Group();
 	scene.add(station);
 	const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x23282e }));
@@ -1639,15 +1656,22 @@
 
 	/** The Build card, the status lines and the materials list. */
 	function showFacts(plan) {
+		const air = plan.built.airport;
 		const facts = [["Size", plan.size.width + " × " + plan.size.length + " × " + plan.size.height], ["Blocks", NUMBER.format(plan.size.blocks)],
-			["Tracks", plan.built.tracks + " · " + plan.built.faces + " faces"], ["Planned", plan.ms + " ms"]];
+			air ? ["Runway", air.length + " × " + air.width + " (" + NUMBER.format(air.metres) + " m)"] : ["Tracks", plan.built.tracks + " · " + plan.built.faces + " faces"],
+			["Planned", plan.ms + " ms"]];
 		$("facts").innerHTML = facts.map(([k, v]) => "<div><dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd></div>").join("");
-		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc(plan.built.roof.charAt(0).toUpperCase() + plan.built.roof.slice(1)) + " · "
+		if (air) {
+			$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc((air.real ? "regional scale" : "compact scale") + " · " + (air.terminal ? "terminal" : "remote stands")
+				+ " · " + air.runways + (air.runways === 1 ? " runway" : " runways") + (plan.built.name ? " · " + plan.built.name : ""));
+		} else {
+			$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc(plan.built.roof.charAt(0).toUpperCase() + plan.built.roof.slice(1)) + " · "
 			+ esc(plan.built.building === "no building" ? "no building" : plan.built.building + (plan.built.scale !== "-" ? ", " + plan.built.scale : ""))
 			+ (plan.built.footbridge ? " · footbridge" : "") + (plan.built.name ? " · " + esc(plan.built.name) : "");
+		}
 		$("status").textContent = "Planned in " + plan.ms + " ms · " + NUMBER.format(plan.size.blocks) + " blocks · " + ($("stage").classList.contains("no-gl") ? "no WebGL" : "WebGL");
 		$("topStatus").textContent = (plan.seed ? "seed " + plan.seed + " · " : "") + plan.title;
-		$("tracksNote").textContent = $("listOn").checked ? "Set by the platform list" : plan.built.platforms + (plan.built.platforms === 1 ? " platform, " : " platforms, ")
+		$("tracksNote").textContent = air ? "An airport has no tracks: its runways, gates and terminal come from the words" : $("listOn").checked ? "Set by the platform list" : plan.built.platforms + (plan.built.platforms === 1 ? " platform, " : " platforms, ")
 			+ plan.built.faces + (plan.built.faces === 1 ? " boarding face" : " boarding faces");
 		const counts = new Map();
 		for (let i = 3; i < plan.cells.length; i += 5) {
@@ -1908,7 +1932,7 @@
 			const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
 			view.target.addScaledVector(right, ((x0 + x1) / 2) * half * camera.aspect).addScaledVector(up, ((y0 + y1) / 2) * half);
 			const k = Math.max((x1 - x0) / 2, (y1 - y0) / 2) / 0.9;
-			view.radius = Math.max(4, Math.min(3000, view.radius * k));
+			view.radius = Math.max(4, Math.min(9000, view.radius * k));
 			if (Math.abs(k - 1) < 0.01 && Math.abs(x0 + x1) < 0.02 && Math.abs(y0 + y1) < 0.02) {
 				break;
 			}
@@ -2128,7 +2152,7 @@
 			return;
 		}
 		glide = null;
-		view.radius = Math.max(2, Math.min(3000, view.radius * Math.exp(e.deltaY * 0.0012)));
+		view.radius = Math.max(2, Math.min(9000, view.radius * Math.exp(e.deltaY * 0.0012)));
 		draw();
 	}, { passive: false });
 
