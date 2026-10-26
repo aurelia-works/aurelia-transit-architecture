@@ -26,6 +26,17 @@ public final class BoardSummary {
 		return "";
 	}
 
+	/** The names of the platforms beside a board in the station's platform order, joined as "5a / 5b" (an island board serves both faces). */
+	public static String platformNames(List<PlatformReference> platforms, List<Long> platformIds) {
+		final StringBuilder out = new StringBuilder();
+		for (final PlatformReference platform : platforms) {
+			if (platformIds.contains(platform.id())) {
+				out.append(out.isEmpty() ? "" : " / ").append(platform.name());
+			}
+		}
+		return out.toString();
+	}
+
 	/**
 	 * @param platformCount the station's platforms (0: nothing to say)
 	 * @param here          name of the platform beside the board, or empty

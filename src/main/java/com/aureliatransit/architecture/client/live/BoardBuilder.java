@@ -75,13 +75,14 @@ final class BoardBuilder {
 	}
 
 	/**
-	 * @param nearestPlatformId when non-zero, only this platform's services are shown (AUTO platform displays)
+	 * @param here             when not empty, only these platforms' services are shown (AUTO platform displays: the board's
+	 *                          platform, or both faces of its island)
 	 * @param topInsetPixels    pixels of the top block edge not usable by the screen (hanging rods)
 	 */
-	static void build(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearestPlatformId,
+	static void build(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, List<Long> here,
 					  int widthBlocks, int heightBlocks, float topInsetPixels, long now) {
 		m.reset();
-		final Board b = new Board(m, tr, widths, kind, config, snapshot, nearestPlatformId, widthBlocks - 2 * FRAME,
+		final Board b = new Board(m, tr, widths, kind, config, snapshot, here, widthBlocks - 2 * FRAME,
 				heightBlocks - 2 * FRAME - topInsetPixels / 16F, now);
 		switch (config.style()) {
 			case UK_DOT_MATRIX -> {
@@ -141,7 +142,7 @@ final class BoardBuilder {
 		final float windowL = sideL;
 		final float windowR = b.vw - sideR;
 		// platform number and arrow
-		final String here = BoardSummary.platformName(b.snapshot.platforms(), b.nearest);
+		final String here = b.hereName;
 		b.put("\u2190", Font.DEFAULT, MARGIN + 2, y0 + 3, 1.4F, st.text());
 		if (!here.isEmpty()) {
 			final float k = Math.min(2.4F, (sideL - MARGIN) / Math.max(7, b.w(here, Font.DEFAULT, 1)));
@@ -718,7 +719,7 @@ final class BoardBuilder {
 			final String clock = clock();
 			final float cw = b.w(clock, Font.SANS_BOLD, 0.85F);
 			b.put(clock, Font.SANS_BOLD, right - cw, y0 + 3, 0.85F, st.text());
-			final String here = BoardSummary.platformName(b.snapshot.platforms(), b.nearest);
+			final String here = b.hereName;
 			final String title = here.isEmpty() ? b.station : Tr.t("board_platform", here);
 			b.fit(title, Font.SANS_BOLD, left, y0 + 3, 0.85F, right - cw - 6 - left, st.text());
 		}
@@ -979,7 +980,9 @@ final class BoardBuilder {
 		final DisplayConfig config;
 		final DisplayStyle style;
 		final StationSnapshot snapshot;
-		final long nearest;
+		final List<Long> here;
+		/** "5" or, for an island board, "5a / 5b"; empty when no platform is beside the board. */
+		final String hereName;
 		final long now;
 		final String station;
 		final List<ServiceMessage> messages;
@@ -991,7 +994,7 @@ final class BoardBuilder {
 		float vw;
 		float vh;
 
-		Board(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, long nearest, float boardW, float boardH,
+		Board(BoardModel m, TextRenderer tr, WidthCache widths, DisplayKind kind, DisplayConfig config, StationSnapshot snapshot, List<Long> here, float boardW, float boardH,
 			  long now) {
 			this.m = m;
 			this.tr = tr;
@@ -999,7 +1002,8 @@ final class BoardBuilder {
 			this.config = config;
 			this.style = config.style();
 			this.snapshot = snapshot;
-			this.nearest = nearest;
+			this.here = here;
+			this.hereName = BoardSummary.platformNames(snapshot.platforms(), here);
 			this.now = now;
 			this.boardW = boardW;
 			this.boardH = boardH;
@@ -1008,7 +1012,7 @@ final class BoardBuilder {
 			this.messages = ClientServiceMessages.applicable(config.message(), plain);
 			this.concourse = kind == DisplayKind.CONCOURSE;
 			this.arrivals = concourse && config.arrivals();
-			this.services = arrivals ? arrivals(snapshot, plain, now) : visible(kind, snapshot, nearest, now);
+			this.services = arrivals ? arrivals(snapshot, plain, now) : visible(kind, snapshot, here, now);
 		}
 
 		/**
@@ -1065,11 +1069,15 @@ final class BoardBuilder {
 			if (!concourse || !config.summary()) {
 				return "";
 			}
-			return BoardSummary.text(snapshot.platforms().size(), BoardSummary.platformName(snapshot.platforms(), nearest));
+			return BoardSummary.text(snapshot.platforms().size(), hereName);
 		}
 
+		/** A platform board names its own platform when idle; only a concourse board welcomes you to the station. */
 		String idleFirst() {
-			return snapshot.station() == null ? Tr.t("term_no_station") : Tr.t("board_welcome", station);
+			if (snapshot.station() == null) {
+				return Tr.t("term_no_station");
+			}
+			return concourse || hereName.isEmpty() ? Tr.t("board_welcome", station) : Tr.t("board_platform", hereName);
 		}
 
 		String idleSecond() {
@@ -1212,13 +1220,13 @@ final class BoardBuilder {
 			return out;
 		}
 
-		private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, long nearestPlatformId, long now) {
+		private static List<ServiceSnapshot> visible(DisplayKind kind, StationSnapshot snapshot, List<Long> here, long now) {
 			final List<ServiceSnapshot> out = new ArrayList<>(snapshot.services().size());
 			for (final ServiceSnapshot s : snapshot.services()) {
 				if (s.departureMillis() < now) {
 					continue;
 				}
-				if (nearestPlatformId != 0 && !kind.stationWide() && s.platformId() != nearestPlatformId) {
+				if (!here.isEmpty() && !kind.stationWide() && !here.contains(s.platformId())) {
 					continue;
 				}
 				out.add(s);
