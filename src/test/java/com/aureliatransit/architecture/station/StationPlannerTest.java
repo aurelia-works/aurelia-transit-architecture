@@ -436,6 +436,34 @@ class StationPlannerTest {
 	}
 
 	@Test
+	void platformScreensAreWithinTheirPlatformSearch() {
+		final List<String> descriptions = new ArrayList<>();
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			descriptions.add(preset.description());
+		}
+		// Jah's 10-26 play-test hub
+		descriptions.add("10 track utrecht station, 200 long");
+		descriptions.add("utrecht style hub, 10 tracks, 5 island platforms, 200 long");
+		final List<String> out = new ArrayList<>();
+		for (final String description : descriptions) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			for (final PlannedBlock block : plan.blocks()) {
+				if (!block.blockId().equals(StationPlanner.PIDS) && !block.blockId().equals(StationPlanner.HANGING_PIDS)) {
+					continue;
+				}
+				int nearest = Integer.MAX_VALUE;
+				for (final TrackLayout.Track track : plan.layout().tracks()) {
+					nearest = Math.min(nearest, Math.abs(block.u() - track.u()));
+				}
+				if (nearest > com.aureliatransit.architecture.live.NearestPlatformProvider.SEARCH_RADIUS) {
+					out.add(description + ": " + block.u() + "," + block.y() + "," + block.v() + " is " + nearest + " from a track");
+				}
+			}
+		}
+		assertTrue(out.isEmpty(), out.size() + " platform screens find no platform, e.g. " + out.stream().limit(6).toList());
+	}
+
+	@Test
 	void presetBlocksAreAllConnectedToTheGround() {
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
 			final List<PlannedBlock> floating = unconnected(plan(StationDescriptionParser.parse(preset.description()).spec()));

@@ -61,11 +61,6 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	 * Platforms requested from MTR for one logical station (a safety bound for enormous AUTO stations).
 	 */
 	static final int MAX_PLATFORMS = 16;
-	/**
-	 * MTR's own PIDS looks for the closest platform within this many blocks of the block position lowered by 4.
-	 */
-	private static final int PLATFORM_SEARCH_RADIUS = 5;
-	private static final int PLATFORM_SEARCH_DROP = 4;
 
 	private record SnapshotKey(long pos, StationAssociation association, boolean withServices, boolean withTimes) {
 	}
@@ -162,7 +157,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	private Resolution resolveAuto(BlockPos pos) {
 		final Station station = InitClient.findStation(new org.mtr.mapping.holder.BlockPos(pos));
 		final Platform[] nearest = new Platform[1];
-		InitClient.findClosePlatform(new org.mtr.mapping.holder.BlockPos(pos.down(PLATFORM_SEARCH_DROP)), PLATFORM_SEARCH_RADIUS, platform -> nearest[0] = platform);
+		InitClient.findClosePlatform(new org.mtr.mapping.holder.BlockPos(pos.down(SEARCH_DROP)), SEARCH_RADIUS, platform -> nearest[0] = platform);
 		final long nearestId = nearest[0] == null ? 0 : nearest[0].getId();
 		if (station != null) {
 			return build(station, station.savedRails, nearestId);
