@@ -288,7 +288,7 @@ abstract class PlanAirport extends PlanFitOut {
 
 	/** Where an aircraft's nose stops on stand: past the boarding bridge, or well in from the apron's edge without a terminal. */
 	int stopU() {
-		return spec.airport().terminal() ? air.terminalU1() + air.dims().bridge() + 3 : air.apronU0() + 10;
+		return air.stopU();
 	}
 
 	/** A yellow lead-in line to the stop bar on every stand, the bar, the stand's number, and white lines between stands. */

@@ -181,6 +181,11 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 		return length - 1 - v;
 	}
 
+	/** Where an aircraft's nose stops on stand: past the boarding bridge, or well in from the apron's edge without a terminal. */
+	public int stopU() {
+		return spec.terminal() ? terminalU1 + dims.bridge() + 3 : apronU0 + 10;
+	}
+
 	/** True when {@code (u, v)} is inside the terminal building's footprint. */
 	public boolean inTerminal(int u, int v) {
 		return spec.terminal() && u >= terminalU0 && u <= terminalU1 && v >= terminalV0 && v <= terminalV1;
