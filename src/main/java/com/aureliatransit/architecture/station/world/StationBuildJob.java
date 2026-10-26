@@ -554,11 +554,9 @@ public final class StationBuildJob {
 		BlockState result = state;
 		for (final Direction direction : Direction.values()) {
 			final BlockPos neighbour = pos.offset(direction);
-			BlockState there = world.getBlockState(neighbour);
+			// the neighbour the plan gives it, even where the ground still stands (a deep station's lower half under rock not yet dug)
 			final BlockState future = planned.get(neighbour);
-			if (future != null && there.isAir()) {
-				there = future;
-			}
+			final BlockState there = future != null ? future : world.getBlockState(neighbour);
 			result = result.getStateForNeighborUpdate(direction, there, world, pos, neighbour);
 		}
 		return result;
