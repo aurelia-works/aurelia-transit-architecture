@@ -114,8 +114,10 @@ public final class AirportRails {
 				cut = end - 1 > start && nextEnd > end + 1;
 			}
 			if (cut) {
+				// a corner is a connector, never a stand: a GATE run's corner takes the kind of the run after it, so only the stand is a platform
+				final Kind bend = kind == Kind.GATE ? ks.get(runs.get(r + 1)[0]) : kind;
 				straight(kind, gate, frame, y, cs.get(start), cs.get(end - 1), out);
-				curve(kind, gate, frame, y, cs.get(end - 1), cs.get(end), cs.get(end + 1), out);
+				curve(bend, gate, frame, y, cs.get(end - 1), cs.get(end), cs.get(end + 1), out);
 				start = end + 1;
 			} else {
 				straight(kind, gate, frame, y, cs.get(start), cs.get(end), out);
