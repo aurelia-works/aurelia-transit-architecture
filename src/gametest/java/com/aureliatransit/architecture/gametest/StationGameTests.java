@@ -414,6 +414,62 @@ public class StationGameTests implements FabricGameTest {
 		});
 	}
 
+	/**
+	 * An airport with a railway station under its terminal (Jah 10-26), built through the command path: every block of the station
+	 * stands, its platform tracks' rail nodes are joined as MTR platforms, and undo takes them away. Far from the other tests (MTR
+	 * areas are columns) and high enough that the box's 16-block dig stays above the flat world's bedrock.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 24000, batchId = "airport_rail")
+	public void airportStationIsBuiltUnderTheTerminalAndUndone(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final String words = "airport with 1 gate and a train station, runway 240 long, 30 wide, named Rail Test";
+		final UUID owner = new UUID(0, 73);
+		final StationSessions.Pending pending = StationCommand.prepare(world, words, context.getAbsolutePos(new BlockPos(-6000, 30, 6000)), Heading.SOUTH);
+		check(pending.spec().airport().rail(), "no railway station in: " + words);
+		check(pending.violations().isEmpty() && pending.audit().buildable(), "plan: " + pending.violations() + " " + pending.audit().problems());
+		final List<Text> said = new ArrayList<>();
+		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, true, said::add);
+		check(job != null, "build refused: " + said);
+		context.runAtEveryTick(() -> {
+			if (!job.finished()) {
+				return;
+			}
+			check(job.state() == StationBuildJob.State.DONE, "job " + job.state() + " " + said);
+			final List<String> problems = new ArrayList<>();
+			final List<BlockPos> nodes = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.y() >= 0) {
+					continue;
+				}
+				final BlockPos pos = cellPos(pending, block);
+				final String id = Registries.BLOCK.getId(world.getBlockState(pos).getBlock()).toString();
+				if (!id.equals(block.blockId())) {
+					problems.add(block + ": found " + id);
+				}
+				if (block.role() == Role.RAIL_NODE) {
+					nodes.add(pos);
+				}
+			}
+			check(!nodes.isEmpty(), "no rail nodes under the terminal");
+			for (final BlockPos node : nodes) {
+				if (!flag(world.getBlockState(node), "is_connected")) {
+					problems.add("rail node at " + node.toShortString() + " not joined as an MTR platform");
+				}
+			}
+			Fixtures.failIfAny(problems, words);
+			StationSessions.cancelJob(owner);
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			for (final BlockPos node : nodes) {
+				check(world.getBlockState(node).isAir(), "undo left the rail node at " + node.toShortString());
+			}
+			context.complete();
+		});
+	}
+
 	/** A terminus (head building, buffer stops, gate line, train shed) built in the world. */
 	@GameTest(templateName = SITE_LARGE, tickLimit = 200)
 	public void terminusBuildsThroughTheCommandPath(TestContext context) {
