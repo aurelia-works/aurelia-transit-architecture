@@ -25,6 +25,9 @@
 - **New real-station fronts:** Tokyo (the red-brick Marunouchi building), Beijing, Kuala Lumpur, Surbiton, Munich, Berlin and Coventry. Tokyo is close to the real building; the others approximate its massing and materials.
 - **A plain "amsterdam" station** gets a grand building by default.
 - **Deep stations:** `deep tube` builds a bored tube 27 m down ("40 blocks deep"), escalator-only with `no ramps`; `cut and cover` builds a deep box with lifts. Presets: Angel (tube, TfL signs), Canary Wharf (box, TfL signs), Vijzelgracht (island box, GVB signs). Shallow underground is unchanged.
+- **Airport blocks (1.7):** runway edge, threshold and taxiway lights, apron floodlight, check-in desk, baggage belt, departures board, windsock and terminal terrazzo, in a new Airport tab; the airport generator builds with them.
+- **Runway numbers (1.7):** "runway 05/23" paints those numbers at the runway ends instead of 09/27; London Southend now carries 05/23.
+- **Airport with a railway station under the terminal (1.7):** "airport with a train station" (or "transit", "rail link") digs a two-track cut-and-cover box with an island platform under the terminal, with escalators and a lift up into the hall and its MTR platforms numbered; new preset "Airport with station". The tracks end at the box walls; it fits regional-size terminals only (a compact airport says so).
 
 ### Build job
 
