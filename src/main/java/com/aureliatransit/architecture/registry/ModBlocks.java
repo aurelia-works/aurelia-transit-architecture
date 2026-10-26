@@ -9,6 +9,7 @@ import com.aureliatransit.architecture.block.GlassBarrierBlock;
 import com.aureliatransit.architecture.block.GlassFacingBlock;
 import com.aureliatransit.architecture.block.InfoDisplayBlock;
 import com.aureliatransit.architecture.block.InfoLayout;
+import com.aureliatransit.architecture.block.JoiningSeatBlock;
 import com.aureliatransit.architecture.block.SeatBlock;
 import com.aureliatransit.architecture.block.Placement;
 import com.aureliatransit.architecture.block.ShapedBlock;
@@ -160,9 +161,9 @@ public final class ModBlocks {
 	// ---- Furniture -------------------------------------------------------------------------------------------------
 
 	public static final Block STEEL_BENCH = register("steel_bench", BlockFamily.FURNITURE, RenderKind.CUTOUT,
-			new SeatBlock(metal(), Placement.TOWARD_PLAYER, BENCH, BENCH_COLLISION, 2, 7.5, 7.5, true), TIP_FACES_YOU, TIP_SIT);
+			new JoiningSeatBlock(metal(), Placement.TOWARD_PLAYER, BENCH, BENCH_COLLISION, 2, 7.5, 7.5, true), TIP_FACES_YOU, TIP_SIT);
 	public static final Block WOODEN_BENCH = register("wooden_bench", BlockFamily.FURNITURE, RenderKind.CUTOUT,
-			new SeatBlock(metal(), Placement.TOWARD_PLAYER, BENCH, BENCH_COLLISION, 2, 7.5, 7.5, true), TIP_FACES_YOU, TIP_SIT);
+			new JoiningSeatBlock(metal(), Placement.TOWARD_PLAYER, BENCH, BENCH_COLLISION, 2, 7.5, 7.5, true), TIP_FACES_YOU, TIP_SIT);
 	public static final Block WASTE_BIN = register("waste_bin", BlockFamily.FURNITURE, RenderKind.CUTOUT,
 			new FacingShapedBlock(metal(), Placement.TOWARD_PLAYER, box(3.5, 0, 3.5, 12.5, 14.5, 12.5)));
 	public static final Block BUFFER_STOP = register("buffer_stop", BlockFamily.FURNITURE, RenderKind.CUTOUT,

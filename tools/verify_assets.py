@@ -35,6 +35,7 @@ EXPECTED_PROPERTIES = {
     "AxisShapedBlock": {"axis"},
     "TextSignBlock": {"facing", "left", "right"},
     "SeatBlock": {"facing"},
+    "JoiningSeatBlock": {"facing", "left", "right"},
     "InfoDisplayBlock": {"facing"},
     "ClockBlock": {"facing"},
     "PidsBlock": {"facing", "left", "right", "up", "down"},

@@ -1,0 +1,8 @@
+{
+  "parent": "aurelia_transit_architecture:block/bench_end_right_template",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/steel_dark",
+    "frame": "aurelia_transit_architecture:block/steel_dark",
+    "seat": "aurelia_transit_architecture:block/wood_slats"
+  }
+}
