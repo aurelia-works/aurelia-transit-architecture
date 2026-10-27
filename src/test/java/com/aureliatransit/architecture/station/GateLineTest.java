@@ -27,6 +27,13 @@ class GateLineTest {
 	}
 
 	@Test
+	void anOpenConcourseHasNoGateStripes() {
+		final boolean striped = StationPlanner.plan(spec(preset("frankfurt"))).blocks().stream()
+				.anyMatch(b -> b.role() == Role.FLOOR && StationPlanner.PLATFORM_COLOURS.contains(b.blockId()));
+		assertFalse(striped, "no platform colour stripes on Frankfurt's concourse floor");
+	}
+
+	@Test
 	void gatesAskedForAreBuiltThere() {
 		assertTrue(gated(preset("frankfurt") + ", gates"));
 		assertTrue(gated(preset("frankfurt") + ", with ticket barriers"));
