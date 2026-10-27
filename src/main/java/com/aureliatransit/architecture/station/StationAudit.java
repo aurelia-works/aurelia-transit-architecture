@@ -1288,7 +1288,7 @@ public final class StationAudit {
 			if (!window) {
 				missing.add("ticket window");
 			}
-			if (!gate && PlanState.gateLine(spec)) {
+			if (!gate) {
 				missing.add("fare gates");
 			}
 			if (!board) {

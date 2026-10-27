@@ -500,7 +500,7 @@ abstract class PlanBridges extends PlanConcourse {
 		final int fence = wallLo + HALL_PASSAGE + 1;
 		final int gateLo = site.street().uMax() + 1;
 		final int gateHi = site.farStreet().uMin() - 1;
-		for (final int u : gateLine() ? new int[]{gateLo, gateHi} : new int[0]) {
+		for (final int u : new int[]{gateLo, gateHi}) {
 			final LocalDir green = u == gateLo ? LocalDir.MINUS_U : LocalDir.PLUS_U;
 			for (int v = fence; v < wallHi; v++) {
 				final int d = v - vB;

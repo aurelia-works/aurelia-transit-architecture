@@ -253,12 +253,12 @@ abstract class PlanFurniture extends PlanRoofs {
 		final HallZones.Layout zones = HallZones.plan(hall, HallZones.profile(region));
 		final int uGate = zones.gateU();
 		// gate bank across the walk in, a lane per door cell: END, GATE.., WIDE, ..GATE, END; glass barriers elsewhere
-		for (int d = -h - 1; d <= h + 1 && gateLine(); d++) {
+		for (int d = -h - 1; d <= h + 1; d++) {
 			final String kind = Math.abs(d) == h + 1 ? "kind=end" : d == 0 ? "kind=wide" : "kind=gate";
 			// green towards the street door, red towards the platforms
 			gate(uGate, StationGeometry.WALK_Y, vEntr + d, LocalDir.MINUS_U, kind, d > 0, LocalDir.PLUS_U);
 		}
-		for (int v = vS + 1; v <= vE - 1 && gateLine(); v++) {
+		for (int v = vS + 1; v <= vE - 1; v++) {
 			if (v >= vEntr - h - 1 && v <= vEntr + h + 1) {
 				continue;
 			}

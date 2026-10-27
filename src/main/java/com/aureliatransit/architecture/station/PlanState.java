@@ -227,18 +227,6 @@ abstract class PlanState {
 	 * True for a real station's train shed that springs from the platforms and spans them freely (St Pancras): no columns or
 	 * cross girders under it, only its ribs, the girders along its eaves and its side walls.
 	 */
-	/**
-	 * A gate line in the station's halls: everywhere but a German or Swiss station, whose concourse is open as the real
-	 * ones are (Frankfurt's platform barriers went in the 1970s) unless the words ask for gates (Jah 10-26).
-	 */
-	boolean gateLine() {
-		return gateLine(spec);
-	}
-
-	static boolean gateLine(StationSpec spec) {
-		return spec.options().gatesAsked() || HallZones.region(spec.operator(), spec.building()) != HallZones.Region.GERMAN;
-	}
-
 	boolean freeShed() {
 		final Landmark.Shed shed = landmark == null ? null : landmark.shed();
 		return shed != null && shed.eavesY() > 0 && spec.roof() == RoofType.HALL && spec.shed().arched() && hallBeamY() == shed.eavesY();
