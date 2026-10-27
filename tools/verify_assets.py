@@ -78,6 +78,7 @@ EXPECTED_PROPERTIES = {
     "StopBoardBlock": {"facing", "wall", "cars"},
     "ArchGlassBlock": set(),
     "ArchGlassPaneBlock": {"north", "east", "south", "west"},
+    "QueuePostBlock": {"north", "east", "south", "west", "waterlogged"},
     "GlassFinBlock": {"axis"},
     "GlassFloorBlock": set(),
     # 1.6 platform slabs: vanilla slab models keyed on type only (waterlogged needs no model)

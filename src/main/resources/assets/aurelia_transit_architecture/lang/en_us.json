@@ -708,5 +708,16 @@
   "block.aurelia_transit_architecture.windsock": "Windsock",
   "block.aurelia_transit_architecture.terminal_terrazzo": "Terminal Terrazzo",
   "itemGroup.aurelia_transit_architecture.airport": "Aurelia Transit: Airport",
-  "tooltip.aurelia_transit_architecture.airport_ground_light": "Set flush into the airfield; gives light"
+  "tooltip.aurelia_transit_architecture.airport_ground_light": "Set flush into the airfield; gives light",
+  "block.aurelia_transit_architecture.security_arch": "Walk-through Metal Detector",
+  "block.aurelia_transit_architecture.xray_scanner": "X-ray Bag Scanner",
+  "block.aurelia_transit_architecture.security_desk": "Security Inspection Table",
+  "block.aurelia_transit_architecture.queue_post": "Queue Post",
+  "block.aurelia_transit_architecture.self_check_in_kiosk": "Self Check-in Kiosk",
+  "block.aurelia_transit_architecture.bag_drop": "Self Bag Drop",
+  "block.aurelia_transit_architecture.baggage_carousel": "Baggage Carousel",
+  "block.aurelia_transit_architecture.baggage_carousel_corner": "Baggage Carousel Corner",
+  "block.aurelia_transit_architecture.gate_desk": "Gate Desk",
+  "block.aurelia_transit_architecture.luggage_trolley": "Luggage Trolley",
+  "block.aurelia_transit_architecture.airport_seat": "Airport Seating"
 }
