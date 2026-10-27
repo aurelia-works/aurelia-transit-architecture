@@ -49,6 +49,14 @@ class StationTextTest {
 	}
 
 	@Test
+	void anAirportIsSummedUpAsAnAirport() {
+		final StationSpec spec = StationDescriptionParser.parse("airport with 2 gates and a train station, runway 600 long, named Velare").spec();
+		final String expected = "airport, 1 runway 600 x " + spec.airport().runwayWidth() + ", 2 gates, terminal, railway station under the terminal, \"Velare\"";
+		assertEquals(expected, StationText.headline(spec));
+		assertEquals(expected, StationText.planLine(spec));
+	}
+
+	@Test
 	void oneTrackIsSingular() {
 		final StationSpec spec = StationDescriptionParser.parse("1 track, 40 long").spec();
 		assertTrue(StationText.planLine(spec).startsWith("1 track, "), StationText.planLine(spec));
