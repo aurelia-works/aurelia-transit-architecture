@@ -73,11 +73,13 @@ final class StationText {
 		if (!spec.isAirport()) {
 			return null;
 		}
-		final String problem = AirportRoute.of(AirportGeometry.of(spec.airport())).problem();
-		if (problem.isEmpty()) {
+		final AirportRoute route = AirportRoute.of(AirportGeometry.of(spec.airport()));
+		if (route.problem().isEmpty() && route.gates().size() >= 2) {
 			return null;
 		}
-		return "No MTR planes: " + problem + (spec.airport().runwayWidth() < AirportGeometry.REAL_WIDTH
+		// AirportMtr makes no route from one gate platform either
+		final String problem = route.problem().isEmpty() ? "MTR needs two gates for a route; this airport has " + route.gates().size() : route.problem();
+		return "No MTR planes: " + problem + (!route.problem().isEmpty() && spec.airport().runwayWidth() < AirportGeometry.REAL_WIDTH
 				? " (a runway " + AirportGeometry.REAL_WIDTH + " or more wide has room for them)" : "") + ".";
 	}
 
@@ -110,8 +112,9 @@ final class StationText {
 	static void shortSummary(StationSessions.Pending pending, BlockStateResolver.Check check, Consumer<Text> out) {
 		final ParseResult parse = pending.parse();
 		out.accept(Text.literal("[ATA Station] ").formatted(Formatting.GOLD).append(Text.literal(headline(pending.spec())).formatted(Formatting.WHITE)));
-		if (noPlanes(pending.spec()) != null) {
-			out.accept(Text.literal("  " + noPlanes(pending.spec())).formatted(Formatting.YELLOW));
+		final String noPlanes = noPlanes(pending.spec());
+		if (noPlanes != null) {
+			out.accept(Text.literal("  " + noPlanes).formatted(Formatting.YELLOW));
 		}
 		for (final String line : parse.understood()) {
 			if (line.startsWith("mix: ")) {
@@ -168,8 +171,9 @@ final class StationText {
 		final LocalFrame frame = pending.frame();
 		final TrackLayout layout = plan.layout();
 		out.accept(Text.literal("[ATA Station] " + planLine(pending.spec())).formatted(Formatting.GOLD));
-		if (noPlanes(pending.spec()) != null) {
-			out.accept(Text.literal(noPlanes(pending.spec())).formatted(Formatting.YELLOW));
+		final String noPlanes = noPlanes(pending.spec());
+		if (noPlanes != null) {
+			out.accept(Text.literal(noPlanes).formatted(Formatting.YELLOW));
 		}
 		list(out, "Understood: ", parse.understood(), Formatting.GRAY);
 		list(out, "Defaults: ", parse.defaulted(), Formatting.DARK_GRAY);
