@@ -24,7 +24,8 @@ import java.util.regex.Pattern;
  * window stays in the background. The request's file name names the screenshot ({@code screenshots/<name>.png}); a request
  * containing {@code nohud} hides the HUD and chat for that shot, and {@code fov=<degrees>} sets the field of view for it.
  * Both are restored afterwards. {@code open=wrench} opens the station wrench screen for the wrench in the main hand, and
- * {@code open=book page=<n>} the written book in the main hand at that page; the screen is closed after the shot. Without a
+ * {@code open=book page=<n>} the written book in the main hand at that page, {@code open=codex} the Station Codex; the screen is
+ * closed after the shot. Without a
  * wrench in hand, {@code open=wrench} opens the screen anyway with {@code recipe=<encoded choices>} (or the defaults), for its
  * live preview; its actions then do nothing. {@code wait=<ticks>} waits longer before the shot (the preview plans and meshes in
  * the background). {@code use}
@@ -131,6 +132,8 @@ final class DevScreenshots {
 				client.setScreen(new StationWrenchScreen(Hand.MAIN_HAND, "",
 						recipe.find() ? StationRecipe.decode(recipe.group(1)) : StationRecipe.defaults()));
 			}
+		} else if (content.contains("open=codex")) {
+			CodexScreen.open();
 		} else if (content.contains("open=book")) {
 			final ItemStack stack = client.player.getMainHandStack();
 			if (!stack.isOf(Items.WRITTEN_BOOK)) {
