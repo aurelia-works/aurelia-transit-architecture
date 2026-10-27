@@ -42,6 +42,19 @@ class ConnectionsTest {
 		assertEquals("left=false,right=false,up=false,down=false", Connections.state(turned, screens, NONE), "facing the other way, apart");
 	}
 
+	@Test
+	void aRowOfBenchesJoinsIntoOneLongBench() {
+		final PlannedBlock end = block(0, 0, ATA + "steel_bench", LocalDir.PLUS_V);
+		final PlannedBlock middle = block(1, 0, ATA + "steel_bench", LocalDir.PLUS_V);
+		final PlannedBlock other = block(2, 0, ATA + "steel_bench", LocalDir.PLUS_V);
+		final PlannedBlock wood = block(3, 0, ATA + "wooden_bench", LocalDir.PLUS_V);
+		final Map<Long, PlannedBlock> row = at(List.of(end, middle, other, wood));
+		assertEquals("left=true,right=true", Connections.state(middle, row, NONE));
+		assertEquals("left=false,right=true", Connections.state(end, row, NONE));
+		assertEquals("left=true,right=false", Connections.state(other, row, NONE), "a different bench is not part of the row");
+		assertEquals("left=false,right=false", Connections.state(wood, row, NONE));
+	}
+
 	private static PlannedBlock block(int u, int v, String id, LocalDir front) {
 		return new PlannedBlock(u, 1, v, Role.FIXTURE, id, front, "", "");
 	}

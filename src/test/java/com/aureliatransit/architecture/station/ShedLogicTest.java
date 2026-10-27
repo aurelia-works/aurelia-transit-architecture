@@ -97,4 +97,35 @@ class ShedLogicTest {
 		}
 		assertEquals(List.of(), problems);
 	}
+
+	/**
+	 * A real shed of several spans (Frankfurt 3, Milan 5) or of nave and aisles (Hamburg) stands only on the column rows
+	 * under its valleys and at its outer edges, not on two rows along every island (Jah 10-26: realism pass).
+	 */
+	@Test
+	void realShedsStandOnTheirValleyRowsOnly() {
+		final Map<String, Integer> lines = Map.of("frankfurt", 4, "milan", 6, "hamburg_hbf", 4);
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			if (!lines.containsKey(preset.key())) {
+				continue;
+			}
+			final java.util.Set<Integer> us = new java.util.TreeSet<>();
+			for (final PlannedBlock block : plan(preset.description()).blocks()) {
+				if (block.role() == Role.COLUMN_CAP) {
+					us.add(block.u());
+				}
+			}
+			assertEquals(lines.get(preset.key()), us.size(), preset.key() + " column lines " + us);
+		}
+	}
+
+	/** The nave springs from the rows that carry it: aisles of different widths, each a vault of its own under the nave. */
+	@Test
+	void naveSpringsFromItsColumnRows() {
+		final int[] rise = new int[60];
+		PlanRoofs.naveAndAisles(rise, 60, 10, 53, 24);
+		assertTrue(rise[10] > 0, "the nave and the left aisle meet above the frame at u=10");
+		assertTrue(rise[30] > rise[10] && rise[30] > rise[53], "the nave's crown is above both aisles");
+		assertTrue(rise[5] > 0 && rise[56] > 0, "each aisle is a vault");
+	}
 }

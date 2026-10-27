@@ -44,6 +44,8 @@ public final class Connections {
 			ATA + "hanging_wayfinding_sign", ATA + "passenger_info_terminal", ATA + "psd_text_panel", ATA + "station_info_board",
 			ATA + "station_name_sign", ATA + "wall_wayfinding_sign", ATA + "ns_station_sign", ATA + "db_station_sign", ATA + "gvb_station_sign",
 			ATA + "underground_station_sign", ATA + "national_rail_station_sign", ATA + "sbahn_station_sign", ATA + "sbb_station_sign", ATA + "jr_station_sign", ATA + "station_lettering");
+	/** Blocks of {@code JoiningSeatBlock}: a row of the same bench facing one way joins like the signs. */
+	private static final Set<String> BENCHES = Set.of(ATA + "steel_bench", ATA + "wooden_bench");
 	private static final Set<String> RAILINGS = Set.of(ATA + "handrail", ATA + "station_fence");
 	private static final String GIRDER = ATA + "station_girder";
 	/** Blocks of {@code GirderBlock}: the girder and the roof truss join each other as one family. */
@@ -81,7 +83,7 @@ public final class Connections {
 			add(out, "right", same(frame, block, facing, beside(at, x, y, z, facing.left())));
 			add(out, "up", same(frame, block, facing, at.get(StudioApi.cell(x, y + 1, z))));
 			add(out, "down", same(frame, block, facing, at.get(StudioApi.cell(x, y - 1, z))));
-		} else if (JOINING_SIGNS.contains(id)) {
+		} else if (JOINING_SIGNS.contains(id) || BENCHES.contains(id)) {
 			add(out, "left", same(frame, block, facing, beside(at, x, y, z, facing.left())));
 			add(out, "right", same(frame, block, facing, beside(at, x, y, z, facing.right())));
 		} else if (id.equals(SIGN_POLE)) {

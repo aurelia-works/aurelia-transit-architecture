@@ -31,6 +31,9 @@ import java.util.function.IntConsumer;
  */
 final class MtrRails {
 
+	/** MTR's own default rail style, the one its Rail Connector gives a rail before the player picks another. */
+	static final String DEFAULT_STYLE = "default";
+
 	private MtrRails() {
 	}
 
@@ -58,9 +61,11 @@ final class MtrRails {
 			final Position to = new Position(b.getX(), b.getY(), b.getZ());
 			final ObjectObjectImmutablePair<Angle, Angle> angles = Rail.getAngles(from, BlockNode.getAngle(new org.mtr.mapping.holder.BlockState(stateA)),
 					to, BlockNode.getAngle(new org.mtr.mapping.holder.BlockState(stateB)));
+			// MTR draws a rail only through its styles; its own connector gives a new rail "default" (PacketUpdateLastRailStyles),
+			// and a rail with none is laid and connected but invisible
 			final Rail rail = planned.turnBack()
-					? Rail.newTurnBackRail(from, angles.left(), to, angles.right(), Rail.Shape.QUADRATIC, 0, new ObjectArrayList<>(), TransportMode.TRAIN)
-					: Rail.newPlatformRail(from, angles.left(), to, angles.right(), Rail.Shape.QUADRATIC, 0, new ObjectArrayList<>(), TransportMode.TRAIN);
+					? Rail.newTurnBackRail(from, angles.left(), to, angles.right(), Rail.Shape.QUADRATIC, 0, ObjectArrayList.of(DEFAULT_STYLE), TransportMode.TRAIN)
+					: Rail.newPlatformRail(from, angles.left(), to, angles.right(), Rail.Shape.QUADRATIC, 0, ObjectArrayList.of(DEFAULT_STYLE), TransportMode.TRAIN);
 			if (!rail.isValid()) {
 				continue;
 			}

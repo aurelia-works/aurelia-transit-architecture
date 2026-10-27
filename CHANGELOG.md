@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.6.1
+
+Fixes from the 1.6.0 play-test (Jah, 10-26). No new features beyond joined benches.
+
+### Fixes
+
+- **Platform boards show their own platform:** a board over an island shows the departures of that island's two tracks, and a board on a side platform its own track, never every departure in the station (the search for a board's platform reached 5 blocks and missed the middle of wide islands). With no trains a platform board names its platforms ("Platform 5 / 6"); the big boards in the hall keep the whole station.
+- **Generated rails are visible:** platform tracks are laid with MTR's default rail style; before, they were connected but drawn as nothing.
+- **Board messages:** a long message on a platform board holds, scrolls once to its end and holds, instead of being cut off.
+- **Terminus halls** get departure boards over the gate line, the main board two blocks high.
+- **Help points** stand by the middle screen of a platform, not at its open tip.
+- **Bed lights** no longer show the terrain through their light channel.
+- **Handrails:** a piece broken out of a generated run and put back goes back into the run (corners too), and the rail is easier to aim at.
+- **Station Studio** no longer adds travelators unless asked for.
+
+### Stations
+
+- **Real train sheds stand on their own column rows:** Frankfurt, Milan, Zurich, Munich, Mumbai and Hamburg rest only on the rows under the valleys between their vaults (Hamburg: between nave and aisles) and at their outer edges, with the platforms under each span free; before, every island had two rows of columns. Berlin's single barrel vault rests on its two outer rows only.
+- **Amsterdam Centraal's real front:** two towers, the raised central gable, long banded brick wings and stepped-gable end pavilions, with a 9-wide entrance.
+
+### Blocks
+
+- **Benches join into one long bench:** the same bench facing the same way side by side shares one frame, with legs and armrests at the ends of the row and a centre support between (Null's request). Platform benches, placed in pairs, now read as one bench.
+
 ## Unreleased
 
 ### Station generator

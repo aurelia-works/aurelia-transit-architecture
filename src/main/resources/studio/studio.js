@@ -757,7 +757,9 @@
 			$("roof").value = r() < 0.4 ? "AUTO" : choose(r, options.roofs.map(([v]) => v).filter((v) => v !== "AUTO" && v !== "OPEN"));
 			$("esc").value = choose(r, ["", "", "1", "reverse", "both"]);
 			$("walls").value = r() < 0.25 ? "1" : "";
-			$("trav").value = r() < 0.25 ? "1" : "";
+			// never rolled on: escalator steps laid flat along a platform looked wrong in game (Jah 10-26); the draw stays so later rolls keep their seeds
+			r();
+			$("trav").value = "";
 			$("bed").value = choose(r, ["", "gravel", "andesite"]);
 			// the class, from its own stream: a terminus or hub is a city or grand station, and a Building locked to none can only
 			// be a halt, whose class the words would otherwise contradict

@@ -74,4 +74,24 @@ public final class MessageRotation {
 		}
 		return (int) Math.min(overflowChars, (elapsed - HOLD_MILLIS) / STEP_MILLIS);
 	}
+
+	/**
+	 * Slot for a message {@code width} units wide that scrolls at {@code speed} units a second: long enough to hold, scroll
+	 * the whole text past and hold again, at least {@code dwell}. From the text's width alone, so boards of every size
+	 * change message together.
+	 */
+	public static long readSlotMillis(float width, float speed, long dwell) {
+		return Math.max(dwell, 2 * HOLD_MILLIS + (long) Math.ceil(width / speed * 1000));
+	}
+
+	/**
+	 * How far a text {@code overflow} units wider than its strip has moved {@code elapsed} ms into its slot: held at its
+	 * start, then {@code speed} units a second, held at its end. 0 when it fits.
+	 */
+	public static float readOffset(long elapsed, float overflow, float speed) {
+		if (overflow <= 0 || elapsed <= HOLD_MILLIS) {
+			return 0;
+		}
+		return Math.min(overflow, (elapsed - HOLD_MILLIS) * speed / 1000F);
+	}
 }

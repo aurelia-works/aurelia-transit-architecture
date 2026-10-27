@@ -17,12 +17,14 @@ import com.aureliatransit.architecture.transit.StationReference;
 import com.aureliatransit.architecture.transit.StationSnapshot;
 import net.minecraft.util.math.BlockPos;
 import org.mtr.core.data.Platform;
+import org.mtr.core.data.Position;
 import org.mtr.core.data.SimplifiedRoute;
 import org.mtr.core.data.SimplifiedRoutePlatform;
 import org.mtr.core.data.Station;
 import org.mtr.core.operation.ArrivalResponse;
 import org.mtr.libraries.it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.mtr.libraries.it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import org.mtr.mod.Init;
 import org.mtr.mod.InitClient;
 import org.mtr.mod.client.MinecraftClientData;
 import org.mtr.mod.data.ArrivalsCacheClient;
@@ -61,11 +63,6 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	 * Platforms requested from MTR for one logical station (a safety bound for enormous AUTO stations).
 	 */
 	static final int MAX_PLATFORMS = 16;
-	/**
-	 * MTR's own PIDS looks for the closest platform within this many blocks of the block position lowered by 4.
-	 */
-	private static final int PLATFORM_SEARCH_RADIUS = 5;
-	private static final int PLATFORM_SEARCH_DROP = 4;
 
 	private record SnapshotKey(long pos, StationAssociation association, boolean withServices, boolean withTimes) {
 	}
@@ -82,8 +79,13 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 		static final Calling NONE = new Calling(List.of(), List.of());
 	}
 
-	private record Resolution(StationReference station, List<PlatformReference> platforms, List<Long> platformIds, long nearestPlatformId) {
-		static final Resolution EMPTY = new Resolution(null, List.of(), List.of(), 0);
+	/** {@code here}: the platforms a platform display at the position serves, closest first (empty for MANUAL). */
+	private record Resolution(StationReference station, List<PlatformReference> platforms, List<Long> platformIds, List<Long> here) {
+		static final Resolution EMPTY = new Resolution(null, List.of(), List.of(), List.of());
+
+		long nearestPlatformId() {
+			return here.isEmpty() ? 0 : here.get(0);
+		}
 	}
 
 	private final LongSupplier clock;
@@ -133,6 +135,11 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 	}
 
 	@Override
+	public List<Long> platformIdsHere(BlockPos pos, StationAssociation association) {
+		return association.isAuto() ? resolution(pos, association).here() : List.of();
+	}
+
+	@Override
 	public List<StationReference> listStations(int limit) {
 		final long now = clock.getAsLong();
 		if (stationListAt == Long.MIN_VALUE || now - stationListAt > RESOLVE_MILLIS) {
@@ -161,23 +168,31 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 
 	private Resolution resolveAuto(BlockPos pos) {
 		final Station station = InitClient.findStation(new org.mtr.mapping.holder.BlockPos(pos));
-		final Platform[] nearest = new Platform[1];
-		InitClient.findClosePlatform(new org.mtr.mapping.holder.BlockPos(pos.down(PLATFORM_SEARCH_DROP)), PLATFORM_SEARCH_RADIUS, platform -> nearest[0] = platform);
-		final long nearestId = nearest[0] == null ? 0 : nearest[0].getId();
-		if (station != null) {
-			return build(station, station.savedRails, nearestId);
+		// MTR's findClosePlatform scan (same reach test and distance), keeping every platform in reach so an island board
+		// gets both its faces (NearestPlatformProvider.island)
+		final MinecraftClientData data = MinecraftClientData.getInstance();
+		final Position position = Init.blockPosToPosition(new org.mtr.mapping.holder.BlockPos(pos.down(SEARCH_DROP)));
+		final List<Candidate> candidates = new ArrayList<>();
+		for (final Platform platform : data.platforms) {
+			if (platform.closeTo(position, SEARCH_RADIUS)) {
+				candidates.add(new Candidate(platform.getId(), platform.getApproximateClosestDistance(position, data)));
+			}
 		}
-		if (nearest[0] != null) {
-			final Station owner = nearest[0].area;
+		final List<Long> here = NearestPlatformProvider.island(candidates);
+		final Platform nearest = here.isEmpty() ? null : data.platformIdMap.get(here.get(0));
+		if (station != null) {
+			return build(station, station.savedRails, here);
+		}
+		if (nearest != null) {
+			final Station owner = nearest.area;
 			if (owner != null) {
-				return build(owner, owner.savedRails, nearestId);
+				return build(owner, owner.savedRails, here);
 			}
 			// A platform without a station: show just that platform.
-			final Platform platform = nearest[0];
-			final String stationName = platform.getStationName();
-			final List<Long> ids = List.of(platform.getId());
-			return new Resolution(stationName.isEmpty() ? null : new StationReference(-platform.getId(), stationName, platform.getColor()),
-					List.of(new PlatformReference(platform.getId(), StationNames.display(platform.getName()), 0)), ids, nearestId);
+			final String stationName = nearest.getStationName();
+			final List<Long> ids = List.of(nearest.getId());
+			return new Resolution(stationName.isEmpty() ? null : new StationReference(-nearest.getId(), stationName, nearest.getColor()),
+					List.of(new PlatformReference(nearest.getId(), StationNames.display(nearest.getName()), 0)), ids, ids);
 		}
 		return Resolution.EMPTY;
 	}
@@ -189,7 +204,7 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 			return Resolution.EMPTY;
 		}
 		if (association.platformIds().isEmpty()) {
-			return build(station, station.savedRails, 0);
+			return build(station, station.savedRails, List.of());
 		}
 		final List<Platform> chosen = new ArrayList<>();
 		for (final long id : association.platformIds()) {
@@ -198,16 +213,16 @@ public final class MtrStationDataProvider implements StationDataProvider, Neares
 				chosen.add(platform);
 			}
 		}
-		return build(station, chosen, 0);
+		return build(station, chosen, List.of());
 	}
 
-	private static Resolution build(Station station, Iterable<Platform> platforms, long nearestPlatformId) {
+	private static Resolution build(Station station, Iterable<Platform> platforms, List<Long> here) {
 		final List<PlatformReference> references = platformReferences(station, platforms);
 		final List<Long> ids = new ArrayList<>(references.size());
 		for (final PlatformReference reference : references) {
 			ids.add(reference.id());
 		}
-		return new Resolution(new StationReference(station.getId(), station.getName(), station.getColor()), references, List.copyOf(ids), nearestPlatformId);
+		return new Resolution(new StationReference(station.getId(), station.getName(), station.getColor()), references, List.copyOf(ids), here);
 	}
 
 	private static List<PlatformReference> platformReferences(Station station, Iterable<Platform> platforms) {

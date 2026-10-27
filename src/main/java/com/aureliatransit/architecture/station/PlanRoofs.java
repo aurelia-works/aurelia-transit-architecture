@@ -442,7 +442,7 @@ abstract class PlanRoofs extends PlanColumns {
 		final int[] rise = shedRise(u0, n);
 		final boolean[] lit = new boolean[layout.width()];
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			for (final int u : columnLines(band, RoofType.HALL)) {
+			for (final int u : hallLines(band)) {
 				lit[u] = true;
 			}
 		}
@@ -464,7 +464,8 @@ abstract class PlanRoofs extends PlanColumns {
 		rows.sort(Comparator.naturalOrder());
 		// a single vault is its own arch: no tie girders across the tracks, only brackets over the platforms and eaves (the
 		// bridge row still crosses on its piers); several vaults keep full ties, which carry their valley gutters
-		final boolean freeArch = spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED;
+		// a real shed's vaults (several spans, or nave and aisles) are arches too, from one kept column row to the next
+		final boolean freeArch = spec.shed() == ShedShape.ARCH || spec.shed() == ShedShape.POINTED || shedLines() != null;
 		final boolean[] untied = freeArch ? betweenPlatforms() : new boolean[layout.width()];
 		final boolean free = freeShed();
 		for (final int v : rows) {
@@ -647,7 +648,7 @@ abstract class PlanRoofs extends PlanColumns {
 		int previous = -1;
 		TrackLayout.PlatformBand previousBand = null;
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			final List<Integer> lines = columnLines(band, RoofType.HALL);
+			final List<Integer> lines = hallLines(band);
 			if (lines.isEmpty()) {
 				continue;
 			}
@@ -698,10 +699,16 @@ abstract class PlanRoofs extends PlanColumns {
 				case POINTED -> Profile.POINTED;
 				case GABLE -> Profile.GABLE;
 			};
-			for (int k = 0; k < spans; k++) {
-				final int a = k * (n - 1) / spans;
-				final int b = (k + 1) * (n - 1) / spans;
-				scaledVault(rise, a, b, profile, real.rise());
+			// the vaults meet over the column lines kept under their valleys (see shedLines), else at equal spans
+			final List<Integer> cuts = valleyCuts(u0, n);
+			if (cuts.size() < 3) {
+				cuts.clear();
+				for (int k = 0; k <= spans; k++) {
+					cuts.add(k * (n - 1) / spans);
+				}
+			}
+			for (int k = 0; k + 1 < cuts.size(); k++) {
+				scaledVault(rise, cuts.get(k), cuts.get(k + 1), profile, real.rise());
 			}
 			return rise;
 		}
@@ -709,7 +716,11 @@ abstract class PlanRoofs extends PlanColumns {
 			case FLAT -> {
 			}
 			case ARCH -> {
-				if (spec.real().trainShed()) {
+				final List<Integer> cuts = valleyCuts(u0, n);
+				if (spec.real().trainShed() && cuts.size() == 4) {
+					// the nave springs from the column rows kept under its edges
+					naveAndAisles(rise, n, cuts.get(1), cuts.get(2), spec.real().roofTopY() - (hallBeamY() + 1));
+				} else if (spec.real().trainShed()) {
 					naveAndAisles(rise, n, spec.real().naveShare(), spec.real().roofTopY() - (hallBeamY() + 1));
 				} else {
 					vault(rise, 0, n - 1, Profile.ROUND, vaultRise());
@@ -746,16 +757,20 @@ abstract class PlanRoofs extends PlanColumns {
 	 */
 	static void naveAndAisles(int[] rise, int n, double share, int crown) {
 		final int aisle = (int) Math.round(n * (1 - share) / 2);
-		if (aisle < 4 || crown < 4) {
+		naveAndAisles(rise, n, aisle, n - 1 - aisle, crown);
+	}
+
+	/** The same with the nave from {@code a} to {@code b}: the aisles are 0..a and b..n - 1, as wide as the column rows put them. */
+	static void naveAndAisles(int[] rise, int n, int a, int b, int crown) {
+		final int aisle = Math.max(a, n - 1 - b);
+		if (Math.min(a, n - 1 - b) < 4 || crown < 4) {
 			vault(rise, 0, n - 1, Profile.ROUND, ARCH_RISE);
 			return;
 		}
-		vault(rise, 0, aisle, Profile.ROUND, ARCH_RISE);
-		vault(rise, n - 1 - aisle, n - 1, Profile.ROUND, ARCH_RISE);
-		// the aisle vault's crown, as vault() sizes it from its span of aisle + 1 blocks
+		vault(rise, 0, a, Profile.ROUND, ARCH_RISE);
+		vault(rise, b, n - 1, Profile.ROUND, ARCH_RISE);
+		// the wider aisle vault's crown, as vault() sizes it from its span of aisle + 1 blocks
 		final int base = Math.min(crown - 2, (int) Math.round((aisle + 1) * ARCH_RISE));
-		final int a = aisle;
-		final int b = n - 1 - aisle;
 		final double half = (b - a) / 2.0;
 		final double centre = (a + b) / 2.0;
 		final int top = Math.min(MAX_VAULT_RISE, crown);
@@ -763,6 +778,24 @@ abstract class PlanRoofs extends PlanColumns {
 			final double x = Math.min(1, Math.abs(u - centre) / half);
 			rise[u] = Math.max(rise[u], base + (int) Math.round((top - base) * Math.sqrt(1 - x * x)));
 		}
+	}
+
+	/**
+	 * Where a real shed's vaults meet, as offsets from u0: 0, each kept valley line (see shedLines) and n - 1; just the two
+	 * ends when the shed keeps every line.
+	 */
+	List<Integer> valleyCuts(int u0, int n) {
+		final List<Integer> cuts = new ArrayList<>(List.of(0));
+		final java.util.TreeSet<Integer> kept = shedLines();
+		if (kept != null) {
+			for (final int u : kept) {
+				if (u != kept.first() && u != kept.last() && u - u0 > 0 && u - u0 < n - 1) {
+					cuts.add(u - u0);
+				}
+			}
+		}
+		cuts.add(n - 1);
+		return cuts;
 	}
 
 	/** The cross-section of one span of a shed roof. */

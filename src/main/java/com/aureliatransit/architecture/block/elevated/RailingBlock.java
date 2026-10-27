@@ -23,6 +23,7 @@ import net.minecraft.world.WorldAccess;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Function;
 
 import static com.aureliatransit.architecture.util.Shapes.union;
 
@@ -146,7 +147,28 @@ public abstract class RailingBlock<K extends Enum<K> & StringIdentifiable> exten
 
 	@Override
 	public BlockState getPlacementState(ItemPlacementContext ctx) {
-		return connected(getDefaultState(), ctx.getWorld(), ctx.getBlockPos());
+		final BlockView world = ctx.getWorld();
+		final BlockPos pos = ctx.getBlockPos();
+		return continueRun(connected(getDefaultState(), world, pos), direction -> world.getBlockState(pos.offset(direction)));
+	}
+
+	/**
+	 * A railing placed by hand carries on the edge run it is placed into: it takes each side whose rail a neighbour along
+	 * that side also has, so a broken piece of a generated run, corner included, goes back as it was (Jah 10-26: it came
+	 * back as a centre fence).
+	 */
+	public static BlockState continueRun(BlockState state, Function<Direction, BlockState> neighbour) {
+		BlockState result = state;
+		for (final Direction side : Direction.Type.HORIZONTAL) {
+			for (final Direction along : new Direction[]{side.rotateYClockwise(), side.rotateYCounterclockwise()}) {
+				final BlockState next = neighbour.apply(along);
+				if (next.getBlock() instanceof RailingBlock && next.get(edge(side))) {
+					result = result.with(edge(side), true);
+					break;
+				}
+			}
+		}
+		return result;
 	}
 
 	@Override

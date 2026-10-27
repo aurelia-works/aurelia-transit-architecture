@@ -236,4 +236,30 @@ class ElevatedBlockStatesTest {
 		assertEquals(post.getMax(Direction.Axis.Z), joined.getMax(Direction.Axis.Z), 0.0001, "no south connection");
 		assertEquals(Direction.Type.HORIZONTAL.stream().count(), 4);
 	}
+
+	@Test
+	void aRailingPlacedIntoAnEdgeRunCarriesItOn() {
+		final HandrailBlock rail = new HandrailBlock(settings());
+		final BlockState bare = rail.getDefaultState();
+		final BlockState northRail = bare.with(RailingBlock.EDGE_NORTH, true);
+		final BlockState eastRail = bare.with(RailingBlock.EDGE_EAST, true);
+		final BlockState air = net.minecraft.block.Blocks.AIR.getDefaultState();
+
+		final BlockState straight = RailingBlock.continueRun(bare, direction -> direction == Direction.EAST ? northRail : air);
+		assertEquals(northRail, straight, "a gap in a run along the north side gets the north rail");
+
+		final BlockState corner = RailingBlock.continueRun(bare, direction -> direction == Direction.EAST ? northRail : direction == Direction.SOUTH ? eastRail : air);
+		assertEquals(bare.with(RailingBlock.EDGE_NORTH, true).with(RailingBlock.EDGE_EAST, true), corner, "two runs meeting give the corner piece");
+
+		assertEquals(bare, RailingBlock.continueRun(bare, direction -> direction == Direction.NORTH ? northRail : air), "a rail across the run is not along it");
+		assertEquals(bare, RailingBlock.continueRun(bare, direction -> bare), "centre railings beside it leave it a centre railing");
+	}
+
+	@Test
+	void handrailOutlineIsAsEasyToAimAtAsAFence() {
+		final HandrailBlock rail = new HandrailBlock(settings());
+		final VoxelShape post = rail.getOutlineShape(rail.getDefaultState(), EmptyBlockView.INSTANCE, BlockPos.ORIGIN, ShapeContext.absent());
+		assertTrue(post.getMax(Direction.Axis.X) - post.getMin(Direction.Axis.X) >= 0.25 - 1e-6, "post at least 4 px wide");
+		assertEquals(1.0, post.getMax(Direction.Axis.Y), 1e-6, "solid to the top");
+	}
 }
