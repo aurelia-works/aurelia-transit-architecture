@@ -130,17 +130,23 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 
 	/**
 	 * The first row of each rapid exit, where it leaves the first runway: at a quarter and three quarters of its length, each only where
-	 * it joins the taxiway before the far link. None on a runway shorter than {@link #RAPID_EXIT_LENGTH}.
+	 * it joins the taxiway before the far link and clear of the middle one. None on a runway shorter than {@link #RAPID_EXIT_LENGTH}.
 	 */
 	public List<Integer> rapidExits() {
 		if (spec.runwayLength() < RAPID_EXIT_LENGTH) {
 			return List.of();
 		}
 		// an exit runs sqrt(3) rows along for every column across the gap (367 rows at the real 212), so on a shorter runway the
-		// second one would join the taxiway past the far link, or past the airport's end: only exits that join before the far link
+		// second one would join the taxiway past the far link, or past the airport's end: only exits that join before the far link,
+		// and clear of the middle link (a runway of about 1,380 to 1,540 brings the first exit onto it)
 		final List<Integer> out = new ArrayList<>();
 		for (final int start : List.of(runwayV0 + spec.runwayLength() / 4, runwayV0 + 3 * spec.runwayLength() / 4)) {
-			if (exitCentre(start, taxiU1 + 1) + exitHalf() < links.get(1)[0]) {
+			final int end = exitCentre(start, taxiU1 + 1);
+			boolean clear = end + exitHalf() < links.get(1)[0];
+			for (int i = 2; i < links.size(); i++) {
+				clear &= end + exitHalf() < links.get(i)[0] || end - exitHalf() > links.get(i)[1];
+			}
+			if (clear) {
 				out.add(start);
 			}
 		}

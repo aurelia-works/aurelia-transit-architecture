@@ -290,10 +290,11 @@ abstract class PlanAirport extends PlanFitOut {
 			}
 			for (int s = 0; s < bars.stripes(); s++) {
 				// stripes 3 wide with 1 bare between them, out from the inner edge (ICAO's 1.5 m gap would push the third of a
-				// 30 m runway's into the edge line); one that would still reach it is left out
+				// 30 m runway's into the edge line); one that would still reach it is left out. The right side mirrors the left, so
+				// the left's test holds for both (testing c + 1 + far dropped the third stripe on an odd width, review 10-27)
 				final int near = inner + s * (bars.width() + 1);
 				final int far = near + bars.width() - 1;
-				if (c - far < u0 + 3 || c + 1 + far > u1 - 3) {
+				if (c - far < u0 + 3) {
 					break;
 				}
 				for (int k = 0; k < bars.length(); k++) {
@@ -487,11 +488,12 @@ abstract class PlanAirport extends PlanFitOut {
 	}
 
 	/**
-	 * Floodlight masts on the apron between the stands, on the stand lines between the terminal and the aircraft's noses. Out on the
-	 * apron they stood on each gate's siding row, so every plane backed through a mast (review 10-27).
+	 * Floodlight masts on the apron between the stands, on the stand lines at the apron's terminal edge. Out on the apron they stood on
+	 * each gate's siding row, so every plane backed through a mast; 2 short of the noses the turn onto the siding still clipped them
+	 * (reviews 10-27).
 	 */
 	void masts() {
-		final int u = air.stopU() - 2;
+		final int u = air.apronU0() + 1;
 		for (int i = 0; i <= spec.airport().gates(); i++) {
 			final int v = air.standV().get(0) - air.dims().standPitch() / 2 + i * air.dims().standPitch();
 			for (int y = StationGeometry.WALK_Y; y < air.dims().mast(); y++) {

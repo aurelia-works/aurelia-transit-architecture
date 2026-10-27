@@ -120,6 +120,76 @@ class AirportReviewFixesTest {
 		assertEquals(8 * 3 + 2, white);
 	}
 
+	/** Review 2: a comma parts "airport" from the station after it, and the platforms of the station under the terminal keep the airport. */
+	@Test
+	void anAirportWithItsOwnStationStaysAnAirport() {
+		assertTrue(spec("airport, train station").isAirport());
+		assertTrue(spec("airport, train station").airport().rail());
+		assertTrue(spec("airport with 2 gates and a train station with 2 platforms").isAirport());
+		assertFalse(spec("6 track station at the airport").isAirport());
+		assertFalse(spec("airport train station, 4 platforms").isAirport());
+	}
+
+	/** Review 2: the default runway is 45 wide (odd); the first touchdown pair has 3 stripes each side, the same on both sides. */
+	@Test
+	void touchdownBarsMatchOnAnOddWidth() {
+		final StationSpec spec = spec("airport");
+		final AirportGeometry air = AirportGeometry.of(spec.airport());
+		final StationPlan plan = StationPlanner.plan(spec);
+		final int row = air.runwayV0() + PlanAirport.touchdownBars(spec.airport().runwayLength()).get(1).from();
+		final int c = air.runwayCentre(0);
+		final long left = plan.blocks().stream().filter(b -> b.v() == row && b.blockId().equals(PlanAirport.PAINT_WHITE)
+				&& b.u() >= air.runwayU0().get(0) && b.u() < c).count();
+		final long right = plan.blocks().stream().filter(b -> b.v() == row && b.blockId().equals(PlanAirport.PAINT_WHITE)
+				&& b.u() > c && b.u() <= air.runwayU1(0)).count();
+		assertEquals(1 + 3 * 3, left, "edge line and three stripes of 3");
+		assertEquals(left, right);
+	}
+
+	/** Review 2: a plane's body is about 6 wide; no floodlight mast stands within 3 of a cell it rolls over. */
+	@Test
+	void mastsStandClearOfThePlanesBodies() {
+		for (final String words : List.of("airport", "airport with 6 gates", "airport with no terminal")) {
+			final StationSpec spec = spec(words);
+			final StationPlan plan = StationPlanner.plan(spec);
+			final AirportRoute route = AirportRoute.of(AirportGeometry.of(spec.airport()));
+			assertFalse(route.gates().isEmpty(), words + ": " + route.problem());
+			for (final PlannedBlock b : plan.blocks()) {
+				if (!b.blockId().equals(PlanAirport.MAST_LAMP)) {
+					continue;
+				}
+				for (final AirportRoute.Gate gate : route.gates()) {
+					for (final AirportRoute.Leg leg : gate.legs()) {
+						for (final AirportRoute.Cell cell : leg.cells()) {
+							assertFalse(Math.abs(cell.u() - b.u()) <= 3 && Math.abs(cell.v() - b.v()) <= 3,
+									words + ": a mast at " + b.u() + "," + b.v() + " by gate " + gate.index() + "'s " + leg.kind() + " at " + cell);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/** Review 2: a rapid exit meets the taxiway clear of every link, the middle one too (runways of about 1,380 to 1,540). */
+	@Test
+	void rapidExitsJoinTheTaxiwayClearOfTheLinks() {
+		for (int length = AirportGeometry.RAPID_EXIT_LENGTH; length <= 3000; length += 10) {
+			final AirportGeometry air;
+			try {
+				air = AirportGeometry.of(new AirportSpec(1, length, AirportSpec.DEFAULT_RUNWAY_WIDTH, 1, true));
+			} catch (IllegalArgumentException e) {
+				continue;
+			}
+			for (final int start : air.rapidExits()) {
+				final int end = air.exitCentre(start, air.taxiU1() + 1);
+				for (final int[] link : air.links()) {
+					assertFalse(end + air.exitHalf() >= link[0] && end - air.exitHalf() <= link[1],
+							"runway " + length + ": the exit from row " + start + " meets the taxiway on the link at " + link[0]);
+				}
+			}
+		}
+	}
+
 	@Test
 	void thePlansStillPassTheirChecks() {
 		for (final String words : List.of("airport", "2 runways", "large airport", "airport with 4 gates and a train station")) {
