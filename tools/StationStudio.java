@@ -18,8 +18,9 @@ import java.util.zip.ZipFile;
  *
  * <pre>
  * ./gradlew compileJava processResources --offline
- * java -cp build/classes/java/main:build/resources/main tools/StationStudio.java
+ * java -cp build/classes/java/main:build/resources/main:&lt;slf4j-api jar&gt; tools/StationStudio.java
  * </pre>
+ * The slf4j API jar (the server's logger; the game supplies it) is in the Gradle cache under {@code org.slf4j/slf4j-api}.
  * (or {@code tools/station-studio.sh}, which does both and opens the browser).
  */
 public final class StationStudio {
