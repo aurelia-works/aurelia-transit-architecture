@@ -157,11 +157,11 @@ final class StationText {
 				what = "rail nodes off";
 			} else if (pending.railSkipped()) {
 				what = BlockStateResolver.RAIL_SKIPPED;
-			} else if (keptNode(pending, track.u(), layout.platformFrom(track)) && keptNode(pending, track.u(), layout.platformTo(track))) {
-				what = "uses the rail nodes already at " + corner(frame, track.u(), layout.platformFrom(track)) + " and "
-						+ corner(frame, track.u(), layout.platformTo(track));
+			} else if (keptNode(pending, track, layout.platformFrom(track)) && keptNode(pending, track, layout.platformTo(track))) {
+				what = "uses the rail nodes already at " + node(frame, track, layout.platformFrom(track)) + " and "
+						+ node(frame, track, layout.platformTo(track));
 			} else {
-				what = "rail nodes at " + corner(frame, track.u(), layout.platformFrom(track)) + " and " + corner(frame, track.u(), layout.platformTo(track))
+				what = "rail nodes at " + node(frame, track, layout.platformFrom(track)) + " and " + node(frame, track, layout.platformTo(track))
 						+ (layout.platformNumber(track) > 0 && MtrRailContract.available()
 						? ", joined as MTR platform " + layout.platformNumber(track) + " when built"
 						: ": connect them with an MTR Platform Rail Connector");
@@ -277,12 +277,17 @@ final class StationText {
 	}
 
 	/** True when the planned rail node at (u, 0, v) is kept because a node is already there (the survey wrote no op for it). */
-	private static boolean keptNode(StationSessions.Pending pending, int u, int v) {
+	private static boolean keptNode(StationSessions.Pending pending, TrackLayout.Track track, int v) {
 		final LocalFrame frame = pending.frame();
-		final int x = frame.x(u, v);
-		final int y = frame.y(0);
-		final int z = frame.z(u, v);
+		final int x = frame.x(track.u(), v);
+		final int y = frame.y(track.level());
+		final int z = frame.z(track.u(), v);
 		return pending.report().ops().stream().noneMatch(op -> op.x() == x && op.y() == y && op.z() == z);
+	}
+
+	/** A track's rail node at row v, at the track's own level (a stacked station's upper track is above the rail level). */
+	static String node(LocalFrame frame, TrackLayout.Track track, int v) {
+		return "(" + frame.x(track.u(), v) + " " + frame.y(track.level()) + " " + frame.z(track.u(), v) + ")";
 	}
 
 	private static String corner(LocalFrame frame, int u, int v) {

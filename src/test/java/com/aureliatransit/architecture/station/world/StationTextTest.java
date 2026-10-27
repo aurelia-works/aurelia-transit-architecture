@@ -57,6 +57,19 @@ class StationTextTest {
 	}
 
 	@Test
+	void aStackedStationsUpperRailNodesAreAtTheirOwnLevel() {
+		final StationSpec spec = StationDescriptionParser.parse("2 track stacked deep tube station, 30 blocks deep, 40 long").spec();
+		final com.aureliatransit.architecture.station.TrackLayout layout = com.aureliatransit.architecture.station.StationPlanner.plan(spec).layout();
+		final com.aureliatransit.architecture.station.LocalFrame frame = com.aureliatransit.architecture.station.LocalFrame.inFrontOf(0, 64, 0,
+				com.aureliatransit.architecture.station.Heading.SOUTH, layout);
+		final java.util.Set<String> nodes = new java.util.HashSet<>();
+		for (final com.aureliatransit.architecture.station.TrackLayout.Track track : layout.tracks()) {
+			nodes.add(StationText.node(frame, track, layout.platformFrom(track)));
+		}
+		assertEquals(2, nodes.size(), "both tracks' first rail nodes print the same place: " + nodes);
+	}
+
+	@Test
 	void oneTrackIsSingular() {
 		final StationSpec spec = StationDescriptionParser.parse("1 track, 40 long").spec();
 		assertTrue(StationText.planLine(spec).startsWith("1 track, "), StationText.planLine(spec));

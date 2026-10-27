@@ -143,6 +143,12 @@ class DeepStationTest {
 	}
 
 	@Test
+	void westminstersJubileePlatformsAreGreyNotHoldenGreen() {
+		final StationSpec spec = StationDescriptionParser.parse(presetText("westminster")).spec();
+		assertEquals("aurelia_transit_architecture:metro_blue_grey_tile", spec.options().tile());
+	}
+
+	@Test
 	void westminsterStacksItsTwoPlatforms() {
 		final StationSpec spec = StationDescriptionParser.parse(presetText("westminster")).spec();
 		assertEquals(UndergroundType.DEEP_STACKED, spec.options().type());
