@@ -424,7 +424,25 @@ public class StationGameTests implements FabricGameTest {
 		final ServerWorld world = context.getWorld();
 		final String words = "airport with 1 gate and a train station, runway 240 long, 30 wide, named Rail Test";
 		final UUID owner = new UUID(0, 73);
-		final StationSessions.Pending pending = StationCommand.prepare(world, words, context.getAbsolutePos(new BlockPos(-6000, 30, 6000)), Heading.SOUTH);
+		final BlockPos feet = context.getAbsolutePos(new BlockPos(-6000, 30, 6000));
+		// the site is in the air: lay stone under every support cell, and as deep as the dig under the station's own boxes
+		final StationSessions.Pending sizing = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		// (the station's own planned cells stay air, so undo has air to give back there)
+		final java.util.Set<BlockPos> below = new java.util.HashSet<>();
+		for (final PlannedBlock block : sizing.plan().blocks()) {
+			if (block.y() < 0) {
+				below.add(cellPos(sizing, block));
+			}
+		}
+		for (final com.aureliatransit.architecture.station.Box box : sizing.plan().supportAreas()) {
+			stone(world, sizing.frame(), below, box.uMin(), box.yMin(), box.vMin(), box.uMax(), box.yMax(), box.vMax());
+		}
+		for (final com.aureliatransit.architecture.station.Box box : sizing.plan().headroom()) {
+			if (box.yMin() < 0) {
+				stone(world, sizing.frame(), below, box.uMin() - 1, box.yMin() - 2, box.vMin() - 1, box.uMax() + 1, -1, box.vMax() + 1);
+			}
+		}
+		final StationSessions.Pending pending = StationCommand.prepare(world, words, feet, Heading.SOUTH);
 		check(pending.spec().airport().rail(), "no railway station in: " + words);
 		check(pending.violations().isEmpty() && pending.audit().buildable(), "plan: " + pending.violations() + " " + pending.audit().problems());
 		final List<Text> said = new ArrayList<>();
@@ -1671,6 +1689,19 @@ public class StationGameTests implements FabricGameTest {
 
 	private static BlockPos cellPos(StationSessions.Pending pending, PlannedBlock block) {
 		return pos(pending.frame(), block.u(), block.y(), block.v());
+	}
+
+	private static void stone(ServerWorld world, LocalFrame frame, java.util.Set<BlockPos> keep, int u0, int y0, int v0, int u1, int y1, int v1) {
+		for (int u = u0; u <= u1; u++) {
+			for (int y = y0; y <= y1; y++) {
+				for (int v = v0; v <= v1; v++) {
+					final BlockPos pos = pos(frame, u, y, v);
+					if (!keep.contains(pos)) {
+						world.setBlockState(pos, Blocks.STONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+					}
+				}
+			}
+		}
 	}
 
 	private static BlockPos pos(LocalFrame frame, int u, int y, int v) {
