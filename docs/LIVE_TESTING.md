@@ -138,7 +138,7 @@ each view's `ATA_TOUR_VIEW n name` log line before capturing, so shots line up w
 - `nohud` hides the HUD and chat for the shot.
 - `fov=<degrees>` sets the field of view for the shot (the dev options use 110, which bends straight columns at the edges).
 - `open=wrench` opens the Station Wrench screen for the wrench in the main hand, and `open=book page=<n>` opens the written book in the
-  main hand at that page, and `open=codex` opens the Station Codex. The screen closes after the shot.
+  main hand at that page, and `open=codex` opens the Station Codex, `open=airport_wrench` the airport wrench. The screen closes after the shot.
   Without a wrench in hand, `open=wrench` opens the screen anyway, with `recipe=<encoded choices>` (a `StationRecipe.encode()`
   string such as `AMSTERDAM;;0;4;AUTO;160;AUTO;1;;GRAND`) or the defaults, to check its 3D preview; its actions do nothing then.
 - `wait=<ticks>` waits up to that many ticks before the shot, e.g. `wait=100` for the wrench screen's preview to plan and draw.

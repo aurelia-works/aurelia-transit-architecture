@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.7.0
+
+Airports and deep underground stations, both built by the station generator. Everything below was built and looked at in game on a dev server (10-27).
+
+### Airports
+
+- **Airports:** "airport", "2 runways", "6 gates", "small airport", "runway 05/23" plan a runway with numbers, markings and lights, a parallel taxiway with links, an apron with gates and MTR airplane routes, and a terminal with boarding bridges. The default is one runway of about 2,550 blocks, long and flat enough for player-flown aircraft; real airport presets set their own. Station Studio has its own Airport Generator section, and the operator-only Airport Wrench plans them in game.
+- **Railway station under the terminal:** "airport with a train station" (or "transit", "rail link") digs a two-track cut-and-cover box with an island platform under the terminal, with escalators and a lift up into the hall and its MTR platforms made.
+- **Terminal fit-out (Null's list):** walk-through metal detector, X-ray bag scanner, security inspection table, queue posts with belts (they join like fences), self check-in kiosk, self bag drop, baggage carousel (straight and corner), gate desk, luggage trolley and joining airport seats. The terminal builds a closed security line between check-in and the gates, a baggage hall with whole carousel loops, a desk, number sign and seat rows at every gate, and kiosks and trolleys by the doors.
+- **Airport blocks:** runway edge, threshold and taxiway lights, apron floodlight, check-in desk, baggage belt, departures board, windsock and terminal terrazzo, in a new Airport tab.
+
+### Underground
+
+- **Deep stations:** `deep tube` builds a bored tube 27 m down, `cut and cover` a deep box with lifts. Presets: Angel (tube), Canary Wharf (box), Vijzelgracht (island box). The look is generic by default; London only from words or presets.
+- **Stacked platforms:** `stacked deep tube` and the Westminster preset build two deep platform levels, one over the other. Westminster is grey concrete and steel, like its Jubilee platforms.
+- **Sounder linings:** a bored tube's lining joins face to face where it steps or curves, and its ticket hall's walls meet the roof with no notch.
+
+### Build job
+
+- **Big sites stream their chunks:** the survey, the build, undo and rebuild hold at most 1024 chunks loaded at a time, and a long survey carries on over the next ticks, so an airport-sized site no longer runs the server out of memory.
+
+### Other
+
+- **Station Codex:** an in-game book (Passenger Equipment tab; operators get it once on joining, `/ata_guide` gives another) with a tab per chapter, contents, search and block previews. It replaces the guide book.
+- **Chat summaries:** an airport is summed up as runways, gates, terminal and station; a deep station by its kind and depth; a stacked station's upper rail nodes at their own height.
+- **Standalone Station Studio** starts again (it crashed outside the game since 10-19: missing logger library).
+
 ## 1.6.1
 
 Fixes from the 1.6.0 play-test (Jah, 10-26). No new features beyond joined benches.
