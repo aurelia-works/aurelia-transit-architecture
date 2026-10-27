@@ -2,8 +2,10 @@ package com.aureliatransit.architecture.station;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Reads the words of an airport description ("small airport with 2 runways, 3000 m runway, 6 gates and a terminal") into an
@@ -29,6 +31,9 @@ final class AirportWords {
 	/** Words for a railway station under the terminal ("airport with a train station", "transit", "rail link"). */
 	private static final Set<String> RAIL = Set.of("train", "trains", "rail", "railway", "metro", "subway", "transit");
 	private static final Set<String> RAIL_NOUN = Set.of("station", "link", "stop", "connection");
+	/** The airport word straight before "station" or "express" (or a rail word and "station"), with no comma between: a station's name. */
+	private static final Pattern STATION_NAME = Pattern.compile(
+			"\\b(airports?|airfield|aerodrome|airstrip)\\s+(station|express|(trains?|rail|railway|metro|subway|transit)\\s+station)\\b");
 	private static final Map<String, Integer> NUMBERS = Map.ofEntries(Map.entry("one", 1), Map.entry("single", 1), Map.entry("two", 2),
 			Map.entry("twin", 2), Map.entry("dual", 2), Map.entry("parallel", 2), Map.entry("three", 3), Map.entry("four", 4), Map.entry("five", 5),
 			Map.entry("six", 6), Map.entry("seven", 7), Map.entry("eight", 8), Map.entry("nine", 9), Map.entry("ten", 10), Map.entry("eleven", 11),
@@ -54,31 +59,35 @@ final class AirportWords {
 
 	/**
 	 * True when the words ask for an airport: a runway, or "airport" (or "airfield" ...) that does not name a
-	 * railway station. "Schiphol airport station, 6 tracks" and "airport express station" are railway stations: a track or platform
-	 * word, or the airport word followed straight by "station" or "express" (or a rail word and "station": "airport rail station"),
-	 * makes the airport word part of the station's name. "airport with a train station" stays an airport with a station under it.
+	 * railway station. "Schiphol airport station, 6 tracks" and "airport express station" are railway stations: the airport word followed
+	 * straight by "station" or "express" (or a rail word and "station": "airport rail station") in {@code text}, with no comma between,
+	 * makes it part of the station's name, and so does a track or platform word ("6 track station at the airport"), unless a rail word
+	 * after the airport word says those are the platforms of its own station ("airport with a train station with 2 platforms").
+	 * "airport, train station" stays an airport with a station under it.
 	 */
-	static boolean mentioned(String[] tokens) {
-		boolean airport = false;
-		boolean station = false;
+	static boolean mentioned(String text, String[] tokens) {
+		int airport = -1;
+		boolean tracks = false;
+		boolean railAfter = false;
 		for (int i = 0; i < tokens.length; i++) {
 			final String token = tokens[i];
 			if (RUNWAY.contains(token)) {
 				return true;
 			}
 			if (TRACK_WORDS.contains(token)) {
-				station = true;
+				tracks = true;
 			}
-			if (TRIGGERS.contains(token)) {
-				airport = true;
-				final String next = i + 1 < tokens.length ? tokens[i + 1] : "";
-				final String after = i + 2 < tokens.length ? tokens[i + 2] : "";
-				if (next.equals("station") || next.equals("express") || RAIL.contains(next) && after.equals("station")) {
-					station = true;
-				}
+			if (TRIGGERS.contains(token) && airport < 0) {
+				airport = i;
+			}
+			if (RAIL.contains(token) && airport >= 0) {
+				railAfter = true;
 			}
 		}
-		return airport && !station;
+		if (airport < 0 || STATION_NAME.matcher(text.toLowerCase(Locale.ROOT)).find()) {
+			return false;
+		}
+		return !tracks || railAfter;
 	}
 
 	static Reading read(String[] tokens) {

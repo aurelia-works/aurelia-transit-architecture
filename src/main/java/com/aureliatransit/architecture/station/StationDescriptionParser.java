@@ -374,7 +374,7 @@ public final class StationDescriptionParser {
 			text = extractClassEraFacing(text);
 			tokens = tokenize(text);
 			used = new boolean[tokens.length];
-			if (AirportWords.mentioned(tokens)) {
+			if (AirportWords.mentioned(text, tokens)) {
 				return airport();
 			}
 			for (int i = 0; i < tokens.length; i++) {
