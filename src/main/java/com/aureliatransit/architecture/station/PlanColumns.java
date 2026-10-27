@@ -483,7 +483,10 @@ abstract class PlanColumns extends PlanMovingWalks {
 				all.addAll(columnLines(band, RoofType.HALL));
 			}
 		}
-		if (valleys.isEmpty() || all.size() < 3) {
+		// a single round or pointed vault (Berlin's glass barrel over a footbridge, which keeps it off its own eaves) spans
+		// every track from its outer rows; a single pitched roof (Paris) keeps its rows
+		final boolean singleVault = real != null && real.spans() <= 1 && real.profile() != Landmark.ShedProfile.GABLE;
+		if (valleys.isEmpty() && !singleVault || all.size() < 3) {
 			return null;
 		}
 		final java.util.TreeSet<Integer> kept = new java.util.TreeSet<>(List.of(all.first(), all.last()));
