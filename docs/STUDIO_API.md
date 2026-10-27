@@ -135,3 +135,16 @@ the generator when it should work.
   was planned. `/ata_station verify paste` anchors the pending (or last built) plan with its paste origin on your feet: plan the
   station, export it, stand where you will paste, `//paste`, then run it. It says `Exact: all N blocks ... are as planned` or lists the
   first blocks that differ. Read only; it never loads a chunk.
+
+## Airports (1.7)
+
+- **Page:** `GET /airport` (also `/airport/`, `/airport.html`) answers the same page as `/` with `data-page="airport"`.
+- **Request:** the plan parameters gain `page` (`airport` or nothing). With `page=airport`, or when the typed `text` names an airport, the
+  description is the typed words alone (plus the swaps, `facing` and `seed`); the station controls are ignored. With `page=airport` the words
+  are prefixed `airport, ` when they do not name one.
+- **`/api/options`** gains `airports`: `[{"key","label","text"}]`, the page's airport choices.
+- **`/api/plan`** answer: `built.mode` is `"Airport"` and `built.airport` is `{runways, length, width, gates, terminal, metres, real}` (null for
+  a station); `views` is null for a station and, for an airport, `{terminal, apron, threshold}` as `{x, y, z, tx, ty, tz}` (cell x, height y, cell z
+  of the eye, and of the point it looks at; `terminal` and `apron` are left out without a terminal); `checks` use the topics Runways, Taxiways,
+  Gates and Terminal; `size.length` is the runway direction. `passenger` stands on the apron, `street` on the road before the terminal.
+

@@ -30,6 +30,7 @@ public final class ModItemGroups {
 		register(BlockFamily.Tab.GLASS, () -> GlassBlocks.CLEAR_FLOAT_GLASS);
 		register(BlockFamily.Tab.STATIONS, () -> StationBlocksNlBe.UTRECHT_WAVE_ROOF_PANEL);
 		register(BlockFamily.Tab.METRO, () -> MetroBlocks.METRO_COFFER_CEILING);
+		register(BlockFamily.Tab.AIRPORT, () -> AirportBlocks.CHECK_IN_DESK);
 	}
 
 	private ModItemGroups() {
@@ -48,6 +49,7 @@ public final class ModItemGroups {
 							if (tab == BlockFamily.Tab.PASSENGER_EQUIPMENT) {
 								entries.add(ModItems.TRANSIT_CARD);
 								entries.add(ModItems.STATION_WRENCH);
+								entries.add(ModItems.AIRPORT_WRENCH);
 								entries.add(ModItems.STATION_CODEX);
 							}
 						})

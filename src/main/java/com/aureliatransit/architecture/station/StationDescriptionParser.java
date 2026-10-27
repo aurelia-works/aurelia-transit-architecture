@@ -215,6 +215,18 @@ public final class StationDescriptionParser {
 	private StationDescriptionParser() {
 	}
 
+	/**
+	 * {@code description} as the words of an airport: unchanged when they already describe one, else prefixed "airport, " (the airport
+	 * wrench and the Airport Generator always plan an airport, whatever the words say about the rest).
+	 */
+	public static String airportWords(String description) {
+		final String text = description == null ? "" : description.strip();
+		if (text.isEmpty()) {
+			return "airport";
+		}
+		return parse(text).spec().isAirport() ? text : "airport, " + text;
+	}
+
 	public static ParseResult parse(String description) {
 		return new Parse().run(description == null ? "" : description);
 	}
@@ -357,6 +369,9 @@ public final class StationDescriptionParser {
 			text = extractClassEraFacing(text);
 			tokens = tokenize(text);
 			used = new boolean[tokens.length];
+			if (AirportWords.mentioned(tokens)) {
+				return airport();
+			}
 			for (int i = 0; i < tokens.length; i++) {
 				if (!used[i]) {
 					scan(i);
@@ -365,6 +380,32 @@ public final class StationDescriptionParser {
 			said = said();
 			applyClassAndEra();
 			final StationSpec spec = resolve(description.isBlank());
+			final List<String> ignored = new ArrayList<>(new LinkedHashSet<>(ignoredWords()));
+			understood.sort(Comparator.comparingInt(Note::at));
+			final List<String> understoodLines = new ArrayList<>();
+			for (final Note note : understood) {
+				understoodLines.add(note.text());
+			}
+			return new ParseResult(spec, understoodLines, defaulted, warnings, ignored);
+		}
+
+		/**
+		 * The words describe an airport ("airport with 2 runways"): read by {@link AirportWords}, planned as an airport. Railway words
+		 * in the same description are listed as ignored; the name, seed, facing and block swaps still apply.
+		 */
+		private ParseResult airport() {
+			final AirportWords.Reading reading = AirportWords.read(tokens);
+			used = reading.used();
+			for (final AirportWords.Note note : reading.understood()) {
+				understood.add(new Note(note.at(), note.text()));
+			}
+			defaulted.addAll(reading.defaulted());
+			reading.warnings().forEach(this::warn);
+			if (seed != 0) {
+				understood.add(new Note(Integer.MAX_VALUE, "seed " + seedText + ": an airport does not vary with it yet"));
+			}
+			said = Set.of(name.isEmpty() ? "airport" : "name");
+			final StationSpec spec = StationSpec.builder().name(name).seed(seed).facing(facing).options(options.withAirport(reading.spec())).build();
 			final List<String> ignored = new ArrayList<>(new LinkedHashSet<>(ignoredWords()));
 			understood.sort(Comparator.comparingInt(Note::at));
 			final List<String> understoodLines = new ArrayList<>();

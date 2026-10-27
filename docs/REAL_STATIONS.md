@@ -98,6 +98,7 @@ The operator is only the name sign (the operator's sign block and text style); t
 | Westminster: platforms | Two platform tunnels, one above the other; length unknown | Two bores one over the other, 12 blocks apart in height (`StationGeometry.STACK_RISE`): track over track, platform over platform, 7 wide, 100 long (a guess) |
 | Westminster: access | 17 escalators and 5 lifts | The tube's shaft to the lower platform's end, a bank of two escalators in its own inclined lane beside the bores up to a passage onto the upper platform, one three-stop lift at the platforms' end (lower platform, upper platform, street) |
 | Westminster: operator | TfL | `tfl signs` from the preset only; no London-only blocks |
+| Westminster: finishes | Jubilee platforms in bare concrete and steel with platform edge doors; the green Holden tiles are on the sub-surface platforms (`docs/research/westminster.md`) | Grey tiles (`grey tiles` in the preset); no platform edge doors |
 
 Not built: the Angel's two tunnels and the 1990s wide southbound platform, Canary Wharf's glass canopies and the matched escalator count, the Vijzelgracht artwork over its escalators, and Westminster's sub-surface District/Circle platforms, its Portcullis House and clock tower, and the real escalator and lift counts. The planner now takes a platform level per track and platform band (`TrackLayout.Track.level`, `PlatformBand.level`, default 0), so every other station plans exactly as before.
 Fixed: a 188-block island box failed the ground check because a lamp on a lift landing kept its head after the landing's pole was cleared; PlanDeep now clears the landing to the lamp head. Vijzelgracht is built 188 long (DeepStationTest checks it).
@@ -112,3 +113,20 @@ Known gap: the preset test asks every preset for a footbridge or a terminus (a c
 1. Add an entry to `RealStation` with its operator, islands, hall depth, height, number of waves and kind. Cite every number here.
 2. If the station is not "one hall over island platforms, streets at both sides", it needs its own rule in the planner. Do not stretch Utrecht's.
 3. Add its facts and its subset table to this page. Add a test for its parse result and for a plan with 0 violations that the audit can build.
+
+## Airports
+
+Presets: `AirportPresets`. The Southend preset is "airport, one 1856 m runway, 5 gates, terminal, named London Southend" (key `southend`).
+The default "airport" stays generic and operator-neutral.
+
+London Southend (EGMC), from a Google Maps satellite reference: one runway 05/23 of 1,856 m (2,784 blocks at 1.5 blocks a metre), a
+parallel taxiway with links to the runway, an apron with about 5 stands, and a terminal on the far side of the apron from the runway,
+beside the railway station. Built: the runway, taxiway, apron, 5 stands with bridges, the terminal and the control tower.
+
+Simplifications:
+- The runway is not turned to its compass heading. The layout runs the runway along the local v axis with the terminal parallel to
+  it; the real runway meets the terminal line at about 45 degrees. There is no heading option.
+- The runway is 45 blocks wide (30 m), the planner's cap; the real runway is about 45 m.
+- The railway station and its platform are not built, and nothing in an airport runs on rails.
+- Stands are generic: no real stand layout, hangars, cargo, car park, fire station or the Jet Centre.
+- One parallel taxiway with links, no holding bays.

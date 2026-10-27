@@ -1,5 +1,7 @@
 package com.aureliatransit.architecture.station.world;
 
+import com.aureliatransit.architecture.station.AirportSpec;
+import com.aureliatransit.architecture.station.AirportStation;
 import com.aureliatransit.architecture.station.CanopyShape;
 import com.aureliatransit.architecture.station.LocalFrame;
 import com.aureliatransit.architecture.station.ParseResult;
@@ -35,13 +37,30 @@ final class StationText {
 	}
 
 	static String planLine(StationSpec spec) {
+		if (spec.isAirport()) {
+			return airportLine(spec);
+		}
 		return spec.trackCount() + (spec.trackCount() == 1 ? " track, " : " tracks, ") + lower(spec.platformLayout().name()) + " platforms, "
 				+ spec.platformLength() + " x " + spec.platformWidth() + ", " + lower(spec.style().name()).replace('_', ' ') + ", "
-				+ (switch (spec.roof()) {
+				+ (deep(spec) != null ? deep(spec) : switch (spec.roof()) {
 					case NONE -> "no roof";
 					case CANOPY -> "canopy";
 					case HALL -> "hall roof";
 				}) + (spec.hub() ? ", hub" : spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+	}
+
+	/** "deep tube, 24 deep" for a deep station (it has no roof to name); null for any other. */
+	private static String deep(StationSpec spec) {
+		return spec.options().deepStation() ? spec.options().type().label() + ", " + spec.options().streetDepth() + " deep" : null;
+	}
+
+	/** "airport, 1 runway 600 x 30, 2 gates, terminal, railway station under the terminal, "Velare"". */
+	static String airportLine(StationSpec spec) {
+		final AirportSpec airport = spec.airport();
+		return "airport, " + airport.runways() + (airport.runways() == 1 ? " runway " : " runways ") + airport.runwayLength() + " x "
+				+ airport.runwayWidth() + ", " + airport.gates() + (airport.gates() == 1 ? " gate" : " gates")
+				+ (airport.terminal() ? ", terminal" : "") + (AirportStation.fits(airport) && airport.rail() ? ", railway station under the terminal" : "")
+				+ (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
 	}
 
 	/** A clickable chat button that runs {@code command} (an operator's own /ata_station command). */
@@ -53,7 +72,10 @@ final class StationText {
 
 	/** "2 tracks, side platforms, 64 long, arched train shed, clinker brick hall (after Hamburg), terminus, "Alpha"". */
 	static String headline(StationSpec spec) {
-		final String roof = switch (spec.roof()) {
+		if (spec.isAirport()) {
+			return airportLine(spec);
+		}
+		final String roof = deep(spec) != null ? deep(spec) : switch (spec.roof()) {
 			case NONE -> "no roof";
 			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "canopies" : spec.canopy().label() + " canopies";
 			case HALL -> spec.shed().label();
@@ -140,11 +162,11 @@ final class StationText {
 				what = "rail nodes off";
 			} else if (pending.railSkipped()) {
 				what = BlockStateResolver.RAIL_SKIPPED;
-			} else if (keptNode(pending, track.u(), layout.platformFrom(track)) && keptNode(pending, track.u(), layout.platformTo(track))) {
-				what = "uses the rail nodes already at " + corner(frame, track.u(), layout.platformFrom(track)) + " and "
-						+ corner(frame, track.u(), layout.platformTo(track));
+			} else if (keptNode(pending, track, layout.platformFrom(track)) && keptNode(pending, track, layout.platformTo(track))) {
+				what = "uses the rail nodes already at " + node(frame, track, layout.platformFrom(track)) + " and "
+						+ node(frame, track, layout.platformTo(track));
 			} else {
-				what = "rail nodes at " + corner(frame, track.u(), layout.platformFrom(track)) + " and " + corner(frame, track.u(), layout.platformTo(track))
+				what = "rail nodes at " + node(frame, track, layout.platformFrom(track)) + " and " + node(frame, track, layout.platformTo(track))
 						+ (layout.platformNumber(track) > 0 && MtrRailContract.available()
 						? ", joined as MTR platform " + layout.platformNumber(track) + " when built"
 						: ": connect them with an MTR Platform Rail Connector");
@@ -260,12 +282,17 @@ final class StationText {
 	}
 
 	/** True when the planned rail node at (u, 0, v) is kept because a node is already there (the survey wrote no op for it). */
-	private static boolean keptNode(StationSessions.Pending pending, int u, int v) {
+	private static boolean keptNode(StationSessions.Pending pending, TrackLayout.Track track, int v) {
 		final LocalFrame frame = pending.frame();
-		final int x = frame.x(u, v);
-		final int y = frame.y(0);
-		final int z = frame.z(u, v);
+		final int x = frame.x(track.u(), v);
+		final int y = frame.y(track.level());
+		final int z = frame.z(track.u(), v);
 		return pending.report().ops().stream().noneMatch(op -> op.x() == x && op.y() == y && op.z() == z);
+	}
+
+	/** A track's rail node at row v, at the track's own level (a stacked station's upper track is above the rail level). */
+	static String node(LocalFrame frame, TrackLayout.Track track, int v) {
+		return "(" + frame.x(track.u(), v) + " " + frame.y(track.level()) + " " + frame.z(track.u(), v) + ")";
 	}
 
 	private static String corner(LocalFrame frame, int u, int v) {

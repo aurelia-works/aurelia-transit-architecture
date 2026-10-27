@@ -17,6 +17,11 @@ public final class StationPlacement {
 	 */
 	public static int[] pasteOrigin(StationSpec spec, StationPlan plan) {
 		final TrackLayout layout = plan.layout();
+		if (spec.isAirport()) {
+			// beside the road in front of the terminal (or the apron), level with the middle of the gates
+			final AirportGeometry airport = AirportGeometry.of(spec.airport());
+			return new int[]{-1, 0, (airport.apronV0() + airport.apronV1()) / 2};
+		}
 		if (layout.terminus()) {
 			return new int[]{(layout.headFrom() + layout.headTo()) / 2, 0, layout.vMax() + 1};
 		}

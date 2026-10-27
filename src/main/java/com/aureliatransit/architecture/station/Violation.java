@@ -24,6 +24,8 @@ public record Violation(Kind kind, int u, int y, int v, String message) {
 		ROOF_SPAN,
 		/** A lamp, bench, bin or sign not standing on a platform floor cell. */
 		FLOATING_FIXTURE,
+		/** Anything standing above the ground on a runway, its blast pad or shoulder, or a taxiway. */
+		AIRFIELD_OBSTACLE,
 		/** Two planned blocks in one cell. */
 		OVERLAP,
 		/** A planned block outside the footprint. */

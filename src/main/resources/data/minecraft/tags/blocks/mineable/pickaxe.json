@@ -247,6 +247,15 @@
     "aurelia_transit_architecture:heritage_buffer_stop",
     "aurelia_transit_architecture:station_lettering",
     "aurelia_transit_architecture:utrecht_hall_roof",
-    "aurelia_transit_architecture:utrecht_hall_beam"
+    "aurelia_transit_architecture:utrecht_hall_beam",
+    "aurelia_transit_architecture:runway_edge_light",
+    "aurelia_transit_architecture:runway_threshold_light",
+    "aurelia_transit_architecture:taxiway_edge_light",
+    "aurelia_transit_architecture:apron_floodlight",
+    "aurelia_transit_architecture:check_in_desk",
+    "aurelia_transit_architecture:baggage_belt",
+    "aurelia_transit_architecture:departures_board",
+    "aurelia_transit_architecture:windsock",
+    "aurelia_transit_architecture:terminal_terrazzo"
   ]
 }

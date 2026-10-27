@@ -112,6 +112,25 @@ public class StationGameTests implements FabricGameTest {
 	private static final String SMALL = "1 track, length 16, width 3, canopy, named Test";
 	private static final String ATA = AureliaTransitArchitecture.MOD_ID + ":";
 
+	/**
+	 * The airport wrench is registered, is a station wrench, and its words plan an airport whose every block exists in the game and
+	 * which passes the design rules and the checks (the plan the wrench's next click would survey and build).
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
+	public void airportWrenchPlansAnAirportWhoseBlocksAllExist(TestContext context) {
+		final net.minecraft.item.Item item = Registries.ITEM.get(AureliaTransitArchitecture.id("airport_wrench"));
+		check(item instanceof com.aureliatransit.architecture.station.world.AirportWrenchItem, "airport_wrench is not registered");
+		final net.minecraft.item.ItemStack stack = new net.minecraft.item.ItemStack(item);
+		StationWrenchItem.setDescription(stack, "small airport, 2 gates, named Test");
+		final StationCommand.Design design = StationCommand.design(StationDescriptionParser.parse(
+				StationDescriptionParser.airportWords(StationWrenchItem.description(stack))));
+		check(design.plan().spec().isAirport(), "the wrench's words did not plan an airport");
+		check(design.violations().isEmpty(), "design violations: " + design.violations());
+		check(design.audit().buildable() && design.audit().problems().isEmpty(), "checks: " + design.audit().problems());
+		check(design.check().ok(), "blocks missing from the game: " + design.check().missing());
+		context.complete();
+	}
+
 	// ---- resolution and probing ------------------------------------------------------------------------------------
 
 	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
@@ -390,6 +409,80 @@ public class StationGameTests implements FabricGameTest {
 			}
 			for (final Map.Entry<BlockPos, BlockState> cell : ground.entrySet()) {
 				check(world.getBlockState(cell.getKey()).getBlock() == cell.getValue().getBlock(), "undo did not give back the ground at " + cell.getKey());
+			}
+			context.complete();
+		});
+	}
+
+	/**
+	 * An airport with a railway station under its terminal (Jah 10-26), built through the command path: every block of the station
+	 * stands, its platform tracks' rail nodes are joined as MTR platforms, and undo takes them away. Far from the other tests (MTR
+	 * areas are columns) and high enough that the box's 16-block dig stays above the flat world's bedrock.
+	 */
+	@GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 24000, batchId = "airport_rail")
+	public void airportStationIsBuiltUnderTheTerminalAndUndone(TestContext context) {
+		final ServerWorld world = context.getWorld();
+		final String words = "airport with 1 gate and a train station, runway 240 long, 30 wide, named Rail Test";
+		final UUID owner = new UUID(0, 73);
+		final BlockPos feet = context.getAbsolutePos(new BlockPos(-6000, 30, 6000));
+		// the site is in the air: lay stone under every support cell, and as deep as the dig under the station's own boxes
+		final StationSessions.Pending sizing = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		// (the station's own planned cells stay air, so undo has air to give back there)
+		final java.util.Set<BlockPos> below = new java.util.HashSet<>();
+		for (final PlannedBlock block : sizing.plan().blocks()) {
+			if (block.y() < 0) {
+				below.add(cellPos(sizing, block));
+			}
+		}
+		for (final com.aureliatransit.architecture.station.Box box : sizing.plan().supportAreas()) {
+			stone(world, sizing.frame(), below, box.uMin(), box.yMin(), box.vMin(), box.uMax(), box.yMax(), box.vMax());
+		}
+		for (final com.aureliatransit.architecture.station.Box box : sizing.plan().headroom()) {
+			if (box.yMin() < 0) {
+				stone(world, sizing.frame(), below, box.uMin() - 1, box.yMin() - 2, box.vMin() - 1, box.uMax() + 1, -1, box.vMax() + 1);
+			}
+		}
+		final StationSessions.Pending pending = StationCommand.prepare(world, words, feet, Heading.SOUTH);
+		check(pending.spec().airport().rail(), "no railway station in: " + words);
+		check(pending.violations().isEmpty() && pending.audit().buildable(), "plan: " + pending.violations() + " " + pending.audit().problems());
+		final List<Text> said = new ArrayList<>();
+		final StationBuildJob job = StationCommand.startBuild(world, owner, pending, true, said::add);
+		check(job != null, "build refused: " + said);
+		context.runAtEveryTick(() -> {
+			if (!job.finished()) {
+				return;
+			}
+			check(job.state() == StationBuildJob.State.DONE, "job " + job.state() + " " + said);
+			final List<String> problems = new ArrayList<>();
+			final List<BlockPos> nodes = new ArrayList<>();
+			for (final PlannedBlock block : pending.plan().blocks()) {
+				if (block.y() >= 0) {
+					continue;
+				}
+				final BlockPos pos = cellPos(pending, block);
+				final String id = Registries.BLOCK.getId(world.getBlockState(pos).getBlock()).toString();
+				if (!id.equals(block.blockId())) {
+					problems.add(block + ": found " + id);
+				}
+				if (block.role() == Role.RAIL_NODE) {
+					nodes.add(pos);
+				}
+			}
+			check(!nodes.isEmpty(), "no rail nodes under the terminal");
+			for (final BlockPos node : nodes) {
+				if (!flag(world.getBlockState(node), "is_connected")) {
+					problems.add("rail node at " + node.toShortString() + " not joined as an MTR platform");
+				}
+			}
+			Fixtures.failIfAny(problems, words);
+			StationSessions.cancelJob(owner);
+			final StationBuildJob undo = StationBuildJob.undo(world, owner, job.undoLog(), text -> {
+			});
+			while (!undo.finished()) {
+				undo.step(StationBuildJob.OPS_PER_TICK);
+			}
+			for (final BlockPos node : nodes) {
+				check(world.getBlockState(node).isAir(), "undo left the rail node at " + node.toShortString());
 			}
 			context.complete();
 		});
@@ -1596,6 +1689,19 @@ public class StationGameTests implements FabricGameTest {
 
 	private static BlockPos cellPos(StationSessions.Pending pending, PlannedBlock block) {
 		return pos(pending.frame(), block.u(), block.y(), block.v());
+	}
+
+	private static void stone(ServerWorld world, LocalFrame frame, java.util.Set<BlockPos> keep, int u0, int y0, int v0, int u1, int y1, int v1) {
+		for (int u = u0; u <= u1; u++) {
+			for (int y = y0; y <= y1; y++) {
+				for (int v = v0; v <= v1; v++) {
+					final BlockPos pos = pos(frame, u, y, v);
+					if (!keep.contains(pos)) {
+						world.setBlockState(pos, Blocks.STONE.getDefaultState(), Block.NOTIFY_LISTENERS);
+					}
+				}
+			}
+		}
 	}
 
 	private static BlockPos pos(LocalFrame frame, int u, int y, int v) {

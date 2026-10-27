@@ -49,6 +49,35 @@ class StationTextTest {
 	}
 
 	@Test
+	void anAirportIsSummedUpAsAnAirport() {
+		final StationSpec spec = StationDescriptionParser.parse("airport with 2 gates and a train station, runway 600 long, named Velare").spec();
+		final String expected = "airport, 1 runway 600 x " + spec.airport().runwayWidth() + ", 2 gates, terminal, railway station under the terminal, \"Velare\"";
+		assertEquals(expected, StationText.headline(spec));
+		assertEquals(expected, StationText.planLine(spec));
+	}
+
+	@Test
+	void aStackedStationsUpperRailNodesAreAtTheirOwnLevel() {
+		final StationSpec spec = StationDescriptionParser.parse("2 track stacked deep tube station, 30 blocks deep, 40 long").spec();
+		final com.aureliatransit.architecture.station.TrackLayout layout = com.aureliatransit.architecture.station.StationPlanner.plan(spec).layout();
+		final com.aureliatransit.architecture.station.LocalFrame frame = com.aureliatransit.architecture.station.LocalFrame.inFrontOf(0, 64, 0,
+				com.aureliatransit.architecture.station.Heading.SOUTH, layout);
+		final java.util.Set<String> nodes = new java.util.HashSet<>();
+		for (final com.aureliatransit.architecture.station.TrackLayout.Track track : layout.tracks()) {
+			nodes.add(StationText.node(frame, track, layout.platformFrom(track)));
+		}
+		assertEquals(2, nodes.size(), "both tracks' first rail nodes print the same place: " + nodes);
+	}
+
+	@Test
+	void aDeepStationIsNamedByItsKindAndDepthNotARoof() {
+		final StationSpec spec = StationDescriptionParser.parse("2 track deep tube station, 24 blocks deep, 60 long").spec();
+		assertTrue(StationText.headline(spec).contains("deep tube, 24 deep"), StationText.headline(spec));
+		assertTrue(StationText.planLine(spec).contains("deep tube, 24 deep"), StationText.planLine(spec));
+		assertTrue(!StationText.headline(spec).contains("roof"), StationText.headline(spec));
+	}
+
+	@Test
 	void oneTrackIsSingular() {
 		final StationSpec spec = StationDescriptionParser.parse("1 track, 40 long").spec();
 		assertTrue(StationText.planLine(spec).startsWith("1 track, "), StationText.planLine(spec));

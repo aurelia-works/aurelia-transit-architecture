@@ -36,6 +36,8 @@ public final class UndoLog {
 	private final List<BlockPos> railNodes = new ArrayList<>();
 	/** Ids of the MTR stations the build added; undo deletes them. */
 	private final List<Long> stations = new ArrayList<>();
+	/** The MTR ids the airport builds added (gate platforms, sidings, route, depot). */
+	private final List<AirportMtr.Ids> airports = new ArrayList<>();
 	/** Set once undo has taken the stations: one MTR answers after that is deleted at once instead of kept. */
 	private boolean stationsTaken;
 
@@ -152,6 +154,17 @@ public final class UndoLog {
 		final List<Long> taken = List.copyOf(stations);
 		stations.clear();
 		stationsTaken = true;
+		return taken;
+	}
+
+	void addAirport(AirportMtr.Ids ids) {
+		airports.add(ids);
+	}
+
+	/** The airports' MTR ids, once: undo deletes them and forgets them. */
+	List<AirportMtr.Ids> takeAirports() {
+		final List<AirportMtr.Ids> taken = List.copyOf(airports);
+		airports.clear();
 		return taken;
 	}
 

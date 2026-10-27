@@ -25,7 +25,8 @@ public final class StationAudit {
 
 	public enum Topic {
 		TRACKS("Tracks"), FACES("Boarding edges"), RAIL_NODES("Rail nodes"), ROOF("Roof cover"), HEADROOM("Headroom"), ACCESS("Step-free access"),
-		NAME_SIGNS("Name signs"), GROUNDED("Nothing floating"), FALLS("No falls"), SIZE("Size"), LIGHTING("Lighting"), FURNISHING("Furnishing");
+		NAME_SIGNS("Name signs"), GROUNDED("Nothing floating"), FALLS("No falls"), SIZE("Size"), LIGHTING("Lighting"), FURNISHING("Furnishing"),
+		RUNWAYS("Runways"), TAXIWAYS("Taxiways"), GATES("Gates"), TERMINAL("Terminal");
 
 		private final String title;
 
@@ -196,6 +197,12 @@ public final class StationAudit {
 		}
 
 		Result run() {
+			if (spec.isAirport()) {
+				// an airport has no tracks, faces or platforms: its own checks, then the generic ones that still apply
+				checks.addAll(AirportAudit.checks(plan));
+				grounded();
+				return size();
+			}
 			tracks();
 			faces();
 			railNodes();

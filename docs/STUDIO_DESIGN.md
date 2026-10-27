@@ -135,3 +135,20 @@ latency, frame time on the largest station, rapid input, memory over 50 rerolls,
 - **Download .schem** posts the plan parameters to `/api/export` and saves the file under the server's name; the note under it shows
   the block count and fingerprint. **Check a paste** explains `//paste` then `/ata_station verify paste`.
 - Checks show their title, message and "Next:" fix; the verdict line carries the plan's pass/warn/fail tally.
+
+## Airport Generator (1.7)
+
+Airports are their own section of the Studio, not a mode of the station page. The sidebar under MINECRAFT has two cards, "Station Generator"
+(`/`) and "Airport Generator" (`/airport`). They are one page file and one script with two modes: the server fills `data-page` on the body
+(`station` or `airport`) and the page shows what belongs to its mode (`.st-only` and `.ap-only`). Shared on purpose: the planner pipeline,
+the 3D view, the API, the checks, the export. The station controls stay in the airport page (hidden), so the shared code that reads every
+field keeps working; the server ignores them.
+
+- **Airport page:** four choice chips (Regional airport, Small airport, Two runways, Airstrip) that write their words into the box, the words
+  box itself (an airport is its words: "airport, 2 runways, 6 gates, 1000 m runway, no terminal, named X"), the checks, the layers and the
+  views. No city cards, type, tracks, length, roof, building options or photo. It remembers its own words (`ata-airport-studio`).
+- **Views:** Overview, Passenger, Plan, Walk and Back as for a station, plus three close views that replace Street: **Terminal** (the road
+  side of the terminal, looking at its entrance), **Gates** (the apron, looking at the boarding bridges) and **Runway** (behind the first
+  runway's end, looking at its numbers and bars). They come from the plan answer's `views`, so they follow the airport's size and facing.
+- A request carries `page=airport`: the server then plans an airport whatever the words say ("3 gates" becomes "airport, 3 gates").
+

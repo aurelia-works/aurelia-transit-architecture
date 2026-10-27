@@ -158,6 +158,16 @@ public record StationSpec(int trackCount, PlatformLayout platformLayout, int pla
 				.stationClass(stationClass).era(era).facing(facing).operator(operator).real(real).options(options);
 	}
 
+	/** The airport the words describe, or {@link AirportSpec#NONE} for a railway station. */
+	public AirportSpec airport() {
+		return options.airport();
+	}
+
+	/** An airport, not a railway station: the runway, taxiway, apron and terminal planned by {@link PlanAirport}. */
+	public boolean isAirport() {
+		return options.airport().present();
+	}
+
 	public boolean hasBuilding() {
 		return building != BuildingStyle.NONE;
 	}

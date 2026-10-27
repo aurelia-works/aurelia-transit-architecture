@@ -340,6 +340,26 @@ It is a second kind of real station (`RealStation.Kind.TRAIN_SHED`); the hall-ov
 A tower taller than the usual 11 blocks gets stone storeys of 8 with string courses and windows, and its belfry under the clock (`PlanBuilding.tower`).
 The Hamburg *look* is unchanged.
 
+## Airports (1.7, milestone 1: seen in Station Studio only)
+
+Words with "airport", "airfield", "airstrip" or "runway" plan an airport instead of a station (`AirportWords` in the parser, `AirportSpec`
+in `StationOptions.airport`, `StationSpec.isAirport()`). Default: one runway 2,550 blocks (1,700 m at 1.5 blocks a metre) by 45 (30 m),
+four gates, a terminal. "small airport" is a 240 x 15 compact one; "2 runways", "6 gates", "3000 m runway", "30 wide", "no terminal" work.
+The runway is capped at 3,000 blocks (a warning says so) because every block of the plan is held in memory.
+
+Layers: `PlanAirport` (after `PlanFitOut`) paints runway, markings, edge lights, parallel taxiway with links, apron with stands,
+terminal and boarding bridges from `AirportGeometry`; pavement is `Role.PLATFORM_SURFACE`, lights `Role.LIGHT_PANEL`. The plan has no
+track envelopes (but those of a railway station under its terminal, below); its support and clearance boxes and its blocks are in 32-row bands along the runway, so surveys and builds sweep along it
+once. `LayoutValidator` adds `AIRFIELD_OBSTACLE`; `AirportAudit` adds Runways, Taxiways, Gates and Terminal checks.
+The runway, taxiways and aprons are flat and long (a 2,550 block runway by default), so an airport works as a landing strip for player-flown aircraft mods; no dependency or code is involved, only geometry (not tested with any such mod). The airport wrench (`AirportWrenchItem`, screen `AirportWrenchScreen`) plans airports in the game through the station wrench's path; it is operator-only like the station wrench. Not built yet: grading of the site, the MTR airplane route, real airport presets, a control tower, rapid exits, boarding bridges at door height.
+The control tower (`PlanAirport.controlTower`: a 3 by 3 shaft to a glazed 5 by 5 cab, on the apron past the last stand line, twice the mast height) and two 30 degree rapid exits from the first runway (`AirportGeometry.rapidExits`, one TAXIWAY strip per gap column in `areas()`) are planned with the airport; Studio's Plan and Street views frame the terminal and apron (`views.focus`).
+
+**Airport blocks.** `registry/AirportBlocks` (own creative tab, assets from `tools/assets_airport.py`, which never runs `generate_assets.main()`): runway edge, runway threshold and taxiway edge lights set flush into the pavement, an apron floodlight on each mast, check-in desks in threes with a baggage belt behind each, departures boards on both faces of every terminal column, a windsock on a pole at the apron's corner, and a terrazzo hall floor. Static: no block entities, nothing ticks.
+
+**Runway numbers.** "runway 05/23" or "runway 05" (`AirportSpec.heading`, 1..18; the high end is that plus 18) paints those numbers instead of 09/27. A bare number after "runway" without a leading zero or a partner 18 apart is still its length. The numbers only: the runway lies the way the player faces when building, not along its compass heading.
+
+**Railway station under the terminal** (Jah 10-26, Schiphol and Zurich style). "train station", "railway station", "metro station", "rail link" or "transit" in airport words (`AirportSpec.rail`) put a two-track cut-and-cover box with an island platform, 16 blocks deep, under the middle of the terminal (`AirportStation`, planned by `PlanDeep` on its own and moved by `PlanAirport.railStation`). Its platforms are as long as the terminal allows in tens of blocks (at most 200). Its street slab is the hall's terrazzo floor; its escalators and lift come up into the hall; its street pavilions and pylons are left out, and glass barriers close the wells' open sides. The terminal's floor, columns and fit-out keep off its dig, and the airport's support layer leaves the box out. Its two platform rails reach MTR through `PlatformRail.of`, which gives an airport without a station no rails. `LayoutValidator` runs the track and platform rules on the station's own plan, moved under the terminal. It fits only a regional-size terminal (40 deep): a compact airport, or one with no terminal, warns and leaves it out. Honest subset: the tracks end at the box's end walls. The tunnels on to the next station, and a station with more tracks (Schiphol has six), are the player's to build. Preset: "Airport with station" (generic). London Southend's real station stands beside its terminal at street level, so the Southend preset has none.
+
 ## Deep tube and cut-and-cover
 
 `deep tube` / `tube` (a bored tunnel) and `cut and cover` / `box` (a rectangular pit) make a deep station, planned by `PlanDeep` and not by the shallow underground plan.
@@ -349,7 +369,7 @@ Depth is the type's own (`UndergroundType.defaultDepth`), or the asked one: `40 
 - The dig is a `Carve` volume: the cells removed from the ground and the lining that touches them. `StationAudit` checks the open edges (FALLS) and the access walk (ACCESS) on it.
 - Presets: Angel (deep tube, 40 blocks, `tfl signs`), Canary Wharf (box, 36 blocks, `tfl signs`), Vijzelgracht (island box, 39 blocks, 188 long, `gvb signs`). The words "deep tube" and "cut and cover" with no preset stay operator-neutral.
 - Operator signs as elsewhere (`tfl`, `gvb`, ...); the TfL sign is the existing Underground name sign and carries its roundel mark. No LU-only blocks.
-- Not yet: Westminster's stacked platforms (the planner does not stack yet), and a box longer than the 300-block limit.
+- Westminster's stacked platforms: see Stacked platforms above. Not yet: a box longer than the 300-block limit.
 
 ## Known limitations
 

@@ -66,6 +66,11 @@ public final class StationPlanner {
 
 	public static StationPlan plan(StationSpec spec) {
 		final Planning planning = new Planning(spec);
+		if (spec.isAirport()) {
+			// an airport has no tracks, platforms or station building: its own layer plans it all
+			planning.airport();
+			return planning.finish();
+		}
 		planning.underpass();
 		planning.escalators();
 		planning.travelators();

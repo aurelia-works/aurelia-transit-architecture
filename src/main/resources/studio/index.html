@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="studio.css">
 <link rel="icon" href="data:,">
 </head>
-<body data-token="{{TOKEN}}" data-ingame="{{INGAME}}" data-version="{{VERSION}}" data-player="{{PLAYER}}" data-uuid="{{UUID}}">
+<body data-page="{{PAGE}}" data-token="{{TOKEN}}" data-ingame="{{INGAME}}" data-version="{{VERSION}}" data-player="{{PLAYER}}" data-uuid="{{UUID}}">
 <a class="skip" href="#settings">Skip to the settings</a>
 <canvas id="silk" aria-hidden="true"></canvas>
 
@@ -31,7 +31,8 @@
 
 		<div class="nav-group">
 			<p class="nav-label">Minecraft</p>
-			<a class="nav-item" href="./" aria-current="page"><b>Station Generator</b><span>Stations to plan and build</span></a>
+			<a class="nav-item" href="./" id="navStation"><b>Station Generator</b><span>Stations to plan and build</span></a>
+			<a class="nav-item" href="airport" id="navAirport"><b>Airport Generator</b><span>Airports to plan and build</span></a>
 		</div>
 
 		<div class="side-foot">
@@ -52,24 +53,26 @@
 				<section class="group" aria-labelledby="g-words">
 					<h2 class="label" id="g-words">What do you want to build?</h2>
 					<div id="words">
-						<p class="help">Type it like you would say it, for example: <i>six-track Amsterdam station</i>.</p>
+						<p class="help st-only">Type it like you would say it, for example: <i>six-track Amsterdam station</i>.</p>
 						<div class="chips presets" id="presets" role="group" aria-label="Presets"></div>
+						<p class="help ap-only">Pick one, or say it: <i>airport with 2 runways, 6 gates and a terminal</i>. Sizes in blocks or metres (1.5 blocks a metre).</p>
+						<div class="chips airports ap-only" id="airports" role="group" aria-label="Airports"></div>
 						<textarea id="text" rows="3" aria-label="Station description" placeholder="e.g. six-track Amsterdam station with a big glass roof"></textarea>
 						<div class="clash" id="clash" hidden role="status"><span id="clashText"></span></div>
 						<div class="field-foot"><span id="count"></span></div>
-						<div class="photo-row">
+						<div class="photo-row st-only">
 							<button type="button" class="chip-btn" id="photoBtn" title="Claude looks at a photo of a station and writes the description for you">From a photo</button>
 							<input type="file" id="photoFile" accept="image/jpeg,image/png,image/webp" hidden>
 							<span class="help" id="photoNote" role="status"></span>
 						</div>
-						<div class="photo-prompt" id="photoPrompt" hidden>
+						<div class="photo-prompt st-only" id="photoPrompt" hidden>
 							<p class="help">No Anthropic API key is set for the Studio (ANTHROPIC_API_KEY). Instead: open Claude, attach the photo, paste this prompt, and put Claude's answer in the box above.</p>
 							<textarea id="photoPromptText" rows="4" readonly aria-label="Prompt for Claude"></textarea>
 							<button type="button" class="chip-btn" id="photoCopy">Copy prompt</button>
 						</div>
 					</div>
 				</section>
-				<section class="group" aria-labelledby="g-station">
+				<section class="group st-only" aria-labelledby="g-station">
 					<h2 class="label" id="g-station">Station</h2>
 					<div class="field">
 						<span class="f-name" id="cityLabel">City</span>
@@ -83,7 +86,7 @@
 						<select id="mode" hidden><option value="through">Through</option><option value="terminus">Terminus</option><option value="hub">Hub</option></select>
 					</div>
 				</section>
-				<section class="group" aria-labelledby="g-shape">
+				<section class="group st-only" aria-labelledby="g-shape">
 					<h2 class="label" id="g-shape">Size</h2>
 					<div class="field">
 						<div class="range-head"><label for="tracks" class="f-name">Tracks</label><output id="tracksOut" for="tracks"></output></div>
@@ -96,7 +99,7 @@
 						<p class="help" id="lengthNote"></p>
 					</div>
 				</section>
-				<section class="group" aria-labelledby="g-name">
+				<section class="group st-only" aria-labelledby="g-name">
 					<h2 class="label" id="g-name">Name and logo</h2>
 					<input type="text" id="name" maxlength="32" placeholder="e.g. Leidsche Rijn" aria-labelledby="g-name">
 				<div class="field">
@@ -105,7 +108,7 @@
 						<select id="operator" hidden><option value="">None</option><option value="ns">NS</option><option value="db">DB</option><option value="gvb">GVB</option><option value="tfl">Underground</option><option value="nationalrail">National Rail</option><option value="sbahn">S-Bahn</option><option value="sbb">SBB</option><option value="jr">JR</option></select>
 					</div>
 				</section>
-				<details class="adv extra" id="more">
+				<details class="adv extra st-only" id="more">
 					<summary>More options</summary>
 					<div class="extra-body">
 										<label class="field row" for="mix"><span class="f-name">Mix in</span>
@@ -270,6 +273,9 @@
 					<button type="button" class="chip-btn" data-view="street">Street</button>
 					<button type="button" class="chip-btn" data-view="head" id="headView" hidden>Head</button>
 					<button type="button" class="chip-btn" data-view="reverse">Back</button>
+					<button type="button" class="chip-btn ap-only" data-view="terminal" id="terminalView" hidden title="In front of the terminal, looking at its entrance">Terminal</button>
+					<button type="button" class="chip-btn ap-only" data-view="apron" id="apronView" hidden title="On the apron, looking at the gates and boarding bridges">Gates</button>
+					<button type="button" class="chip-btn ap-only" data-view="threshold" id="thresholdView" hidden title="Behind the runway's threshold, looking at its numbers and markings">Runway</button>
 				</div>
 				<div class="seg times" role="group" aria-label="Time of day">
 					<button type="button" data-time="" aria-pressed="true" title="The plain studio backdrop">Studio</button>

@@ -27,7 +27,9 @@ public enum BlockFamily {
 	/** British suburban stations (Teddington, Surbiton, Coventry), 2026-10-20. */
 	STATIONS_UK(Tab.STATIONS),
 	/** 1.5 metro (underground) station finishes. */
-	METRO(Tab.METRO);
+	METRO(Tab.METRO),
+	/** 1.7 airport: airfield lights, check-in desks, baggage belts, departures boards, windsocks. */
+	AIRPORT(Tab.AIRPORT);
 
 	/**
 	 * The dedicated creative tabs. Tab ids are not stored in worlds, so regrouping never touches block or item ids.
@@ -40,7 +42,8 @@ public enum BlockFamily {
 		GLASS("glass"),
 
 		STATIONS("stations"),
-		METRO("metro");
+		METRO("metro"),
+		AIRPORT("airport");
 
 		private final String id;
 

@@ -216,6 +216,7 @@ public final class StationBuildJob {
 		final RebuildDiff<BlockPos> diff = RebuildDiff.of(built, wanted);
 		MtrLiftContract.remove(world, last.takeLifts());
 		MtrStationContract.remove(world, last.takeStations());
+		AirportMtr.remove(world, last.takeAirports());
 		final UndoLog log = new UndoLog(world.getRegistryKey());
 		log.copySoil(last);
 		log.copyRails(last);
@@ -328,6 +329,7 @@ public final class StationBuildJob {
 		final List<Long> stations = log.takeStations();
 		MtrLiftContract.remove(world, lifts);
 		MtrStationContract.remove(world, stations);
+		AirportMtr.remove(world, log.takeAirports());
 		// the platform rails the build laid go with their nodes; a node the player connected on their own stays
 		MtrRailContract.remove(world, log.takeRailNodes());
 		// the build said what it added to MTR; undo says what it took away
@@ -616,6 +618,7 @@ public final class StationBuildJob {
 			MtrStationContract.register(world, zone, log, out);
 			if (zone != null) {
 				MtrRailContract.lay(world, zone.rails(), log, out);
+				AirportMtr.lay(world, zone.airRails(), log, out);
 			}
 		});
 		return steps;

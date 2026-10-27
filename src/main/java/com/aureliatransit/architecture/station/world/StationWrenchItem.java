@@ -61,6 +61,11 @@ public class StationWrenchItem extends Item {
 		super(settings);
 	}
 
+	/** The words a plan is made from: the remembered description. The airport wrench makes sure they describe an airport. */
+	protected String wordsToPlan(String description) {
+		return description;
+	}
+
 	public static String description(ItemStack stack) {
 		final NbtCompound nbt = stack.getNbt();
 		return nbt == null ? "" : bounded(nbt.getString(DESCRIPTION));
@@ -110,7 +115,7 @@ public class StationWrenchItem extends Item {
 		setRecipe(stack, recipe);
 		switch (action) {
 			case SAVE -> player.sendMessage(Text.literal("Station description saved on the wrench.").formatted(Formatting.GRAY), true);
-			case PLAN -> StationActions.plan(player, description(stack), null);
+			case PLAN -> StationActions.plan(player, ((StationWrenchItem) stack.getItem()).wordsToPlan(description(stack)), null);
 			case PREVIEW -> StationActions.preview(player);
 			case CONFIRM -> StationActions.confirm(player, false);
 			case CONFIRM_REPLACE_TERRAIN -> StationActions.confirm(player, true);
@@ -156,7 +161,7 @@ public class StationWrenchItem extends Item {
 			if (player.isSneaking()) {
 				StationActions.confirm(server, false);
 			} else {
-				StationActions.plan(server, description(context.getStack()), context.getBlockPos());
+				StationActions.plan(server, wordsToPlan(description(context.getStack())), context.getBlockPos());
 			}
 		}
 		// success on both sides, so use() (the screen) does not also fire

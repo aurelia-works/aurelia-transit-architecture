@@ -6,7 +6,9 @@
 	const $ = (id) => document.getElementById(id);
 	const TOKEN = document.body.dataset.token;
 	const IN_GAME = document.body.dataset.ingame === "true";
-	const STORE = "ata-station-studio";
+	/** Which page this is: the station generator, or the airport generator (/airport), the same page with the airport controls. */
+	const PAGE = document.body.dataset.page === "airport" ? "airport" : "station";
+	const STORE = PAGE === "airport" ? "ata-airport-studio" : "ata-station-studio";
 	const FACE_SHADE = { up: 1.0, down: 0.5, north: 0.8, south: 0.8, west: 0.6, east: 0.6 };
 	const TINT = new THREE.Color(0x7cbd4f);
 
@@ -42,6 +44,7 @@
 		q.rolled = [...pins].filter((f) => rolled.has(f)).concat(rolled.has("class") && !pins.has("class") ? ["class"] : []).join(",");
 		// the generator seed: the dice's, or the one kept while Details is locked
 		q.seed = seeds.detail;
+		q.page = PAGE;
 		return q;
 	}
 
@@ -335,6 +338,43 @@
 			// words, such as the roof and the footbridge, go in the description
 			b.addEventListener("click", () => applyPreset(p));
 			presets.append(b);
+		}
+		// airports are planned from their words alone: the card only writes them, and the station controls keep their settings
+		const airports = $("airports");
+		if (PAGE !== "airport") {
+			options.airports = [];
+		}
+		airports.innerHTML = "";
+		for (const a of options.airports || []) {
+			const b = document.createElement("button");
+			b.type = "button";
+			b.className = "chip airport";
+			b.textContent = a.label;
+			b.title = a.text;
+			b.addEventListener("click", () => {
+				$("text").value = a.text;
+				touched.clear();
+				rolled.clear();
+				changed();
+			});
+			airports.append(b);
+		}
+	}
+
+	/**
+	 * The airport page: the airport words in the box (the first card's, on a first visit), its own titles, and no station controls
+	 * (they stay in the page, hidden, so the shared code keeps working). The station settings the dice rolled are ignored by the
+	 * server: an airport is its words.
+	 */
+	function setupAirportPage(returning) {
+		document.title = "Airport Generator · Aurelia Transit Architecture";
+		document.querySelector(".top h1").textContent = "Airport Generator";
+		document.querySelector(".wordmark .wm").innerHTML = "<b>Airport</b> <i>Generator</i>";
+		$("settings").setAttribute("aria-label", "Airport settings");
+		$("text").placeholder = "e.g. airport with 2 runways, 6 gates and a terminal";
+		$("text").setAttribute("aria-label", "Airport description");
+		if (!returning || !$("text").value.trim()) {
+			$("text").value = (options.airports[0] || { text: "airport" }).text;
 		}
 	}
 
@@ -943,6 +983,10 @@
 			rollSettings(seeds.value);
 			rolling = false;
 		}
+		if (PAGE === "airport") {
+			setupAirportPage(returning);
+		}
+		$((PAGE === "airport" ? "navAirport" : "navStation")).setAttribute("aria-current", "page");
 		setupSeed();
 		setupLayers();
 		setupPhoto();
@@ -1225,7 +1269,7 @@
 	const NIGHT = new THREE.Color(0x101317);
 	const SKY = new THREE.Color(0xa9bfd3);
 	scene.background = NIGHT;
-	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 4000);
+	const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 16000);
 	const station = new THREE.Group();
 	scene.add(station);
 	const ground = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: 0x23282e }));
@@ -1641,15 +1685,22 @@
 
 	/** The Build card, the status lines and the materials list. */
 	function showFacts(plan) {
+		const air = plan.built.airport;
 		const facts = [["Size", plan.size.width + " × " + plan.size.length + " × " + plan.size.height], ["Blocks", NUMBER.format(plan.size.blocks)],
-			["Tracks", plan.built.tracks + " · " + plan.built.faces + " faces"], ["Planned", plan.ms + " ms"]];
+			air ? ["Runway", air.length + " × " + air.width + " (" + NUMBER.format(air.metres) + " m)"] : ["Tracks", plan.built.tracks + " · " + plan.built.faces + " faces"],
+			["Planned", plan.ms + " ms"]];
 		$("facts").innerHTML = facts.map(([k, v]) => "<div><dt>" + esc(k) + "</dt><dd>" + esc(v) + "</dd></div>").join("");
-		$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc(plan.built.roof.charAt(0).toUpperCase() + plan.built.roof.slice(1)) + " · "
+		if (air) {
+			$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc((air.real ? "regional scale" : "compact scale") + " · " + (air.terminal ? "terminal" : "remote stands")
+				+ " · " + air.runways + (air.runways === 1 ? " runway" : " runways") + (plan.built.name ? " · " + plan.built.name : ""));
+		} else {
+			$("banner").innerHTML = "<b>" + esc(plan.title) + "</b>" + esc(plan.built.roof.charAt(0).toUpperCase() + plan.built.roof.slice(1)) + " · "
 			+ esc(plan.built.building === "no building" ? "no building" : plan.built.building + (plan.built.scale !== "-" ? ", " + plan.built.scale : ""))
 			+ (plan.built.footbridge ? " · footbridge" : "") + (plan.built.name ? " · " + esc(plan.built.name) : "");
+		}
 		$("status").textContent = "Planned in " + plan.ms + " ms · " + NUMBER.format(plan.size.blocks) + " blocks · " + ($("stage").classList.contains("no-gl") ? "no WebGL" : "WebGL");
 		$("topStatus").textContent = (plan.seed ? "seed " + plan.seed + " · " : "") + plan.title;
-		$("tracksNote").textContent = $("listOn").checked ? "Set by the platform list" : plan.built.platforms + (plan.built.platforms === 1 ? " platform, " : " platforms, ")
+		$("tracksNote").textContent = air ? "An airport has no tracks: its runways, gates and terminal come from the words" : $("listOn").checked ? "Set by the platform list" : plan.built.platforms + (plan.built.platforms === 1 ? " platform, " : " platforms, ")
 			+ plan.built.faces + (plan.built.faces === 1 ? " boarding face" : " boarding faces");
 		const counts = new Map();
 		for (let i = 3; i < plan.cells.length; i += 5) {
@@ -1756,9 +1807,14 @@
 		// a terminus faces the street with its head building: the Head view replaces the side-on Street view, which would
 		// only show the edge of the platforms
 		$("headView").hidden = !plan.head;
+		for (const name of ["terminal", "apron", "threshold"]) {
+			$(name + "View").hidden = !(plan.views && plan.views[name]);
+		}
 		document.querySelector('[data-view="street"]').hidden = !!plan.head;
 		if (walk) {
 			// keep walking
+		} else if (plan.views && /^head$/.test(currentView)) {
+			setView("overview");
 		} else if (!plan.head && currentView === "head") {
 			setView("overview");
 		} else if (plan.head && currentView === "street") {
@@ -1796,8 +1852,10 @@
 			draw();
 			return;
 		}
-		const c = bounds.getCenter(new THREE.Vector3());
-		const size = bounds.getSize(new THREE.Vector3());
+		// an airport's Plan and Street views frame its terminal and apron, not the whole runway
+		const box = ((name === "plan" || name === "street") && airportFocus()) || bounds;
+		const c = box.getCenter(new THREE.Vector3());
+		const size = box.getSize(new THREE.Vector3());
 		const reach = Math.max(size.x, size.z, size.y * 2);
 		view.target.copy(c);
 		view.target.y = Math.min(c.y, 6);
@@ -1824,10 +1882,25 @@
 			eye.y = Math.min(size.y * 0.55, 18);
 			Object.assign(view, viewFrom(eye, front));
 		}
+		if (/^(terminal|apron|threshold)$/.test(name) && current && current.views && current.views[name]) {
+			// an airport's close views: from a point near the terminal, the gates or the runway's end, looking at what they show
+			const p = current.views[name];
+			Object.assign(view, viewFrom(new THREE.Vector3(p.x + 0.5, p.y, p.z + 0.5), new THREE.Vector3(p.tx + 0.5, p.ty, p.tz + 0.5)));
+		}
 		if (/^(overview|reverse|street|plan)$/.test(name)) {
-			fitView();
+			fitView(box);
 		}
 		draw();
+	}
+
+	// An airport's focus box for the Plan and Street views: its terminal to its taxiway and the apron's rows, at the plan's height.
+	// Null for a station, which frames the whole plan.
+	function airportFocus() {
+		const f = current && current.views && current.views.focus;
+		if (!f || bounds.isEmpty()) {
+			return null;
+		}
+		return new THREE.Box3(new THREE.Vector3(f.x0, bounds.min.y, f.z0), new THREE.Vector3(f.x1 + 1, bounds.max.y, f.z1 + 1));
 	}
 
 	// The plan's own frame has no compass north (the station is built to face the way its player looks), but it does say where
@@ -1878,15 +1951,15 @@
 
 	// Frame the whole station: from the angle already set, back the camera off (or in) and slide it sideways until the eight
 	// corners of the station's box fill the view with a margin, whatever the station's size or the view's shape.
-	function fitView() {
-		if (bounds.isEmpty()) {
+	function fitView(box = bounds) {
+		if (box.isEmpty()) {
 			return;
 		}
 		resize();
 		const corners = [];
-		for (const x of [bounds.min.x, bounds.max.x]) {
-			for (const y of [bounds.min.y, bounds.max.y]) {
-				for (const z of [bounds.min.z, bounds.max.z]) {
+		for (const x of [box.min.x, box.max.x]) {
+			for (const y of [box.min.y, box.max.y]) {
+				for (const z of [box.min.z, box.max.z]) {
 					corners.push(new THREE.Vector3(x, y, z));
 				}
 			}
@@ -1910,7 +1983,7 @@
 			const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
 			view.target.addScaledVector(right, ((x0 + x1) / 2) * half * camera.aspect).addScaledVector(up, ((y0 + y1) / 2) * half);
 			const k = Math.max((x1 - x0) / 2, (y1 - y0) / 2) / 0.9;
-			view.radius = Math.max(4, Math.min(3000, view.radius * k));
+			view.radius = Math.max(4, Math.min(9000, view.radius * k));
 			if (Math.abs(k - 1) < 0.01 && Math.abs(x0 + x1) < 0.02 && Math.abs(y0 + y1) < 0.02) {
 				break;
 			}
@@ -2130,7 +2203,7 @@
 			return;
 		}
 		glide = null;
-		view.radius = Math.max(2, Math.min(3000, view.radius * Math.exp(e.deltaY * 0.0012)));
+		view.radius = Math.max(2, Math.min(9000, view.radius * Math.exp(e.deltaY * 0.0012)));
 		draw();
 	}, { passive: false });
 

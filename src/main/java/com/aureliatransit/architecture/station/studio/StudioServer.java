@@ -159,8 +159,9 @@ public final class StudioServer {
 		}
 		final String path = exchange.getRequestURI().getPath();
 		final String method = exchange.getRequestMethod();
-		if (path.equals("/") || path.equals("/index.html")) {
-			final String page = resource("index.html").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null))
+		if (path.equals("/") || path.equals("/index.html") || path.equals("/airport") || path.equals("/airport/") || path.equals("/airport.html")) {
+			// the station generator and the airport generator are one page with two modes (see docs/STUDIO_DESIGN.md)
+			final String page = resource("index.html").replace("{{PAGE}}", path.startsWith("/airport") ? "airport" : "station").replace("{{TOKEN}}", token).replace("{{INGAME}}", Boolean.toString(sender != null))
 					.replace("{{VERSION}}", html(VERSION)).replace("{{PLAYER}}", player == null ? "" : html(player.name()))
 					.replace("{{UUID}}", player == null || player.uuid() == null ? "" : html(player.uuid().replace("-", "")));
 			reply(exchange, 200, "text/html; charset=utf-8", page);
