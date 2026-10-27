@@ -59,8 +59,8 @@ abstract class PlanHead extends PlanLifts {
 			final TrackLayout.PlatformBand band = bandAt(u);
 			for (int v = vL; v <= vE; v++) {
 				final boolean edge = u == u0 || u == u1 || v == vE;
-				// each platform's colour runs across the floor either side of its gates (none in an open concourse)
-				final boolean stripe = !edge && band != null && gateLine() && (v == vL + 1 || v == vL + 3);
+				// each platform's colour runs across the floor either side of its gates
+				final boolean stripe = !edge && band != null && (v == vL + 1 || v == vL + 3);
 				put(Role.FLOOR, u, StationGeometry.PLATFORM_Y, v, LocalDir.PLUS_V, edge ? b.plinth() : stripe ? platformColour(band) : b.floor());
 			}
 		}
