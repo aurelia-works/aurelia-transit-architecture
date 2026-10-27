@@ -17,6 +17,7 @@ Fixes from the 1.6.0 play-test (Jah, 10-26). No new features beyond joined bench
 
 ### Stations
 
+- **Real train sheds stand on their own column rows:** Frankfurt, Milan, Zurich, Munich, Mumbai and Hamburg rest only on the rows under the valleys between their vaults (Hamburg: between nave and aisles) and at their outer edges, with the platforms under each span free; before, every island had two rows of columns.
 - **Amsterdam Centraal's real front:** two towers, the raised central gable, long banded brick wings and stepped-gable end pavilions, with a 9-wide entrance.
 
 ### Blocks
