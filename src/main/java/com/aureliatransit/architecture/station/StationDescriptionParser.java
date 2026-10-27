@@ -943,7 +943,22 @@ public final class StationDescriptionParser {
 				default -> null;
 			};
 			if (style == null) {
-				return false;
+				// "gates", "gate line", "ticket barriers", "fare gates": a gate line in the default gates, which a German or Swiss
+				// station otherwise goes without (Jah 10-26)
+				int k = i;
+				if (token.equals("ticket") || token.equals("fare")) {
+					k++;
+				}
+				final String noun = at(k);
+				final boolean line = noun.equals("gate") && at(k + 1).equals("line");
+				if (!line && !noun.equals("gates") && !noun.equals("gateline") && !noun.equals("faregates") && !noun.equals("turnstiles")
+						&& !(k > i && noun.equals("barriers"))) {
+					return false;
+				}
+				use(i, line ? k + 1 : k);
+				options = options.withGatesAsked();
+				note(i, "a gate line");
+				return true;
 			}
 			int j = i + 1;
 			if (at(j).equals("ticket") || at(j).equals("fare")) {

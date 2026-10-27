@@ -52,7 +52,7 @@ abstract class PlanConcourse extends PlanHead {
 		final int half = Math.max(2, Math.min((inner - 4) / 2, GATE_BANK_HALF));
 		final int pitch = 2 * half + 1 + GATE_BANK_GAP;
 		final int banks = inner >= 3 * pitch && layout.tracks().size() >= 6 ? 3 : 1;
-		for (int u = u0 + 1; u < u1; u++) {
+		for (int u = u0 + 1; u < u1 && gateLine(); u++) {
 			// from the middle of the nearest bank
 			final int d = banks == 1 ? u - door : u - door - pitch * Math.max(-1, Math.min(1, Math.round((u - door) / (float) pitch)));
 			if (Math.abs(d) <= half) {
@@ -63,7 +63,9 @@ abstract class PlanConcourse extends PlanHead {
 				fence(u, StationGeometry.WALK_Y, gateV, LocalDir.PLUS_V);
 			}
 		}
-		gateSigns(banks == 1 ? List.of(door) : List.of(door - pitch, door, door + pitch), gateV);
+		if (gateLine()) {
+			gateSigns(banks == 1 ? List.of(door) : List.of(door - pitch, door, door + pitch), gateV);
+		}
 		gateBooth(door + half + 2, gateV, u1, b);
 		// a big number under the lintel over each platform end
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
