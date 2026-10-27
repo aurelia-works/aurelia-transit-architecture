@@ -150,6 +150,21 @@ Place the camera with RCON or the console (`gamemode spectator`, `tp <player> x 
 For example, `printf 'nohud fov=70' > run/client/screenshot-requests/shed` writes `run/client/screenshots/shed.png` a few ticks later.
 The hook is off in a normal game.
 
+## Live code changes without a restart (hot swap)
+
+Start the run with `-Pata.hotswap=true` (`./gradlew runServer --offline --args=nogui -Pata.hotswap=true`; the server listens for
+the swap tool on 127.0.0.1:5005, the client run on 5006). After an edit:
+
+```
+./gradlew compileJava --offline -q && java tools/HotSwap.java 5005     # 5006 for the client
+```
+
+then plan the station again: the planner runs fresh on every plan, so the new code builds it. Tested 10-26: Frankfurt planned
+87,488 blocks, a swapped-in change gave 100,537 and the swap back 87,488, with the server, client and world up throughout.
+The standard JVM swaps method bodies only: adding or removing a method or field, or a record component, is refused and needs a
+restart (JetBrains Runtime with HotswapAgent would lift that; not set up). Models, textures and lang: `./gradlew processResources`
+and F3+T in game; loot and recipes: `/reload`. New blocks or items always need a restart.
+
 ## Station tour (dev server)
 
 `tools/station_tour.py` builds station plans on the dev server and photographs them from views placed at each plan's own features

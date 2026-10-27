@@ -35,6 +35,7 @@ EXPECTED_PROPERTIES = {
     "AxisShapedBlock": {"axis"},
     "TextSignBlock": {"facing", "left", "right"},
     "SeatBlock": {"facing"},
+    "JoiningSeatBlock": {"facing", "left", "right"},
     "InfoDisplayBlock": {"facing"},
     "ClockBlock": {"facing"},
     "PidsBlock": {"facing", "left", "right", "up", "down"},
@@ -176,6 +177,37 @@ def check_element_budget():
             problem(message + "; merge cuboids or simplify (added in 1.5)")
 
 
+def model_fills_cube(ref):
+    """False when an ATA block model has elements and none of them is the whole cube; True for vanilla parents (cube_all)."""
+    namespace, path = ref.split(":", 1) if ":" in ref else ("minecraft", ref)
+    if namespace != MOD:
+        return True
+    m = load(ASSETS / "models" / f"{path}.json") or {}
+    if "elements" not in m:
+        return model_fills_cube(m["parent"]) if "parent" in m else True
+    return any(e["from"] == [0, 0, 0] and e["to"] == [16, 16, 16] for e in m["elements"])
+
+
+def check_see_through():
+    """An opaque block makes its neighbours drop the faces touching it; if its model leaves part of the cube open, the
+    terrain shows through that gap (the bed lights' channel, Jah 10-26). Such blocks need nonOpaque()."""
+    source = "\n".join((REGISTRY / f).read_text(encoding="utf-8") for f in REGISTRY_FILES if (REGISTRY / f).is_file())
+    for m in re.finditer(r'register\("([a-z0-9_]+)"(.*?)\);', source, re.S):
+        block_id, body = m.group(1), m.group(2)
+        # metal() and glass() settings are already non-opaque
+        if re.search(r"nonOpaque|noCollision|metal\(|glass\(", body):
+            continue
+        path = ASSETS / "blockstates" / f"{block_id}.json"
+        state = load(path) if path.is_file() else None
+        if not state:
+            continue
+        refs = [v["model"] for variant in state.get("variants", {}).values() for v in (variant if isinstance(variant, list) else [variant])]
+        refs += [a["model"] for part in state.get("multipart", []) for a in (part["apply"] if isinstance(part["apply"], list) else [part["apply"]])]
+        open_models = sorted({r for r in refs if not model_fills_cube(r)})
+        if open_models:
+            problem(f"{block_id}: opaque, but model {open_models[0]} leaves the cube open (see-through neighbours); add nonOpaque()")
+
+
 def main():
     blocks = registered_blocks()
     if not blocks:
@@ -270,6 +302,7 @@ def main():
     for family, count in families.items():
         print(f"  {family:<13} {count}")
     check_element_budget()
+    check_see_through()
     print(f"Models checked: {len([m for m in seen_models if m.startswith(MOD)])}, recipes: {recipe_count}")
     if warnings:
         print(f"\n{len(warnings)} warning(s), not failures:")

@@ -21,9 +21,20 @@ repositories {
 loom {
 	runs {
 		configureEach { ideConfigGenerated = true }
-		server { runDir = "run/server" }
+		server {
+			runDir = "run/server"
+			// Dev only: -Pata.hotswap=true opens a local debug port for tools/HotSwap.java, which swaps changed method bodies
+			// into the running server after compileJava (docs/LIVE_TESTING.md). Not part of the mod.
+			if (project.hasProperty("ata.hotswap")) {
+				vmArg "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5005"
+			}
+		}
 		client {
 			runDir = "run/client"
+			// Dev only: the same for the client (and its integrated server), on port 5006.
+			if (project.hasProperty("ata.hotswap")) {
+				vmArg "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=127.0.0.1:5006"
+			}
 			// Dev only: Loom runs Apple Silicon on LWJGL 3.3.2-snapshot natives; Sodium 0.5's startup check wants 3.3.1
 			// and refuses to start. This switch (Sodium issue #2561) skips only that check. Not part of the mod.
 			vmArg "-Dsodium.checks.issue2561=false"

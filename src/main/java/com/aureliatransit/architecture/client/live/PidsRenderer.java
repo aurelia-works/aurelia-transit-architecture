@@ -25,6 +25,7 @@ import net.minecraft.client.render.block.entity.BlockEntityRenderer;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -145,18 +146,20 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		cache.height = block.height(world, entity.getPos(), state);
 		final var config = entity.config();
 		final StationDataProvider provider = StationData.provider();
-		long nearest = 0;
+		List<Long> here = List.of();
 		if (provider instanceof NearestPlatformProvider nearestProvider && (!block.kind().stationWide() || config.summary())) {
-			nearest = nearestProvider.nearestPlatformId(entity.getPos(), config.association());
+			// from the middle of the screen: a wide board's owner block sits at its end, nearer one face of an island
+			final BlockPos middle = entity.getPos().offset(PidsBlock.viewerRight(state.get(PidsBlock.FACING)), (cache.width - 1) / 2);
+			here = nearestProvider.platformIdsHere(middle, config.association());
 		}
 		StationSnapshot snapshot = null;
-		if (nearest != 0 && !block.kind().stationWide()) {
-			// An AUTO platform display shows one platform. Resolving the whole station would cap the list at the
-			// station's first MAX_SERVICES departures, so this platform's trains could drop out behind other platforms'.
+		if (!here.isEmpty() && !block.kind().stationWide()) {
+			// An AUTO platform display shows its own platform (both faces of an island), never the whole station. Resolving
+			// the whole station would also cap the list at the station's first MAX_SERVICES departures.
 			final StationSnapshot station = provider.resolve(entity.getPos(), config.association(), false);
 			if (station.station() != null && station.station().id() > 0) {
 				final StationSnapshot platform = provider.resolve(entity.getPos(),
-						new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), List.of(nearest)), true, config.callingTimes() && config.callingAt());
+						new StationAssociation(StationAssociationMode.MANUAL, station.station().id(), here), true, config.callingTimes() && config.callingAt());
 				if (platform.hasStation()) {
 					snapshot = platform;
 				}
@@ -165,7 +168,7 @@ public final class PidsRenderer implements BlockEntityRenderer<PidsBlockEntity> 
 		if (snapshot == null) {
 			snapshot = provider.resolve(entity.getPos(), config.association(), true, config.callingTimes() && config.callingAt());
 		}
-		BoardBuilder.build(cache.model, textRenderer, widths, block.kind(), config, snapshot, nearest, cache.width, cache.height, block.topInsetPixels(), now);
+		BoardBuilder.build(cache.model, textRenderer, widths, block.kind(), config, snapshot, here, cache.width, cache.height, block.topInsetPixels(), now);
 		cache.nextRebuild = now + (cache.model.stripScroll ? MessageRotation.STEP_MILLIS : cache.model.marquee ? REBUILD_MARQUEE_MILLIS : REBUILD_MILLIS);
 		if (cache.model.seconds) {
 			// a clock with seconds ticks on the second, like the real board

@@ -23,7 +23,7 @@ abstract class PlanColumns extends PlanMovingWalks {
 				continue;
 			}
 			final int top = roof(band) == RoofType.CANOPY ? StationGeometry.CANOPY_Y : hallBeamY();
-			for (final int u : columnLines(band, roof(band))) {
+			for (final int u : roof(band) == RoofType.HALL ? hallLines(band) : columnLines(band, roof(band))) {
 				for (final int v : spec.roof() == RoofType.HALL ? hallRows() : columnVForLine(band, u)) {
 					final int base = spec.roof() == RoofType.HALL ? standsOn(u, v, top) : StationGeometry.WALK_Y - 1;
 					if (base >= StationGeometry.WALK_Y) {
@@ -373,7 +373,7 @@ abstract class PlanColumns extends PlanMovingWalks {
 	/** Every column line at {@code v} is clear up to the frame or ends on a solid roof, wall or deck it can stand on. */
 	boolean rowCarried(int v, int top) {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			for (final int u : columnLines(band, RoofType.HALL)) {
+			for (final int u : hallLines(band)) {
 				// past a shorter platform's end a column needs its footing cell (columns() skips one on a ramp)
 				if (!band.runs(v) && !footing(band, u, v) && standsOn(u, v, top) < StationGeometry.WALK_Y) {
 					return false;
@@ -398,7 +398,7 @@ abstract class PlanColumns extends PlanMovingWalks {
 
 	boolean rowFree(int v, int top, boolean doors) {
 		for (final TrackLayout.PlatformBand band : layout.platforms()) {
-			for (final int u : columnLines(band, RoofType.HALL)) {
+			for (final int u : hallLines(band)) {
 				if (doors && site.building() && Math.abs(u - site.platformWall(layout)) <= 3 && (doorV.contains(v - 1) || doorV.contains(v)
 						|| doorV.contains(v + 1))) {
 					return false;
@@ -443,6 +443,62 @@ abstract class PlanColumns extends PlanMovingWalks {
 		// the street entrance (number 0) is open to the sky, under a train shed too: the shed starts at the first track
 		return band.number() == 0 ? RoofType.NONE : StationGeometry.roof(spec, band.number());
 	}
+
+	/** The hall column lines on this platform that carry the frame: all of them, or under a real shed only its kept lines. */
+	List<Integer> hallLines(TrackLayout.PlatformBand band) {
+		final java.util.TreeSet<Integer> kept = shedLines();
+		return columnLines(band, RoofType.HALL).stream().filter(u -> kept == null || kept.contains(u)).toList();
+	}
+
+	/**
+	 * The column lines under a real station's shed of several spans (Frankfurt, Zurich, Milan, Munich, Mumbai) or of nave
+	 * and aisles (Hamburg): the line nearest each valley, where one vault meets the next, and the outermost line each side.
+	 * The real halls stand on rows between their spans with the platforms under a span free; before, every island had two
+	 * rows of columns (Jah 10-26: realism pass). Null when every column line carries the frame.
+	 */
+	java.util.TreeSet<Integer> shedLines() {
+		if (shedLinesDone) {
+			return shedLines;
+		}
+		shedLinesDone = true;
+		if (spec.roof() != RoofType.HALL || !spec.shed().arched()) {
+			return null;
+		}
+		final int u0 = site.street() != null ? StationGeometry.STREET_WIDTH : layout.buildingWidth();
+		final int n = layout.width() - u0;
+		final Landmark.Shed real = landmark == null ? null : landmark.shed();
+		final List<Integer> valleys = new ArrayList<>();
+		if (real != null && real.spans() > 1) {
+			for (int k = 1; k < real.spans(); k++) {
+				valleys.add(u0 + k * (n - 1) / real.spans());
+			}
+		} else if (real == null && spec.real().trainShed() && spec.real().naveShare() < 1) {
+			final int aisle = (int) Math.round(n * (1 - spec.real().naveShare()) / 2);
+			valleys.add(u0 + aisle);
+			valleys.add(u0 + n - 1 - aisle);
+		}
+		final java.util.TreeSet<Integer> all = new java.util.TreeSet<>();
+		for (final TrackLayout.PlatformBand band : layout.platforms()) {
+			if (roof(band) == RoofType.HALL) {
+				all.addAll(columnLines(band, RoofType.HALL));
+			}
+		}
+		// a single round or pointed vault (Berlin's glass barrel over a footbridge, which keeps it off its own eaves) spans
+		// every track from its outer rows; a single pitched roof (Paris) keeps its rows
+		final boolean singleVault = real != null && real.spans() <= 1 && real.profile() != Landmark.ShedProfile.GABLE;
+		if (valleys.isEmpty() && !singleVault || all.size() < 3) {
+			return null;
+		}
+		final java.util.TreeSet<Integer> kept = new java.util.TreeSet<>(List.of(all.first(), all.last()));
+		for (final int valley : valleys) {
+			kept.add(all.stream().min(Comparator.comparingInt(u -> Math.abs(u - valley))).orElseThrow());
+		}
+		shedLines = kept;
+		return kept;
+	}
+
+	private java.util.TreeSet<Integer> shedLines;
+	private boolean shedLinesDone;
 
 	boolean isColumnV(int v) {
 		return spec.roof() == RoofType.HALL ? hallRows().contains(v) : columnV.contains(v);

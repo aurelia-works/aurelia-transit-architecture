@@ -315,22 +315,23 @@ abstract class PlanState {
 	/** The hanging wayfinding sign: its hanger stubs line up with a drop rod's hangers like a hanging screen's. */
 	static final String HANGING_SIGN = "aurelia_transit_architecture:hanging_wayfinding_sign";
 
+	/** The y of the first roof, beam or rib above (u, y, v) within {@link #MAX_DROP} with every cell between free, or -1. */
+	int ceilingAbove(int u, int y, int v) {
+		for (int h = y + 1; h <= y + MAX_DROP; h++) {
+			final PlannedBlock block = cells.get(new Cell(u, h, v));
+			if (block != null) {
+				return block.role().covers() || block.role() == Role.BEAM || block.role() == Role.RIB ? h : -1;
+			}
+		}
+		return -1;
+	}
+
 	/**
 	 * A rod from the fixture at (u, y, v) up to the first roof, beam or rib above it, when one is within {@link #MAX_DROP} and
 	 * every cell between is free; nothing otherwise.
 	 */
 	void dropRod(int u, int y, int v) {
-		int top = -1;
-		for (int h = y + 1; h <= y + MAX_DROP && top < 0; h++) {
-			final PlannedBlock block = cells.get(new Cell(u, h, v));
-			if (block == null) {
-				continue;
-			}
-			if (!block.role().covers() && block.role() != Role.BEAM && block.role() != Role.RIB) {
-				return;
-			}
-			top = h;
-		}
+		final int top = ceilingAbove(u, y, v);
 		if (top < 0) {
 			return;
 		}

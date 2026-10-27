@@ -79,10 +79,16 @@ abstract class PlanConcourse extends PlanHead {
 				}
 			}
 		}
-		// the main departure board hung from the lintel over the platform ends, facing the concourse, and the clock over it
+		// the main departure board hung from the lintel over the platform ends, facing the concourse, and the clock over it; two
+		// high, as one row read as a coloured band from the hall (Jah 10-26: "no PIDS in the central")
 		final int boardHalf = Math.min((inner - 1) / 2, scale == StationScale.GRAND ? 4 : scale == StationScale.CITY ? 3 : 1);
 		for (int u = door - boardHalf; u <= door + boardHalf; u++) {
-			put(Role.FIXTURE, u, StationGeometry.UPPER_FLOOR_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+			for (int y = StationGeometry.UPPER_FLOOR_Y - 1; y <= StationGeometry.UPPER_FLOOR_Y; y++) {
+				put(Role.FIXTURE, u, y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+			}
+		}
+		if (banks == 3) {
+			hallBoards(List.of(door - (pitch + 1) / 2, door + (pitch + 1) / 2), gateV);
 		}
 		put(Role.FIXTURE, door, StationGeometry.UPPER_WALK_Y, vL + 1, LocalDir.PLUS_V, "aurelia_transit_architecture:wall_digital_clock");
 		final int gallery = galleryWidth(inner, gateV - vL);
@@ -127,6 +133,43 @@ abstract class PlanConcourse extends PlanHead {
 		}
 		// no MTR name board over the door (the entrance's own lettering names it) and no MTR tactile map, which plays music
 		// to anyone near it (Jah, 10-22)
+	}
+
+	/** Width of a departure board hung over the gate line between two banks, facing the ticket hall. */
+	static final int HALL_BOARD_WIDTH = 5;
+
+	/**
+	 * In a big hall, departure boards hung from the ceiling over the gate line between the banks, two high, facing the ticket
+	 * hall, as at Utrecht Centraal: the main board over the platform ends cannot be read from the entrance. None where the
+	 * ceiling is too far up to hang them from or anything is in the way; a board moves up to two cells along the gate line
+	 * round a pier (Mumbai's tower walls stand in the gaps).
+	 */
+	void hallBoards(List<Integer> centres, int gateV) {
+		final int low = StationGeometry.WALK_Y + 3;
+		for (final int centre : centres) {
+			int from = Integer.MIN_VALUE;
+			for (final int shift : new int[]{0, -1, 1, -2, 2}) {
+				final int at = centre + shift - HALL_BOARD_WIDTH / 2;
+				boolean free = true;
+				for (int u = at; u < at + HALL_BOARD_WIDTH && free; u++) {
+					free = !taken(u, low, gateV) && !taken(u, low + 1, gateV) && ceilingAbove(u, low + 1, gateV) >= 0;
+				}
+				if (free) {
+					from = at;
+					break;
+				}
+			}
+			if (from == Integer.MIN_VALUE) {
+				continue;
+			}
+			for (int u = from; u < from + HALL_BOARD_WIDTH; u++) {
+				put(Role.FIXTURE, u, low, gateV, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+				put(Role.FIXTURE, u, low + 1, gateV, LocalDir.PLUS_V, "aurelia_transit_architecture:concourse_board");
+			}
+			// rods at the board's two ends
+			dropRod(from, low + 1, gateV);
+			dropRod(from + HALL_BOARD_WIDTH - 1, low + 1, gateV);
+		}
 	}
 
 	/**

@@ -26,7 +26,7 @@ public final class StationPresets {
 			new Preset("utrecht", BuildingStyle.NONE, "utrecht centraal"),
 			new Preset("hamburg_hbf", BuildingStyle.SANDSTONE, "hamburg hauptbahnhof"),
 			new Preset("amsterdam", BuildingStyle.AMSTERDAM,
-					"eight track amsterdam station, four island platforms, 240 long, train shed, station building with footbridge, named Amsterdam Centraal"),
+					"eight track amsterdam station, four island platforms, 240 long, train shed, grand station building with footbridge, 9 wide entrance, named Amsterdam Centraal"),
 			new Preset("st_pancras", BuildingStyle.GOTHIC_BRICK,
 					"eight track st pancras terminus, four island platforms, 200 long, train shed, named St Pancras"),
 			new Preset("antwerp", BuildingStyle.ANTWERP,

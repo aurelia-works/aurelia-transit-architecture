@@ -436,6 +436,114 @@ class StationPlannerTest {
 	}
 
 	@Test
+	void platformScreensAreWithinTheirPlatformSearch() {
+		final List<String> descriptions = new ArrayList<>();
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			descriptions.add(preset.description());
+		}
+		// Jah's 10-26 play-test hub
+		descriptions.add("10 track utrecht station, 200 long");
+		descriptions.add("utrecht style hub, 10 tracks, 5 island platforms, 200 long");
+		final List<String> out = new ArrayList<>();
+		for (final String description : descriptions) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			for (final PlannedBlock block : plan.blocks()) {
+				if (!block.blockId().equals(StationPlanner.PIDS) && !block.blockId().equals(StationPlanner.HANGING_PIDS)) {
+					continue;
+				}
+				int nearest = Integer.MAX_VALUE;
+				for (final TrackLayout.Track track : plan.layout().tracks()) {
+					nearest = Math.min(nearest, Math.abs(block.u() - track.u()));
+				}
+				if (nearest > com.aureliatransit.architecture.live.NearestPlatformProvider.SEARCH_RADIUS) {
+					out.add(description + ": " + block.u() + "," + block.y() + "," + block.v() + " is " + nearest + " from a track");
+				}
+			}
+		}
+		assertTrue(out.isEmpty(), out.size() + " platform screens find no platform, e.g. " + out.stream().limit(6).toList());
+	}
+
+	@Test
+	void aBigTerminusHallHangsDepartureBoardsOverItsGateLine() {
+		final List<String> descriptions = new ArrayList<>();
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			descriptions.add(preset.description());
+		}
+		// Jah's 10-26 play-test hub: from the hall the only board read as a coloured band over the platform ends
+		descriptions.add("utrecht style hub, 10 tracks, 5 island platforms, 200 long");
+		final List<String> bare = new ArrayList<>();
+		int big = 0;
+		for (final String description : descriptions) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			if (!plan.spec().terminus()) {
+				continue;
+			}
+			final List<PlannedBlock> gates = plan.blocks().stream().filter(b -> b.role() == Role.GATE && b.y() == StationGeometry.WALK_Y).toList();
+			if (gates.isEmpty()) {
+				continue;
+			}
+			final int gateV = gates.get(0).v();
+			// three banks of gates (runs along the gate line): a big hall
+			final List<Integer> us = gates.stream().filter(b -> b.v() == gateV).map(PlannedBlock::u).sorted().distinct().toList();
+			int banks = 1;
+			for (int i = 1; i < us.size(); i++) {
+				if (us.get(i) - us.get(i - 1) > 2) {
+					banks++;
+				}
+			}
+			if (banks < 3) {
+				continue;
+			}
+			big++;
+			final long boards = plan.blocks().stream().filter(b -> b.blockId().equals("aurelia_transit_architecture:concourse_board")
+					&& b.v() == gateV && b.front() == LocalDir.PLUS_V).count();
+			if (boards < 2 * PlanConcourse.HALL_BOARD_WIDTH * 2) {
+				bare.add(description + " (" + boards + " board blocks)");
+			}
+		}
+		assertTrue(big > 0, "no big terminus hall among the presets");
+		assertTrue(bare.isEmpty(), bare.size() + " big halls without both gate-line boards: " + bare);
+	}
+
+	@Test
+	void platformHelpPointsStandUnderTheRoof() {
+		final List<String> descriptions = new ArrayList<>();
+		for (final StationPresets.Preset preset : StationPresets.ALL) {
+			descriptions.add(preset.description());
+		}
+		// Jah's 10-26 play-test hub: the help points stood at the open tips of the islands
+		descriptions.add("utrecht style hub, 10 tracks, 5 island platforms, 200 long");
+		final List<String> out = new ArrayList<>();
+		for (final String description : descriptions) {
+			final StationPlan plan = plan(StationDescriptionParser.parse(description).spec());
+			final Set<String> covered = new HashSet<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.role().covers() && block.y() > StationGeometry.WALK_Y) {
+					covered.add(block.u() + "," + block.v());
+				}
+			}
+			for (final PlannedBlock block : plan.blocks()) {
+				if (!block.blockId().equals(StationPlanner.HELP_POINT) || block.y() != StationGeometry.WALK_Y) {
+					continue;
+				}
+				for (final TrackLayout.PlatformBand band : plan.layout().platforms()) {
+					if (band.uMin() > block.u() || block.u() > band.uMax() || !band.runs(block.v())) {
+						continue;
+					}
+					boolean roofed = false;
+					for (int v = band.vFrom(); v <= band.vTo() && !roofed; v++) {
+						roofed = covered.contains(block.u() + "," + v);
+					}
+					if (roofed && !covered.contains(block.u() + "," + block.v())) {
+						out.add(description + ": " + block.u() + "," + block.v() + " on " + band.vFrom() + ".." + band.vTo());
+					}
+				}
+			}
+		}
+		assertTrue(out.isEmpty(), out.size() + " help points out in the open on a roofed platform, e.g. " + out.stream().limit(4).toList());
+	}
+
+	@Test
 	void presetBlocksAreAllConnectedToTheGround() {
 		for (final StationPresets.Preset preset : StationPresets.ALL) {
 			final List<PlannedBlock> floating = unconnected(plan(StationDescriptionParser.parse(preset.description()).spec()));

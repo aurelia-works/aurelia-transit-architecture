@@ -1,19 +1,160 @@
 {
-  "variants": {
-    "facing=north": {
-      "model": "aurelia_transit_architecture:block/wooden_bench"
+  "multipart": [
+    {
+      "when": {
+        "facing": "north"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_seat"
+      }
     },
-    "facing=east": {
-      "model": "aurelia_transit_architecture:block/wooden_bench",
-      "y": 90
+    {
+      "when": {
+        "facing": "north",
+        "left": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_left"
+      }
     },
-    "facing=south": {
-      "model": "aurelia_transit_architecture:block/wooden_bench",
-      "y": 180
+    {
+      "when": {
+        "facing": "north",
+        "right": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_right"
+      }
     },
-    "facing=west": {
-      "model": "aurelia_transit_architecture:block/wooden_bench",
-      "y": 270
+    {
+      "when": {
+        "facing": "north",
+        "left": "true",
+        "right": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_middle"
+      }
+    },
+    {
+      "when": {
+        "facing": "east"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_seat",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "left": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_left",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "right": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_right",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "east",
+        "left": "true",
+        "right": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_middle",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "facing": "south"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_seat",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "left": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_left",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "right": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_right",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "south",
+        "left": "true",
+        "right": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_middle",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "facing": "west"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_seat",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "left": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_left",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "right": "false"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_end_right",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "facing": "west",
+        "left": "true",
+        "right": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/wooden_bench_middle",
+        "y": 270
+      }
     }
-  }
+  ]
 }

@@ -118,13 +118,14 @@ public final class ElevatedBlocks {
 
 	/**
 	 * Ballast with a lit channel along one edge, laid against a platform wall so the light sits under the platform's lip; the
-	 * station generator's track bed light. The channel faces the placing player.
+	 * station generator's track bed light. The channel faces the placing player. Not opaque: the channel leaves the cube open
+	 * at its top front edge, and neighbours that culled their faces against a full cube showed the terrain through it (Jah 10-26).
 	 */
 	public static final Block GRAVEL_BED_LIGHT = ModBlocks.register("gravel_bed_light", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).sounds(net.minecraft.sound.BlockSoundGroup.GRAVEL).luminance(state -> 15),
+			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).sounds(net.minecraft.sound.BlockSoundGroup.GRAVEL).luminance(state -> 15).nonOpaque(),
 					Placement.TOWARD_PLAYER, box(0, 0, 0, 16, 16, 16)), TIP + "faces_you");
 	public static final Block ANDESITE_BED_LIGHT = ModBlocks.register("andesite_bed_light", BlockFamily.PLATFORMS, RenderKind.SOLID,
-			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).luminance(state -> 15), Placement.TOWARD_PLAYER, box(0, 0, 0, 16, 16, 16)),
+			new FacingShapedBlock(ModBlocks.paving(MapColor.STONE_GRAY).luminance(state -> 15).nonOpaque(), Placement.TOWARD_PLAYER, box(0, 0, 0, 16, 16, 16)),
 			TIP + "faces_you");
 
 	public static void init() {
