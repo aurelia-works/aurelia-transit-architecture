@@ -42,11 +42,16 @@ final class StationText {
 		}
 		return spec.trackCount() + (spec.trackCount() == 1 ? " track, " : " tracks, ") + lower(spec.platformLayout().name()) + " platforms, "
 				+ spec.platformLength() + " x " + spec.platformWidth() + ", " + lower(spec.style().name()).replace('_', ' ') + ", "
-				+ (switch (spec.roof()) {
+				+ (deep(spec) != null ? deep(spec) : switch (spec.roof()) {
 					case NONE -> "no roof";
 					case CANOPY -> "canopy";
 					case HALL -> "hall roof";
 				}) + (spec.hub() ? ", hub" : spec.terminus() ? ", terminus" : "") + (spec.stepFree() ? ", step-free" : "") + (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
+	}
+
+	/** "deep tube, 24 deep" for a deep station (it has no roof to name); null for any other. */
+	private static String deep(StationSpec spec) {
+		return spec.options().deepStation() ? spec.options().type().label() + ", " + spec.options().streetDepth() + " deep" : null;
 	}
 
 	/** "airport, 1 runway 600 x 30, 2 gates, terminal, railway station under the terminal, "Velare"". */
@@ -70,7 +75,7 @@ final class StationText {
 		if (spec.isAirport()) {
 			return airportLine(spec);
 		}
-		final String roof = switch (spec.roof()) {
+		final String roof = deep(spec) != null ? deep(spec) : switch (spec.roof()) {
 			case NONE -> "no roof";
 			case CANOPY -> spec.canopy() == CanopyShape.FLAT ? "canopies" : spec.canopy().label() + " canopies";
 			case HALL -> spec.shed().label();

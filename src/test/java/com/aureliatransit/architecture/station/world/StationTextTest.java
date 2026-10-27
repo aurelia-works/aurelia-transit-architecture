@@ -70,6 +70,14 @@ class StationTextTest {
 	}
 
 	@Test
+	void aDeepStationIsNamedByItsKindAndDepthNotARoof() {
+		final StationSpec spec = StationDescriptionParser.parse("2 track deep tube station, 24 blocks deep, 60 long").spec();
+		assertTrue(StationText.headline(spec).contains("deep tube, 24 deep"), StationText.headline(spec));
+		assertTrue(StationText.planLine(spec).contains("deep tube, 24 deep"), StationText.planLine(spec));
+		assertTrue(!StationText.headline(spec).contains("roof"), StationText.headline(spec));
+	}
+
+	@Test
 	void oneTrackIsSingular() {
 		final StationSpec spec = StationDescriptionParser.parse("1 track, 40 long").spec();
 		assertTrue(StationText.planLine(spec).startsWith("1 track, "), StationText.planLine(spec));
