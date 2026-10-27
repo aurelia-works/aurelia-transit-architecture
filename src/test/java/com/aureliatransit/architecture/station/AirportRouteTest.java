@@ -96,12 +96,12 @@ class AirportRouteTest {
 	}
 
 	@Test
-	void theRunwayIsEnteredOnlyAtTheTakeOffLinkAndLeftOnlyAtTheExitLink() {
+	void theRunwayIsEnteredOnlyAtTheNearLinkAndLeftOnlyAtTheFarLink() {
 		final AirportRoute route = AirportRoute.of(REAL);
-		final int[] farLink = REAL.links().get(1);
-		final int takeOffRow = (farLink[0] + farLink[1]) / 2;
 		final int[] nearLink = REAL.links().get(0);
-		final int exitRow = (nearLink[0] + nearLink[1]) / 2;
+		final int takeOffRow = (nearLink[0] + nearLink[1]) / 2;
+		final int[] farLink = REAL.links().get(1);
+		final int exitRow = (farLink[0] + farLink[1]) / 2;
 		for (final Gate gate : route.gates()) {
 			final List<Leg> legs = gate.legs();
 			final Leg takeOffLink = legs.get(3);
@@ -118,6 +118,28 @@ class AirportRouteTest {
 			final Leg landing = legs.get(5);
 			assertEquals(new Cell(REAL.runwayCentre(0), REAL.runwayV1()), last(takeOff), "the take-off roll ends at the far end");
 			assertEquals(new Cell(REAL.runwayCentre(0), REAL.runwayV0()), first(landing), "the landing roll starts at the threshold");
+		}
+	}
+
+	/** Review 10-27: the planes took off and stopped in about 16 blocks of a 1,500-block runway. */
+	@Test
+	void takeOffAndLandingUseNearlyTheWholeRunway() {
+		final int runway = REAL.spec().runwayLength();
+		for (final Gate gate : AirportRoute.of(REAL).gates()) {
+			assertTrue(gate.legs().get(4).cells().size() >= runway * 9 / 10, "take-off roll of gate " + gate.index());
+			assertTrue(gate.legs().get(5).cells().size() >= runway * 9 / 10, "landing roll of gate " + gate.index());
+		}
+	}
+
+	/** The taxiway is flown one way (-v), so no plane meets another head on. */
+	@Test
+	void theTaxiwayIsFlownOneWay() {
+		for (final Gate gate : AirportRoute.of(REAL).gates()) {
+			for (final Leg leg : gate.legs()) {
+				if (leg.kind() == Kind.TAXI) {
+					assertTrue(last(leg).v() < first(leg).v(), "gate " + gate.index() + " taxis -v");
+				}
+			}
 		}
 	}
 

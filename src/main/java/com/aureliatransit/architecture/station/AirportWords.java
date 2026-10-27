@@ -22,6 +22,10 @@ final class AirportWords {
 	private static final Set<String> SMALL = Set.of("small", "tiny", "regional", "minor", "local");
 	private static final Set<String> LARGE = Set.of("large", "big", "major", "international", "huge");
 	private static final Set<String> NO = Set.of("no", "without", "remote");
+	/** Words a "no" may stand before its noun across: "without a train station", "no terminal building". */
+	private static final Set<String> ARTICLES = Set.of("a", "an", "the", "any");
+	/** Words of a railway station's own layout: with them, "airport" names the station, not an airport to build. */
+	private static final Set<String> TRACK_WORDS = Set.of("track", "tracks", "platform", "platforms");
 	/** Words for a railway station under the terminal ("airport with a train station", "transit", "rail link"). */
 	private static final Set<String> RAIL = Set.of("train", "trains", "rail", "railway", "metro", "subway", "transit");
 	private static final Set<String> RAIL_NOUN = Set.of("station", "link", "stop", "connection");
@@ -48,14 +52,33 @@ final class AirportWords {
 	record Reading(AirportSpec spec, List<Note> understood, List<String> defaulted, List<String> warnings, boolean[] used) {
 	}
 
-	/** True when a token names an airport ("airport", "airfield", "airstrip") or a runway. */
+	/**
+	 * True when the words ask for an airport: a runway, or "airport" (or "airfield" ...) that does not name a
+	 * railway station. "Schiphol airport station, 6 tracks" and "airport express station" are railway stations: a track or platform
+	 * word, or the airport word followed straight by "station" or "express" (or a rail word and "station": "airport rail station"),
+	 * makes the airport word part of the station's name. "airport with a train station" stays an airport with a station under it.
+	 */
 	static boolean mentioned(String[] tokens) {
-		for (final String token : tokens) {
-			if (TRIGGERS.contains(token) || RUNWAY.contains(token)) {
+		boolean airport = false;
+		boolean station = false;
+		for (int i = 0; i < tokens.length; i++) {
+			final String token = tokens[i];
+			if (RUNWAY.contains(token)) {
 				return true;
 			}
+			if (TRACK_WORDS.contains(token)) {
+				station = true;
+			}
+			if (TRIGGERS.contains(token)) {
+				airport = true;
+				final String next = i + 1 < tokens.length ? tokens[i + 1] : "";
+				final String after = i + 2 < tokens.length ? tokens[i + 2] : "";
+				if (next.equals("station") || next.equals("express") || RAIL.contains(next) && after.equals("station")) {
+					station = true;
+				}
+			}
 		}
-		return false;
+		return airport && !station;
 	}
 
 	static Reading read(String[] tokens) {
@@ -241,20 +264,31 @@ final class AirportWords {
 			}
 		}
 
+		/** The token that says "no" before token {@code i}, past an article ("without a terminal"), or -1. */
+		private int no(int i) {
+			int j = i - 1;
+			while (ARTICLES.contains(at(j))) {
+				j--;
+			}
+			return NO.contains(at(j)) ? j : -1;
+		}
+
 		private void terminalWord(int i) {
-			final boolean none = NO.contains(at(i - 1));
-			use(none ? i - 1 : i, i);
+			final int no = no(i);
+			final boolean none = no >= 0;
+			use(none ? no : i, i);
 			if (terminal == null) {
 				terminal = !none;
-				note(none ? i - 1 : i, none ? "no terminal: the stands are remote, out on the apron" : "a terminal building");
+				note(none ? no : i, none ? "no terminal: the stands are remote, out on the apron" : "a terminal building");
 			}
 		}
 
 		/** "train station", "rail link", "metro", "transit": a railway station under the terminal; "no train station" says none. */
 		private void railWord(int i) {
-			final boolean none = NO.contains(at(i - 1));
+			final int no = no(i);
+			final boolean none = no >= 0;
 			final int end = RAIL_NOUN.contains(at(i + 1)) ? i + 1 : i;
-			use(none ? i - 1 : i, end);
+			use(none ? no : i, end);
 			if (!none && !rail) {
 				rail = true;
 				note(i, "a railway station under the terminal");

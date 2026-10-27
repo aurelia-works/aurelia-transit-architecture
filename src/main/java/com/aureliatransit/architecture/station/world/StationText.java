@@ -1,5 +1,7 @@
 package com.aureliatransit.architecture.station.world;
 
+import com.aureliatransit.architecture.station.AirportGeometry;
+import com.aureliatransit.architecture.station.AirportRoute;
 import com.aureliatransit.architecture.station.AirportSpec;
 import com.aureliatransit.architecture.station.AirportStation;
 import com.aureliatransit.architecture.station.CanopyShape;
@@ -63,6 +65,22 @@ final class StationText {
 				+ (spec.name().isEmpty() ? "" : ", \"" + spec.name() + "\"");
 	}
 
+	/**
+	 * Why an airport gets no MTR planes, for the chat ("No planes: the siding would be 23 blocks; a plane is 30 ..."), or null when it
+	 * gets them or is no airport. Before 10-27 a small airport lost its planes without a word.
+	 */
+	static String noPlanes(StationSpec spec) {
+		if (!spec.isAirport()) {
+			return null;
+		}
+		final String problem = AirportRoute.of(AirportGeometry.of(spec.airport())).problem();
+		if (problem.isEmpty()) {
+			return null;
+		}
+		return "No MTR planes: " + problem + (spec.airport().runwayWidth() < AirportGeometry.REAL_WIDTH
+				? " (a runway " + AirportGeometry.REAL_WIDTH + " or more wide has room for them)" : "") + ".";
+	}
+
 	/** A clickable chat button that runs {@code command} (an operator's own /ata_station command). */
 	static MutableText button(String label, String command, Formatting colour, String hover) {
 		return Text.literal("[" + label + "]").styled(style -> style.withColor(colour).withBold(true)
@@ -92,6 +110,9 @@ final class StationText {
 	static void shortSummary(StationSessions.Pending pending, BlockStateResolver.Check check, Consumer<Text> out) {
 		final ParseResult parse = pending.parse();
 		out.accept(Text.literal("[ATA Station] ").formatted(Formatting.GOLD).append(Text.literal(headline(pending.spec())).formatted(Formatting.WHITE)));
+		if (noPlanes(pending.spec()) != null) {
+			out.accept(Text.literal("  " + noPlanes(pending.spec())).formatted(Formatting.YELLOW));
+		}
 		for (final String line : parse.understood()) {
 			if (line.startsWith("mix: ")) {
 				out.accept(Text.literal("  " + line.substring(5)).formatted(Formatting.GRAY));
@@ -147,6 +168,9 @@ final class StationText {
 		final LocalFrame frame = pending.frame();
 		final TrackLayout layout = plan.layout();
 		out.accept(Text.literal("[ATA Station] " + planLine(pending.spec())).formatted(Formatting.GOLD));
+		if (noPlanes(pending.spec()) != null) {
+			out.accept(Text.literal(noPlanes(pending.spec())).formatted(Formatting.YELLOW));
+		}
 		list(out, "Understood: ", parse.understood(), Formatting.GRAY);
 		list(out, "Defaults: ", parse.defaulted(), Formatting.DARK_GRAY);
 		list(out, "Warnings: ", parse.warnings(), Formatting.YELLOW);

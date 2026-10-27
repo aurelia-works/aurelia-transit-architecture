@@ -63,7 +63,13 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 	/** A runway this wide or wider (30 m at 1.5 blocks a metre) is a regional airport's, with the real dimensions. */
 	public static final int REAL_WIDTH = 30;
 	public static final Dims COMPACT = new Dims(24, 6, 6, 18, 30, 28, 9, 14, 30, 8, 2, 8, 12, 6, 5, 3, 8, 11, 4, 6, 8, 6, 0);
-	public static final Dims REAL = new Dims(60, 24, 12, 40, 84, 66, 21, 48, 120, 16, 6, 22, 24, 10, 7, 5, 18, 30, 8, 10, 14, 10, 6);
+	/**
+	 * Real dimensions at 1.5 blocks a metre (ICAO Annex 14, code C, the A320's class): the parallel taxiway's centreline at least
+	 * 158 m (237 blocks) from an instrument runway's on a 30-block runway, more on a wider one; parallel runways at least 210 m
+	 * (315 blocks) apart; threshold stripes 30 m long, the runway number 12 m past them. Until 10-27 the taxiway stood 54 m off the
+	 * runway and two runways 110 m apart.
+	 */
+	public static final Dims REAL = new Dims(60, 24, 12, 40, 84, 66, 21, 212, 285, 16, 6, 22, 24, 10, 7, 5, 45, 65, 8, 10, 14, 10, 6);
 	/** A runway longer than this gets a link in the middle as well. */
 	public static final int MID_LINK_LENGTH = 480;
 
@@ -123,14 +129,22 @@ public record AirportGeometry(AirportSpec spec, int width, int length, int roadU
 	static final double EXIT_ROWS_PER_COLUMN = Math.sqrt(3);
 
 	/**
-	 * The first row of each rapid exit, where it leaves the first runway: at a quarter and three quarters of its length. None on a runway
-	 * shorter than {@link #RAPID_EXIT_LENGTH}.
+	 * The first row of each rapid exit, where it leaves the first runway: at a quarter and three quarters of its length, each only where
+	 * it joins the taxiway before the far link. None on a runway shorter than {@link #RAPID_EXIT_LENGTH}.
 	 */
 	public List<Integer> rapidExits() {
 		if (spec.runwayLength() < RAPID_EXIT_LENGTH) {
 			return List.of();
 		}
-		return List.of(runwayV0 + spec.runwayLength() / 4, runwayV0 + 3 * spec.runwayLength() / 4);
+		// an exit runs sqrt(3) rows along for every column across the gap (367 rows at the real 212), so on a shorter runway the
+		// second one would join the taxiway past the far link, or past the airport's end: only exits that join before the far link
+		final List<Integer> out = new ArrayList<>();
+		for (final int start : List.of(runwayV0 + spec.runwayLength() / 4, runwayV0 + 3 * spec.runwayLength() / 4)) {
+			if (exitCentre(start, taxiU1 + 1) + exitHalf() < links.get(1)[0]) {
+				out.add(start);
+			}
+		}
+		return List.copyOf(out);
 	}
 
 	/** The centreline row of a rapid exit that leaves the runway at row {@code start}, in column {@code u} of the gap to the taxiway. */

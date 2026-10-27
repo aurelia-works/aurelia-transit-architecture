@@ -5,6 +5,7 @@ import com.sun.net.httpserver.HttpServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -28,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Station Studio's local web server: the page, its scripts, the planner ({@link StudioApi}) and block textures, on
@@ -438,9 +440,31 @@ public final class StudioServer {
 		reply(exchange, status, type, text.getBytes(StandardCharsets.UTF_8));
 	}
 
+	/** Text this long or longer goes gzipped to a browser that takes it: an airport's plan is several MB of JSON, mostly runway. */
+	static final int GZIP_FROM = 8 * 1024;
+
+	/** True when a reply of this type and size goes gzipped to a client that sent {@code acceptEncoding}. */
+	static boolean gzips(String type, int length, String acceptEncoding) {
+		return length >= GZIP_FROM && acceptEncoding != null && acceptEncoding.toLowerCase(Locale.ROOT).contains("gzip")
+				&& (type.startsWith("application/json") || type.startsWith("text/") || type.startsWith("application/javascript"));
+	}
+
+	static byte[] gzip(byte[] bytes) throws IOException {
+		final ByteArrayOutputStream packed = new ByteArrayOutputStream(bytes.length / 8 + 64);
+		try (GZIPOutputStream zip = new GZIPOutputStream(packed)) {
+			zip.write(bytes);
+		}
+		return packed.toByteArray();
+	}
+
 	private static void reply(HttpExchange exchange, int status, String type, byte[] bytes) throws IOException {
 		exchange.getResponseHeaders().set("Content-Type", type);
 		exchange.getResponseHeaders().set("X-Content-Type-Options", "nosniff");
+		if (gzips(type, bytes.length, exchange.getRequestHeaders().getFirst("Accept-Encoding"))) {
+			bytes = gzip(bytes);
+			exchange.getResponseHeaders().set("Content-Encoding", "gzip");
+			exchange.getResponseHeaders().set("Vary", "Accept-Encoding");
+		}
 		exchange.sendResponseHeaders(status, bytes.length);
 		try (OutputStream out = exchange.getResponseBody()) {
 			out.write(bytes);

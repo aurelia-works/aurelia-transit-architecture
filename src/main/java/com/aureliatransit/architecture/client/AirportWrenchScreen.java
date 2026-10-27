@@ -30,6 +30,8 @@ public class AirportWrenchScreen extends Screen {
 	private final Hand hand;
 	private String words;
 	private TextFieldWidget field;
+	/** Set once an action went to the server, which saves the words with it: closing then sends nothing more. */
+	private boolean sent;
 
 	public AirportWrenchScreen(Hand hand, String words) {
 		super(Text.translatable(KEY + "title"));
@@ -76,6 +78,7 @@ public class AirportWrenchScreen extends Screen {
 	private void send(StationWrenchItem.Action action) {
 		words = field.getText();
 		ClientPlayNetworking.send(ModPackets.STATION_WRENCH, ModPackets.writeStationWrench(hand, action, words, ""));
+		sent = true;
 		close();
 	}
 
@@ -90,7 +93,7 @@ public class AirportWrenchScreen extends Screen {
 	@Override
 	public void close() {
 		// closing without an action saves the words on the wrench, so its next click on the ground plans them
-		if (field != null && !field.getText().equals(StationWrenchItem.description(client.player.getStackInHand(hand)))) {
+		if (!sent && field != null && !field.getText().equals(StationWrenchItem.description(client.player.getStackInHand(hand)))) {
 			ClientPlayNetworking.send(ModPackets.STATION_WRENCH, ModPackets.writeStationWrench(hand, StationWrenchItem.Action.SAVE, field.getText(), ""));
 		}
 		super.close();

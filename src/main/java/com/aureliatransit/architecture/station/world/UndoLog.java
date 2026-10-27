@@ -40,6 +40,8 @@ public final class UndoLog {
 	private final List<AirportMtr.Ids> airports = new ArrayList<>();
 	/** Set once undo has taken the stations: one MTR answers after that is deleted at once instead of kept. */
 	private boolean stationsTaken;
+	/** Set once undo or a rebuild has taken the airports, as {@link #stationsTaken}. */
+	private boolean airportsTaken;
 
 	public UndoLog(RegistryKey<World> dimension) {
 		this.dimension = dimension;
@@ -157,14 +159,25 @@ public final class UndoLog {
 		return taken;
 	}
 
-	void addAirport(AirportMtr.Ids ids) {
+	/** @return false when undo (or a rebuild) already took the airports, so the caller must not add this one to MTR */
+	boolean addAirport(AirportMtr.Ids ids) {
+		if (airportsTaken) {
+			return false;
+		}
 		airports.add(ids);
+		return true;
+	}
+
+	/** True once undo or a rebuild took the airports: an MTR answer arriving after that adds nothing. */
+	boolean airportsTaken() {
+		return airportsTaken;
 	}
 
 	/** The airports' MTR ids, once: undo deletes them and forgets them. */
 	List<AirportMtr.Ids> takeAirports() {
 		final List<AirportMtr.Ids> taken = List.copyOf(airports);
 		airports.clear();
+		airportsTaken = true;
 		return taken;
 	}
 

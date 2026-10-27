@@ -34,7 +34,8 @@ import org.mtr.mod.packet.PacketUpdateData;
 /**
  * An airport's gate loops in MTR, in four update_data steps as MtrRails does them: the rails; then the gate platforms, named
  * "Gate n", the airplane route through them, the depot (frequencies set, or MTR never sends a plane) and the sidings' cars; then
- * generate_by_depot_ids for the depot. Nothing happens without MTR, or with fewer than two gate platforms.
+ * generate_by_depot_ids for the depot. Nothing happens without MTR, or with fewer than two gate platforms. An undo that runs
+ * before MTR answers wins: the route and depot are then never sent. A changed MTR API is logged, never thrown into the build's tick.
  */
 final class AirportMtr {
 
@@ -45,6 +46,15 @@ final class AirportMtr {
 		if (!MtrRailContract.available() || rails.isEmpty()) {
 			return;
 		}
+		try {
+			send(world, rails, log, out);
+		} catch (RuntimeException | LinkageError e) {
+			AureliaTransitArchitecture.LOGGER.warn("Could not lay the airport's MTR route", e);
+			out.accept(Text.literal("Airport: MTR would not take the plane route (see the log); the airport is built without planes.").formatted(Formatting.YELLOW));
+		}
+	}
+
+	private static void send(ServerWorld world, List<AirRail> rails, UndoLog log, Consumer<Text> out) {
 		final org.mtr.mapping.holder.MinecraftServer server = new org.mtr.mapping.holder.MinecraftServer(world.getServer());
 		final org.mtr.mapping.holder.World mtrWorld = new org.mtr.mapping.holder.World(world);
 		final org.mtr.mapping.holder.ServerWorld serverWorld = new org.mtr.mapping.holder.ServerWorld(world);
@@ -64,7 +74,15 @@ final class AirportMtr {
 		}
 		Init.sendMessageC2S("update_data", server, mtrWorld, request, (UpdateDataResponse response) -> {
 			PacketUpdateData.sendDirectlyToClientDepotUpdate(serverWorld, response);
-			depot(server, mtrWorld, serverWorld, rails, response, log, out);
+			if (log.airportsTaken()) {
+				return;
+			}
+			try {
+				depot(server, mtrWorld, serverWorld, rails, response, log, out);
+			} catch (RuntimeException | LinkageError e) {
+				AureliaTransitArchitecture.LOGGER.warn("Could not make the airport's MTR route and depot", e);
+				out.accept(Text.literal("Airport: MTR would not take the route and depot (see the log).").formatted(Formatting.YELLOW));
+			}
 		}, UpdateDataResponse.class);
 	}
 
@@ -154,7 +172,10 @@ final class AirportMtr {
 			depot.setFrequency(hour, 4);
 		}
 		next.addRoute(route).addDepot(depot);
-		log.addAirport(new Ids(platformIds, sidingIds, route.getId(), depot.getId()));
+		if (!log.addAirport(new Ids(platformIds, sidingIds, route.getId(), depot.getId()))) {
+			// undone between the two answers: send nothing, the undo has removed the rails these hang on
+			return;
+		}
 		Init.sendMessageC2S("update_data", server, mtrWorld, next, (UpdateDataResponse named) -> {
 			PacketUpdateData.sendDirectlyToClientDepotUpdate(serverWorld, named);
 			final DepotOperationByIds generate = new DepotOperationByIds();
