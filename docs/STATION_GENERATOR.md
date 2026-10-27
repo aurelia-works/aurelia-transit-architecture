@@ -340,7 +340,7 @@ It is a second kind of real station (`RealStation.Kind.TRAIN_SHED`); the hall-ov
 A tower taller than the usual 11 blocks gets stone storeys of 8 with string courses and windows, and its belfry under the clock (`PlanBuilding.tower`).
 The Hamburg *look* is unchanged.
 
-## Airports (1.7, milestone 1: seen in Station Studio only)
+## Airports (1.7; seen in game 10-27)
 
 Words with "airport", "airfield", "airstrip" or "runway" plan an airport instead of a station (`AirportWords` in the parser, `AirportSpec`
 in `StationOptions.airport`, `StationSpec.isAirport()`). Default: one runway 2,550 blocks (1,700 m at 1.5 blocks a metre) by 45 (30 m),
@@ -355,6 +355,8 @@ The runway, taxiways and aprons are flat and long (a 2,550 block runway by defau
 The control tower (`PlanAirport.controlTower`: a 3 by 3 shaft to a glazed 5 by 5 cab, on the apron past the last stand line, twice the mast height) and two 30 degree rapid exits from the first runway (`AirportGeometry.rapidExits`, one TAXIWAY strip per gap column in `areas()`) are planned with the airport; Studio's Plan and Street views frame the terminal and apron (`views.focus`).
 
 **Airport blocks.** `registry/AirportBlocks` (own creative tab, assets from `tools/assets_airport.py`, which never runs `generate_assets.main()`): runway edge, runway threshold and taxiway edge lights set flush into the pavement, an apron floodlight on each mast, check-in desks in threes with a baggage belt behind each, departures boards on both faces of every terminal column, a windsock on a pole at the apron's corner, and a terrazzo hall floor. Static: no block entities, nothing ticks.
+
+**Terminal fit-out (Null's blocks, 10-26).** `PlanAirport.terminal` also builds: a security line across the hall at `securityU()` (airside of the railway station's box when there is one, so its escalators come up landside; past the second column line otherwise; mid-hall in a compact terminal): lanes every 6 rows of a walk-through arch (two blocks high, its top kept clear) and an X-ray scanner with a baggage belt either side and an inspection table after it, four queue posts before each lane, glass two high between lanes, and a 3-row exit by the far end wall. Check-in groups get a self bag drop and queue posts; kiosks and luggage trolleys stand either side of the entrance; the landside's far third is a baggage hall (`reclaimV`) with 10-row carousel loops (a loop is built whole or not at all, so a station opening never breaks one); every gate has a gate desk beside its door, a hanging "Gate n" sign over it and two rows of four linked airport seats each side. Queue posts join their neighbours like fences (`QueuePostBlock`); the seats join into rows like the benches.
 
 **Runway numbers.** "runway 05/23" or "runway 05" (`AirportSpec.heading`, 1..18; the high end is that plus 18) paints those numbers instead of 09/27. A bare number after "runway" without a leading zero or a partner 18 apart is still its length. The numbers only: the runway lies the way the player faces when building, not along its compass heading.
 

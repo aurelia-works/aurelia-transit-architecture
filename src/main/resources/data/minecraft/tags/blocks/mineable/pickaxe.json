@@ -256,6 +256,17 @@
     "aurelia_transit_architecture:baggage_belt",
     "aurelia_transit_architecture:departures_board",
     "aurelia_transit_architecture:windsock",
-    "aurelia_transit_architecture:terminal_terrazzo"
+    "aurelia_transit_architecture:terminal_terrazzo",
+    "aurelia_transit_architecture:security_arch",
+    "aurelia_transit_architecture:xray_scanner",
+    "aurelia_transit_architecture:security_desk",
+    "aurelia_transit_architecture:queue_post",
+    "aurelia_transit_architecture:self_check_in_kiosk",
+    "aurelia_transit_architecture:bag_drop",
+    "aurelia_transit_architecture:baggage_carousel",
+    "aurelia_transit_architecture:baggage_carousel_corner",
+    "aurelia_transit_architecture:gate_desk",
+    "aurelia_transit_architecture:luggage_trolley",
+    "aurelia_transit_architecture:airport_seat"
   ]
 }

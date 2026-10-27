@@ -1,5 +1,7 @@
 """1.7 airport block assets: airfield ground lights, apron floodlight, check-in desk, baggage belt, departures board, windsock and
-terminal terrazzo.
+terminal terrazzo; and the terminal's security and gate blocks (Null, 10-26): walk-through metal detector, X-ray bag scanner,
+inspection table, queue posts with belts, self check-in kiosk, bag drop, baggage carousel (straight and corner), gate desk, luggage
+trolley and linked airport seats.
 
 Standalone on purpose: it writes only these blocks' files (textures, block and item models, blockstates, loot tables, stonecutter
 recipes) and adds their lang lines and pickaxe tag entries in place. It never runs generate_assets.main(), which wipes hand-made
@@ -100,6 +102,55 @@ def textures():
         x, y = r.randrange(16), r.randrange(16)
         px[x, y] = r.choice(((150, 152, 156), (186, 176, 160), (110, 114, 120), (204, 196, 182))) + (255,)
     t["terminal_terrazzo"] = terrazzo
+
+    casing = g.noisy((214, 216, 218), 2, "casing")
+    g.rect(casing, 0, 0, 16, 1, (176, 180, 184))
+    g.rect(casing, 0, 15, 16, 16, (176, 180, 184))
+    t["security_casing"] = casing
+    lamp_strip = g.noisy((214, 216, 218), 2, "arch_lamp")
+    g.rect(lamp_strip, 2, 6, 14, 10, (40, 44, 48))
+    for x in range(3, 13, 3):
+        g.rect(lamp_strip, x, 7, x + 2, 9, (90, 220, 110))  # the go/stop lights over the arch
+    t["security_arch_lamps"] = lamp_strip
+    curtain = g.new((26, 28, 30))
+    for x in range(0, 16, 2):
+        g.rect(curtain, x, 0, x + 1, 16, (44, 47, 50))  # the lead strips hanging in the tunnel mouth
+    g.rect(curtain, 0, 0, 16, 2, (214, 216, 218))
+    t["xray_scanner_curtain"] = curtain
+    xside = g.noisy((214, 216, 218), 2, "xray_side")
+    g.rect(xside, 3, 4, 13, 7, (60, 120, 200))  # a blue band along the casing
+    t["xray_scanner_side"] = xside
+
+    strap = g.new((34, 62, 140))
+    g.rect(strap, 0, 0, 16, 1, (24, 44, 104))
+    g.rect(strap, 0, 15, 16, 16, (24, 44, 104))
+    t["queue_belt"] = strap
+
+    kiosk_screen = g.new((20, 64, 140))
+    g.rect(kiosk_screen, 1, 1, 15, 3, (236, 240, 244))
+    for y in (5, 8, 11):
+        g.rect(kiosk_screen, 3, y, 13, y + 2, (90, 170, 240))  # big touch buttons
+    g.rect(kiosk_screen, 0, 0, 16, 0, (14, 16, 20))
+    t["kiosk_screen"] = kiosk_screen
+    kiosk_body = g.noisy((232, 233, 235), 2, "kiosk_body")
+    g.rect(kiosk_body, 4, 12, 12, 13, (40, 44, 48))  # the boarding pass slot
+    t["kiosk_body"] = kiosk_body
+
+    plates = g.new((58, 60, 64))
+    for y in range(0, 16, 4):
+        g.rect(plates, 0, y, 16, y + 1, (36, 38, 41))  # overlapping slat edges
+    t["carousel_plates"] = plates
+
+    gate_front = g.noisy((34, 48, 84), 2, "gate_front")
+    g.rect(gate_front, 0, 0, 16, 2, (196, 198, 200))
+    g.rect(gate_front, 2, 6, 14, 8, (232, 234, 238))
+    t["gate_desk_front"] = gate_front
+
+    seat = g.noisy((52, 64, 86), 2, "airport_seat")
+    for x in range(1, 16, 3):
+        for y in range(1, 16, 3):
+            seat.load()[x, y] = (38, 46, 62, 255)  # perforations
+    t["airport_seat"] = seat
     return t
 
 
@@ -134,22 +185,110 @@ def models():
         g.el([5, 9, 2], [11, 15, 8], "#cloth"),
         g.el([6, 10, 0], [10, 14, 2], "#cloth"),
     ], ao=False)
+
+    # Null's security and gate blocks (10-26). Fronts face NORTH: the passenger's side, or the way through.
+    m["security_arch"] = g.model({"particle": "security_casing", "c": "security_casing", "lamps": "security_arch_lamps"}, [
+        g.el([0, 0, 5], [3, 30, 11], "#c"),
+        g.el([13, 0, 5], [16, 30, 11], "#c"),
+        g.el([0, 30, 5], [16, 32, 11], "#c", faces={"north": "#lamps", "south": "#lamps"}),
+        g.el([3, 0, 4], [13, 0.25, 12], "#c"),
+    ])
+    m["xray_scanner"] = g.model({"particle": "security_casing", "c": "security_casing", "side": "xray_scanner_side",
+                                 "belt": "baggage_belt_top", "curtain": "xray_scanner_curtain"}, [
+        g.el([0, 0, 0], [16, 5, 16], "#c", faces={"up": "#belt"}),
+        g.el([0, 5, 0], [2, 14, 16], "#side"),
+        g.el([14, 5, 0], [16, 14, 16], "#side"),
+        g.el([0, 14, 0], [16, 16, 16], "#c", faces={"north": "#curtain", "south": "#curtain"}),
+    ])
+    m["security_desk"] = g.model({"particle": "steel", "steel": "steel", "dark": "steel_dark"}, [
+        g.el([0, 13, 1], [16, 14.5, 15], "#steel"),
+        g.el([1, 0, 3], [15, 13, 13], "#dark"),
+    ])
+    m["queue_post"] = g.model({"particle": "steel", "steel": "steel", "dark": "steel_dark"}, [
+        g.el([5, 0, 5], [11, 1, 11], "#dark"),
+        g.el([7, 1, 7], [9, 14, 9], "#steel"),
+        g.el([6.5, 14, 6.5], [9.5, 15.5, 9.5], "#steel"),
+    ])
+    m["queue_post_belt"] = g.model({"particle": "queue_belt", "belt": "queue_belt"}, [
+        g.el([7.75, 11.5, 0], [8.25, 14, 7], "#belt"),
+    ], ao=False)
+    m["self_check_in_kiosk"] = g.model({"particle": "kiosk_body", "body": "kiosk_body", "screen": "kiosk_screen", "dark": "steel_dark"}, [
+        g.el([3, 0, 4], [13, 1, 12], "#dark"),
+        g.el([5, 1, 6], [11, 12, 11], "#body"),
+        g.el([2, 12, 4], [14, 24, 12], "#body", faces={"north": "#screen"}),
+    ])
+    m["bag_drop"] = g.model({"particle": "kiosk_body", "body": "kiosk_body", "screen": "kiosk_screen", "belt": "baggage_belt_top",
+                             "side": "baggage_belt_side"}, [
+        g.el([0, 0, 0], [16, 7, 11], "#side", faces={"up": "#belt"}),
+        g.el([4, 0, 11], [12, 18, 15], "#body"),
+        g.el([3, 18, 10], [13, 24, 15], "#body", faces={"north": "#screen"}),
+    ])
+    m["baggage_carousel"] = g.model({"particle": "steel", "steel": "steel", "plates": "carousel_plates"}, [
+        g.el([0, 0, 0], [16, 5, 16], "#steel", faces={"up": "#plates"}),
+        g.el([0, 5, 0], [16, 7, 1], "#steel"),
+    ])
+    m["baggage_carousel_corner"] = g.model({"particle": "steel", "steel": "steel", "plates": "carousel_plates"}, [
+        g.el([0, 0, 0], [16, 5, 16], "#steel", faces={"up": "#plates"}),
+        g.el([0, 5, 0], [16, 7, 1], "#steel"),
+        g.el([0, 5, 1], [1, 7, 16], "#steel"),
+    ])
+    m["gate_desk"] = g.model({"particle": "gate_desk_front", "front": "gate_desk_front", "top": "check_in_desk_top", "steel": "steel",
+                              "screen": "check_in_desk_screen"}, [
+        g.el([1, 0, 4], [15, 15, 14], "#front", faces={"up": "#top", "south": "#steel"}),
+        g.el([4, 15, 11], [12, 21, 13], "#steel", faces={"south": "#screen"}),
+    ])
+    m["luggage_trolley"] = g.model({"particle": "steel", "steel": "steel", "dark": "steel_dark"}, [
+        g.el([3, 1, 1], [13, 2.5, 15], "#steel"),
+        g.el([3, 2.5, 13], [13, 9, 14], "#steel"),
+        g.el([3, 9, 1.75], [4, 14, 2.25], "#steel"),
+        g.el([12, 9, 1.75], [13, 14, 2.25], "#steel"),
+        g.el([2, 14, 1.5], [14, 15, 2.5], "#dark"),
+        g.el([4, 0, 2], [12, 1, 14], "#dark"),
+    ])
+    m["airport_seat_seat"] = g.model({"particle": "airport_seat", "seat": "airport_seat", "steel": "steel"}, [
+        g.el([1, 6.5, 3.5], [15, 8, 11], "#seat"),
+        g.el([1, 8, 10.5], [15, 15, 12], "#seat"),
+        g.el([0, 4.5, 6], [16, 5.5, 9], "#steel"),
+        g.el([0, 6.5, 4], [1, 11, 10], "#steel"),
+    ])
+    m["airport_seat_end_left"] = g.model({"particle": "steel", "steel": "steel"}, [
+        g.el([1.5, 0, 6.5], [3, 4.5, 8.5], "#steel"),
+        g.el([1, 0, 3], [3.5, 0.5, 12], "#steel"),
+    ])
+    m["airport_seat_end_right"] = g.model({"particle": "steel", "steel": "steel"}, [
+        g.el([13, 0, 6.5], [14.5, 4.5, 8.5], "#steel"),
+        g.el([12.5, 0, 3], [15, 0.5, 12], "#steel"),
+        g.el([15, 6.5, 4], [16, 11, 10], "#steel"),
+    ])
     return m
 
 
-FACING = ("check_in_desk", "departures_board", "windsock")
+FACING = ("check_in_desk", "departures_board", "windsock", "security_arch", "xray_scanner", "self_check_in_kiosk", "bag_drop",
+          "baggage_carousel", "baggage_carousel_corner", "gate_desk", "luggage_trolley")
+# blockstates written by hand below: the queue post connects like a fence, the seats join into a row like the benches
+QUEUE_POST = "queue_post"
+SEAT = "airport_seat"
 BLOCKS = ("runway_edge_light", "runway_threshold_light", "taxiway_edge_light", "apron_floodlight", "check_in_desk", "baggage_belt",
-          "departures_board", "windsock", "terminal_terrazzo")
+          "departures_board", "windsock", "terminal_terrazzo", "security_arch", "xray_scanner", "security_desk", QUEUE_POST,
+          "self_check_in_kiosk", "bag_drop", "baggage_carousel", "baggage_carousel_corner", "gate_desk", "luggage_trolley", SEAT)
 NAMES = {
     "runway_edge_light": "Runway Edge Light", "runway_threshold_light": "Runway Threshold Light", "taxiway_edge_light": "Taxiway Edge Light",
     "apron_floodlight": "Apron Floodlight", "check_in_desk": "Check-in Desk", "baggage_belt": "Baggage Belt",
     "departures_board": "Departures Board", "windsock": "Windsock", "terminal_terrazzo": "Terminal Terrazzo",
+    "security_arch": "Walk-through Metal Detector", "xray_scanner": "X-ray Bag Scanner", "security_desk": "Security Inspection Table",
+    "queue_post": "Queue Post", "self_check_in_kiosk": "Self Check-in Kiosk", "bag_drop": "Self Bag Drop",
+    "baggage_carousel": "Baggage Carousel", "baggage_carousel_corner": "Baggage Carousel Corner", "gate_desk": "Gate Desk",
+    "luggage_trolley": "Luggage Trolley", "airport_seat": "Airport Seating",
 }
 # stonecutter: (ingredient, count)
 RECIPES = {
     "runway_edge_light": ("minecraft:glowstone", 4), "runway_threshold_light": ("minecraft:glowstone", 4), "taxiway_edge_light": ("minecraft:glowstone", 4),
     "apron_floodlight": ("minecraft:iron_ingot", 2), "check_in_desk": ("minecraft:iron_ingot", 2), "baggage_belt": ("minecraft:iron_ingot", 4),
     "departures_board": ("minecraft:iron_ingot", 2), "windsock": ("minecraft:iron_ingot", 2), "terminal_terrazzo": ("minecraft:smooth_stone", 1),
+    "security_arch": ("minecraft:iron_ingot", 1), "xray_scanner": ("minecraft:iron_ingot", 1), "security_desk": ("minecraft:iron_ingot", 2),
+    "queue_post": ("minecraft:iron_ingot", 4), "self_check_in_kiosk": ("minecraft:iron_ingot", 2), "bag_drop": ("minecraft:iron_ingot", 2),
+    "baggage_carousel": ("minecraft:iron_ingot", 4), "baggage_carousel_corner": ("minecraft:iron_ingot", 4), "gate_desk": ("minecraft:iron_ingot", 2),
+    "luggage_trolley": ("minecraft:iron_ingot", 2), "airport_seat": ("minecraft:iron_ingot", 2),
 }
 LANG = {f"block.{MOD}.{b}": n for b, n in NAMES.items()} | {
     f"itemGroup.{MOD}.airport": "Aurelia Transit: Airport",
@@ -179,12 +318,22 @@ def main():
     for name, data in models().items():
         g.write_json(ASSETS / "models" / "block" / f"{name}.json", data)
     for b in BLOCKS:
-        if b in FACING:
+        if b == QUEUE_POST:
+            state = {"multipart": [{"apply": {"model": f"{MOD}:block/queue_post"}}] + [
+                {"when": {f: "true"}, "apply": {"model": f"{MOD}:block/queue_post_belt", "uvlock": True} | ({"y": y} if y else {})}
+                for f, y in g.FACING_Y.items()]}
+        elif b == SEAT:
+            state = {"multipart": [part for f, y in g.FACING_Y.items() for part in (
+                {"when": {"facing": f}, "apply": {"model": f"{MOD}:block/airport_seat_seat"} | ({"y": y} if y else {})},
+                {"when": {"facing": f, "left": "false"}, "apply": {"model": f"{MOD}:block/airport_seat_end_left"} | ({"y": y} if y else {})},
+                {"when": {"facing": f, "right": "false"}, "apply": {"model": f"{MOD}:block/airport_seat_end_right"} | ({"y": y} if y else {})})]}
+        elif b in FACING:
             state = {"variants": {f"facing={f}": {"model": f"{MOD}:block/{b}"} | ({"y": y} if y else {}) for f, y in g.FACING_Y.items()}}
         else:
             state = {"variants": {"": {"model": f"{MOD}:block/{b}"}}}
         g.write_json(ASSETS / "blockstates" / f"{b}.json", state)
-        g.write_json(ASSETS / "models" / "item" / f"{b}.json", {"parent": f"{MOD}:block/{b}"})
+        item = {QUEUE_POST: "queue_post", SEAT: "airport_seat_seat"}.get(b, b)
+        g.write_json(ASSETS / "models" / "item" / f"{b}.json", {"parent": f"{MOD}:block/{item}"})
         g.write_json(DATA / MOD / "loot_tables" / "blocks" / f"{b}.json", {
             "type": "minecraft:block",
             "pools": [{"rolls": 1, "bonus_rolls": 0, "entries": [{"type": "minecraft:item", "name": f"{MOD}:{b}"}],

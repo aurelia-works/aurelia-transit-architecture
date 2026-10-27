@@ -1,0 +1,79 @@
+{
+  "parent": "block/block",
+  "textures": {
+    "particle": "aurelia_transit_architecture:block/queue_belt",
+    "belt": "aurelia_transit_architecture:block/queue_belt"
+  },
+  "elements": [
+    {
+      "from": [
+        7.75,
+        11.5,
+        0
+      ],
+      "to": [
+        8.25,
+        14,
+        7
+      ],
+      "faces": {
+        "down": {
+          "uv": [
+            7.75,
+            9,
+            8.25,
+            16.0
+          ],
+          "texture": "#belt"
+        },
+        "up": {
+          "uv": [
+            7.75,
+            0.0,
+            8.25,
+            7
+          ],
+          "texture": "#belt"
+        },
+        "north": {
+          "uv": [
+            7.75,
+            2,
+            8.25,
+            4.5
+          ],
+          "texture": "#belt",
+          "cullface": "north"
+        },
+        "south": {
+          "uv": [
+            7.75,
+            2,
+            8.25,
+            4.5
+          ],
+          "texture": "#belt"
+        },
+        "west": {
+          "uv": [
+            0.0,
+            2,
+            7,
+            4.5
+          ],
+          "texture": "#belt"
+        },
+        "east": {
+          "uv": [
+            9,
+            2,
+            16.0,
+            4.5
+          ],
+          "texture": "#belt"
+        }
+      }
+    }
+  ],
+  "ambientocclusion": false
+}

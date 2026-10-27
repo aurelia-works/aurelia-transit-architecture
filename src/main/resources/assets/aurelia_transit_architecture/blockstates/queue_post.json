@@ -1,0 +1,48 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "aurelia_transit_architecture:block/queue_post"
+      }
+    },
+    {
+      "when": {
+        "north": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/queue_post_belt",
+        "uvlock": true
+      }
+    },
+    {
+      "when": {
+        "east": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/queue_post_belt",
+        "uvlock": true,
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "south": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/queue_post_belt",
+        "uvlock": true,
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "west": "true"
+      },
+      "apply": {
+        "model": "aurelia_transit_architecture:block/queue_post_belt",
+        "uvlock": true,
+        "y": 270
+      }
+    }
+  ]
+}

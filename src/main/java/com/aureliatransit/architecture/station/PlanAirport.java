@@ -43,6 +43,22 @@ abstract class PlanAirport extends PlanFitOut {
 	static final String BAGGAGE_BELT = "aurelia_transit_architecture:baggage_belt";
 	static final String WINDSOCK = "aurelia_transit_architecture:windsock";
 	static final String TERMINAL_FLOOR = "aurelia_transit_architecture:terminal_terrazzo";
+	static final String SECURITY_ARCH = "aurelia_transit_architecture:security_arch";
+	static final String XRAY_SCANNER = "aurelia_transit_architecture:xray_scanner";
+	static final String SECURITY_DESK = "aurelia_transit_architecture:security_desk";
+	static final String QUEUE_POST = "aurelia_transit_architecture:queue_post";
+	static final String KIOSK = "aurelia_transit_architecture:self_check_in_kiosk";
+	static final String BAG_DROP = "aurelia_transit_architecture:bag_drop";
+	static final String CAROUSEL = "aurelia_transit_architecture:baggage_carousel";
+	static final String CAROUSEL_CORNER = "aurelia_transit_architecture:baggage_carousel_corner";
+	static final String GATE_DESK = "aurelia_transit_architecture:gate_desk";
+	static final String TROLLEY = "aurelia_transit_architecture:luggage_trolley";
+	static final String AIRPORT_SEAT = "aurelia_transit_architecture:airport_seat";
+	/** Rows a security lane takes along the line: the arch, the scanner, then glass up to the next lane. */
+	static final int LANE_PITCH = 6;
+	/** A baggage carousel's length in rows, and the rows from one to the next. */
+	static final int CAROUSEL_LENGTH = 10;
+	static final int CAROUSEL_PITCH = 15;
 	/** The airport's geometry; null for a railway station. */
 	final AirportGeometry air;
 	/** The railway station under the terminal ({@link AirportStation}); null without one. */
@@ -417,8 +433,10 @@ abstract class PlanAirport extends PlanFitOut {
 
 	/**
 	 * The terminal: a floor, glass along the airside with pilasters, a landside wall with a five-wide entrance and the name over it,
-	 * end walls, columns, a roof with lights, check-in counters on the landside, benches in front of every gate, and a doorway onto
-	 * every boarding bridge. Built from the modern building set.
+	 * end walls, columns, a roof with lights, check-in counters with bag drops and queue posts on the landside, kiosks and trolleys
+	 * by the entrance, a security line across the hall, a baggage hall with carousels at the landside's far end, and at every gate a
+	 * desk, its number over the door and rows of linked seats; and a doorway onto every boarding bridge. Built from the modern
+	 * building set; the security and gate blocks are Null's (10-26).
 	 */
 	void terminal() {
 		final StylePalette.Building b = palette.building();
@@ -488,21 +506,130 @@ abstract class PlanAirport extends PlanFitOut {
 				put(Role.FIXTURE, u, StationGeometry.WALK_Y + 2, v + 1, LocalDir.PLUS_V, DEPARTURES_BOARD);
 			}
 		}
-		// check-in counters along the landside, facing the entrance, and benches facing the glass in front of every gate
-		for (int v = v0 + 5; v <= v1 - 5; v += 6) {
+		final int security = securityU();
+		final int reclaim = reclaimV(security);
+		// check-in counters along the landside, facing the entrance: three desks and a bag drop, a belt behind, queue posts in front
+		for (int v = v0 + 5; v <= v1 - 5 && v + 2 < reclaim; v += 6) {
 			if (Math.abs(v - door) > half + 3) {
 				for (int k = 0; k < 3; k++) {
 					put(Role.FIXTURE, u0 + 3, StationGeometry.WALK_Y, v + k - 1, LocalDir.MINUS_U, CHECK_IN_DESK);
 				}
+				put(Role.FIXTURE, u0 + 3, StationGeometry.WALK_Y, v + 2, LocalDir.MINUS_U, BAG_DROP);
 				put(Role.FIXTURE, u0 + 4, StationGeometry.WALK_Y, v, LocalDir.MINUS_U, BAGGAGE_BELT);
+				for (int u = u0 + 1; u <= u0 + 2; u++) {
+					put(Role.FIXTURE, u, StationGeometry.WALK_Y, v - 2, LocalDir.MINUS_U, QUEUE_POST);
+				}
 			}
 		}
-		final int off = d.standPitch() / 4;
-		for (final int c : air.standV()) {
-			for (final int v : new int[]{c - off - 1, c - off, c + off, c + off + 1}) {
-				put(Role.BENCH, u1 - 2, StationGeometry.WALK_Y, v, LocalDir.PLUS_U);
+		// self check-in kiosks and luggage trolleys either side of the entrance, inside the door
+		for (final int side : new int[]{-1, 1}) {
+			for (int k = 0; k < 2; k++) {
+				put(Role.FIXTURE, u0 + 1, StationGeometry.WALK_Y, door + side * (half + 1 + k), LocalDir.MINUS_U, TROLLEY);
+				put(Role.FIXTURE, u0 + 6, StationGeometry.WALK_Y, door + side * (half + 2 + 2 * k), LocalDir.MINUS_U, KIOSK);
 			}
-			put(Role.BIN, u1 - 2, StationGeometry.WALK_Y, c + off + 2, LocalDir.PLUS_U);
+		}
+		securityLine(security);
+		baggageReclaim(security, reclaim);
+		// at every gate: a gate desk beside the door, its number over the door, and rows of linked seats facing the glass
+		final int off = d.standPitch() / 4;
+		final int doorHalf = d.bridgeWidth() / 2;
+		for (int i = 0; i < air.standV().size(); i++) {
+			final int c = air.standV().get(i);
+			put(Role.FIXTURE, u1 - 2, StationGeometry.WALK_Y, c - doorHalf - 2, LocalDir.MINUS_U, GATE_DESK);
+			putText(Role.FIXTURE, u1 - 1, StationGeometry.WALK_Y + StationGeometry.DOOR_HEIGHT, c, LocalDir.MINUS_U, HANGING_SIGN,
+					"NONE:Gate " + (i + 1));
+			for (final int u : new int[]{u1 - 2, u1 - 4}) {
+				for (int k = 0; k < 4; k++) {
+					put(Role.BENCH, u, StationGeometry.WALK_Y, c - off - k, LocalDir.PLUS_U, AIRPORT_SEAT);
+					put(Role.BENCH, u, StationGeometry.WALK_Y, c + off + k, LocalDir.PLUS_U, AIRPORT_SEAT);
+				}
+			}
+			put(Role.BIN, u1 - 2, StationGeometry.WALK_Y, c + off + 4, LocalDir.PLUS_U);
+		}
+	}
+
+	/**
+	 * The row (u) of the security line across the terminal: just airside of the railway station's box when there is one, so its
+	 * escalators come up landside, else past the second column line; in the middle of a terminal too shallow for either.
+	 */
+	int securityU() {
+		final int u0 = air.terminalU0();
+		final int u1 = air.terminalU1();
+		final int depth = u1 - u0 + 1;
+		final int wanted = Math.max(u0 + 2 * depth / 3 + 3, rail == null ? u0 : rail.du() + AirportStation.WIDTH);
+		// the lane (queue four rows before it, the table two after it) and two rows of seats must still fit before the glass
+		return wanted + 2 < u1 - 5 ? wanted : u0 + depth / 2;
+	}
+
+	/** The first row of the baggage hall at the terminal's far end, or one past the end wall when the landside has no room for one. */
+	int reclaimV(int security) {
+		final int v1 = air.terminalV1();
+		final int room = security - 5 - (air.terminalU0() + 6);
+		if (room < 2) {
+			return v1 + 1;
+		}
+		final int rows = (air.terminalV1() - air.terminalV0()) / 3;
+		return rows >= CAROUSEL_LENGTH + 4 ? v1 - rows : v1 + 1;
+	}
+
+	/**
+	 * Security across the terminal at row {@code at}: lanes of a walk-through arch, an X-ray scanner with a belt either side and the
+	 * inspection table after it, queue posts before them, and glass between the lanes up to an exit opening by the far end wall. Cells
+	 * already planned (columns, the railway station's openings) are left as they are.
+	 */
+	void securityLine(int at) {
+		final StylePalette.Building b = palette.building();
+		final int v0 = air.terminalV0();
+		final int v1 = air.terminalV1();
+		final int exit = v1 - 3;
+		final Set<Integer> lanes = new HashSet<>();
+		for (int v = v0 + 3; v + 2 < exit; v += LANE_PITCH) {
+			lanes.add(v);
+			lanes.add(v + 1);
+			put(Role.FIXTURE, at, StationGeometry.WALK_Y, v, LocalDir.PLUS_U, SECURITY_ARCH);
+			keepClear(at, StationGeometry.WALK_Y + 1, v);
+			put(Role.FIXTURE, at - 1, StationGeometry.WALK_Y, v + 1, LocalDir.PLUS_U, BAGGAGE_BELT);
+			put(Role.FIXTURE, at, StationGeometry.WALK_Y, v + 1, LocalDir.PLUS_U, XRAY_SCANNER);
+			put(Role.FIXTURE, at + 1, StationGeometry.WALK_Y, v + 1, LocalDir.PLUS_U, BAGGAGE_BELT);
+			put(Role.FIXTURE, at + 2, StationGeometry.WALK_Y, v + 1, LocalDir.PLUS_U, SECURITY_DESK);
+			for (int u = at - 4; u <= at - 1; u++) {
+				put(Role.FIXTURE, u, StationGeometry.WALK_Y, v - 1, LocalDir.MINUS_U, QUEUE_POST);
+			}
+		}
+		for (int v = v0 + 1; v < exit; v++) {
+			if (!lanes.contains(v)) {
+				for (int y = StationGeometry.WALK_Y; y <= StationGeometry.WALK_Y + 1; y++) {
+					put(Role.WINDOW, at, y, v, LocalDir.PLUS_U, b.window());
+				}
+			}
+		}
+	}
+
+	/**
+	 * The baggage hall at the landside's far end (from row {@code from}): carousels, each a loop two pieces wide with corner pieces at
+	 * its ends and its lip facing out, between the check-in belts and the security queue.
+	 */
+	void baggageReclaim(int security, int from) {
+		final int v1 = air.terminalV1();
+		final int a = (air.terminalU0() + 6 + security - 5) / 2;
+		for (int v = from + 2; v + CAROUSEL_LENGTH - 1 <= v1 - 3; v += CAROUSEL_PITCH) {
+			final int end = v + CAROUSEL_LENGTH - 1;
+			// a whole loop or none: an opening of the railway station below, or a column, would break it
+			boolean free = true;
+			for (int r = v; r <= end; r++) {
+				free &= !taken(a, StationGeometry.WALK_Y, r) && !taken(a + 1, StationGeometry.WALK_Y, r);
+			}
+			if (!free) {
+				continue;
+			}
+			put(Role.FIXTURE, a, StationGeometry.WALK_Y, v, LocalDir.MINUS_U, CAROUSEL_CORNER);
+			put(Role.FIXTURE, a + 1, StationGeometry.WALK_Y, v, LocalDir.MINUS_V, CAROUSEL_CORNER);
+			put(Role.FIXTURE, a, StationGeometry.WALK_Y, end, LocalDir.PLUS_V, CAROUSEL_CORNER);
+			put(Role.FIXTURE, a + 1, StationGeometry.WALK_Y, end, LocalDir.PLUS_U, CAROUSEL_CORNER);
+			for (int r = v + 1; r < end; r++) {
+				put(Role.FIXTURE, a, StationGeometry.WALK_Y, r, LocalDir.MINUS_U, CAROUSEL);
+				put(Role.FIXTURE, a + 1, StationGeometry.WALK_Y, r, LocalDir.PLUS_U, CAROUSEL);
+			}
 		}
 	}
 
