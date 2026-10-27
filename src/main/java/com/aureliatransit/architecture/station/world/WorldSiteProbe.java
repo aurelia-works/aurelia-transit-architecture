@@ -25,9 +25,11 @@ import java.util.Map;
  */
 public final class WorldSiteProbe implements SiteProbe {
 
-	/** Holds a station's chunks loaded through a survey and its build; renewed whenever the walk comes back to a chunk. */
+	/** Holds a station's chunks loaded through a survey and its build, for ten minutes from when it was last added. */
 	private static final ChunkTicketType<ChunkPos> HOLD = ChunkTicketType.create("ata_station", Comparator.comparingLong(ChunkPos::toLong),
 			20 * 60 * 10);
+	/** A chunk held this long is ticketed again when the walk comes back to it, well before its ticket runs out (a long airport build). */
+	private static final long RENEW = 20 * 60 * 5;
 
 	private final ServerWorld world;
 	private final boolean load;
@@ -79,8 +81,10 @@ public final class WorldSiteProbe implements SiteProbe {
 			final long key = ChunkPos.toLong(cx, cz);
 			// another probe letting go of the same chunk drops this one's ticket too (equal tickets are one), so look again
 			final boolean unloaded = !world.isChunkLoaded(cx, cz);
-			if (!held.holds(key) || unloaded) {
-				if (unloaded || !ringLoaded(cx, cz)) {
+			final long now = world.getTime();
+			final boolean ticket = unloaded || held.due(key, now, RENEW);
+			if (ticket) {
+				if (unloaded || !held.holds(key) && !ringLoaded(cx, cz)) {
 					loads++;
 				}
 				final ChunkPos pos = new ChunkPos(cx, cz);
@@ -90,6 +94,9 @@ public final class WorldSiteProbe implements SiteProbe {
 				}
 			}
 			final Long gone = held.use(key);
+			if (ticket) {
+				held.ticketed(key, now);
+			}
 			if (gone != null) {
 				final ChunkPos old = new ChunkPos(gone);
 				world.getChunkManager().removeTicket(HOLD, old, 1, old);

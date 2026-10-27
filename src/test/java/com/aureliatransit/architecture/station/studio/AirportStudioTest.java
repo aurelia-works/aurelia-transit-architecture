@@ -23,6 +23,28 @@ class AirportStudioTest {
 		return Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
 	};
 
+	/** Review 10-27: an airport's plan went to the page as 6-7 MB of plain JSON on every change. */
+	@Test
+	void bigTextRepliesGoGzippedToABrowserThatTakesIt() throws IOException, InterruptedException {
+		assertTrue(StudioServer.gzips("application/json; charset=utf-8", StudioServer.GZIP_FROM, "gzip, deflate, br"));
+		assertFalse(StudioServer.gzips("application/json", StudioServer.GZIP_FROM - 1, "gzip"), "small replies stay plain");
+		assertFalse(StudioServer.gzips("application/json", StudioServer.GZIP_FROM, null), "a client that takes no gzip gets plain");
+		assertFalse(StudioServer.gzips("image/png", 1 << 20, "gzip"), "images are packed already");
+		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, 25831);
+		try {
+			final HttpClient http = HttpClient.newHttpClient();
+			final String plain = http.send(HttpRequest.newBuilder(URI.create(server.url() + "airport")).build(), HttpResponse.BodyHandlers.ofString()).body();
+			final HttpResponse<byte[]> packed = http.send(HttpRequest.newBuilder(URI.create(server.url() + "airport")).header("Accept-Encoding", "gzip").build(),
+					HttpResponse.BodyHandlers.ofByteArray());
+			assertEquals("gzip", packed.headers().firstValue("Content-Encoding").orElse(""));
+			try (java.util.zip.GZIPInputStream in = new java.util.zip.GZIPInputStream(new java.io.ByteArrayInputStream(packed.body()))) {
+				assertEquals(plain, new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+			}
+		} finally {
+			server.stop();
+		}
+	}
+
 	@Test
 	void theAirportPageIsItsOwnRouteOfTheSamePage() throws IOException, InterruptedException {
 		final StudioServer server = StudioServer.start(OWN_ASSETS, (action, description, encoded) -> "ok", null, 25830);

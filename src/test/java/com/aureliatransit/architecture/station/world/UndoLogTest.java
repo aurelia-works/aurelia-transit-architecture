@@ -40,6 +40,19 @@ class UndoLogTest {
 		return new UndoLog(World.OVERWORLD);
 	}
 
+	/** Review 10-27: MTR answering after an undo left the airport's route and depot in MTR for good. */
+	@Test
+	void anAirportAddedAfterUndoTookTheAirportsIsRefused() {
+		final UndoLog log = log();
+		final AirportMtr.Ids first = new AirportMtr.Ids(List.of(1L), List.of(2L), 3L, 4L);
+		assertTrue(log.addAirport(first));
+		assertFalse(log.airportsTaken());
+		assertEquals(List.of(first), log.takeAirports());
+		assertTrue(log.airportsTaken());
+		assertFalse(log.addAirport(new AirportMtr.Ids(List.of(5L), List.of(6L), 7L, 8L)), "MTR answered after the undo");
+		assertEquals(List.of(), log.takeAirports());
+	}
+
 	@Test
 	void startsEmptyAndRemembersItsDimension() {
 		final UndoLog log = log();

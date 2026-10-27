@@ -28,6 +28,22 @@ class AirportRailsTest {
 		}
 	}
 
+	/** Review 10-27: the siding's corner onto the taxiway was a second siding (a 2-block curve no plane fits) and the push-back was lost. */
+	@Test
+	void everyGateHasOneStraightSidingThatHoldsAPlaneAndAPushBack() {
+		final List<AirRail> rails = rails();
+		for (int gate = 0; gate < 5; gate++) {
+			final int g = gate;
+			final List<AirRail> sidings = rails.stream().filter(r -> r.gate() == g && r.kind() == Kind.SIDING).toList();
+			assertEquals(1, sidings.size(), "gate " + g + " sidings " + sidings);
+			final AirRail siding = sidings.get(0);
+			assertEquals(null, siding.via(), "the siding is straight");
+			final int length = Math.abs(siding.to().x() - siding.from().x()) + Math.abs(siding.to().z() - siding.from().z());
+			assertTrue(length >= AirportRoute.PLANE_LENGTH, "gate " + g + " siding is " + length + " blocks");
+			assertTrue(rails.stream().anyMatch(r -> r.gate() == g && r.kind() == Kind.PUSH_BACK), "gate " + g + " has no push-back");
+		}
+	}
+
 	@Test
 	void curvesPassThroughAOneBlockCornerBetweenTheirEnds() {
 		int curves = 0;

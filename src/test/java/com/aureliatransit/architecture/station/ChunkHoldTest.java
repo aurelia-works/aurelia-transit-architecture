@@ -21,6 +21,22 @@ class ChunkHoldTest {
 		assertEquals(3, hold.size());
 	}
 
+	/** Review 10-27: a chunk held the whole walk was never ticketed again, so its ten-minute ticket ran out in a long build. */
+	@Test
+	void aChunkHeldLongerThanItsTicketLastsIsDueForANewOne() {
+		final ChunkHold hold = new ChunkHold(3);
+		assertTrue(hold.due(1, 0, 100), "not held yet");
+		hold.use(1);
+		assertTrue(hold.due(1, 0, 100), "held but never ticketed");
+		hold.ticketed(1, 10);
+		assertFalse(hold.due(1, 109, 100));
+		// used again without a new ticket: still counted from the last one
+		hold.use(1);
+		assertTrue(hold.due(1, 110, 100));
+		hold.ticketed(1, 110);
+		assertFalse(hold.due(1, 200, 100));
+	}
+
 	@Test
 	void pastTheCapLetsGoOfTheLeastRecentlyUsed() {
 		final ChunkHold hold = new ChunkHold(3);

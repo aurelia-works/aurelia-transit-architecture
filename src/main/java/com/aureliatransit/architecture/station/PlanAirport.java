@@ -154,12 +154,16 @@ abstract class PlanAirport extends PlanFitOut {
 			paint(u0 + 1, v, PAINT_WHITE);
 			paint(u1 - 1, v, PAINT_WHITE);
 		}
-		for (int u = u0 + 3; u <= u1 - 3; u++) {
-			// piano keys either side of the centre, leaving the centreline's own column bare
-			if ((u - u0) % 2 == 1 && Math.abs(u - c) >= 1) {
-				for (int k = 0; k < d.thresholdLength(); k++) {
-					paint(u, v0 + 2 + k, PAINT_WHITE);
-					paint(u, v1 - 2 - k, PAINT_WHITE);
+		if (air.dims() == AirportGeometry.REAL) {
+			thresholdStripes(u0, c, v0, v1);
+		} else {
+			for (int u = u0 + 3; u <= u1 - 3; u++) {
+				// piano keys either side of the centre, leaving the centreline's own column bare
+				if ((u - u0) % 2 == 1 && Math.abs(u - c) >= 1) {
+					for (int k = 0; k < d.thresholdLength(); k++) {
+						paint(u, v0 + 2 + k, PAINT_WHITE);
+						paint(u, v1 - 2 - k, PAINT_WHITE);
+					}
 				}
 			}
 		}
@@ -186,31 +190,122 @@ abstract class PlanAirport extends PlanFitOut {
 		return w >= 40 ? 3 : w >= 20 ? 2 : 1;
 	}
 
+	/** Threshold stripes on a real-size runway: how many ICAO gives for its width in metres, 4 to 16. */
+	static int thresholdStripes(int runwayWidth) {
+		final double metres = runwayWidth / 1.5;
+		return metres >= 60 ? 16 : metres >= 45 ? 12 : metres >= 30 ? 8 : metres >= 23 ? 6 : 4;
+	}
+
 	/**
-	 * The aiming-point bars and touchdown-zone bars of a real-size runway, from each end: pairs of bars either side of the
-	 * centreline at 225, 450 (the aiming point, broader and longer), 675, 900 and 1125 blocks from the threshold (150 to 750 m at
-	 * 1.5 blocks a metre) as far as half the runway allows.
+	 * The columns of one side's threshold stripes, from the edge in, as {@code {first, last}} pairs: half of {@link #thresholdStripes},
+	 * each 3 blocks wide (1.8 m at 1.5 blocks a metre, rounded up) where they fit, else 2, spread evenly from 3 columns in from the edge to
+	 * 3 columns short of the centreline. The other side mirrors them about the centre.
 	 */
+	static List<int[]> stripeColumns(int u0, int c, int runwayWidth) {
+		final int k = thresholdStripes(runwayWidth) / 2;
+		final int from = u0 + 3;
+		final int span = (c - 3) - from + 1;
+		final int width = k * 3 + (k - 1) <= span ? 3 : 2;
+		final int gap = k > 1 ? Math.max(1, (span - k * width) / (k - 1)) : 0;
+		final List<int[]> out = new ArrayList<>();
+		for (int i = 0; i < k; i++) {
+			final int first = from + i * (width + gap);
+			if (first + width - 1 > c - 2) {
+				break;
+			}
+			out.add(new int[]{first, first + width - 1});
+		}
+		return out;
+	}
+
+	private void thresholdStripes(int u0, int c, int v0, int v1) {
+		final int length = air.dims().thresholdLength();
+		final int u1 = air.runwayU1(0) - air.runwayU0().get(0) + u0;
+		for (final int[] stripe : stripeColumns(u0, c, spec.airport().runwayWidth())) {
+			for (int u = stripe[0]; u <= stripe[1]; u++) {
+				// the mirror about the runway's middle; an even width has its middle between c and c + 1
+				final int mirror = u0 + u1 - u;
+				for (int k = 0; k < length; k++) {
+					paint(u, v0 + 2 + k, PAINT_WHITE);
+					paint(u, v1 - 2 - k, PAINT_WHITE);
+					paint(mirror, v0 + 2 + k, PAINT_WHITE);
+					paint(mirror, v1 - 2 - k, PAINT_WHITE);
+				}
+			}
+		}
+	}
+
+	/** One pair of touchdown or aiming bars: how far from the threshold, how many stripes each side, how long and how wide each stripe is. */
+	record Bars(int from, int stripes, int length, int width) {
+	}
+
+	/**
+	 * The aiming point and touchdown-zone bars of a real-size runway, from each threshold, after ICAO Annex 14 at 1.5 blocks a
+	 * metre. The landing distance sets the aiming point (150 m short of 800 m, 250 m to 1,200 m, 300 m to 2,400 m, 400 m beyond)
+	 * and the pairs of touchdown bars (1, 2, 3, 4 or 6 pairs below 900, 1,200, 1,500, 2,400 m and beyond), every 150 m from 150 m,
+	 * a pair within 50 m of the aiming point left out; the bars go 3, 2, 2, 1, 1, 1 stripes, each 22.5 m by 3 m. The aiming point is
+	 * one stripe 45 m by 6 m (30 m by 4 m on a runway under 1,200 m). Each runway gets its pairs as far as half its length.
+	 */
+	static List<Bars> touchdownBars(int runwayLength) {
+		final double metres = runwayLength / 1.5;
+		final int aim = metres < 800 ? 150 : metres < 1200 ? 250 : metres < 2400 ? 300 : 400;
+		final int pairs = metres < 900 ? 1 : metres < 1200 ? 2 : metres < 1500 ? 3 : metres < 2400 ? 4 : 6;
+		final int[] stripes = {3, 2, 2, 1, 1, 1};
+		final List<Bars> out = new ArrayList<>();
+		out.add(metres < 1200 ? new Bars(blocks(aim), 1, blocks(30), blocks(4)) : new Bars(blocks(aim), 1, blocks(45), blocks(6)));
+		int at = 150;
+		while (out.size() - 1 < pairs) {
+			if (Math.abs(at - aim) > 50) {
+				out.add(new Bars(blocks(at), stripes[out.size() - 1], blocks(22.5), 3));
+			}
+			at += 150;
+		}
+		return out;
+	}
+
+	private static int blocks(double metres) {
+		return (int) Math.round(metres * 1.5);
+	}
+
+	/**
+	 * Columns out from the centre to the inner edge of every bar: ICAO's 18 m (27 blocks) between the aiming point's inner edges on a
+	 * runway 60 blocks (40 m) or wider; a narrower one brings them in so the outer stripes stay inside the edge line (19 blocks on a 30 m one).
+	 */
+	static int barsInner(int runwayWidth) {
+		return Math.min(13, Math.max(3, runwayWidth / 2 - 13));
+	}
+
 	private void touchdownMarks(int i) {
 		if (air.dims() != AirportGeometry.REAL) {
 			return;
 		}
 		final int c = air.runwayCentre(i);
+		final int u0 = air.runwayU0().get(i);
+		final int u1 = air.runwayU1(i);
 		final int half = spec.airport().runwayLength() / 2;
-		for (final int from : new int[]{225, 450, 675, 900, 1125}) {
-			final boolean aim = from == 450;
-			final int length = aim ? 45 : 22;
-			final int width = aim ? 4 : 2;
-			final int out = aim ? 12 : 8;
-			if (from + length > half - 20 || c - (out + width - 1) < air.runwayU0().get(i) + 3 || c + out + width - 1 > air.runwayU1(i) - 3) {
+		final int inner = barsInner(spec.airport().runwayWidth());
+		for (final Bars bars : touchdownBars(spec.airport().runwayLength())) {
+			if (bars.from() + bars.length() > half - 20) {
 				continue;
 			}
-			for (int k = 0; k < length; k++) {
-				for (int w = 0; w < width; w++) {
-					for (final int side : new int[]{-1, 1}) {
-						final int u = c + side * out + (side < 0 ? -w : w);
-						paint(u, air.runwayV0() + from + k, PAINT_WHITE);
-						paint(u, air.runwayV1() - from - k, PAINT_WHITE);
+			for (int s = 0; s < bars.stripes(); s++) {
+				// stripes 3 wide with 1 bare between them, out from the inner edge (ICAO's 1.5 m gap would push the third of a
+				// 30 m runway's into the edge line); one that would still reach it is left out. The right side mirrors the left, so
+				// the left's test holds for both (testing c + 1 + far dropped the third stripe on an odd width, review 10-27)
+				final int near = inner + s * (bars.width() + 1);
+				final int far = near + bars.width() - 1;
+				if (c - far < u0 + 3) {
+					break;
+				}
+				for (int k = 0; k < bars.length(); k++) {
+					for (int w = near; w <= far; w++) {
+						// left of the centre from c, right of it from the column past the middle, so both sides match on an even width
+						final int left = c - w;
+						final int right = u0 + u1 - left;
+						for (final int u : new int[]{left, right}) {
+							paint(u, air.runwayV0() + bars.from() + k, PAINT_WHITE);
+							paint(u, air.runwayV1() - bars.from() - k, PAINT_WHITE);
+						}
 					}
 				}
 			}
@@ -392,9 +487,13 @@ abstract class PlanAirport extends PlanFitOut {
 		put(Role.FIXTURE, u, StationGeometry.WALK_Y + 4, v, LocalDir.PLUS_V, WINDSOCK);
 	}
 
-	/** Floodlight masts on the apron between the stands. */
+	/**
+	 * Floodlight masts on the apron between the stands, on the stand lines at the apron's terminal edge. Out on the apron they stood on
+	 * each gate's siding row, so every plane backed through a mast; 2 short of the noses the turn onto the siding still clipped them
+	 * (reviews 10-27).
+	 */
 	void masts() {
-		final int u = air.apronU1() - 6;
+		final int u = air.apronU0() + 1;
 		for (int i = 0; i <= spec.airport().gates(); i++) {
 			final int v = air.standV().get(0) - air.dims().standPitch() / 2 + i * air.dims().standPitch();
 			for (int y = StationGeometry.WALK_Y; y < air.dims().mast(); y++) {

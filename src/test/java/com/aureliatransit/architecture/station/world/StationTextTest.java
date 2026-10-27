@@ -48,6 +48,20 @@ class StationTextTest {
 		assertTrue(line.contains("\"Alpha\""), line);
 	}
 
+	/** Review 10-27: a small airport got no planes and nothing said why. */
+	@Test
+	void anAirportWithoutPlanesSaysWhy() {
+		final String small = StationText.noPlanes(StationDescriptionParser.parse("small airport with 2 gates").spec());
+		assertNotNull(small);
+		assertTrue(small.contains("siding") && small.contains("30 or more wide"), small);
+		assertEquals(null, StationText.noPlanes(StationDescriptionParser.parse("airport with 4 gates").spec()));
+		assertEquals(null, StationText.noPlanes(StationDescriptionParser.parse("4 track station").spec()));
+		// review 2: MTR needs two gates for a route, so a 1-gate airport says so at plan time too
+		final String one = StationText.noPlanes(StationDescriptionParser.parse("airport with 1 gate").spec());
+		assertNotNull(one);
+		assertTrue(one.contains("two gates"), one);
+	}
+
 	@Test
 	void anAirportIsSummedUpAsAnAirport() {
 		final StationSpec spec = StationDescriptionParser.parse("airport with 2 gates and a train station, runway 600 long, named Velare").spec();
