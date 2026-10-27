@@ -2,6 +2,7 @@ package com.aureliatransit.architecture.station;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -1356,72 +1357,65 @@ public final class StationAudit {
 		}
 
 		private void grounded() {
-			// a dense grid over the plan's bounds: 0 empty, 1 a block, 2 a block joined to the ground
-			int uLo = Integer.MAX_VALUE, uHi = Integer.MIN_VALUE, yLo = Integer.MAX_VALUE, yHi = Integer.MIN_VALUE, vLo = Integer.MAX_VALUE, vHi = Integer.MIN_VALUE;
+			// the plan's cells as sorted keys, joined[i] once cell i is joined to the ground: memory goes with the blocks, not with their
+			// bounds (a dense grid over a real-size airport's bounds ran the unit tests out of heap, 10-27)
+			final long[] keys = new long[cells.size()];
+			int n = 0;
+			for (final long key : cells.keySet()) {
+				keys[n++] = key;
+			}
+			Arrays.sort(keys);
+			final boolean[] joined = new boolean[keys.length];
+			final int[] queue = new int[keys.length];
+			int head = 0;
+			int tail = 0;
+			int uLo = Integer.MAX_VALUE, uHi = Integer.MIN_VALUE, vLo = Integer.MAX_VALUE, vHi = Integer.MIN_VALUE;
 			for (final PlannedBlock block : plan.blocks()) {
 				uLo = Math.min(uLo, block.u());
 				uHi = Math.max(uHi, block.u());
-				yLo = Math.min(yLo, block.y());
-				yHi = Math.max(yHi, block.y());
 				vLo = Math.min(vLo, block.v());
 				vHi = Math.max(vHi, block.v());
 			}
-			if (uLo > uHi) {
-				pass(Topic.GROUNDED, "No floating parts: all 0 blocks are joined to the ground");
-				return;
-			}
-			// one empty cell of margin on every side, so neighbours never fall off the grid
-			final int u0 = uLo - 1, y0 = yLo - 1, v0 = vLo - 1;
-			final int nu = uHi - uLo + 3, ny = yHi - yLo + 3, nv = vHi - vLo + 3;
-			final byte[] state = new byte[nu * ny * nv];
-			for (final PlannedBlock block : plan.blocks()) {
-				state[((block.v() - v0) * ny + (block.y() - y0)) * nu + (block.u() - u0)] = 1;
-			}
-			final int[] queue = new int[plan.blocks().size()];
-			int head = 0;
-			int tail = 0;
+			final int y = StationGeometry.PLATFORM_Y;
 			for (final Box area : plan.supportAreas()) {
-				final int y = StationGeometry.PLATFORM_Y;
-				if (y < yLo || y > yHi) {
-					continue;
-				}
 				for (int u = Math.max(area.uMin(), uLo); u <= Math.min(area.uMax(), uHi); u++) {
 					for (int v = Math.max(area.vMin(), vLo); v <= Math.min(area.vMax(), vHi); v++) {
-						final int i = ((v - v0) * ny + (y - y0)) * nu + (u - u0);
-						if (state[i] == 1) {
-							state[i] = 2;
+						final int i = Arrays.binarySearch(keys, key(u, y, v));
+						if (i >= 0 && !joined[i]) {
+							joined[i] = true;
 							queue[tail++] = i;
 						}
 					}
 				}
 			}
 			// faces and edges join, corners do not: the 18 neighbours with one or two axes moved
-			final int[] steps = new int[18];
-			int n = 0;
-			for (int du = -1; du <= 1; du++) {
-				for (int dy = -1; dy <= 1; dy++) {
-					for (int dv = -1; dv <= 1; dv++) {
-						final int moved = Math.abs(du) + Math.abs(dy) + Math.abs(dv);
-						if (moved != 0 && moved != 3) {
-							steps[n++] = (dv * ny + dy) * nu + du;
-						}
-					}
-				}
-			}
+			final long offset = 1 << 20;
+			final long mask = (1L << 21) - 1;
 			while (head < tail) {
-				final int i = queue[head++];
-				for (final int step : steps) {
-					final int next = i + step;
-					if (state[next] == 1) {
-						state[next] = 2;
-						queue[tail++] = next;
+				final long key = keys[queue[head++]];
+				final int u = (int) ((key >>> 42) - offset);
+				final int cy = (int) (((key >>> 21) & mask) - offset);
+				final int v = (int) ((key & mask) - offset);
+				for (int du = -1; du <= 1; du++) {
+					for (int dy = -1; dy <= 1; dy++) {
+						for (int dv = -1; dv <= 1; dv++) {
+							final int moved = Math.abs(du) + Math.abs(dy) + Math.abs(dv);
+							if (moved == 0 || moved == 3) {
+								continue;
+							}
+							final int i = Arrays.binarySearch(keys, key(u + du, cy + dy, v + dv));
+							if (i >= 0 && !joined[i]) {
+								joined[i] = true;
+								queue[tail++] = i;
+							}
+						}
 					}
 				}
 			}
 			int floating = 0;
 			PlannedBlock example = null;
 			for (final PlannedBlock block : plan.blocks()) {
-				if (state[((block.v() - v0) * ny + (block.y() - y0)) * nu + (block.u() - u0)] != 2) {
+				if (!joined[Arrays.binarySearch(keys, key(block.u(), block.y(), block.v()))]) {
 					floating++;
 					if (example == null) {
 						example = block;

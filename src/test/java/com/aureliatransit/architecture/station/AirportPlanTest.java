@@ -107,6 +107,21 @@ class AirportPlanTest {
 		assertTrue(LayoutValidator.validate(bad).stream().anyMatch(v -> v.kind() == Violation.Kind.AIRFIELD_OBSTACLE));
 	}
 
+	/**
+	 * The grounded check holds the plan's blocks, not a grid over their bounds: one stray block far off (bounds past 2^31 cells) is
+	 * found floating instead of breaking the audit. A dense grid over a real-size airport ran the unit tests out of heap (CI 10-27).
+	 */
+	@Test
+	void theGroundedCheckCopesWithAFarStrayBlock() {
+		final StationPlan plan = plan("small airport");
+		final List<PlannedBlock> blocks = new ArrayList<>(plan.blocks());
+		blocks.add(new PlannedBlock(100_000, 40, 100_000, Role.FIXTURE, "minecraft:stone", LocalDir.PLUS_V, ""));
+		final StationPlan stray = new StationPlan(plan.spec(), plan.layout(), blocks, plan.trackEnvelopes(), plan.headroom(), plan.supportAreas(), plan.foundationId());
+		final StationAudit.Result result = StationAudit.audit(stray);
+		assertTrue(result.problems().stream().anyMatch(c -> c.topic() == StationAudit.Topic.GROUNDED && c.message().startsWith("1 block is not joined")),
+				result.problems().toString());
+	}
+
 	@Test
 	void randomAirportWordsPlanCleanly() {
 		final Random r = new Random(7);
