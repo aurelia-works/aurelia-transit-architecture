@@ -3,8 +3,12 @@ package com.aureliatransit.architecture.station;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -165,6 +169,45 @@ class AirportPlanTest {
 		assertEquals("airport, 3 gates", StationDescriptionParser.airportWords("3 gates"));
 		assertEquals("small airport", StationDescriptionParser.airportWords("small airport"));
 		assertTrue(StationDescriptionParser.parse(StationDescriptionParser.airportWords("2 track station")).spec().isAirport());
+	}
+
+	/**
+	 * Jah 10-28, from the MTR airport video: a plane's door opens only beside an MTR Platform Block. Both rows beside every stand's
+	 * platform rail are the apron-looking platform block at ground level (but the stop bar's row, which keeps its paint), and it is used
+	 * nowhere else.
+	 */
+	@Test
+	void everyStandHasPlatformBlocksBesideItsPlatformRail() {
+		for (final String words : new String[]{"airport", "small airport", "airport, 2 runways", "airport, no terminal"}) {
+			final StationPlan plan = plan(words);
+			final AirportGeometry g = AirportGeometry.of(plan.spec().airport());
+			final AirportRoute route = AirportRoute.of(g);
+			final Map<String, String> ground = new HashMap<>();
+			for (final PlannedBlock block : plan.blocks()) {
+				if (block.y() == StationGeometry.PLATFORM_Y) {
+					ground.putIfAbsent(block.u() + "," + block.v(), block.blockId());
+				}
+			}
+			final Set<String> beside = new HashSet<>();
+			for (final AirportRoute.Gate gate : route.gates()) {
+				assertFalse(gate.platform().isEmpty(), words + " gate " + (gate.index() + 1));
+				for (final AirportRoute.Cell cell : gate.platform()) {
+					for (final int side : new int[]{-1, 1}) {
+						final String key = cell.u() + "," + (cell.v() + side);
+						beside.add(key);
+						if (cell.u() == g.stopU()) {
+							continue; // the stop bar's paint
+						}
+						assertEquals(PlanAirport.APRON_PLATFORM, ground.get(key), words + " gate " + (gate.index() + 1) + " beside " + cell);
+					}
+				}
+			}
+			for (final Map.Entry<String, String> cell : ground.entrySet()) {
+				if (PlanAirport.APRON_PLATFORM.equals(cell.getValue())) {
+					assertTrue(beside.contains(cell.getKey()), words + ": apron platform away from a stand at " + cell.getKey());
+				}
+			}
+		}
 	}
 
 	@Test

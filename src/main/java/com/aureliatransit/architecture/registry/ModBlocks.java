@@ -84,6 +84,9 @@ public final class ModBlocks {
 			MtrPlatformContract.surface(paving(MapColor.DEEPSLATE_GRAY)));
 	public static final Block TACTILE_WARNING_PAVING = register("tactile_warning_paving", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			MtrPlatformContract.surface(paving(MapColor.YELLOW)));
+	// 1.7: the airport apron's light grey concrete with the MTR door marker, beside each stand so a plane's doors open
+	public static final Block APRON_PLATFORM = register("apron_platform", BlockFamily.PLATFORMS, RenderKind.SOLID,
+			MtrPlatformContract.surface(paving(MapColor.LIGHT_GRAY)));
 	// 1.6 platform slabs: half-height surfaces with the same MTR door marker, for platforms level with a train floor
 	public static final Block PLATFORM_PAVING_LIGHT_SLAB = register("platform_paving_light_slab", BlockFamily.PLATFORMS, RenderKind.SOLID,
 			MtrPlatformContract.slab(paving(MapColor.STONE_GRAY)));

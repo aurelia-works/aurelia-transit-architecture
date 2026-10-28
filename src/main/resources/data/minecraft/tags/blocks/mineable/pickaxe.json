@@ -4,6 +4,7 @@
     "aurelia_transit_architecture:platform_paving_light",
     "aurelia_transit_architecture:platform_paving_dark",
     "aurelia_transit_architecture:tactile_warning_paving",
+    "aurelia_transit_architecture:apron_platform",
     "aurelia_transit_architecture:platform_edge",
     "aurelia_transit_architecture:platform_edge_warning",
     "aurelia_transit_architecture:platform_ramp_lower",
