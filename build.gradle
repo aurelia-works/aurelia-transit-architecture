@@ -100,6 +100,11 @@ test {
 	// The test classes share no files or ports, so they spread over several JVMs: every core on CI, half of them locally (the dev client keeps the rest)
 	final int cores = Runtime.runtime.availableProcessors()
 	maxParallelForks = System.getenv("CI") ? cores : Math.max(1, cores.intdiv(2))
+	// fabric-loader-junit creates mods/ in each JVM as it starts; on a fresh checkout two JVMs raced and one died with
+	// FileAlreadyExistsException (CI 10-28, every class in that JVM failed), so the folder is there before any starts
+	doFirst {
+		mkdir("mods")
+	}
 	// CI runs the slowest classes (the StationRecipeTest sweep, the planner and real-city tests) in jobs of their own and leaves
 	// them out of the build job: -Pata.tests.exclude takes comma-separated class patterns
 	if (project.hasProperty("ata.tests.exclude")) {
