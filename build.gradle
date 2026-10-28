@@ -100,9 +100,39 @@ test {
 	// The test classes share no files or ports, so they spread over several JVMs: every core on CI, half of them locally (the dev client keeps the rest)
 	final int cores = Runtime.runtime.availableProcessors()
 	maxParallelForks = System.getenv("CI") ? cores : Math.max(1, cores.intdiv(2))
-	// CI runs the slowest class (StationRecipeTest's sweep, ~6 min in one method) as a job of its own and leaves it out of this one
+	// CI runs the slowest classes (the StationRecipeTest sweep, the planner and real-city tests) in jobs of their own and leaves
+	// them out of the build job: -Pata.tests.exclude takes comma-separated class patterns
 	if (project.hasProperty("ata.tests.exclude")) {
-		filter { excludeTestsMatching project.property("ata.tests.exclude") }
+		filter {
+			project.property("ata.tests.exclude").toString().split(",").each { excludeTestsMatching it.trim() }
+		}
+	}
+	// StationRecipeTest's sweep runs every n-th look from the k-th with -Pata.sweep.shard=k/n, so CI spreads it over n jobs
+	if (project.hasProperty("ata.sweep.shard")) {
+		systemProperty "ata.sweep.shard", project.property("ata.sweep.shard")
+	}
+}
+
+// Fabric 1.20.1 runs every registered game test and has no filter, so CI splits the suite over jobs by which test classes the
+// gametest mod registers: -Pata.gametests=A,B keeps only those simple class names, -Pata.gametests=!A,B keeps all but those.
+// A name that is not registered fails the build, so a rename cannot quietly drop tests from CI.
+tasks.named("processGametestResources") {
+	final String chosen = project.findProperty("ata.gametests") ?: ""
+	inputs.property("ata.gametests", chosen)
+	doLast {
+		if (!chosen.isEmpty()) {
+			final File json = new File(destinationDir, "fabric.mod.json")
+			final def mod = new groovy.json.JsonSlurper().parse(json)
+			final boolean skip = chosen.startsWith("!")
+			final Set<String> names = (skip ? chosen.substring(1) : chosen).split(",").collect { it.trim() } as Set
+			final List<String> all = mod.entrypoints["fabric-gametest"]
+			final Set<String> known = all.collect { it.substring(it.lastIndexOf('.') + 1) } as Set
+			if (!known.containsAll(names)) {
+				throw new GradleException("ata.gametests names unknown game test classes: " + (names - known))
+			}
+			mod.entrypoints["fabric-gametest"] = all.findAll { names.contains(it.substring(it.lastIndexOf('.') + 1)) != skip }
+			json.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(mod))
+		}
 	}
 }
 
