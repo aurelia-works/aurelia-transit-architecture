@@ -6,7 +6,7 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-# The suites are split over jobs that run side by side, so the run takes as long as the slowest job :
+# The suites are split over jobs that run side by side, so the run takes as long as the slowest job:
 # build + unit tests, the three slowest unit test classes, the StationRecipeTest sweep in 4 shards of looks, and the game tests in 2 servers (the airport rebuild test,
 # real-time MTR waits for two airport builds, alone in one).
 jobs:
