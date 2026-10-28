@@ -58,7 +58,7 @@ class StationRecipeTest {
 	}
 
 	/**
-	 * The looks the sweep covers in this run: all of them, or with {@code -Data.sweep.shard=k/n} every n-th look from the k-th, so CI
+	 * The looks the sweep covers in this run: all of them, or with {@code -Pata.sweep.shard=k/n} (Gradle passes it to the test JVM) every n-th look from the k-th, so CI
 	 * spreads the sweep over n jobs.
 	 */
 	static Stream<StationRecipe.Look> sweptLooks() {
