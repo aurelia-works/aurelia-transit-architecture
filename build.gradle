@@ -100,9 +100,12 @@ test {
 	// The test classes share no files or ports, so they spread over several JVMs: every core on CI, half of them locally (the dev client keeps the rest)
 	final int cores = Runtime.runtime.availableProcessors()
 	maxParallelForks = System.getenv("CI") ? cores : Math.max(1, cores.intdiv(2))
-	// CI runs the slowest class (StationRecipeTest's sweep, ~6 min in one method) as a job of its own and leaves it out of this one
+	// CI runs the slowest classes (the StationRecipeTest sweep, the planner and real-city tests) in jobs of their own and leaves
+	// them out of the build job: -Pata.tests.exclude takes comma-separated class patterns
 	if (project.hasProperty("ata.tests.exclude")) {
-		filter { excludeTestsMatching project.property("ata.tests.exclude") }
+		filter {
+			project.property("ata.tests.exclude").toString().split(",").each { excludeTestsMatching it.trim() }
+		}
 	}
 	// StationRecipeTest's sweep runs every n-th look from the k-th with -Pata.sweep.shard=k/n, so CI spreads it over n jobs
 	if (project.hasProperty("ata.sweep.shard")) {
