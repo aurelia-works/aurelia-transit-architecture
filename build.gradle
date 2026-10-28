@@ -97,6 +97,13 @@ dependencies {
 
 test {
 	useJUnitPlatform()
+	// The test classes share no files or ports, so they spread over several JVMs: every core on CI, half of them locally (the dev client keeps the rest)
+	final int cores = Runtime.runtime.availableProcessors()
+	maxParallelForks = System.getenv("CI") ? cores : Math.max(1, cores.intdiv(2))
+	// CI runs the slowest class (StationRecipeTest's sweep, ~6 min in one method) as a job of its own and leaves it out of this one
+	if (project.hasProperty("ata.tests.exclude")) {
+		filter { excludeTestsMatching project.property("ata.tests.exclude") }
+	}
 }
 
 // The dev-run shader stack must not start inside the unit tests (fabric-loader-junit loads every mod on the test classpath).
