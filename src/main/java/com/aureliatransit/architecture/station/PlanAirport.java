@@ -24,6 +24,8 @@ abstract class PlanAirport extends PlanFitOut {
 	static final String BLAST_SURFACE = "minecraft:polished_andesite";
 	static final String TAXI_SURFACE = "minecraft:gray_concrete";
 	static final String APRON_SURFACE = "minecraft:light_gray_concrete";
+	/** The apron's concrete as an MTR platform block, beside each stand's platform rail so the plane's doors open. */
+	static final String APRON_PLATFORM = "aurelia_transit_architecture:apron_platform";
 	static final String ROAD_SURFACE = "minecraft:gray_concrete";
 	static final String PAINT_WHITE = "minecraft:white_concrete";
 	static final String PAINT_YELLOW = "minecraft:yellow_concrete";
@@ -97,6 +99,7 @@ abstract class PlanAirport extends PlanFitOut {
 		windsock();
 		masts();
 		standMarks();
+		gatePlatforms();
 		for (int i = 0; i < spec.airport().runways(); i++) {
 			runwayMarks(i);
 		}
@@ -444,6 +447,19 @@ abstract class PlanAirport extends PlanFitOut {
 			// the number, upright for someone on the terminal side of the stand facing out over the apron: up is +u, the near edge is the terminal side
 			final int scale = numberScale() > 1 ? 2 : 1;
 			paintText(List.of(Integer.toString(i + 1)), scale, stop + 4, c + air.dims().standPitch() / 4, 1, 0, PAINT_WHITE);
+		}
+	}
+
+	/**
+	 * MTR opens a plane's doors only beside a platform block (the MTR airport video), so both rows beside every stand's platform
+	 * rail are the apron's concrete as a platform block. After the stand marks: the stop bar keeps its paint.
+	 */
+	void gatePlatforms() {
+		for (final AirportRoute.Gate gate : AirportRoute.of(air).gates()) {
+			for (final AirportRoute.Cell cell : gate.platform()) {
+				paint(cell.u(), cell.v() - 1, APRON_PLATFORM);
+				paint(cell.u(), cell.v() + 1, APRON_PLATFORM);
+			}
 		}
 	}
 
